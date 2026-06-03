@@ -45,8 +45,5 @@ When asked to build features, implement them in alignment with these standard Ma
 - **Publishing Statuses:** Implement a character counter (500-character standard default) and support Content Warnings (CW) via `spoiler_text`.
 - **Media Uploads:** Handle multi-part form uploads (`POST /api/v1/media`) before attaching the returned IDs to a new status.
 
----
-
-## 🤖 Prompting Template for Gemini
-
-Copy and append this to your prompt when starting a new feature development cycle:
+### 4. User Preferences
+- **Agent:** Do not directly write the code, show it to the user on the conversation.
