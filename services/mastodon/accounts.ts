@@ -5,6 +5,12 @@ export interface Account {
     username: string;
     display_name: string;
     avatar: string;
+    header: string;
+    note: string;
+    followers_count: number;
+    following_count: number;
+    statuses_count: number;
+    url: string;
 }
 
 export async function getCurrentAccount(): Promise<Account> {

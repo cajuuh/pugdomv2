@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.ts",
   "dependencies": {
+    "@expo/vector-icons": "^15.0.2",
     "axios": "^1.16.1",
     "expo": "~56.0.8",
     "expo-linking": "~56.0.13",
