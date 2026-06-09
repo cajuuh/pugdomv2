@@ -3,11 +3,23 @@
   "version": "1.0.0",
   "main": "index.ts",
   "dependencies": {
+    "@expo/vector-icons": "^15.0.2",
     "axios": "^1.16.1",
     "expo": "~56.0.8",
+    "expo-linking": "~56.0.13",
+    "expo-secure-store": "~56.0.4",
     "expo-status-bar": "~56.0.4",
+    "expo-web-browser": "~56.0.5",
     "react": "19.2.3",
-    "react-native": "0.85.3"
+    "react-dom": "19.2.3",
+    "react-native": "0.85.3",
+    "react-native-gesture-handler": "~2.31.1",
+    "react-native-reanimated": "4.3.1",
+    "react-native-svg": "15.15.4",
+    "react-native-ui-lib": "^9.0.4",
+    "react-native-vector-icons": "^10.3.0",
+    "react-native-web": "^0.21.2",
+    "uilib-native": "^5.1.2"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
@@ -19,5 +31,6 @@
     "ios": "expo start --ios",
     "web": "expo start --web"
   },
-  "private": true
+  "private": true,
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }
