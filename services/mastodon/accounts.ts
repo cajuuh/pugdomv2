@@ -8,6 +8,6 @@ export async function getCurrentAccount(): Promise<Account> {
 
 // get toots
 export async function getAccountStatuses(accountId: string, maxId?: string): Promise<Status[]> {
-    const response = await apiClient.get<Status[]>(`/accounts/${accountId}/statuses}`, { params: { mas_id: maxId } });
+    const response = await apiClient.get<Status[]>(`/accounts/${accountId}/statuses`, { params: { max_id: maxId } });
     return response.data;
 }

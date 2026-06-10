@@ -24,7 +24,7 @@ const getRelativeTime = (dateString: string) => {
 
     if (diffSec < 60) {
         return 'now';
-    } else if (diffSec < 60) {
+    } else if (diffMin < 60) {
         return `${diffMin}m`;
     } else if (diffHr < 24) {
         return `${diffHr}h`;
@@ -81,7 +81,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status }) => {
 
     const toggleFavorite = () => {
         setIsFavorited(!isFavorited);
-        setFavCount((prev) => (isReblogged ? prev - 1 : prev + 1));
+        setFavCount((prev) => (isFavorited ? prev - 1 : prev + 1));
     }
 
     const toggleReblog = () => {

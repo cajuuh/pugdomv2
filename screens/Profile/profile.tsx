@@ -22,7 +22,7 @@ const Profile = () => {
         return null;
     }
 
-    const formattedBio = stripHtml(user.note);
+    const formattedBio = stripHtml(user.note || '');
 
     const handleOpenWeb = async () => {
         if (user.url) {
@@ -74,16 +74,16 @@ const Profile = () => {
                 <View style={styles.statsGrid}>
                     <Card style={styles.statsCard} enableShadow={false}>
                         <Text style={styles.statNumber}>
-                            {user.statuses_count.toLocaleString()}
+                            {user.statuses_count?.toLocaleString()}
                         </Text>
                         <Text style={styles.statLabel}>Posts</Text>
                     </Card>
                     <Card style={styles.statsCard} enableShadow={false}>
-                        <Text style={styles.statNumber}>{user.following_count.toLocaleString()}</Text>
+                        <Text style={styles.statNumber}>{user.following_count?.toLocaleString()}</Text>
                         <Text style={styles.statLabel}>Following</Text>
                     </Card>
                     <Card style={styles.statsCard} enableShadow={false}>
-                        <Text style={styles.statNumber}>{user.followers_count.toLocaleString()}</Text>
+                        <Text style={styles.statNumber}>{user.followers_count?.toLocaleString()}</Text>
                         <Text style={styles.statLabel}>Followers</Text>
                     </Card>
                 </View>
