@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { Image as RNImage } from 'react-native';
 import { Avatar, View, Text, Button, Image, TouchableOpacity } from 'react-native-ui-lib';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import * as WebBrowser from 'expo-web-browser';
 import { Status, CustomEmoji, Attachment } from '../../services/mastodon/types';
 import { styles } from './styles';
 
@@ -31,9 +33,18 @@ const getRelativeTime = (dateString: string) => {
     } else {
         return `${diffDays}d`;
     }
-}
+};
 
-const renderTextWithEmojis = (
+const getDomainName = (urlStr: string) => {
+    try {
+        const matches = urlStr.match(/^https?:\/\/([^/?#]+)(?:[/?#]|$)/i);
+        return matches && matches[1] ? matches[1].replace('www.', '') : 'Link';
+    } catch {
+        return 'Link';
+    }
+};
+
+export const renderTextWithEmojis = (
     text: string,
     emojis: CustomEmoji[],
     textStyle: any,
@@ -42,7 +53,7 @@ const renderTextWithEmojis = (
     if (!text) {
         return null;
     } else if (!emojis || emojis.length === 0) {
-        return <Text style={textStyle}>{text}</Text>
+        return <Text style={textStyle}>{text}</Text>;
     }
 
     const parts = text.split(/(:\w+:)/g);
@@ -55,11 +66,15 @@ const renderTextWithEmojis = (
                     const emoji = emojis.find((e) => e.shortcode === shortcode);
                     if (emoji) {
                         return (
-                            <Image key={index} source={{ uri: emoji.url }} style={{ width: emojiSize, height: emojiSize, resizeMode: 'contain' }} />
-                        )
+                            <RNImage
+                                key={index}
+                                source={{ uri: emoji.url }}
+                                style={{ width: emojiSize, height: emojiSize, resizeMode: 'contain' }}
+                            />
+                        );
                     }
                 }
-                return <React.Fragment key={index}>{part}</React.Fragment>
+                return <React.Fragment key={index}>{part}</React.Fragment>;
             })}
         </Text>
     );
@@ -82,12 +97,20 @@ export const TootCard: React.FC<TootCardProps> = ({ status }) => {
     const toggleFavorite = () => {
         setIsFavorited(!isFavorited);
         setFavCount((prev) => (isFavorited ? prev - 1 : prev + 1));
-    }
+    };
 
     const toggleReblog = () => {
         setIsreblogged(!isReblogged);
         setBoostCount((prev) => (isReblogged ? prev - 1 : prev + 1));
-    }
+    };
+
+    const handlePressCard = async (url: string) => {
+        try {
+            await WebBrowser.openBrowserAsync(url);
+        } catch (error) {
+            console.error('Failed to open link:', error);
+        }
+    };
 
     const renderMedia = (attachments: Attachment[]) => {
         if (!attachments || attachments.length === 0) {
@@ -103,7 +126,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status }) => {
                         style={styles.singleMedia}
                     />
                 </View>
-            )
+            );
         }
 
         return (
@@ -183,6 +206,34 @@ export const TootCard: React.FC<TootCardProps> = ({ status }) => {
                 renderMedia(targetStatus.media_attachments)
             )}
 
+            {/* link preview */}
+            {(!targetStatus.sensitive || !isSpoilerCollapsed) && targetStatus.card && (
+                <TouchableOpacity
+                    style={styles.linkPreviewContainer}
+                    onPress={() => handlePressCard(targetStatus.card!.url)}
+                >
+                    {targetStatus.card.image && (
+                        <Image
+                            source={{ uri: targetStatus.card.image }}
+                            style={styles.linkPreviewImage}
+                        />
+                    )}
+                    <View style={styles.linkPreviewContent}>
+                        <Text style={styles.linkPreviewProvider}>
+                            {targetStatus.card.provider_name || getDomainName(targetStatus.card.url)}
+                        </Text>
+                        <Text style={styles.linkPreviewTitle} numberOfLines={2}>
+                            {targetStatus.card.title}
+                        </Text>
+                        {targetStatus.card.description ? (
+                            <Text style={styles.linkPreviewDescription} numberOfLines={2}>
+                                {targetStatus.card.description}
+                            </Text>
+                        ) : null}
+                    </View>
+                </TouchableOpacity>
+            )}
+
             {/* action buttons */}
             <View style={styles.actionRow}>
                 {/* TODO: add reply action */}
@@ -208,5 +259,5 @@ export const TootCard: React.FC<TootCardProps> = ({ status }) => {
                 </TouchableOpacity>
             </View>
         </View>
-    )
-}
+    );
+};

@@ -5,6 +5,7 @@ import { useAuth } from '../../services/authContext';
 import * as WebBrowser from 'expo-web-browser';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { styles } from './styles'
+import { renderTextWithEmojis } from '../../components/TootCard/tootCard';
 
 const { width } = Dimensions.get('window');
 
@@ -37,7 +38,7 @@ const Profile = () => {
                     message: `Check out my Mastodon profile on pugdom: ${user.url}`
                 })
             } catch (error: any) {
-                Alert.alert('Error sharing progile', error.message);
+                Alert.alert('Error sharing profile', error.message);
             }
         }
     };
@@ -66,24 +67,27 @@ const Profile = () => {
                     <Avatar source={{ uri: user.avatar }} size={90} containerStyle={styles.avatarBorder} />
                 </View>
                 {/* names */}
-                <Text style={styles.displayName}>
-                    {user.display_name || user.username}
-                </Text>
+                {renderTextWithEmojis(
+                    user.display_name || user.username,
+                    user.emojis || [],
+                    styles.displayName,
+                    20
+                )}
                 <Text style={styles.username}>@{user.username}</Text>
                 {/* stats */}
                 <View style={styles.statsGrid}>
                     <Card style={styles.statsCard} enableShadow={false}>
                         <Text style={styles.statNumber}>
-                            {user.statuses_count?.toLocaleString()}
+                            {user.statuses_count?.toLocaleString() || '0'}
                         </Text>
                         <Text style={styles.statLabel}>Posts</Text>
                     </Card>
                     <Card style={styles.statsCard} enableShadow={false}>
-                        <Text style={styles.statNumber}>{user.following_count?.toLocaleString()}</Text>
+                        <Text style={styles.statNumber}>{user.following_count?.toLocaleString() || '0'}</Text>
                         <Text style={styles.statLabel}>Following</Text>
                     </Card>
                     <Card style={styles.statsCard} enableShadow={false}>
-                        <Text style={styles.statNumber}>{user.followers_count?.toLocaleString()}</Text>
+                        <Text style={styles.statNumber}>{user.followers_count?.toLocaleString() || '0'}</Text>
                         <Text style={styles.statLabel}>Followers</Text>
                     </Card>
                 </View>

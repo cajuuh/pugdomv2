@@ -86,6 +86,7 @@ const Login = () => {
                     onChangeText={setInstance}
                     value={instance}
                     disabled={loading}
+                    autoCapitalize="none"
                     fieldStyle={{ borderColor: '#334155', backgroundColor: '#1E293B' }}
                     style={{ color: '#F8FAFC' }}
                     placeholderTextColor={'#64748B'}

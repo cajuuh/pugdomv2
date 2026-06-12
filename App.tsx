@@ -21,11 +21,13 @@ function NavigationRoot() {
   }
 
   if (!user) {
-    <View flex style={styles.container}>
-      <StatusBar style='light' />
-      <Login />
-    </View>
-  }
+    return (
+      <View flex style={styles.container}>
+        <StatusBar style='light' />
+        <Login />
+      </View>
+    );
+  };
 
   return (
     <View flex style={styles.container}>

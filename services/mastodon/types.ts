@@ -28,6 +28,16 @@ export interface Account {
     emojis: CustomEmoji[];
 }
 
+export interface PreviewCard {
+    url: string;
+    title: string;
+    description: string;
+    type: 'link' | 'photo' | 'video' | 'rich';
+    image?: string | null;
+    provider_name?: string;
+    provider_url?: string;
+}
+
 export interface Status {
     id: string;
     created_at: string;
@@ -49,4 +59,5 @@ export interface Status {
     emojis: CustomEmoji[];
     favourited?: boolean;
     reblogged?: boolean;
+    card?: PreviewCard | null;
 }

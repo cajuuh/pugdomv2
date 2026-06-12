@@ -129,5 +129,38 @@ export const styles = StyleSheet.create({
         fontSize: 12,
         color: '#64748B',
         fontWeight: '600'
-    }
+    },
+    linkPreviewContainer: {
+        backgroundColor: '#0F172A',
+        borderRadius: 12,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: '#334155',
+        marginBottom: 12,
+    },
+    linkPreviewImage: {
+        width: '100%',
+        height: 150,
+        resizeMode: 'cover',
+    },
+    linkPreviewContent: {
+        padding: 12,
+        gap: 4,
+    },
+    linkPreviewProvider: {
+        fontSize: 11,
+        color: '#6366F1',
+        fontWeight: '600',
+        textTransform: 'uppercase',
+    },
+    linkPreviewTitle: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#F8FAFC',
+    },
+    linkPreviewDescription: {
+        fontSize: 12,
+        color: '#94A3B8',
+        lineHeight: 16,
+    },
 })
