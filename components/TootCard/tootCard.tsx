@@ -4,6 +4,7 @@ import { Avatar, View, Text, Button, Image, TouchableOpacity } from 'react-nativ
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as WebBrowser from 'expo-web-browser';
 import { Status, CustomEmoji, Attachment } from '../../services/mastodon/types';
+import { useSettings } from '../../services/settingsContext';
 import { styles } from './styles';
 
 const stripHtml = (html: string) => {
@@ -85,6 +86,7 @@ interface TootCardProps {
 }
 
 export const TootCard: React.FC<TootCardProps> = ({ status }) => {
+    const { compactMode } = useSettings();
     const isReblog = !!status.reblog;
     const targetStatus = isReblog ? status.reblog! : status;
 
@@ -146,7 +148,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status }) => {
     };
 
     return (
-        <View style={styles.cardContainer}>
+        <View style={[styles.cardContainer, compactMode && { padding: 10, marginVertical: 4, marginHorizontal: 12, borderRadius: 10 }]}>
             {/* boost header */}
             {isReblog && (
                 <View style={styles.boostedHeader}>
@@ -159,13 +161,13 @@ export const TootCard: React.FC<TootCardProps> = ({ status }) => {
             {/* author */}
             <View style={styles.headerRow}>
                 <View style={styles.userInfo}>
-                    <Avatar source={{ uri: targetStatus.account.avatar }} size={44} />
+                    <Avatar source={{ uri: targetStatus.account.avatar }} size={compactMode ? 32 : 44} />
                     <View style={styles.namesContainer}>
                         <View style={styles.nameRow}>
                             {renderTextWithEmojis(
                                 targetStatus.account.display_name || targetStatus.account.username,
                                 targetStatus.account.emojis,
-                                styles.displayName
+                                [styles.displayName, compactMode && { fontSize: 13 }]
                             )}
                         </View>
                         <Text style={styles.username} numberOfLines={1}>
@@ -196,7 +198,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status }) => {
                     {renderTextWithEmojis(
                         stripHtml(targetStatus.content),
                         targetStatus.emojis,
-                        styles.contentText
+                        [styles.contentText, compactMode && { fontSize: 13, lineHeight: 18 }]
                     )}
                 </View>
             )}

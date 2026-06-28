@@ -44,6 +44,3 @@ When asked to build features, implement them in alignment with these standard Ma
 - **Home Timeline:** Fetch via `GET /api/v1/timelines/home` supporting pagination using `max_id` and `since_id`.
 - **Publishing Statuses:** Implement a character counter (500-character standard default) and support Content Warnings (CW) via `spoiler_text`.
 - **Media Uploads:** Handle multi-part form uploads (`POST /api/v1/media`) before attaching the returned IDs to a new status.
-
-### 4. User Preferences
-- **Agent:** Do not directly write the code, show it to the user on the conversation.

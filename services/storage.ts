@@ -39,3 +39,22 @@ export async function clearCredentials() {
     await SecureStore.deleteItemAsync(TOKEN_KEY);
     await SecureStore.deleteItemAsync(INSTANCE_KEY);
 }
+
+export async function saveSetting(key: string, value: boolean) {
+    const strVal = value ? 'true' : 'false';
+    if (Platform.OS === 'web') {
+        localStorage.setItem(key, strVal);
+        return;
+    }
+    await SecureStore.setItemAsync(key, strVal);
+}
+
+export async function getSetting(key: string, defaultValue: boolean): Promise<boolean> {
+    let val: string | null = null;
+    if (Platform.OS === 'web') {
+        val = localStorage.getItem(key);
+    } else {
+        val = await SecureStore.getItemAsync(key);
+    }
+    return val !== null ? val === 'true' : defaultValue;
+}

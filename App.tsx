@@ -3,14 +3,19 @@ import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, ActivityIndicator } from 'react-native'
 import { View, Text, TouchableOpacity } from 'react-native-ui-lib'
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './services/authContext';
+import { SettingsProvider } from './services/settingsContext';
 import Login from './screens/Login/login'
 import Profile from './screens/Profile/profile'
 import Timeline from './screens/Timeline/timeline';
+import { TopBar } from './components/TopBar/topBar';
+import Settings from './screens/Settings/settings';
 
 function NavigationRoot() {
-  const { user, loading } = useAuth();
+  const { user, loading, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'home' | 'profile'>('home');
+  const [currentScreen, setCurrentScreen] = useState<'main' | 'settings'>('main');
 
   if (loading) {
     return (
@@ -29,9 +34,26 @@ function NavigationRoot() {
     );
   };
 
+  if (currentScreen === 'settings') {
+    return (
+      <View flex style={styles.container}>
+        <StatusBar style='light' />
+        <Settings onBack={() => setCurrentScreen('main')} />
+      </View>
+    );
+  }
+
   return (
     <View flex style={styles.container}>
       <StatusBar style='light' />
+
+      {/* Top Bar */}
+      <TopBar
+        user={user}
+        onAvatarPress={() => setActiveTab('profile')}
+        onSettingsPress={() => setCurrentScreen('settings')}
+        onLogoutPress={logout}
+      />
 
       {/* Screen content area */}
       <View flex>
@@ -72,9 +94,13 @@ function NavigationRoot() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <NavigationRoot />
-    </AuthProvider>
+    <SafeAreaProvider>
+      <SettingsProvider>
+        <AuthProvider>
+          <NavigationRoot />
+        </AuthProvider>
+      </SettingsProvider>
+    </SafeAreaProvider>
   );
 }
 

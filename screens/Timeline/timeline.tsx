@@ -98,10 +98,6 @@ const Timeline = () => {
 
     return (
         <View flex style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.headerTitle}>Home Timeline</Text>
-            </View>
-
             <FlatList
                 data={statuses}
                 keyExtractor={(item) => item.id}
