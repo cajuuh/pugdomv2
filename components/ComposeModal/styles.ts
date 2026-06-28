@@ -8,7 +8,7 @@ export const styles = StyleSheet.create({
         flex: 1,
     },
     header: {
-        height: 56,
+        height: 50,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -16,22 +16,22 @@ export const styles = StyleSheet.create({
         borderBottomWidth: 1,
     },
     headerTitle: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: 'bold',
     },
     headerButton: {
-        paddingVertical: 8,
-        paddingHorizontal: 12,
+        paddingVertical: 6,
+        paddingHorizontal: 10,
         borderRadius: 8,
     },
     headerButtonText: {
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: '600',
     },
     publishButton: {
-        borderRadius: 20,
-        paddingHorizontal: 16,
-        paddingVertical: 6,
+        borderRadius: 18,
+        paddingHorizontal: 14,
+        paddingVertical: 5,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -39,43 +39,30 @@ export const styles = StyleSheet.create({
         opacity: 0.5,
     },
     publishButtonText: {
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: 'bold',
     },
-    /* Helpers Bar under header */
+    /* Helper Bar under header (now language-only) */
     helperBar: {
-        height: 48,
+        height: 44,
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 16,
         borderBottomWidth: 1,
-        gap: 12,
-    },
-    helperButton: {
-        width: 34,
-        height: 34,
-        borderRadius: 8,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 1,
-    },
-    helperButtonText: {
-        fontSize: 16,
-        fontWeight: 'bold',
     },
     langPill: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderRadius: 16,
+        paddingVertical: 4,
+        borderRadius: 12,
         borderWidth: 1,
-        marginLeft: 'auto', // push to the right
         gap: 4,
     },
     langPillText: {
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: 'bold',
+        letterSpacing: 0.5,
     },
     /* Language Dialog Dropdown */
     langModalContainer: {
@@ -122,7 +109,7 @@ export const styles = StyleSheet.create({
         marginVertical: 2,
     },
     langOptionText: {
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: '600',
     },
     scrollContainer: {
@@ -130,7 +117,7 @@ export const styles = StyleSheet.create({
     },
     scrollContent: {
         padding: 16,
-        paddingBottom: 40,
+        paddingBottom: 20,
     },
     /* Reply Preview Card */
     replyPreview: {
@@ -164,7 +151,7 @@ export const styles = StyleSheet.create({
         gap: 10,
     },
     authorName: {
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: '600',
     },
     /* Input Section */
@@ -172,46 +159,42 @@ export const styles = StyleSheet.create({
         marginBottom: 12,
     },
     spoilerInput: {
-        height: 40,
+        height: 38,
         borderWidth: 1,
         borderRadius: 8,
         paddingHorizontal: 12,
-        fontSize: 14,
+        fontSize: 13,
     },
     textArea: {
         minHeight: 150,
-        fontSize: 16,
+        fontSize: 15,
         lineHeight: 22,
         textAlignVertical: 'top',
         padding: 0,
     },
-    /* Settings Row */
-    settingsContainer: {
-        borderTopWidth: 1,
-        marginTop: 20,
-        paddingTop: 12,
-    },
-    settingRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingVertical: 8,
-    },
-    settingLabel: {
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    /* Footer */
+    /* Bottom Accessory Bar */
     footer: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'flex-end',
+        justifyContent: 'space-between',
         paddingHorizontal: 16,
-        paddingVertical: 12,
+        height: 52,
         borderTopWidth: 1,
     },
+    leftAccessoryRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 14,
+    },
+    accessoryButton: {
+        width: 36,
+        height: 36,
+        borderRadius: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     charCounter: {
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: '700',
     },
 });

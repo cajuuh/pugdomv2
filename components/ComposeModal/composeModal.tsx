@@ -3,7 +3,6 @@ import {
     Modal,
     TextInput,
     ScrollView,
-    Switch,
     TouchableOpacity,
     ActivityIndicator,
     DeviceEventEmitter,
@@ -30,11 +29,11 @@ const stripHtml = (html: string) => {
 };
 
 const LANGUAGES = [
-    { code: 'en', label: 'English', flag: '🇺🇸' },
-    { code: 'pt', label: 'Português', flag: '🇧🇷' },
-    { code: 'es', label: 'Español', flag: '🇪🇸' },
-    { code: 'fr', label: 'Français', flag: '🇫🇷' },
-    { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
+    { code: 'en-US', label: 'English (US)' },
+    { code: 'pt-BR', label: 'Português (Brasil)' },
+    { code: 'es-ES', label: 'Español (España)' },
+    { code: 'fr-FR', label: 'Français (France)' },
+    { code: 'de-DE', label: 'Deutsch (Deutschland)' },
 ];
 
 const ComposeModal: React.FC = () => {
@@ -48,7 +47,7 @@ const ComposeModal: React.FC = () => {
     const [loading, setLoading] = useState(false);
     
     // Helper States
-    const [language, setLanguage] = useState('en');
+    const [language, setLanguage] = useState('en-US');
     const [langModalVisible, setLangModalVisible] = useState(false);
 
     const inputRef = useRef<TextInput>(null);
@@ -62,7 +61,7 @@ const ComposeModal: React.FC = () => {
             }
             setSensitive(false);
             setSpoilerText('');
-            setLanguage('en');
+            setLanguage('en-US');
             setLoading(false);
             
             // Focus on mount/open
@@ -88,11 +87,6 @@ const ComposeModal: React.FC = () => {
     } else if (isOverLimit) {
         counterColor = colors.dangerColor; // Error red
     }
-
-    const insertSymbol = (symbol: string) => {
-        setText(prev => prev + symbol);
-        inputRef.current?.focus();
-    };
 
     const handlePublish = async () => {
         if (isPublishDisabled) return;
@@ -158,25 +152,8 @@ const ComposeModal: React.FC = () => {
                         </TouchableOpacity>
                     </View>
 
-                    {/* Helper Input Bar (notch safe, under header) */}
+                    {/* Helper Input Bar (Language selection only) */}
                     <View style={[styles.helperBar, { backgroundColor: colors.cardBackground, borderBottomColor: colors.borderColor }]}>
-                        <TouchableOpacity
-                            style={[styles.helperButton, { backgroundColor: colors.background, borderColor: colors.borderColor }]}
-                            onPress={() => insertSymbol('#')}
-                            activeOpacity={0.7}
-                        >
-                            <Text style={[styles.helperButtonText, { color: colors.accentColor }]}>#</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={[styles.helperButton, { backgroundColor: colors.background, borderColor: colors.borderColor }]}
-                            onPress={() => insertSymbol('@')}
-                            activeOpacity={0.7}
-                        >
-                            <Text style={[styles.helperButtonText, { color: colors.accentColor }]}>@</Text>
-                        </TouchableOpacity>
-
-                        {/* Language Selector Pill */}
                         {(() => {
                             const selectedLang = LANGUAGES.find(l => l.code === language) || LANGUAGES[0];
                             return (
@@ -185,11 +162,11 @@ const ComposeModal: React.FC = () => {
                                     onPress={() => setLangModalVisible(true)}
                                     activeOpacity={0.7}
                                 >
-                                    <Text style={{ fontSize: 13 }}>{selectedLang.flag}</Text>
+                                    <Ionicons name="globe-outline" size={13} color={colors.accentColor} />
                                     <Text style={[styles.langPillText, { color: colors.textPrimary }]}>
-                                        {selectedLang.code.toUpperCase()}
+                                        {selectedLang.code}
                                     </Text>
-                                    <Ionicons name="chevron-down" size={12} color={colors.textSecondary} />
+                                    <Ionicons name="chevron-down" size={10} color={colors.textSecondary} />
                                 </TouchableOpacity>
                             );
                         })()}
@@ -265,28 +242,35 @@ const ComposeModal: React.FC = () => {
                             onChangeText={setText}
                             maxLength={600}
                         />
-
-                        {/* Composer settings / toggles */}
-                        <View style={[styles.settingsContainer, { borderTopColor: colors.borderColor }]}>
-                            <View style={styles.settingRow}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                    <Ionicons name="eye-off-outline" size={20} color={colors.accentColor} />
-                                    <Text style={[styles.settingLabel, { color: colors.textPrimary }]}>
-                                        Sensitive Content
-                                    </Text>
-                                </View>
-                                <Switch
-                                    value={sensitive}
-                                    onValueChange={setSensitive}
-                                    trackColor={{ false: colors.borderColor, true: colors.accentColor }}
-                                    thumbColor="#FFFFFF"
-                                />
-                            </View>
-                        </View>
                     </ScrollView>
 
-                    {/* Footer */}
+                    {/* Bottom Accessory Bar */}
                     <View style={[styles.footer, { backgroundColor: colors.cardBackground, borderTopColor: colors.borderColor }]}>
+                        <View style={styles.leftAccessoryRow}>
+                            {/* Media selector button */}
+                            <TouchableOpacity
+                                style={styles.accessoryButton}
+                                onPress={() => Alert.alert('Add Media', 'Media attachments feature coming soon!')}
+                                activeOpacity={0.7}
+                            >
+                                <Ionicons name="image-outline" size={20} color={colors.textSecondary} />
+                            </TouchableOpacity>
+
+                            {/* Sensitive / CW eye toggle button */}
+                            <TouchableOpacity
+                                style={styles.accessoryButton}
+                                onPress={() => setSensitive(!sensitive)}
+                                activeOpacity={0.7}
+                            >
+                                <Ionicons
+                                    name={sensitive ? "eye-off-outline" : "eye-outline"}
+                                    size={20}
+                                    color={sensitive ? colors.accentColor : colors.textSecondary}
+                                />
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Character count */}
                         <Text style={[styles.charCounter, { color: counterColor }]}>
                             {remaining}
                         </Text>
@@ -328,10 +312,10 @@ const ComposeModal: React.FC = () => {
                                 }}
                             >
                                 <Text style={[styles.langOptionText, { color: colors.textPrimary }]}>
-                                    {item.flag}   {item.label}
+                                    {item.label} ({item.code})
                                 </Text>
                                 {language === item.code && (
-                                    <Ionicons name="checkmark-sharp" size={18} color={colors.accentColor} />
+                                    <Ionicons name="checkmark-sharp" size={16} color={colors.accentColor} />
                                 )}
                             </TouchableOpacity>
                         ))}
