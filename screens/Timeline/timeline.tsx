@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { FlatList, ActivityIndicator, RefreshControl } from 'react-native';
+import { FlatList, ActivityIndicator, RefreshControl, DeviceEventEmitter } from 'react-native';
 import { View, Text } from 'react-native-ui-lib';
 import { fetchHomeTimeline } from '../../services/mastodon/timeline';
 import { Status } from '../../services/mastodon/types';
@@ -54,6 +54,14 @@ const Timeline = () => {
 
     useEffect(() => {
         loadTimeline();
+
+        const subscription = DeviceEventEmitter.addListener('status_published', () => {
+            loadTimeline(undefined, true); // force reload timeline on new status
+        });
+
+        return () => {
+            subscription.remove();
+        };
     }, []);
 
     const handleRefresh = useCallback(() => {

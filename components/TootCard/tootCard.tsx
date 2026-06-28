@@ -6,6 +6,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { Status, CustomEmoji, Attachment } from '../../services/mastodon/types';
 import { useSettings } from '../../services/settingsContext';
 import { useTheme } from '../../services/themeContext';
+import { useCompose } from '../../services/composeContext';
 import { styles } from './styles';
 
 const stripHtml = (html: string) => {
@@ -89,6 +90,7 @@ interface TootCardProps {
 export const TootCard: React.FC<TootCardProps> = ({ status }) => {
     const { compactMode } = useSettings();
     const { colors } = useTheme();
+    const { openCompose } = useCompose();
     const isReblog = !!status.reblog;
     const targetStatus = isReblog ? status.reblog! : status;
 
@@ -244,8 +246,11 @@ export const TootCard: React.FC<TootCardProps> = ({ status }) => {
 
             {/* action buttons */}
             <View style={[styles.actionRow, { borderTopColor: colors.borderColor }]}>
-                {/* TODO: add reply action */}
-                <TouchableOpacity style={styles.actionButton}>
+                {/* reply action */}
+                <TouchableOpacity 
+                    style={styles.actionButton} 
+                    onPress={() => openCompose({ replyToStatus: targetStatus })}
+                >
                     <Ionicons name="chatbubble-outline" size={18} color={colors.textMuted} />
                     <Text style={[styles.actionCount, { color: colors.textMuted }]}>{targetStatus.replies_count || 0}</Text>
                 </TouchableOpacity>
