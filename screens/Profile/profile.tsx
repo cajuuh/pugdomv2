@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, ScrollView, Dimensions, Alert, Image, Share } from 'react-native';
 import { View, Text, Button, Avatar, Card } from 'react-native-ui-lib';
 import { useAuth } from '../../services/authContext';
+import { useTheme } from '../../services/themeContext';
 import * as WebBrowser from 'expo-web-browser';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { styles } from './styles'
@@ -18,6 +19,7 @@ const stripHtml = (html: string) => {
 
 const Profile = () => {
     const { user, logout } = useAuth();
+    const { colors } = useTheme();
 
     if (!user) {
         return null;
@@ -55,48 +57,48 @@ const Profile = () => {
     }
 
     return (
-        <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
+        <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
             {/* header */}
-            <View style={styles.headerBannerContainer}>
+            <View style={[styles.headerBannerContainer, { backgroundColor: colors.cardBackground }]}>
                 {checkHeader()}
             </View>
             {/* profiel info */}
             <View style={styles.profileInfoContainer}>
                 {/* avatar */}
                 <View style={styles.avatarWrapper}>
-                    <Avatar source={{ uri: user.avatar }} size={90} containerStyle={styles.avatarBorder} />
+                    <Avatar source={{ uri: user.avatar }} size={90} containerStyle={[styles.avatarBorder, { borderColor: colors.background }]} />
                 </View>
                 {/* names */}
                 {renderTextWithEmojis(
                     user.display_name || user.username,
                     user.emojis || [],
-                    styles.displayName,
+                    [styles.displayName, { color: colors.textPrimary }],
                     20
                 )}
-                <Text style={styles.username}>@{user.username}</Text>
+                <Text style={[styles.username, { color: colors.textSecondary }]}>@{user.username}</Text>
                 {/* stats */}
                 <View style={styles.statsGrid}>
-                    <Card style={styles.statsCard} enableShadow={false}>
-                        <Text style={styles.statNumber}>
+                    <Card style={[styles.statsCard, { backgroundColor: colors.cardBackground, borderColor: colors.borderColor }]} enableShadow={false}>
+                        <Text style={[styles.statNumber, { color: colors.textPrimary }]}>
                             {user.statuses_count?.toLocaleString() || '0'}
                         </Text>
-                        <Text style={styles.statLabel}>Posts</Text>
+                        <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Posts</Text>
                     </Card>
-                    <Card style={styles.statsCard} enableShadow={false}>
-                        <Text style={styles.statNumber}>{user.following_count?.toLocaleString() || '0'}</Text>
-                        <Text style={styles.statLabel}>Following</Text>
+                    <Card style={[styles.statsCard, { backgroundColor: colors.cardBackground, borderColor: colors.borderColor }]} enableShadow={false}>
+                        <Text style={[styles.statNumber, { color: colors.textPrimary }]}>{user.following_count?.toLocaleString() || '0'}</Text>
+                        <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Following</Text>
                     </Card>
-                    <Card style={styles.statsCard} enableShadow={false}>
-                        <Text style={styles.statNumber}>{user.followers_count?.toLocaleString() || '0'}</Text>
-                        <Text style={styles.statLabel}>Followers</Text>
+                    <Card style={[styles.statsCard, { backgroundColor: colors.cardBackground, borderColor: colors.borderColor }]} enableShadow={false}>
+                        <Text style={[styles.statNumber, { color: colors.textPrimary }]}>{user.followers_count?.toLocaleString() || '0'}</Text>
+                        <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Followers</Text>
                     </Card>
                 </View>
                 {formattedBio ? (
-                    <View style={styles.bioContainer}>
-                        <Text style={styles.bioTitle}>
+                    <View style={[styles.bioContainer, { backgroundColor: colors.cardBackground, borderColor: colors.borderColor }]}>
+                        <Text style={[styles.bioTitle, { color: colors.accentColor }]}>
                             About Me
                         </Text>
-                        <Text style={styles.bioText}>
+                        <Text style={[styles.bioText, { color: colors.textPrimary }]}>
                             {formattedBio}
                         </Text>
                     </View>
@@ -105,7 +107,7 @@ const Profile = () => {
                     <Button
                         label="View on web"
                         size={Button.sizes.medium}
-                        backgroundColor="#6366F1"
+                        backgroundColor={colors.accentColor}
                         style={styles.actionButton}
                         onPress={handleOpenWeb}
                         labelStyle={styles.buttonLabel}
@@ -114,20 +116,20 @@ const Profile = () => {
                         label="Share Profile"
                         size={Button.sizes.medium}
                         outline
-                        outlineColor="#475569"
+                        outlineColor={colors.borderColor}
                         style={[styles.actionButton, styles.outlineButton]}
                         onPress={handleShare}
-                        labelStyle={[styles.buttonLabel, { color: '#E2E8F0' }]}
+                        labelStyle={[styles.buttonLabel, { color: colors.textPrimary }]}
                     />
                 </View>
                 <Button
                     label="Log Out"
                     link
-                    color="#EF4444"
+                    color={colors.dangerColor}
                     style={styles.logoutButton}
                     onPress={logout}
-                    labelStyle={styles.logoutLabel}
-                    iconSource={() => <Ionicons name="log-out-outline" size={18} color="#EF4444" style={{ marginRight: 6 }} />}
+                    labelStyle={[styles.logoutLabel, { color: colors.dangerColor }]}
+                    iconSource={() => <Ionicons name="log-out-outline" size={18} color={colors.dangerColor} style={{ marginRight: 6 }} />}
                 />
             </View>
         </ScrollView>

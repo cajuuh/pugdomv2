@@ -4,9 +4,11 @@ import { View, Text } from 'react-native-ui-lib';
 import { fetchHomeTimeline } from '../../services/mastodon/timeline';
 import { Status } from '../../services/mastodon/types';
 import { TootCard } from '../../components/TootCard/tootCard';
+import { useTheme } from '../../services/themeContext';
 import { styles } from './styles';
 
 const Timeline = () => {
+    const { colors } = useTheme();
     const [statuses, setStatuses] = useState<Status[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -83,21 +85,21 @@ const Timeline = () => {
         }
         return (
             <View flex center padding-40 style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No toots on your home timeline yet!</Text>
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No toots on your home timeline yet!</Text>
             </View>
         );
     };
 
     if (loading && statuses.length === 0) {
         return (
-            <View flex center style={styles.loadingContainer}>
-                <ActivityIndicator size={'large'} color={'#6366F1'} />
+            <View flex center style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+                <ActivityIndicator size={'large'} color={colors.accentColor} />
             </View>
         );
     };
 
     return (
-        <View flex style={styles.container}>
+        <View flex style={[styles.container, { backgroundColor: colors.background }]}>
             <FlatList
                 data={statuses}
                 keyExtractor={(item) => item.id}
@@ -108,8 +110,8 @@ const Timeline = () => {
                     <RefreshControl
                         refreshing={refreshing}
                         onRefresh={handleRefresh}
-                        tintColor={'#6366F1'}
-                        colors={['#6366F1']}
+                        tintColor={colors.accentColor}
+                        colors={[colors.accentColor]}
                     />
                 }
                 ListFooterComponent={renderFooter}

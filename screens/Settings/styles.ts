@@ -128,4 +128,21 @@ export const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
     },
+    themeSelectorContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    themePill: {
+        paddingVertical: 6,
+        paddingHorizontal: 10,
+        borderRadius: 8,
+        borderWidth: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    themePillText: {
+        fontSize: 12,
+        fontWeight: 'bold',
+    },
 });

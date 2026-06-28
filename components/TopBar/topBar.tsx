@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, Avatar } from 'react-native-ui-lib';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Account } from '../../services/mastodon/types';
+import { useTheme } from '../../services/themeContext';
 import { styles } from './styles';
 
 interface TopBarProps {
@@ -15,24 +16,25 @@ interface TopBarProps {
 
 export const TopBar: React.FC<TopBarProps> = ({ user, onAvatarPress, onSettingsPress, onLogoutPress }) => {
     const [menuVisible, setMenuVisible] = useState(false);
+    const { colors } = useTheme();
 
     return (
-        <SafeAreaView style={styles.safeArea}>
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.cardBackground, borderBottomColor: colors.borderColor }]}>
             <View style={styles.container}>
                 <TouchableOpacity onPress={onAvatarPress} style={styles.avatarContainer} activeOpacity={0.7}>
                     {user?.avatar ? (
-                        <Avatar source={{ uri: user.avatar }} size={34} containerStyle={styles.avatar} />
+                        <Avatar source={{ uri: user.avatar }} size={34} containerStyle={[styles.avatar, { borderColor: colors.accentColor }]} />
                     ) : (
-                        <Ionicons name="person-circle-outline" size={34} color="#94A3B8" />
+                        <Ionicons name="person-circle-outline" size={34} color={colors.textSecondary} />
                     )}
                 </TouchableOpacity>
 
                 <View style={styles.titleContainer}>
-                    <Text style={styles.titleText}>pugdom</Text>
+                    <Text style={[styles.titleText, { color: colors.accentColor }]}>pugdom</Text>
                 </View>
 
                 <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuButton} activeOpacity={0.7}>
-                    <Ionicons name="ellipsis-vertical" size={22} color="#F8FAFC" />
+                    <Ionicons name="ellipsis-vertical" size={22} color={colors.textPrimary} />
                 </TouchableOpacity>
             </View>
 
@@ -44,7 +46,7 @@ export const TopBar: React.FC<TopBarProps> = ({ user, onAvatarPress, onSettingsP
                 onRequestClose={() => setMenuVisible(false)}
             >
                 <Pressable style={styles.modalOverlay} onPress={() => setMenuVisible(false)}>
-                    <View style={styles.dropdownContainer}>
+                    <View style={[styles.dropdownContainer, { backgroundColor: colors.cardBackground, borderColor: colors.borderColor }]}>
                         <TouchableOpacity
                             style={styles.dropdownItem}
                             onPress={() => {
@@ -52,11 +54,11 @@ export const TopBar: React.FC<TopBarProps> = ({ user, onAvatarPress, onSettingsP
                                 onSettingsPress();
                             }}
                         >
-                            <Ionicons name="settings-outline" size={18} color="#F8FAFC" style={styles.dropdownIcon} />
-                            <Text style={styles.dropdownText}>Settings</Text>
+                            <Ionicons name="settings-outline" size={18} color={colors.textPrimary} style={styles.dropdownIcon} />
+                            <Text style={[styles.dropdownText, { color: colors.textPrimary }]}>Settings</Text>
                         </TouchableOpacity>
 
-                        <View style={styles.divider} />
+                        <View style={[styles.divider, { backgroundColor: colors.borderColor }]} />
 
                         <TouchableOpacity
                             style={styles.dropdownItem}
@@ -65,8 +67,8 @@ export const TopBar: React.FC<TopBarProps> = ({ user, onAvatarPress, onSettingsP
                                 onLogoutPress();
                             }}
                         >
-                            <Ionicons name="log-out-outline" size={18} color="#EF4444" style={styles.dropdownIcon} />
-                            <Text style={[styles.dropdownText, styles.logoutText]}>Log Out</Text>
+                            <Ionicons name="log-out-outline" size={18} color={colors.dangerColor} style={styles.dropdownIcon} />
+                            <Text style={[styles.dropdownText, { color: colors.dangerColor }]}>Log Out</Text>
                         </TouchableOpacity>
                     </View>
                 </Pressable>

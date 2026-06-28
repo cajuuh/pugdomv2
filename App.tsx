@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './services/authContext';
 import { SettingsProvider } from './services/settingsContext';
+import { ThemeProvider, useTheme } from './services/themeContext';
 import Login from './screens/Login/login'
 import Profile from './screens/Profile/profile'
 import Timeline from './screens/Timeline/timeline';
@@ -14,21 +15,24 @@ import Settings from './screens/Settings/settings';
 
 function NavigationRoot() {
   const { user, loading, logout } = useAuth();
+  const { colors, isDark } = useTheme();
   const [activeTab, setActiveTab] = useState<'home' | 'profile'>('home');
   const [currentScreen, setCurrentScreen] = useState<'main' | 'settings'>('main');
 
+  const statusBarStyle = isDark ? 'light' : 'dark';
+
   if (loading) {
     return (
-      <View flex center style={styles.loadingContainer}>
-        <ActivityIndicator size='large' color='#6366F1' />
+      <View flex center style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size='large' color={colors.accentColor} />
       </View>
     )
   }
 
   if (!user) {
     return (
-      <View flex style={styles.container}>
-        <StatusBar style='light' />
+      <View flex style={[styles.container, { backgroundColor: colors.background }]}>
+        <StatusBar style={statusBarStyle} />
         <Login />
       </View>
     );
@@ -36,16 +40,16 @@ function NavigationRoot() {
 
   if (currentScreen === 'settings') {
     return (
-      <View flex style={styles.container}>
-        <StatusBar style='light' />
+      <View flex style={[styles.container, { backgroundColor: colors.background }]}>
+        <StatusBar style={statusBarStyle} />
         <Settings onBack={() => setCurrentScreen('main')} />
       </View>
     );
   }
 
   return (
-    <View flex style={styles.container}>
-      <StatusBar style='light' />
+    <View flex style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar style={statusBarStyle} />
 
       {/* Top Bar */}
       <TopBar
@@ -60,7 +64,7 @@ function NavigationRoot() {
         {activeTab === 'home' ? <Timeline /> : <Profile />}
       </View>
       {/* Custom Tab Bar */}
-      <View style={styles.tabBar}>
+      <View style={[styles.tabBar, { backgroundColor: colors.tabBarBackground, borderTopColor: colors.borderColor }]}>
         <TouchableOpacity
           onPress={() => setActiveTab('home')}
           style={styles.tabItem}
@@ -68,9 +72,9 @@ function NavigationRoot() {
           <Ionicons
             name={activeTab === 'home' ? 'home' : 'home-outline'}
             size={22}
-            color={activeTab === 'home' ? '#6366F1' : '#94A3B8'}
+            color={activeTab === 'home' ? colors.tabBarActiveColor : colors.tabBarInactiveColor}
           />
-          <Text style={[styles.tabLabel, { color: activeTab === 'home' ? '#6366F1' : '#94A3B8' }]}>
+          <Text style={[styles.tabLabel, { color: activeTab === 'home' ? colors.tabBarActiveColor : colors.tabBarInactiveColor }]}>
             Home
           </Text>
         </TouchableOpacity>
@@ -81,9 +85,9 @@ function NavigationRoot() {
           <Ionicons
             name={activeTab === 'profile' ? 'person' : 'person-outline'}
             size={22}
-            color={activeTab === 'profile' ? '#6366F1' : '#94A3B8'}
+            color={activeTab === 'profile' ? colors.tabBarActiveColor : colors.tabBarInactiveColor}
           />
-          <Text style={[styles.tabLabel, { color: activeTab === 'profile' ? '#6366F1' : '#94A3B8' }]}>
+          <Text style={[styles.tabLabel, { color: activeTab === 'profile' ? colors.tabBarActiveColor : colors.tabBarInactiveColor }]}>
             Profile
           </Text>
         </TouchableOpacity>
@@ -95,11 +99,13 @@ function NavigationRoot() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <SettingsProvider>
-        <AuthProvider>
-          <NavigationRoot />
-        </AuthProvider>
-      </SettingsProvider>
+      <ThemeProvider>
+        <SettingsProvider>
+          <AuthProvider>
+            <NavigationRoot />
+          </AuthProvider>
+        </SettingsProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

@@ -58,3 +58,21 @@ export async function getSetting(key: string, defaultValue: boolean): Promise<bo
     }
     return val !== null ? val === 'true' : defaultValue;
 }
+
+export async function saveStringSetting(key: string, value: string) {
+    if (Platform.OS === 'web') {
+        localStorage.setItem(key, value);
+        return;
+    }
+    await SecureStore.setItemAsync(key, value);
+}
+
+export async function getStringSetting(key: string, defaultValue: string): Promise<string> {
+    let val: string | null = null;
+    if (Platform.OS === 'web') {
+        val = localStorage.getItem(key);
+    } else {
+        val = await SecureStore.getItemAsync(key);
+    }
+    return val !== null ? val : defaultValue;
+}

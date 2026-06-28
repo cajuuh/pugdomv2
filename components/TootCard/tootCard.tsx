@@ -5,6 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as WebBrowser from 'expo-web-browser';
 import { Status, CustomEmoji, Attachment } from '../../services/mastodon/types';
 import { useSettings } from '../../services/settingsContext';
+import { useTheme } from '../../services/themeContext';
 import { styles } from './styles';
 
 const stripHtml = (html: string) => {
@@ -87,6 +88,7 @@ interface TootCardProps {
 
 export const TootCard: React.FC<TootCardProps> = ({ status }) => {
     const { compactMode } = useSettings();
+    const { colors } = useTheme();
     const isReblog = !!status.reblog;
     const targetStatus = isReblog ? status.reblog! : status;
 
@@ -148,12 +150,16 @@ export const TootCard: React.FC<TootCardProps> = ({ status }) => {
     };
 
     return (
-        <View style={[styles.cardContainer, compactMode && { padding: 10, marginVertical: 4, marginHorizontal: 12, borderRadius: 10 }]}>
+        <View style={[
+            styles.cardContainer,
+            { backgroundColor: colors.cardBackground, borderColor: colors.borderColor },
+            compactMode && { padding: 10, marginVertical: 4, marginHorizontal: 12, borderRadius: 10 }
+        ]}>
             {/* boost header */}
             {isReblog && (
                 <View style={styles.boostedHeader}>
-                    <Ionicons name="repeat" size={14} color="#94A3B8" />
-                    <Text style={styles.boostedText}>
+                    <Ionicons name="repeat" size={14} color={colors.textMuted} />
+                    <Text style={[styles.boostedText, { color: colors.textMuted }]}>
                         {status.account.display_name || status.account.username} boosted
                     </Text>
                 </View>
@@ -167,25 +173,25 @@ export const TootCard: React.FC<TootCardProps> = ({ status }) => {
                             {renderTextWithEmojis(
                                 targetStatus.account.display_name || targetStatus.account.username,
                                 targetStatus.account.emojis,
-                                [styles.displayName, compactMode && { fontSize: 13 }]
+                                [styles.displayName, { color: colors.textPrimary }, compactMode && { fontSize: 13 }]
                             )}
                         </View>
-                        <Text style={styles.username} numberOfLines={1}>
+                        <Text style={[styles.username, { color: colors.textSecondary }]} numberOfLines={1}>
                             @{targetStatus.account.username}
                         </Text>
                     </View>
                 </View>
-                <Text style={styles.timeText}>{getRelativeTime(targetStatus.created_at)}</Text>
+                <Text style={[styles.timeText, { color: colors.textMuted }]}>{getRelativeTime(targetStatus.created_at)}</Text>
             </View>
             {targetStatus.sensitive && targetStatus.spoiler_text && (
-                <View style={styles.spoilerContainer}>
-                    <Text style={styles.spoilerText} numberOfLines={1}>
+                <View style={[styles.spoilerContainer, { backgroundColor: colors.background, borderColor: colors.borderColor }]}>
+                    <Text style={[styles.spoilerText, { color: colors.textPrimary }]} numberOfLines={1}>
                         CW: {targetStatus.spoiler_text}
                     </Text>
                     <Button
                         label={isSpoilerCollapsed ? 'Show' : 'Hide'}
                         size={Button.sizes.xSmall}
-                        backgroundColor={isSpoilerCollapsed ? '#4F46E5' : '#475569'}
+                        backgroundColor={isSpoilerCollapsed ? colors.accentColor : colors.textMuted}
                         onPress={() => setIsSpoilerCollapsed(!isSpoilerCollapsed)}
                         labelStyle={styles.spoilerButtonLabel}
                     />
@@ -198,7 +204,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status }) => {
                     {renderTextWithEmojis(
                         stripHtml(targetStatus.content),
                         targetStatus.emojis,
-                        [styles.contentText, compactMode && { fontSize: 13, lineHeight: 18 }]
+                        [styles.contentText, { color: colors.textPrimary }, compactMode && { fontSize: 13, lineHeight: 18 }]
                     )}
                 </View>
             )}
@@ -211,7 +217,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status }) => {
             {/* link preview */}
             {(!targetStatus.sensitive || !isSpoilerCollapsed) && targetStatus.card && (
                 <TouchableOpacity
-                    style={styles.linkPreviewContainer}
+                    style={[styles.linkPreviewContainer, { backgroundColor: colors.background, borderColor: colors.borderColor }]}
                     onPress={() => handlePressCard(targetStatus.card!.url)}
                 >
                     {targetStatus.card.image && (
@@ -221,14 +227,14 @@ export const TootCard: React.FC<TootCardProps> = ({ status }) => {
                         />
                     )}
                     <View style={styles.linkPreviewContent}>
-                        <Text style={styles.linkPreviewProvider}>
+                        <Text style={[styles.linkPreviewProvider, { color: colors.accentColor }]}>
                             {targetStatus.card.provider_name || getDomainName(targetStatus.card.url)}
                         </Text>
-                        <Text style={styles.linkPreviewTitle} numberOfLines={2}>
+                        <Text style={[styles.linkPreviewTitle, { color: colors.textPrimary }]} numberOfLines={2}>
                             {targetStatus.card.title}
                         </Text>
                         {targetStatus.card.description ? (
-                            <Text style={styles.linkPreviewDescription} numberOfLines={2}>
+                            <Text style={[styles.linkPreviewDescription, { color: colors.textSecondary }]} numberOfLines={2}>
                                 {targetStatus.card.description}
                             </Text>
                         ) : null}
@@ -237,27 +243,27 @@ export const TootCard: React.FC<TootCardProps> = ({ status }) => {
             )}
 
             {/* action buttons */}
-            <View style={styles.actionRow}>
+            <View style={[styles.actionRow, { borderTopColor: colors.borderColor }]}>
                 {/* TODO: add reply action */}
                 <TouchableOpacity style={styles.actionButton}>
-                    <Ionicons name="chatbubble-outline" size={18} color="#64748B" />
-                    <Text style={styles.actionCount}>{targetStatus.replies_count || 0}</Text>
+                    <Ionicons name="chatbubble-outline" size={18} color={colors.textMuted} />
+                    <Text style={[styles.actionCount, { color: colors.textMuted }]}>{targetStatus.replies_count || 0}</Text>
                 </TouchableOpacity>
                 {/* reblog */}
                 <TouchableOpacity style={styles.actionButton} onPress={toggleReblog}>
-                    <Ionicons name="repeat" size={18} color={isReblogged ? '#10B981' : '#64748B'} />
-                    <Text style={[styles.actionCount, isReblogged && { color: '#10B981' }]}>
+                    <Ionicons name="repeat" size={18} color={isReblogged ? '#10B981' : colors.textMuted} />
+                    <Text style={[styles.actionCount, { color: isReblogged ? '#10B981' : colors.textMuted }]}>
                         {boostCount || 0}
                     </Text>
                 </TouchableOpacity>
                 {/* favourite */}
                 <TouchableOpacity style={styles.actionButton} onPress={toggleFavorite}>
-                    <Ionicons name={isFavorited ? 'heart' : 'heart-outline'} size={18} color={isFavorited ? '#EF4444' : '#64748B'} />
-                    <Text style={[styles.actionCount, isFavorited && { color: '#EF4444' }]}>{favCount || 0}</Text>
+                    <Ionicons name={isFavorited ? 'heart' : 'heart-outline'} size={18} color={isFavorited ? '#EF4444' : colors.textMuted} />
+                    <Text style={[styles.actionCount, { color: isFavorited ? '#EF4444' : colors.textMuted }]}>{favCount || 0}</Text>
                 </TouchableOpacity>
                 {/* share */}
                 <TouchableOpacity style={styles.actionButton}>
-                    <Ionicons name="share-social-outline" size={18} color="#64748B" />
+                    <Ionicons name="share-social-outline" size={18} color={colors.textMuted} />
                 </TouchableOpacity>
             </View>
         </View>
