@@ -7,6 +7,7 @@ export interface CreateStatusParams {
     sensitive?: boolean;
     spoiler_text?: string;
     visibility?: 'public' | 'unlisted' | 'private' | 'direct';
+    language?: string;
 }
 
 export async function createStatus(params: CreateStatusParams): Promise<Status> {

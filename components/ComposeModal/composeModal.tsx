@@ -9,9 +9,9 @@ import {
     DeviceEventEmitter,
     Alert,
     Platform,
-    KeyboardAvoidingView
+    KeyboardAvoidingView,
+    SafeAreaView
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, Avatar } from 'react-native-ui-lib';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useCompose } from '../../services/composeContext';
@@ -29,15 +29,27 @@ const stripHtml = (html: string) => {
         .trim();
 };
 
+const LANGUAGES = [
+    { code: 'en', label: 'English', flag: '🇺🇸' },
+    { code: 'pt', label: 'Português', flag: '🇧🇷' },
+    { code: 'es', label: 'Español', flag: '🇪🇸' },
+    { code: 'fr', label: 'Français', flag: '🇫🇷' },
+    { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
+];
+
 const ComposeModal: React.FC = () => {
     const { isOpen, replyToStatus, closeCompose } = useCompose();
     const { user } = useAuth();
-    const { colors, isDark } = useTheme();
+    const { colors } = useTheme();
 
     const [text, setText] = useState('');
     const [sensitive, setSensitive] = useState(false);
     const [spoilerText, setSpoilerText] = useState('');
     const [loading, setLoading] = useState(false);
+    
+    // Helper States
+    const [language, setLanguage] = useState('en');
+    const [langModalVisible, setLangModalVisible] = useState(false);
 
     const inputRef = useRef<TextInput>(null);
 
@@ -50,9 +62,10 @@ const ComposeModal: React.FC = () => {
             }
             setSensitive(false);
             setSpoilerText('');
+            setLanguage('en');
             setLoading(false);
             
-            // Short delay to ensure modal is mounted before focusing
+            // Focus on mount/open
             const timer = setTimeout(() => {
                 inputRef.current?.focus();
             }, 150);
@@ -76,6 +89,11 @@ const ComposeModal: React.FC = () => {
         counterColor = colors.dangerColor; // Error red
     }
 
+    const insertSymbol = (symbol: string) => {
+        setText(prev => prev + symbol);
+        inputRef.current?.focus();
+    };
+
     const handlePublish = async () => {
         if (isPublishDisabled) return;
         setLoading(true);
@@ -85,6 +103,7 @@ const ComposeModal: React.FC = () => {
                 in_reply_to_id: replyToStatus ? replyToStatus.id : null,
                 sensitive,
                 spoiler_text: sensitive ? spoilerText : undefined,
+                language: language,
             });
 
             DeviceEventEmitter.emit('status_published');
@@ -137,6 +156,43 @@ const ComposeModal: React.FC = () => {
                                 <Text style={[styles.publishButtonText, { color: '#FFFFFF' }]}>Post</Text>
                             )}
                         </TouchableOpacity>
+                    </View>
+
+                    {/* Helper Input Bar (notch safe, under header) */}
+                    <View style={[styles.helperBar, { backgroundColor: colors.cardBackground, borderBottomColor: colors.borderColor }]}>
+                        <TouchableOpacity
+                            style={[styles.helperButton, { backgroundColor: colors.background, borderColor: colors.borderColor }]}
+                            onPress={() => insertSymbol('#')}
+                            activeOpacity={0.7}
+                        >
+                            <Text style={[styles.helperButtonText, { color: colors.accentColor }]}>#</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.helperButton, { backgroundColor: colors.background, borderColor: colors.borderColor }]}
+                            onPress={() => insertSymbol('@')}
+                            activeOpacity={0.7}
+                        >
+                            <Text style={[styles.helperButtonText, { color: colors.accentColor }]}>@</Text>
+                        </TouchableOpacity>
+
+                        {/* Language Selector Pill */}
+                        {(() => {
+                            const selectedLang = LANGUAGES.find(l => l.code === language) || LANGUAGES[0];
+                            return (
+                                <TouchableOpacity
+                                    style={[styles.langPill, { backgroundColor: colors.background, borderColor: colors.borderColor }]}
+                                    onPress={() => setLangModalVisible(true)}
+                                    activeOpacity={0.7}
+                                >
+                                    <Text style={{ fontSize: 13 }}>{selectedLang.flag}</Text>
+                                    <Text style={[styles.langPillText, { color: colors.textPrimary }]}>
+                                        {selectedLang.code.toUpperCase()}
+                                    </Text>
+                                    <Ionicons name="chevron-down" size={12} color={colors.textSecondary} />
+                                </TouchableOpacity>
+                            );
+                        })()}
                     </View>
 
                     {/* Editor Space */}
@@ -207,7 +263,7 @@ const ComposeModal: React.FC = () => {
                             multiline={true}
                             value={text}
                             onChangeText={setText}
-                            maxLength={600} // Give slightly more than limit so user sees overflow count
+                            maxLength={600}
                         />
 
                         {/* Composer settings / toggles */}
@@ -237,6 +293,51 @@ const ComposeModal: React.FC = () => {
                     </View>
                 </KeyboardAvoidingView>
             </SafeAreaView>
+
+            {/* Language Selection Modal Sheet */}
+            <Modal
+                visible={langModalVisible}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={() => setLangModalVisible(false)}
+            >
+                <TouchableOpacity
+                    style={styles.langModalContainer}
+                    activeOpacity={1}
+                    onPress={() => setLangModalVisible(false)}
+                >
+                    <View style={[styles.langSheet, { backgroundColor: colors.cardBackground }]}>
+                        <View style={styles.langSheetHeader}>
+                            <Text style={[styles.langSheetTitle, { color: colors.textPrimary }]}>
+                                Select Post Language
+                            </Text>
+                            <TouchableOpacity onPress={() => setLangModalVisible(false)}>
+                                <Ionicons name="close" size={22} color={colors.textPrimary} />
+                            </TouchableOpacity>
+                        </View>
+                        {LANGUAGES.map((item) => (
+                            <TouchableOpacity
+                                key={item.code}
+                                style={[
+                                    styles.langOption,
+                                    { backgroundColor: language === item.code ? colors.background : 'transparent' }
+                                ]}
+                                onPress={() => {
+                                    setLanguage(item.code);
+                                    setLangModalVisible(false);
+                                }}
+                            >
+                                <Text style={[styles.langOptionText, { color: colors.textPrimary }]}>
+                                    {item.flag}   {item.label}
+                                </Text>
+                                {language === item.code && (
+                                    <Ionicons name="checkmark-sharp" size={18} color={colors.accentColor} />
+                                )}
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </TouchableOpacity>
+            </Modal>
         </Modal>
     );
 };

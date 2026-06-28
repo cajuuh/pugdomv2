@@ -42,6 +42,89 @@ export const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: 'bold',
     },
+    /* Helpers Bar under header */
+    helperBar: {
+        height: 48,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        borderBottomWidth: 1,
+        gap: 12,
+    },
+    helperButton: {
+        width: 34,
+        height: 34,
+        borderRadius: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+    },
+    helperButtonText: {
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    langPill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 16,
+        borderWidth: 1,
+        marginLeft: 'auto', // push to the right
+        gap: 4,
+    },
+    langPillText: {
+        fontSize: 12,
+        fontWeight: 'bold',
+    },
+    /* Language Dialog Dropdown */
+    langModalContainer: {
+        flex: 1,
+        justifyContent: 'flex-end',
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    },
+    langSheet: {
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        paddingVertical: 20,
+        paddingHorizontal: 16,
+        maxHeight: '60%',
+        ...Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: -4 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+            },
+            android: {
+                elevation: 10,
+            }
+        })
+    },
+    langSheetHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+        paddingHorizontal: 4,
+    },
+    langSheetTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    langOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 14,
+        paddingHorizontal: 12,
+        borderRadius: 10,
+        marginVertical: 2,
+    },
+    langOptionText: {
+        fontSize: 15,
+        fontWeight: '600',
+    },
     scrollContainer: {
         flex: 1,
     },
@@ -96,7 +179,7 @@ export const styles = StyleSheet.create({
         fontSize: 14,
     },
     textArea: {
-        minHeight: 120,
+        minHeight: 150,
         fontSize: 16,
         lineHeight: 22,
         textAlignVertical: 'top',
