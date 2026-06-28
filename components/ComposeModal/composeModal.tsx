@@ -8,9 +8,9 @@ import {
     DeviceEventEmitter,
     Alert,
     Platform,
-    KeyboardAvoidingView,
-    SafeAreaView
+    KeyboardAvoidingView
 } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, Avatar } from 'react-native-ui-lib';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useCompose } from '../../services/composeContext';
@@ -120,7 +120,8 @@ const ComposeModal: React.FC = () => {
             presentationStyle="fullScreen"
             onRequestClose={closeCompose}
         >
-            <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+            <SafeAreaProvider>
+                <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
                 <KeyboardAvoidingView 
                     behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
                     style={{ flex: 1 }}
@@ -277,6 +278,7 @@ const ComposeModal: React.FC = () => {
                     </View>
                 </KeyboardAvoidingView>
             </SafeAreaView>
+        </SafeAreaProvider>
 
             {/* Language Selection Modal Sheet */}
             <Modal
