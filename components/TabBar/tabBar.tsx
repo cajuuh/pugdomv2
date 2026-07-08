@@ -6,8 +6,8 @@ import { useCompose } from '../../services/composeContext';
 import { styles } from './styles';
 
 interface TabBarProps {
-    activeTab: 'home' | 'profile';
-    onTabPress: (tab: 'home' | 'profile') => void;
+    activeTab: 'home' | 'notifications' | 'profile';
+    onTabPress: (tab: 'home' | 'notifications' | 'profile') => void;
 }
 
 export const TabBar: React.FC<TabBarProps> = ({ activeTab, onTabPress }) => {
@@ -29,6 +29,22 @@ export const TabBar: React.FC<TabBarProps> = ({ activeTab, onTabPress }) => {
                 />
                 <Text style={[styles.tabLabel, { color: activeTab === 'home' ? colors.tabBarActiveColor : colors.tabBarInactiveColor }]}>
                     Home
+                </Text>
+            </TouchableOpacity>
+
+            {/* Notifications Tab */}
+            <TouchableOpacity
+                onPress={() => onTabPress('notifications')}
+                style={styles.tabItem}
+                activeOpacity={0.7}
+            >
+                <Ionicons
+                    name={activeTab === 'notifications' ? 'notifications' : 'notifications-outline'}
+                    size={22}
+                    color={activeTab === 'notifications' ? colors.tabBarActiveColor : colors.tabBarInactiveColor}
+                />
+                <Text style={[styles.tabLabel, { color: activeTab === 'notifications' ? colors.tabBarActiveColor : colors.tabBarInactiveColor }]}>
+                    Alerts
                 </Text>
             </TouchableOpacity>
 

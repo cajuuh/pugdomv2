@@ -10,6 +10,7 @@ import { ComposeProvider } from './services/composeContext';
 import Login from './screens/Login/login';
 import Profile from './screens/Profile/profile';
 import Timeline from './screens/Timeline/timeline';
+import Notifications from './screens/Notifications/notifications';
 import { TopBar } from './components/TopBar/topBar';
 import { TabBar } from './components/TabBar/tabBar';
 import Settings from './screens/Settings/settings';
@@ -18,7 +19,7 @@ import Thread from './screens/Thread/thread';
 function NavigationRoot() {
   const { user, loading, logout } = useAuth();
   const { colors, isDark } = useTheme();
-  const [activeTab, setActiveTab] = useState<'home' | 'profile'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'notifications' | 'profile'>('home');
   const [currentScreen, setCurrentScreen] = useState<'main' | 'settings' | 'thread'>('main');
   const [threadStatusId, setThreadStatusId] = useState<string | null>(null);
 
@@ -83,7 +84,9 @@ function NavigationRoot() {
 
       {/* Screen content area */}
       <View flex>
-        {activeTab === 'home' ? <Timeline onStatusPress={openThread} /> : <Profile />}
+        {activeTab === 'home' && <Timeline onStatusPress={openThread} />}
+        {activeTab === 'notifications' && <Notifications onStatusPress={openThread} />}
+        {activeTab === 'profile' && <Profile />}
       </View>
       {/* Custom Tab Bar */}
       <TabBar activeTab={activeTab} onTabPress={setActiveTab} />
