@@ -6,3 +6,10 @@ export async function fetchHomeTimeline(maxId?: string) {
     });
     return response.data;
 }
+
+export async function fetchPublicTimeline(maxId?: string, local?: boolean) {
+    const response = await apiClient.get('/timelines/public', {
+        params: { max_id: maxId, local: local ? true : undefined },
+    });
+    return response.data;
+}
