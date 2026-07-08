@@ -3,7 +3,7 @@ import { Alert, Image as RNImage } from 'react-native';
 import { Avatar, View, Text, Button, Image, TouchableOpacity } from 'react-native-ui-lib';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as WebBrowser from 'expo-web-browser';
-import RenderHtml from 'react-native-render-html';
+import RenderHtml, { HTMLElementModel, HTMLContentModel } from 'react-native-render-html';
 import { useWindowDimensions } from 'react-native';
 import ImageViewing from 'react-native-image-viewing';
 import { Status, CustomEmoji, Attachment } from '../../services/mastodon/types';
@@ -13,6 +13,29 @@ import { useCompose } from '../../services/composeContext';
 import { styles } from './styles';
 import { favouriteStatus, unfavouriteStatus, reblogStatus, unreblogStatus } from '../../services/mastodon/statuses';
 import { Poll } from '../Poll/poll';
+import { renderTextWithEmojis } from '../../utils/textUtils';
+
+const customHTMLElementModels = {
+    emoji: HTMLElementModel.fromCustomModel({
+        tagName: 'emoji',
+        mixedUAStyles: {
+            width: 16,
+            height: 16,
+        },
+        contentModel: HTMLContentModel.textual
+    })
+};
+
+const renderers = {
+    emoji: ({ tnode }: any) => {
+        return (
+            <RNImage
+                source={{ uri: tnode.attributes.src }}
+                style={{ width: 16, height: 16, resizeMode: 'contain', marginHorizontal: 2 }}
+            />
+        );
+    }
+};
 
 const StatusHtmlContent = React.memo(({ content, emojis, colors, compactMode, width, onPressMention, onPressHashtag, onPressLink }: any) => {
     const renderersProps = React.useMemo(() => ({
@@ -61,7 +84,7 @@ const StatusHtmlContent = React.memo(({ content, emojis, colors, compactMode, wi
         if (emojis && emojis.length > 0) {
             emojis.forEach((emoji: CustomEmoji) => {
                 const regex = new RegExp(`:${emoji.shortcode}:`, 'g');
-                html = html.replace(regex, `<img src="${emoji.url}" style="width: 16px; height: 16px; vertical-align: middle;" />`);
+                html = html.replace(regex, `<emoji src="${emoji.url}" />`);
             });
         }
         return html;
@@ -73,6 +96,8 @@ const StatusHtmlContent = React.memo(({ content, emojis, colors, compactMode, wi
             source={{ html: processedHtml }}
             tagsStyles={tagsStyles}
             renderersProps={renderersProps}
+            customHTMLElementModels={customHTMLElementModels}
+            renderers={renderers}
         />
     );
 });
@@ -106,41 +131,7 @@ const getDomainName = (urlStr: string) => {
     }
 };
 
-export const renderTextWithEmojis = (
-    text: string,
-    emojis: CustomEmoji[],
-    textStyle: any,
-    emojiSize: number = 16
-) => {
-    if (!text) {
-        return null;
-    } else if (!emojis || emojis.length === 0) {
-        return <Text style={textStyle}>{text}</Text>;
-    }
 
-    const parts = text.split(/(:\w+:)/g);
-
-    return (
-        <Text style={textStyle}>
-            {parts.map((part, index) => {
-                if (part.startsWith(':') && part.endsWith(':')) {
-                    const shortcode = part.slice(1, -1);
-                    const emoji = emojis.find((e) => e.shortcode === shortcode);
-                    if (emoji) {
-                        return (
-                            <RNImage
-                                key={index}
-                                source={{ uri: emoji.url }}
-                                style={{ width: emojiSize, height: emojiSize, resizeMode: 'contain' }}
-                            />
-                        );
-                    }
-                }
-                return <React.Fragment key={index}>{part}</React.Fragment>;
-            })}
-        </Text>
-    );
-};
 
 
 

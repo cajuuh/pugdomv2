@@ -13,7 +13,6 @@ import {
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, Avatar } from 'react-native-ui-lib';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useCompose } from '../../services/composeContext';
 import { useAuth } from '../../services/authContext';
 import { useTheme } from '../../services/themeContext';
 import { createStatus } from '../../services/mastodon/statuses';
@@ -36,8 +35,15 @@ const LANGUAGES = [
     { code: 'de-DE', label: 'Deutsch (Deutschland)' },
 ];
 
-const ComposeModal: React.FC = () => {
-    const { isOpen, replyToStatus, closeCompose } = useCompose();
+import { Status } from '../../services/mastodon/types';
+
+interface ComposeModalProps {
+    isOpen: boolean;
+    replyToStatus: Status | null;
+    closeCompose: () => void;
+}
+
+const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, closeCompose }) => {
     const { user } = useAuth();
     const { colors } = useTheme();
 
