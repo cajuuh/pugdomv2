@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { FlatList, ActivityIndicator, RefreshControl, StyleSheet, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, RefreshControl, StyleSheet, TouchableOpacity } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { View, Text } from 'react-native-ui-lib';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { getStatus, getStatusContext } from '../../services/mastodon/statuses';
@@ -63,7 +64,8 @@ export default function Thread({ statusId, onBack, onStatusPress }: ThreadProps)
                     <ActivityIndicator size="large" color={colors.accentColor} />
                 </View>
             ) : (
-                <FlatList
+                <FlashList
+                    estimatedItemSize={200}
                     data={statuses}
                     keyExtractor={(item, index) => item.id + index}
                     renderItem={({ item }) => (

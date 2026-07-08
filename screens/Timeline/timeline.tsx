@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { FlatList, ActivityIndicator, RefreshControl, DeviceEventEmitter } from 'react-native';
+import { ActivityIndicator, RefreshControl, DeviceEventEmitter } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { View, Text, SegmentedControl } from 'react-native-ui-lib';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTimeline } from '../../hooks/useTimeline';
@@ -96,7 +97,8 @@ const Timeline = ({ onStatusPress }: TimelineProps) => {
                     <ActivityIndicator size={'large'} color={colors.accentColor} />
                 </View>
             ) : (
-                <FlatList
+                <FlashList
+                    estimatedItemSize={200}
                     data={statuses}
                     keyExtractor={(item) => item.id}
                     renderItem={({ item }) => <TootCard status={item} onPress={() => onStatusPress?.(item.id)} />}

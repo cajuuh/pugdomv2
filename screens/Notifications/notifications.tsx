@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { FlatList, ActivityIndicator, RefreshControl, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, RefreshControl, TouchableOpacity } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { View, Text, Avatar, Button } from 'react-native-ui-lib';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { fetchNotifications } from '../../services/mastodon/notifications';
@@ -181,7 +182,8 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
 
     return (
         <View flex style={[styles.container, { backgroundColor: colors.background }]}>
-            <FlatList
+            <FlashList
+                estimatedItemSize={150}
                 data={notifications}
                 keyExtractor={(item) => item.id}
                 renderItem={renderNotification}

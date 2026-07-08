@@ -1163,6 +1163,11 @@
     invariant "^2.2.4"
     nullthrows "^1.1.1"
 
+"@shopify/flash-list@^2.3.2":
+  version "2.3.2"
+  resolved "https://registry.yarnpkg.com/@shopify/flash-list/-/flash-list-2.3.2.tgz#d96a00f2195629b070117f1eaabc12f8b25be8f1"
+  integrity sha512-vQnd0y0Ag11yzS30llaeCrtIU3xYTMe7KEOP3dveLImnVjQEUw6BEg1+Ztja6aODlVNz1BpvxtlQ5eZGxiLwKw==
+
 "@sinclair/typebox@^0.27.8":
   version "0.27.10"
   resolved "https://registry.npmjs.org/@sinclair/typebox/-/typebox-0.27.10.tgz"
