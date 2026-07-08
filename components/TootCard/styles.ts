@@ -15,6 +15,10 @@ export const styles = StyleSheet.create({
         marginBottom: 8,
         gap: 6
     },
+    boostedAvatar: {
+        marginHorizontal: 6,
+        borderRadius: 9
+    },
     boostedText: {
         fontSize: 12,
         color: '#94A3B8',
