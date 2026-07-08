@@ -10,13 +10,79 @@ import { useCompose } from '../../services/composeContext';
 import { styles } from './styles';
 import { favouriteStatus, unfavouriteStatus, reblogStatus, unreblogStatus } from '../../services/mastodon/statuses';
 
-const stripHtml = (html: string) => {
-    if (!html) return '';
-    return html
+type ParsedPart = {
+    type: 'text' | 'link' | 'mention' | 'hashtag';
+    content: string;
+    href?: string;
+    acct?: string;
+    tag?: string;
+};
+
+export const parseStatusHtml = (html: string): ParsedPart[] => {
+    if (!html) return [];
+    
+    let text = html
         .replace(/<br\s*\/?>/gi, '\n')
         .replace(/<\/p>/gi, '\n\n')
-        .replace(/<[^>]*>/g, '')
+        .replace(/<p>/gi, '')
         .trim();
+        
+    const parts: ParsedPart[] = [];
+    const anchorRegex = /<a\s+([^>]+)>(.*?)<\/a>/gi;
+    let match;
+    let lastIndex = 0;
+
+    while ((match = anchorRegex.exec(text)) !== null) {
+        if (match.index > lastIndex) {
+            const plainText = text.substring(lastIndex, match.index).replace(/<[^>]*>/g, '');
+            if (plainText) {
+                parts.push({ type: 'text', content: plainText });
+            }
+        }
+
+        const attributesString = match[1];
+        const innerHtml = match[2];
+
+        const hrefMatch = attributesString.match(/href="([^"]*)"/i);
+        const href = hrefMatch ? hrefMatch[1] : '';
+
+        const classMatch = attributesString.match(/class="([^"]*)"/i);
+        const className = classMatch ? classMatch[1] : '';
+
+        let innerText = innerHtml;
+        if (!className.includes('mention') && !className.includes('hashtag')) {
+           innerText = innerText.replace(/<span class="invisible">.*?<\/span>/gi, '');
+        }
+        innerText = innerText.replace(/<[^>]*>/g, '');
+
+        let type: ParsedPart['type'] = 'link';
+        let acct: string | undefined;
+        let tag: string | undefined;
+
+        if (className.includes('mention')) {
+            type = 'mention';
+            acct = innerText.replace(/^@/, '');
+        } else if (className.includes('hashtag')) {
+            type = 'hashtag';
+            tag = innerText.replace(/^#/, '');
+        }
+
+        parts.push({ type, href, content: innerText, acct, tag });
+        lastIndex = anchorRegex.lastIndex;
+    }
+
+    if (lastIndex < text.length) {
+        const plainText = text.substring(lastIndex).replace(/<[^>]*>/g, '');
+        if (plainText) {
+            parts.push({ type: 'text', content: plainText });
+        }
+    }
+
+    if (parts.length === 0) {
+        parts.push({ type: 'text', content: text.replace(/<[^>]*>/g, '') });
+    }
+
+    return parts;
 };
 
 const getRelativeTime = (dateString: string) => {
@@ -84,11 +150,62 @@ export const renderTextWithEmojis = (
     );
 };
 
+export const renderStatusContent = (
+    html: string,
+    emojis: CustomEmoji[],
+    textStyle: any,
+    linkStyle: any,
+    onPressLink: (part: ParsedPart) => void
+) => {
+    const parts = parseStatusHtml(html);
+    return (
+        <Text style={textStyle}>
+            {parts.map((part, index) => {
+                const emojiRegex = /(:[a-zA-Z0-9_]+:)/g;
+                const tokens = part.content.split(emojiRegex);
+                
+                const contentNodes = tokens.map((token, tIndex) => {
+                    if (token.startsWith(':') && token.endsWith(':')) {
+                        const shortcode = token.slice(1, -1);
+                        const emoji = emojis?.find((e) => e.shortcode === shortcode);
+                        if (emoji) {
+                            return (
+                                <RNImage
+                                    key={`emoji-${index}-${tIndex}`}
+                                    source={{ uri: emoji.url }}
+                                    style={{ width: 16, height: 16, resizeMode: 'contain' }}
+                                />
+                            );
+                        }
+                    }
+                    return <React.Fragment key={`text-${index}-${tIndex}`}>{token}</React.Fragment>;
+                });
+
+                if (part.type === 'text') {
+                    return <React.Fragment key={`part-${index}`}>{contentNodes}</React.Fragment>;
+                } else {
+                    return (
+                        <Text 
+                            key={`part-${index}`} 
+                            style={linkStyle} 
+                            onPress={() => onPressLink(part)}
+                        >
+                            {contentNodes}
+                        </Text>
+                    );
+                }
+            })}
+        </Text>
+    );
+};
+
 interface TootCardProps {
     status: Status;
+    onPressMention?: (acct: string) => void;
+    onPressHashtag?: (hashtag: string) => void;
 }
 
-export const TootCard: React.FC<TootCardProps> = ({ status }) => {
+export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPressHashtag }) => {
     const { compactMode } = useSettings();
     const { colors } = useTheme();
     const { openCompose } = useCompose();
@@ -234,10 +351,22 @@ export const TootCard: React.FC<TootCardProps> = ({ status }) => {
             {/* content text */}
             {(!targetStatus.sensitive || !isSpoilerCollapsed) && (
                 <View style={styles.contentContainer}>
-                    {renderTextWithEmojis(
-                        stripHtml(targetStatus.content),
+                    {renderStatusContent(
+                        targetStatus.content,
                         targetStatus.emojis,
-                        [styles.contentText, { color: colors.textPrimary }, compactMode && { fontSize: 13, lineHeight: 18 }]
+                        [styles.contentText, { color: colors.textPrimary }, compactMode && { fontSize: 13, lineHeight: 18 }],
+                        { color: colors.accentColor },
+                        (part) => {
+                            if (part.type === 'mention') {
+                                if (onPressMention && part.acct) onPressMention(part.acct);
+                                else if (part.href) handlePressCard(part.href);
+                            } else if (part.type === 'hashtag') {
+                                if (onPressHashtag && part.tag) onPressHashtag(part.tag);
+                                else if (part.href) handlePressCard(part.href);
+                            } else if (part.href) {
+                                handlePressCard(part.href);
+                            }
+                        }
                     )}
                 </View>
             )}
