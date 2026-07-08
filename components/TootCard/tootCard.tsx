@@ -3,6 +3,8 @@ import { Alert, Image as RNImage } from 'react-native';
 import { Avatar, View, Text, Button, Image, TouchableOpacity } from 'react-native-ui-lib';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as WebBrowser from 'expo-web-browser';
+import RenderHtml from 'react-native-render-html';
+import { useWindowDimensions } from 'react-native';
 import { Status, CustomEmoji, Attachment } from '../../services/mastodon/types';
 import { useSettings } from '../../services/settingsContext';
 import { useTheme } from '../../services/themeContext';
@@ -10,80 +12,68 @@ import { useCompose } from '../../services/composeContext';
 import { styles } from './styles';
 import { favouriteStatus, unfavouriteStatus, reblogStatus, unreblogStatus } from '../../services/mastodon/statuses';
 
-type ParsedPart = {
-    type: 'text' | 'link' | 'mention' | 'hashtag';
-    content: string;
-    href?: string;
-    acct?: string;
-    tag?: string;
-};
-
-export const parseStatusHtml = (html: string): ParsedPart[] => {
-    if (!html) return [];
-    
-    let text = html
-        .replace(/<br\s*\/?>/gi, '\n')
-        .replace(/<\/p>/gi, '\n\n')
-        .replace(/<p>/gi, '')
-        .trim();
-        
-    const parts: ParsedPart[] = [];
-    const anchorRegex = /<a\s+([^>]+)>(.*?)<\/a>/gi;
-    let match;
-    let lastIndex = 0;
-
-    while ((match = anchorRegex.exec(text)) !== null) {
-        if (match.index > lastIndex) {
-            const plainText = text.substring(lastIndex, match.index).replace(/<[^>]*>/g, '');
-            if (plainText) {
-                parts.push({ type: 'text', content: plainText });
+const StatusHtmlContent = React.memo(({ content, emojis, colors, compactMode, width, onPressMention, onPressHashtag, onPressLink }: any) => {
+    const renderersProps = React.useMemo(() => ({
+        a: {
+            onPress: (event: any, href: string, htmlAttribs: any) => {
+                const className = htmlAttribs.class || '';
+                if (className.includes('mention')) {
+                    const acct = href.split('/').pop()?.replace(/^@/, '');
+                    if (onPressMention && acct) onPressMention(acct);
+                    else onPressLink(href);
+                } else if (className.includes('hashtag')) {
+                    const tag = href.split('/').pop()?.replace(/^#/, '');
+                    if (onPressHashtag && tag) onPressHashtag(tag);
+                    else onPressLink(href);
+                } else {
+                    onPressLink(href);
+                }
             }
         }
+    }), [onPressMention, onPressHashtag, onPressLink]);
 
-        const attributesString = match[1];
-        const innerHtml = match[2];
-
-        const hrefMatch = attributesString.match(/href="([^"]*)"/i);
-        const href = hrefMatch ? hrefMatch[1] : '';
-
-        const classMatch = attributesString.match(/class="([^"]*)"/i);
-        const className = classMatch ? classMatch[1] : '';
-
-        let innerText = innerHtml;
-        if (!className.includes('mention') && !className.includes('hashtag')) {
-           innerText = innerText.replace(/<span class="invisible">.*?<\/span>/gi, '');
+    const tagsStyles = React.useMemo(() => ({
+        body: {
+            color: colors.textPrimary,
+            fontSize: compactMode ? 13 : 15,
+            lineHeight: compactMode ? 18 : 22,
+        },
+        a: {
+            color: colors.accentColor,
+            textDecorationLine: 'none' as const,
+        },
+        p: {
+            marginTop: 0,
+            marginBottom: 10,
         }
-        innerText = innerText.replace(/<[^>]*>/g, '');
+    }), [colors, compactMode]);
 
-        let type: ParsedPart['type'] = 'link';
-        let acct: string | undefined;
-        let tag: string | undefined;
-
-        if (className.includes('mention')) {
-            type = 'mention';
-            acct = innerText.replace(/^@/, '');
-        } else if (className.includes('hashtag')) {
-            type = 'hashtag';
-            tag = innerText.replace(/^#/, '');
+    const processedHtml = React.useMemo(() => {
+        let html = content || '';
+        html = html.replace(/<span class="invisible">https?:\/\/<\/span>/gi, '');
+        html = html.replace(/<span class="invisible">.*?<\/span>/gi, (match) => {
+            const inner = match.replace(/<[^>]*>/g, '');
+            if (inner === '' || inner === '/') return inner;
+            return '...';
+        });
+        if (emojis && emojis.length > 0) {
+            emojis.forEach((emoji: CustomEmoji) => {
+                const regex = new RegExp(`:${emoji.shortcode}:`, 'g');
+                html = html.replace(regex, `<img src="${emoji.url}" style="width: 16px; height: 16px; vertical-align: middle;" />`);
+            });
         }
+        return html;
+    }, [content, emojis]);
 
-        parts.push({ type, href, content: innerText, acct, tag });
-        lastIndex = anchorRegex.lastIndex;
-    }
-
-    if (lastIndex < text.length) {
-        const plainText = text.substring(lastIndex).replace(/<[^>]*>/g, '');
-        if (plainText) {
-            parts.push({ type: 'text', content: plainText });
-        }
-    }
-
-    if (parts.length === 0) {
-        parts.push({ type: 'text', content: text.replace(/<[^>]*>/g, '') });
-    }
-
-    return parts;
-};
+    return (
+        <RenderHtml
+            contentWidth={width - (compactMode ? 44 : 64)}
+            source={{ html: processedHtml }}
+            tagsStyles={tagsStyles}
+            renderersProps={renderersProps}
+        />
+    );
+});
 
 const getRelativeTime = (dateString: string) => {
     const now = new Date();
@@ -150,54 +140,7 @@ export const renderTextWithEmojis = (
     );
 };
 
-export const renderStatusContent = (
-    html: string,
-    emojis: CustomEmoji[],
-    textStyle: any,
-    linkStyle: any,
-    onPressLink: (part: ParsedPart) => void
-) => {
-    const parts = parseStatusHtml(html);
-    return (
-        <Text style={textStyle}>
-            {parts.map((part, index) => {
-                const emojiRegex = /(:[a-zA-Z0-9_]+:)/g;
-                const tokens = part.content.split(emojiRegex);
-                
-                const contentNodes = tokens.map((token, tIndex) => {
-                    if (token.startsWith(':') && token.endsWith(':')) {
-                        const shortcode = token.slice(1, -1);
-                        const emoji = emojis?.find((e) => e.shortcode === shortcode);
-                        if (emoji) {
-                            return (
-                                <RNImage
-                                    key={`emoji-${index}-${tIndex}`}
-                                    source={{ uri: emoji.url }}
-                                    style={{ width: 16, height: 16, resizeMode: 'contain' }}
-                                />
-                            );
-                        }
-                    }
-                    return <React.Fragment key={`text-${index}-${tIndex}`}>{token}</React.Fragment>;
-                });
 
-                if (part.type === 'text') {
-                    return <React.Fragment key={`part-${index}`}>{contentNodes}</React.Fragment>;
-                } else {
-                    return (
-                        <Text 
-                            key={`part-${index}`} 
-                            style={linkStyle} 
-                            onPress={() => onPressLink(part)}
-                        >
-                            {contentNodes}
-                        </Text>
-                    );
-                }
-            })}
-        </Text>
-    );
-};
 
 interface TootCardProps {
     status: Status;
@@ -209,6 +152,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const { compactMode } = useSettings();
     const { colors } = useTheme();
     const { openCompose } = useCompose();
+    const { width } = useWindowDimensions();
     const isReblog = !!status.reblog;
     const targetStatus = isReblog ? status.reblog! : status;
 
@@ -351,23 +295,16 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             {/* content text */}
             {(!targetStatus.sensitive || !isSpoilerCollapsed) && (
                 <View style={styles.contentContainer}>
-                    {renderStatusContent(
-                        targetStatus.content,
-                        targetStatus.emojis,
-                        [styles.contentText, { color: colors.textPrimary }, compactMode && { fontSize: 13, lineHeight: 18 }],
-                        { color: colors.accentColor },
-                        (part) => {
-                            if (part.type === 'mention') {
-                                if (onPressMention && part.acct) onPressMention(part.acct);
-                                else if (part.href) handlePressCard(part.href);
-                            } else if (part.type === 'hashtag') {
-                                if (onPressHashtag && part.tag) onPressHashtag(part.tag);
-                                else if (part.href) handlePressCard(part.href);
-                            } else if (part.href) {
-                                handlePressCard(part.href);
-                            }
-                        }
-                    )}
+                    <StatusHtmlContent
+                        content={targetStatus.content}
+                        emojis={targetStatus.emojis}
+                        colors={colors}
+                        compactMode={compactMode}
+                        width={width}
+                        onPressMention={onPressMention}
+                        onPressHashtag={onPressHashtag}
+                        onPressLink={handlePressCard}
+                    />
                 </View>
             )}
 
