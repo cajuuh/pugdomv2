@@ -399,6 +399,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 onRequestClose={() => setIsImageViewerVisible(false)}
                 swipeToCloseEnabled={true}
                 doubleTapToZoomEnabled={true}
+                backgroundColor="rgba(0, 0, 0, 0.85)"
             />
         </CardContainer>
     );
