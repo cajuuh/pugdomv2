@@ -13,7 +13,7 @@ interface SettingsProps {
 }
 
 const Settings: React.FC<SettingsProps> = ({ onBack }) => {
-    const { user, logout } = useAuth();
+    const { user, logout, savedAccounts, switchAccount, setAddingAccount } = useAuth();
     const { colors, theme, setTheme } = useTheme();
     const {
         notifications,
@@ -36,17 +36,51 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
             </View>
 
             <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
-                {/* User Card */}
-                {user && (
-                    <Card style={[styles.userCard, { backgroundColor: colors.cardBackground, borderColor: colors.borderColor }]} enableShadow={false}>
-                        <Avatar source={{ uri: user.avatar }} size={60} containerStyle={[styles.userAvatar, { borderColor: colors.accentColor }]} />
-                        <View style={styles.userInfo}>
-                            <Text style={[styles.displayName, { color: colors.textPrimary }]}>{user.display_name || user.username}</Text>
-                            <Text style={[styles.username, { color: colors.textSecondary }]}>@{user.username}</Text>
-                            <Text style={[styles.instanceText, { color: colors.accentColor }]}>Authenticated Account</Text>
-                        </View>
-                    </Card>
-                )}
+                {/* Accounts Section */}
+                <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>ACCOUNTS</Text>
+                <Card style={[styles.settingsGroup, { backgroundColor: colors.cardBackground, borderColor: colors.borderColor }]} enableShadow={false}>
+                    {savedAccounts.map((account, index) => {
+                        const isActive = user?.id === account.userInfo.id;
+                        return (
+                            <React.Fragment key={account.id}>
+                                <TouchableOpacity 
+                                    style={styles.settingRow} 
+                                    activeOpacity={0.7}
+                                    onPress={() => !isActive && switchAccount(account.id)}
+                                >
+                                    <View style={styles.settingLeft}>
+                                        <Avatar source={{ uri: account.userInfo.avatar }} size={40} containerStyle={{ borderWidth: 1, borderColor: colors.borderColor, borderRadius: 20 }} />
+                                        <View style={{ marginLeft: 12, flex: 1 }}>
+                                            <Text style={[styles.settingLabel, { color: colors.textPrimary }]} numberOfLines={1}>
+                                                {account.userInfo.display_name || account.userInfo.username}
+                                            </Text>
+                                            <Text style={{ color: colors.textSecondary, fontSize: 12 }} numberOfLines={1}>
+                                                @{account.userInfo.acct} • {account.instanceUrl.replace(/^https?:\/\//, '')}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                    {isActive ? (
+                                        <Ionicons name="checkmark-circle" size={24} color={colors.accentColor} />
+                                    ) : (
+                                        <TouchableOpacity onPress={() => logout(account.id)} hitSlop={{top:10, bottom:10, left:10, right:10}}>
+                                            <Ionicons name="log-out-outline" size={20} color={colors.dangerColor} />
+                                        </TouchableOpacity>
+                                    )}
+                                </TouchableOpacity>
+                                <View style={[styles.divider, { backgroundColor: colors.borderColor }]} />
+                            </React.Fragment>
+                        );
+                    })}
+                    
+                    <TouchableOpacity 
+                        style={[styles.settingRow, { justifyContent: 'center' }]} 
+                        activeOpacity={0.7}
+                        onPress={() => setAddingAccount(true)}
+                    >
+                        <Ionicons name="add-circle-outline" size={20} color={colors.accentColor} style={{ marginRight: 8 }} />
+                        <Text style={[styles.settingLabel, { color: colors.accentColor }]}>Add Account</Text>
+                    </TouchableOpacity>
+                </Card>
 
                 {/* Preferences Section */}
                 <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>PREFERENCES</Text>

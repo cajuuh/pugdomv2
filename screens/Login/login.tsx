@@ -18,7 +18,11 @@ import { useAuth } from '../../services/authContext'
 // web browser helper to complete authorizations on Android/Web
 WebBrowser.maybeCompleteAuthSession();
 
-const Login = () => {
+interface LoginProps {
+    onCancel?: () => void;
+}
+
+const Login: React.FC<LoginProps> = ({ onCancel }) => {
     const [instance, setInstance] = useState<string>('');
     const [loading, setLoading] = useState<boolean>(false);
     const { login } = useAuth();
@@ -62,7 +66,7 @@ const Login = () => {
 
                 // get user information
                 const account = await getCurrentAccount();
-                login(account);
+                login(account, tokenData.access_token, formattedInstance);
             }
         } catch (error: any) {
             console.error(error);
@@ -93,12 +97,23 @@ const Login = () => {
             {loading ? (
                 <LoaderScreen message="Connecting to instance..." marginT-s5 messageStyle={{ color: '#94A3B8' }} />
             ) : (
-                <Button
-                    label="Login with Mastodon"
-                    marginT-s5
-                    onPress={handleLogin}
-                    backgroundColor={'#6366F1'}
-                />
+                <View width="100%">
+                    <Button
+                        label="Login with Mastodon"
+                        marginT-s5
+                        onPress={handleLogin}
+                        backgroundColor={'#6366F1'}
+                    />
+                    {onCancel && (
+                        <Button
+                            label="Cancel"
+                            marginT-s3
+                            onPress={onCancel}
+                            link
+                            color="#94A3B8"
+                        />
+                    )}
+                </View>
             )}
         </View>
     )

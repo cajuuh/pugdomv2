@@ -20,7 +20,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 const queryClient = new QueryClient();
 
 function NavigationRoot() {
-  const { user, loading, logout } = useAuth();
+  const { user, loading, logout, isAddingAccount, setAddingAccount } = useAuth();
   const { colors, isDark } = useTheme();
   const [activeTab, setActiveTab] = useState<'home' | 'notifications' | 'profile'>('home');
   const [currentScreen, setCurrentScreen] = useState<'main' | 'settings' | 'thread'>('main');
@@ -46,11 +46,11 @@ function NavigationRoot() {
     )
   }
 
-  if (!user) {
+  if (!user || isAddingAccount) {
     return (
       <View flex style={[styles.container, { backgroundColor: colors.background }]}>
         <StatusBar style={statusBarStyle} />
-        <Login />
+        <Login onCancel={isAddingAccount && user ? () => setAddingAccount(false) : undefined} />
       </View>
     );
   };
