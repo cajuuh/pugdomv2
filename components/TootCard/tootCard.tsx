@@ -92,7 +92,7 @@ const StatusHtmlContent = React.memo(({ content, emojis, colors, compactMode, wi
 
     return (
         <RenderHtml
-            contentWidth={width - (compactMode ? 44 : 64)}
+            contentWidth={width}
             source={{ html: processedHtml }}
             tagsStyles={tagsStyles}
             renderersProps={renderersProps}
@@ -140,9 +140,12 @@ interface TootCardProps {
     onPressMention?: (acct: string) => void;
     onPressHashtag?: (hashtag: string) => void;
     onPress?: () => void;
+    threadMode?: boolean;
+    hasThreadLineTop?: boolean;
+    hasThreadLineBottom?: boolean;
 }
 
-export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPressHashtag, onPress }) => {
+export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPressHashtag, onPress, threadMode, hasThreadLineTop, hasThreadLineBottom }) => {
     const { compactMode } = useSettings();
     const { colors } = useTheme();
     const { openCompose } = useCompose();
@@ -275,6 +278,11 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         );
     };
 
+    const avatarSize = compactMode ? 32 : 44;
+    const cardPadding = compactMode ? 10 : 16;
+    // contentWidth is screen width - card padding on both sides - avatar size - gap (10)
+    const contentWidth = width - (cardPadding * 2) - avatarSize - 10;
+
     const CardContainer = onPress ? TouchableOpacity : View;
 
     return (
@@ -283,7 +291,15 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             style={[
             styles.cardContainer,
             { backgroundColor: colors.cardBackground, borderColor: colors.borderColor },
-            compactMode && { padding: 10, marginVertical: 4, marginHorizontal: 12, borderRadius: 10 }
+            compactMode && { padding: 10, marginVertical: 4, marginHorizontal: 12, borderRadius: 10 },
+            threadMode && {
+                backgroundColor: 'transparent',
+                borderWidth: 0,
+                marginHorizontal: 0,
+                marginVertical: 0,
+                shadowOpacity: 0,
+                elevation: 0,
+            }
         ]}>
             {/* boost header */}
             {isReblog && (
@@ -294,120 +310,147 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     </Text>
                 </View>
             )}
-            {/* author */}
-            <View style={styles.headerRow}>
-                <View style={styles.userInfo}>
-                    <Avatar source={{ uri: targetStatus.account.avatar }} size={compactMode ? 32 : 44} />
-                    <View style={styles.namesContainer}>
-                        <View style={styles.nameRow}>
-                            {renderTextWithEmojis(
-                                targetStatus.account.display_name || targetStatus.account.username,
-                                targetStatus.account.emojis,
-                                [styles.displayName, { color: colors.textPrimary }, compactMode && { fontSize: 13 }]
-                            )}
-                        </View>
-                        <Text style={[styles.username, { color: colors.textSecondary }]} numberOfLines={1}>
-                            @{targetStatus.account.username}
-                        </Text>
-                    </View>
-                </View>
-                <Text style={[styles.timeText, { color: colors.textMuted }]}>{getRelativeTime(targetStatus.created_at)}</Text>
-            </View>
-            {targetStatus.sensitive && targetStatus.spoiler_text && (
-                <View style={[styles.spoilerContainer, { backgroundColor: colors.background, borderColor: colors.borderColor }]}>
-                    <Text style={[styles.spoilerText, { color: colors.textPrimary }]} numberOfLines={1}>
-                        CW: {targetStatus.spoiler_text}
-                    </Text>
-                    <Button
-                        label={isSpoilerCollapsed ? 'Show' : 'Hide'}
-                        size={Button.sizes.xSmall}
-                        backgroundColor={isSpoilerCollapsed ? colors.accentColor : colors.textMuted}
-                        onPress={() => setIsSpoilerCollapsed(!isSpoilerCollapsed)}
-                        labelStyle={styles.spoilerButtonLabel}
-                    />
-                </View>
-            )}
 
-            {/* content text */}
-            {(!targetStatus.sensitive || !isSpoilerCollapsed) && (
-                <View style={styles.contentContainer}>
-                    <StatusHtmlContent
-                        content={targetStatus.content}
-                        emojis={targetStatus.emojis}
-                        colors={colors}
-                        compactMode={compactMode}
-                        width={width}
-                        onPressMention={onPressMention}
-                        onPressHashtag={onPressHashtag}
-                        onPressLink={handlePressCard}
-                    />
-                </View>
-            )}
-
-            {/* poll */}
-            {(!targetStatus.sensitive || !isSpoilerCollapsed) && targetStatus.poll && (
-                <Poll initialPoll={targetStatus.poll} />
-            )}
-
-            {/* media */}
-            {(!targetStatus.sensitive || !isSpoilerCollapsed) && (
-                renderMedia(targetStatus.media_attachments)
-            )}
-
-            {/* link preview */}
-            {(!targetStatus.sensitive || !isSpoilerCollapsed) && targetStatus.card && (
-                <TouchableOpacity
-                    style={[styles.linkPreviewContainer, { backgroundColor: colors.background, borderColor: colors.borderColor }]}
-                    onPress={() => handlePressCard(targetStatus.card!.url)}
-                >
-                    {targetStatus.card.image && (
-                        <Image
-                            source={{ uri: targetStatus.card.image }}
-                            style={styles.linkPreviewImage}
-                        />
+            <View style={styles.mainRow}>
+                <View style={[styles.leftColumn, { width: avatarSize }]}>
+                    {threadMode && hasThreadLineTop && (
+                        <View style={{
+                            position: 'absolute',
+                            width: 2,
+                            backgroundColor: colors.borderColor,
+                            top: -cardPadding,
+                            height: cardPadding + avatarSize / 2,
+                            zIndex: -1
+                        }} />
                     )}
-                    <View style={styles.linkPreviewContent}>
-                        <Text style={[styles.linkPreviewProvider, { color: colors.accentColor }]}>
-                            {targetStatus.card.provider_name || getDomainName(targetStatus.card.url)}
-                        </Text>
-                        <Text style={[styles.linkPreviewTitle, { color: colors.textPrimary }]} numberOfLines={2}>
-                            {targetStatus.card.title}
-                        </Text>
-                        {targetStatus.card.description ? (
-                            <Text style={[styles.linkPreviewDescription, { color: colors.textSecondary }]} numberOfLines={2}>
-                                {targetStatus.card.description}
-                            </Text>
-                        ) : null}
-                    </View>
-                </TouchableOpacity>
-            )}
+                    {threadMode && hasThreadLineBottom && (
+                        <View style={{
+                            position: 'absolute',
+                            width: 2,
+                            backgroundColor: colors.borderColor,
+                            top: avatarSize / 2,
+                            bottom: -cardPadding,
+                            zIndex: -1
+                        }} />
+                    )}
+                    <Avatar source={{ uri: targetStatus.account.avatar }} size={avatarSize} />
+                </View>
 
-            {/* action buttons */}
-            <View style={[styles.actionRow, { borderTopColor: colors.borderColor }]}>
-                {/* reply action */}
-                <TouchableOpacity 
-                    style={styles.actionButton} 
-                    onPress={() => openCompose({ replyToStatus: targetStatus })}
-                >
-                    <Ionicons name="chatbubble-outline" size={18} color={colors.textMuted} />
-                    <Text style={[styles.actionCount, { color: colors.textMuted }]}>{targetStatus.replies_count || 0}</Text>
-                </TouchableOpacity>
-                {/* reblog */}
-                <TouchableOpacity style={styles.actionButton} onPress={toggleReblog}>
-                    <Ionicons name="repeat" size={18} color={isReblogged ? '#10B981' : colors.textMuted} />
-                    <Text style={[styles.actionCount, { color: isReblogged ? '#10B981' : colors.textMuted }]}>
-                        {boostCount || 0}
-                    </Text>
-                </TouchableOpacity>
-                {/* favourite */}
-                <TouchableOpacity style={styles.actionButton} onPress={toggleFavorite}>
-                    <Ionicons name={isFavorited ? 'heart' : 'heart-outline'} size={18} color={isFavorited ? '#EF4444' : colors.textMuted} />
-                    <Text style={[styles.actionCount, { color: isFavorited ? '#EF4444' : colors.textMuted }]}>{favCount || 0}</Text>
-                </TouchableOpacity>
-                {/* share */}
-                <TouchableOpacity style={styles.actionButton}>
-                    <Ionicons name="share-social-outline" size={18} color={colors.textMuted} />
-                </TouchableOpacity>
+                <View style={styles.rightColumn}>
+                    {/* author */}
+                    <View style={styles.headerRow}>
+                        <View style={styles.namesContainer}>
+                            <View style={styles.nameRow}>
+                                {renderTextWithEmojis(
+                                    targetStatus.account.display_name || targetStatus.account.username,
+                                    targetStatus.account.emojis,
+                                    [styles.displayName, { color: colors.textPrimary }, compactMode && { fontSize: 13 }]
+                                )}
+                            </View>
+                            <Text style={[styles.username, { color: colors.textSecondary }]} numberOfLines={1}>
+                                @{targetStatus.account.username}
+                            </Text>
+                        </View>
+                        <Text style={[styles.timeText, { color: colors.textMuted }]}>{getRelativeTime(targetStatus.created_at)}</Text>
+                    </View>
+                    
+                    {targetStatus.sensitive && targetStatus.spoiler_text && (
+                        <View style={[styles.spoilerContainer, { backgroundColor: colors.background, borderColor: colors.borderColor }]}>
+                            <Text style={[styles.spoilerText, { color: colors.textPrimary }]} numberOfLines={1}>
+                                CW: {targetStatus.spoiler_text}
+                            </Text>
+                            <Button
+                                label={isSpoilerCollapsed ? 'Show' : 'Hide'}
+                                size={Button.sizes.xSmall}
+                                backgroundColor={isSpoilerCollapsed ? colors.accentColor : colors.textMuted}
+                                onPress={() => setIsSpoilerCollapsed(!isSpoilerCollapsed)}
+                                labelStyle={styles.spoilerButtonLabel}
+                            />
+                        </View>
+                    )}
+
+                    {/* content text */}
+                    {(!targetStatus.sensitive || !isSpoilerCollapsed) && (
+                        <View style={styles.contentContainer}>
+                            <StatusHtmlContent
+                                content={targetStatus.content}
+                                emojis={targetStatus.emojis}
+                                colors={colors}
+                                compactMode={compactMode}
+                                width={contentWidth + (compactMode ? 44 : 64)} // pass equivalent width to keep old behavior inside StatusHtmlContent or just modify StatusHtmlContent
+                                onPressMention={onPressMention}
+                                onPressHashtag={onPressHashtag}
+                                onPressLink={handlePressCard}
+                            />
+                        </View>
+                    )}
+
+                    {/* poll */}
+                    {(!targetStatus.sensitive || !isSpoilerCollapsed) && targetStatus.poll && (
+                        <Poll initialPoll={targetStatus.poll} />
+                    )}
+
+                    {/* media */}
+                    {(!targetStatus.sensitive || !isSpoilerCollapsed) && (
+                        renderMedia(targetStatus.media_attachments)
+                    )}
+
+                    {/* link preview */}
+                    {(!targetStatus.sensitive || !isSpoilerCollapsed) && targetStatus.card && (
+                        <TouchableOpacity
+                            style={[styles.linkPreviewContainer, { backgroundColor: colors.background, borderColor: colors.borderColor }]}
+                            onPress={() => handlePressCard(targetStatus.card!.url)}
+                        >
+                            {targetStatus.card.image && (
+                                <Image
+                                    source={{ uri: targetStatus.card.image }}
+                                    style={styles.linkPreviewImage}
+                                />
+                            )}
+                            <View style={styles.linkPreviewContent}>
+                                <Text style={[styles.linkPreviewProvider, { color: colors.accentColor }]}>
+                                    {targetStatus.card.provider_name || getDomainName(targetStatus.card.url)}
+                                </Text>
+                                <Text style={[styles.linkPreviewTitle, { color: colors.textPrimary }]} numberOfLines={2}>
+                                    {targetStatus.card.title}
+                                </Text>
+                                {targetStatus.card.description ? (
+                                    <Text style={[styles.linkPreviewDescription, { color: colors.textSecondary }]} numberOfLines={2}>
+                                        {targetStatus.card.description}
+                                    </Text>
+                                ) : null}
+                            </View>
+                        </TouchableOpacity>
+                    )}
+
+                    {/* action buttons */}
+                    <View style={[styles.actionRow, { borderTopColor: colors.borderColor }]}>
+                        {/* reply action */}
+                        <TouchableOpacity 
+                            style={styles.actionButton} 
+                            onPress={() => openCompose({ replyToStatus: targetStatus })}
+                        >
+                            <Ionicons name="chatbubble-outline" size={18} color={colors.textMuted} />
+                            <Text style={[styles.actionCount, { color: colors.textMuted }]}>{targetStatus.replies_count || 0}</Text>
+                        </TouchableOpacity>
+                        {/* reblog */}
+                        <TouchableOpacity style={styles.actionButton} onPress={toggleReblog}>
+                            <Ionicons name="repeat" size={18} color={isReblogged ? colors.accentColor : colors.textMuted} />
+                            <Text style={[styles.actionCount, { color: isReblogged ? colors.accentColor : colors.textMuted }]}>
+                                {boostCount || 0}
+                            </Text>
+                        </TouchableOpacity>
+                        {/* favourite */}
+                        <TouchableOpacity style={styles.actionButton} onPress={toggleFavorite}>
+                            <Ionicons name={isFavorited ? "star" : "star-outline"} size={18} color={isFavorited ? colors.dangerColor : colors.textMuted} />
+                            <Text style={[styles.actionCount, { color: isFavorited ? colors.dangerColor : colors.textMuted }]}>{favCount || 0}</Text>
+                        </TouchableOpacity>
+                        {/* share */}
+                        <TouchableOpacity style={styles.actionButton}>
+                            <Ionicons name="share-social-outline" size={18} color={colors.textMuted} />
+                        </TouchableOpacity>
+                    </View>
+                </View>
             </View>
 
             <ImageViewing

@@ -58,7 +58,7 @@ export const TabBar: React.FC<TabBarProps> = ({ activeTab, onTabPress }) => {
                     <Ionicons
                         name="add"
                         size={28}
-                        color="#FFFFFF"
+                        color={colors.buttonTextColor}
                     />
                 </TouchableOpacity>
             </View>

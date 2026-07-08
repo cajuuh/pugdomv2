@@ -68,11 +68,23 @@ export default function Thread({ statusId, onBack, onStatusPress }: ThreadProps)
                     estimatedItemSize={200}
                     data={statuses}
                     keyExtractor={(item, index) => item.id + index}
-                    renderItem={({ item }) => (
-                        <View style={(item as any).isMain ? [styles.mainStatusWrapper, { borderColor: colors.accentColor }] : {}}>
-                             <TootCard status={item} onPress={() => onStatusPress(item.id)} />
-                        </View>
-                    )}
+                    renderItem={({ item, index }) => {
+                        const isMain = (item as any).isMain;
+                        return (
+                            <View style={[
+                                { borderBottomWidth: 1, borderBottomColor: colors.borderColor },
+                                isMain && { backgroundColor: colors.cardBackground }
+                            ]}>
+                                 <TootCard 
+                                    status={item} 
+                                    onPress={() => onStatusPress(item.id)} 
+                                    threadMode={true} 
+                                    hasThreadLineTop={index > 0} 
+                                    hasThreadLineBottom={index < statuses.length - 1}
+                                />
+                            </View>
+                        );
+                    }}
                     refreshControl={
                         <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accentColor} />
                     }
@@ -99,10 +111,5 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-    },
-    mainStatusWrapper: {
-        borderLeftWidth: 3,
-        marginLeft: 4,
-        marginVertical: 4,
     }
 });

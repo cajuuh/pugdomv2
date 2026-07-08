@@ -2,13 +2,12 @@ import { StyleSheet } from 'react-native';
 
 export const styles = StyleSheet.create({
     cardContainer: {
-        backgroundColor: '#1E293B',
         borderRadius: 16,
-        padding: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
         marginHorizontal: 16,
         marginVertical: 8,
         borderWidth: 1,
-        borderColor: '#334155'
     },
     boostedHeader: {
         flexDirection: 'row',
@@ -27,11 +26,15 @@ export const styles = StyleSheet.create({
         justifyContent: 'space-between',
         marginBottom: 10
     },
-    userInfo: {
+    mainRow: {
         flexDirection: 'row',
+    },
+    leftColumn: {
         alignItems: 'center',
+        marginRight: 10,
+    },
+    rightColumn: {
         flex: 1,
-        gap: 10
     },
     namesContainer: {
         flex: 1,

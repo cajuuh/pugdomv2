@@ -18,6 +18,7 @@ export interface ThemeColors {
     inputBackground: string;
     buttonTextColor: string;
     dangerColor: string;
+    warningColor: string;
 }
 
 interface ThemeContextType {
@@ -32,35 +33,37 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 const THEME_KEY = 'pugdom_settings_theme';
 
 export const lightColors: ThemeColors = {
-    background: '#F8FAFC',
+    background: '#F4F3EF',
     cardBackground: '#FFFFFF',
-    borderColor: '#E2E8F0',
-    textPrimary: '#0F172A',
-    textSecondary: '#475569',
-    textMuted: '#94A3B8',
-    accentColor: '#4F46E5',
-    tabBarBackground: '#FFFFFF',
-    tabBarActiveColor: '#4F46E5',
-    tabBarInactiveColor: '#64748B',
-    inputBackground: '#F1F5F9',
+    borderColor: '#E3E1D5',
+    textPrimary: '#2D3748',
+    textSecondary: '#4A5568',
+    textMuted: '#718096',
+    accentColor: '#556B2F',
+    tabBarBackground: '#F4F3EF',
+    tabBarActiveColor: '#556B2F',
+    tabBarInactiveColor: '#A3B18A',
+    inputBackground: '#EAE8DE',
     buttonTextColor: '#FFFFFF',
-    dangerColor: '#EF4444',
+    dangerColor: '#E63946',
+    warningColor: '#FFB703',
 };
 
 export const darkColors: ThemeColors = {
-    background: '#0F172A',
-    cardBackground: '#1E293B',
-    borderColor: '#334155',
-    textPrimary: '#F8FAFC',
-    textSecondary: '#94A3B8',
-    textMuted: '#64748B',
-    accentColor: '#6366F1',
-    tabBarBackground: '#1E293B',
-    tabBarActiveColor: '#6366F1',
-    tabBarInactiveColor: '#94A3B8',
-    inputBackground: '#0F172A',
-    buttonTextColor: '#FFFFFF',
-    dangerColor: '#EF4444',
+    background: '#0F0E17',
+    cardBackground: '#1E1B2E',
+    borderColor: '#2A263D',
+    textPrimary: '#F4F3EF',
+    textSecondary: '#A3B18A',
+    textMuted: '#6B7280',
+    accentColor: '#A3B18A',
+    tabBarBackground: '#0F0E17',
+    tabBarActiveColor: '#A3B18A',
+    tabBarInactiveColor: '#4A5568',
+    inputBackground: '#1E1B2E',
+    buttonTextColor: '#0F0E17',
+    dangerColor: '#E63946',
+    warningColor: '#FFB703',
 };
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

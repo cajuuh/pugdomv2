@@ -25,7 +25,6 @@ export const styles = StyleSheet.create({
         flexDirection: 'row',
         padding: 16,
         borderBottomWidth: 1,
-        borderBottomColor: '#2C3E50', // placeholder, will use theme colors
     },
     iconContainer: {
         width: 48,

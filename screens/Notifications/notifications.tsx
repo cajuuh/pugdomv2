@@ -115,11 +115,11 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
 
         if (item.type === 'favourite') {
             iconName = 'star';
-            iconColor = '#EAB308'; // yellow
+            iconColor = colors.warningColor; 
             actionText = 'favourited your status';
         } else if (item.type === 'reblog') {
             iconName = 'repeat';
-            iconColor = '#22C55E'; // green
+            iconColor = colors.accentColor; 
             actionText = 'boosted your status';
         } else {
             return null; // Skip unsupported types
