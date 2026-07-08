@@ -36,6 +36,7 @@ const LANGUAGES = [
 ];
 
 import { Status } from '../../services/mastodon/types';
+import { renderTextWithEmojis } from '../TootCard/tootCard';
 
 interface ComposeModalProps {
     isOpen: boolean;
@@ -193,7 +194,11 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                                     <Avatar source={{ uri: replyToStatus.account.avatar }} size={24} />
                                     <View>
                                         <Text style={[styles.replyDisplayName, { color: colors.textPrimary }]} numberOfLines={1}>
-                                            {replyToStatus.account.display_name || replyToStatus.account.username}
+                                            {renderTextWithEmojis(
+                                                replyToStatus.account.display_name || replyToStatus.account.username,
+                                                replyToStatus.account.emojis,
+                                                styles.replyDisplayName
+                                            )}
                                         </Text>
                                         <Text style={[styles.replyUsername, { color: colors.textSecondary }]} numberOfLines={1}>
                                             @{replyToStatus.account.username}
@@ -212,7 +217,11 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                                 <Avatar source={{ uri: user.avatar }} size={36} />
                                 <View>
                                     <Text style={[styles.authorName, { color: colors.textPrimary }]}>
-                                        {user.display_name || user.username}
+                                        {renderTextWithEmojis(
+                                            user.display_name || user.username,
+                                            user.emojis,
+                                            styles.authorName
+                                        )}
                                     </Text>
                                 </View>
                             </View>
