@@ -69,55 +69,54 @@ function NavigationRoot() {
     );
   };
 
-  if (currentScreen === 'settings') {
-    return (
-      <View flex style={[styles.container, { backgroundColor: colors.background }]}>
-        <StatusBar style={statusBarStyle} />
-        <Settings onBack={() => setCurrentScreen('main')} />
-      </View>
-    );
-  }
-
-  if (currentScreen === 'thread' && threadStatusId) {
-    return (
-      <View flex style={[styles.container, { backgroundColor: colors.background }]}>
-        <StatusBar style={statusBarStyle} />
-        <Thread statusId={threadStatusId} onBack={closeThread} onStatusPress={openThread} />
-      </View>
-    );
-  }
-
   return (
     <View flex style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar style={statusBarStyle} />
 
-      {/* Top Bar */}
-      <TopBar
-        user={user}
-        onAvatarPress={() => setActiveTab('profile')}
-        onSettingsPress={() => setCurrentScreen('settings')}
-        onLogoutPress={logout}
-      />
-
-      {/* Screen content area */}
+      {/* Render main navigation stack always */}
       <View flex>
-        {activeTab === 'home' && <Timeline onStatusPress={openThread} />}
-        {activeTab === 'notifications' && <Notifications onStatusPress={openThread} />}
-        {activeTab === 'profile' && <Profile />}
+        {/* Top Bar */}
+        <TopBar
+          user={user}
+          onAvatarPress={() => setActiveTab('profile')}
+          onSettingsPress={() => setCurrentScreen('settings')}
+          onLogoutPress={logout}
+        />
+
+        {/* Screen content area */}
+        <View flex>
+          {activeTab === 'home' && <Timeline onStatusPress={openThread} />}
+          {activeTab === 'notifications' && <Notifications onStatusPress={openThread} />}
+          {activeTab === 'profile' && <Profile />}
+        </View>
+
+        <TouchableOpacity
+            onPress={() => openCompose()}
+            style={[styles.fabButton, { backgroundColor: colors.accentColor }]}
+            activeOpacity={0.8}
+        >
+            <Ionicons name="create" size={24} color="#FFF" />
+        </TouchableOpacity>
+
+        {/* Custom Tab Bar */}
+        <TabBar activeTab={activeTab} onTabPress={handleTabPress} />
       </View>
 
-      <TouchableOpacity
-          onPress={() => openCompose()}
-          style={[styles.fabButton, { backgroundColor: colors.accentColor }]}
-          activeOpacity={0.8}
-      >
-          <Ionicons name="create" size={24} color="#FFF" />
-      </TouchableOpacity>
+      {/* Render Thread as absolute overlay on top if active */}
+      {currentScreen === 'thread' && threadStatusId && (
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.background }]}>
+              <Thread statusId={threadStatusId} onBack={closeThread} onStatusPress={openThread} />
+          </View>
+      )}
 
-      {/* Custom Tab Bar */}
-      <TabBar activeTab={activeTab} onTabPress={handleTabPress} />
+      {/* Render Settings as absolute overlay on top if active */}
+      {currentScreen === 'settings' && (
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.background }]}>
+              <Settings onBack={() => setCurrentScreen('main')} />
+          </View>
+      )}
     </View>
-  )
+  );
 }
 
 export default function App() {
