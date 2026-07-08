@@ -326,9 +326,12 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 <View style={styles.boostedHeader}>
                     <Ionicons name="repeat" size={14} color={colors.textMuted} />
                     <Avatar source={{ uri: status.account.avatar }} size={18} containerStyle={styles.boostedAvatar} />
-                    <Text style={[styles.boostedText, { color: colors.textMuted }]}>
-                        {status.account.display_name || status.account.username} boosted
-                    </Text>
+                    {renderTextWithEmojis(
+                        (status.account.display_name || status.account.username) + ' boosted',
+                        status.account.emojis || [],
+                        [styles.boostedText, { color: colors.textMuted }],
+                        14
+                    )}
                 </View>
             )}
 
