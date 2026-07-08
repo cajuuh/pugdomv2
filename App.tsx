@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, ActivityIndicator, DeviceEventEmitter, TouchableOpacity, Platform } from 'react-native';
+import { StyleSheet, ActivityIndicator, DeviceEventEmitter, TouchableOpacity, Platform, LogBox } from 'react-native';
+
+LogBox.ignoreLogs([
+    "SafeAreaView has been deprecated and will be removed in a future release",
+]);
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { View } from 'react-native-ui-lib';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
