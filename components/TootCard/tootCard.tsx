@@ -12,6 +12,7 @@ import { useTheme } from '../../services/themeContext';
 import { useCompose } from '../../services/composeContext';
 import { styles } from './styles';
 import { favouriteStatus, unfavouriteStatus, reblogStatus, unreblogStatus } from '../../services/mastodon/statuses';
+import { Poll } from '../Poll/poll';
 
 const StatusHtmlContent = React.memo(({ content, emojis, colors, compactMode, width, onPressMention, onPressHashtag, onPressLink }: any) => {
     const renderersProps = React.useMemo(() => ({
@@ -332,6 +333,11 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                         onPressLink={handlePressCard}
                     />
                 </View>
+            )}
+
+            {/* poll */}
+            {(!targetStatus.sensitive || !isSpoilerCollapsed) && targetStatus.poll && (
+                <Poll initialPoll={targetStatus.poll} />
             )}
 
             {/* media */}
