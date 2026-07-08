@@ -15,6 +15,9 @@ import { TopBar } from './components/TopBar/topBar';
 import { TabBar } from './components/TabBar/tabBar';
 import Settings from './screens/Settings/settings';
 import Thread from './screens/Thread/thread';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient();
 
 function NavigationRoot() {
   const { user, loading, logout } = useAuth();
@@ -101,7 +104,9 @@ export default function App() {
         <SettingsProvider>
           <AuthProvider>
             <ComposeProvider>
-              <NavigationRoot />
+              <QueryClientProvider client={queryClient}>
+                <NavigationRoot />
+              </QueryClientProvider>
             </ComposeProvider>
           </AuthProvider>
         </SettingsProvider>
