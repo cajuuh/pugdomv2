@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Image as RNImage } from 'react-native';
+import { Alert, Image as RNImage } from 'react-native';
 import { Avatar, View, Text, Button, Image, TouchableOpacity } from 'react-native-ui-lib';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as WebBrowser from 'expo-web-browser';
@@ -8,6 +8,7 @@ import { useSettings } from '../../services/settingsContext';
 import { useTheme } from '../../services/themeContext';
 import { useCompose } from '../../services/composeContext';
 import { styles } from './styles';
+import { favouriteStatus, unfavouriteStatus, reblogStatus, unreblogStatus } from '../../services/mastodon/statuses';
 
 const stripHtml = (html: string) => {
     if (!html) return '';
@@ -100,14 +101,44 @@ export const TootCard: React.FC<TootCardProps> = ({ status }) => {
     const [favCount, setFavCount] = useState(targetStatus.favourites_count);
     const [boostCount, setBoostCount] = useState(targetStatus.reblogs_count);
 
-    const toggleFavorite = () => {
-        setIsFavorited(!isFavorited);
-        setFavCount((prev) => (isFavorited ? prev - 1 : prev + 1));
+    const toggleFavorite = async () => {
+        const previousIsFavorited = isFavorited;
+        const previousFavCount = favCount;
+
+        setIsFavorited(!previousIsFavorited);
+        setFavCount((prev) => (previousIsFavorited ? prev - 1 : prev + 1));
+
+        try {
+            if (previousIsFavorited) {
+                await unfavouriteStatus(targetStatus.id);
+            } else {
+                await favouriteStatus(targetStatus.id);
+            }
+        } catch (error) {
+            setIsFavorited(previousIsFavorited);
+            setFavCount(previousFavCount);
+            Alert.alert('Error', 'Failed to update favorite status. Please try again.');
+        }
     };
 
-    const toggleReblog = () => {
-        setIsreblogged(!isReblogged);
-        setBoostCount((prev) => (isReblogged ? prev - 1 : prev + 1));
+    const toggleReblog = async () => {
+        const previousIsReblogged = isReblogged;
+        const previousBoostCount = boostCount;
+
+        setIsreblogged(!previousIsReblogged);
+        setBoostCount((prev) => (previousIsReblogged ? prev - 1 : prev + 1));
+
+        try {
+            if (previousIsReblogged) {
+                await unreblogStatus(targetStatus.id);
+            } else {
+                await reblogStatus(targetStatus.id);
+            }
+        } catch (error) {
+            setIsreblogged(previousIsReblogged);
+            setBoostCount(previousBoostCount);
+            Alert.alert('Error', 'Failed to update boost status. Please try again.');
+        }
     };
 
     const handlePressCard = async (url: string) => {
