@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, ActivityIndicator, DeviceEventEmitter } from 'react-native';
+import { StyleSheet, ActivityIndicator, DeviceEventEmitter, TouchableOpacity, Platform } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { View } from 'react-native-ui-lib';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './services/authContext';
 import { SettingsProvider } from './services/settingsContext';
 import { ThemeProvider, useTheme } from './services/themeContext';
-import { ComposeProvider } from './services/composeContext';
+import { ComposeProvider, useCompose } from './services/composeContext';
 import Login from './screens/Login/login';
 import Profile from './screens/Profile/profile';
 import Timeline from './screens/Timeline/timeline';
@@ -21,6 +22,7 @@ const queryClient = new QueryClient();
 
 function NavigationRoot() {
   const { user, loading, logout, isAddingAccount, setAddingAccount } = useAuth();
+  const { openCompose } = useCompose();
   const { colors, isDark } = useTheme();
   const [activeTab, setActiveTab] = useState<'home' | 'notifications' | 'profile'>('home');
   const [currentScreen, setCurrentScreen] = useState<'main' | 'settings' | 'thread'>('main');
@@ -99,6 +101,15 @@ function NavigationRoot() {
         {activeTab === 'notifications' && <Notifications onStatusPress={openThread} />}
         {activeTab === 'profile' && <Profile />}
       </View>
+
+      <TouchableOpacity
+          onPress={() => openCompose()}
+          style={[styles.fabButton, { backgroundColor: colors.accentColor }]}
+          activeOpacity={0.8}
+      >
+          <Ionicons name="create" size={24} color="#FFF" />
+      </TouchableOpacity>
+
       {/* Custom Tab Bar */}
       <TabBar activeTab={activeTab} onTabPress={handleTabPress} />
     </View>
@@ -132,5 +143,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center'
   },
-
+  fabButton: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 100 : 85,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
 });
