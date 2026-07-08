@@ -52,26 +52,7 @@ export const styles = StyleSheet.create({
         marginTop: 4,
         opacity: 0.8,
     },
-    followCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: 16,
-        borderBottomWidth: 1,
-    },
-    followInfo: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        flex: 1,
-    },
-    followName: {
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    followAcct: {
-        fontSize: 14,
-        marginTop: 2,
-    },
+
     followButton: {
         paddingHorizontal: 16,
         paddingVertical: 8,
