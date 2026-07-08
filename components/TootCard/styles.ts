@@ -182,5 +182,22 @@ export const styles = StyleSheet.create({
     },
     imageViewerNavRight: {
         right: 16,
+    },
+    blurContainer: {
+        overflow: 'hidden',
+        borderRadius: 12,
+        marginBottom: 12,
+    },
+    revealButton: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    },
+    revealText: {
+        color: '#FFF',
+        marginTop: 8,
+        fontWeight: 'bold',
+        fontSize: 14,
     }
 });

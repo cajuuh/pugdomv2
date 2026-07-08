@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Alert, Image as RNImage } from 'react-native';
+import { Alert, Image as RNImage, StyleSheet } from 'react-native';
 import { Avatar, View, Text, Button, Image, TouchableOpacity } from 'react-native-ui-lib';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as WebBrowser from 'expo-web-browser';
 import RenderHtml, { HTMLElementModel, HTMLContentModel } from 'react-native-render-html';
 import { useWindowDimensions } from 'react-native';
 import ImageViewing from 'react-native-image-viewing';
+import { BlurView } from 'expo-blur';
 import { Status, CustomEmoji, Attachment } from '../../services/mastodon/types';
 import { useSettings } from '../../services/settingsContext';
 import { useTheme } from '../../services/themeContext';
@@ -160,6 +161,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const [boostCount, setBoostCount] = useState(targetStatus.reblogs_count);
     const [isImageViewerVisible, setIsImageViewerVisible] = useState(false);
     const [imageViewerIndex, setImageViewerIndex] = useState(0);
+    const [isMediaRevealed, setIsMediaRevealed] = useState(false);
 
     const toggleFavorite = async () => {
         const previousIsFavorited = isFavorited;
@@ -215,10 +217,12 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         }
 
         const count = attachments.length;
+        let mediaContent;
+
         if (count === 1) {
-            return (
+            mediaContent = (
                 <TouchableOpacity 
-                    style={styles.mediaContainer}
+                    style={[styles.mediaContainer, targetStatus.sensitive && !isMediaRevealed && { marginBottom: 0 }]}
                     onPress={() => {
                         setImageViewerIndex(0);
                         setIsImageViewerVisible(true);
@@ -230,30 +234,46 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     />
                 </TouchableOpacity>
             );
+        } else {
+            mediaContent = (
+                <View style={[styles.mediaGrid, targetStatus.sensitive && !isMediaRevealed && { marginBottom: 0 }]}>
+                    {attachments.map((item, idx) => (
+                        <TouchableOpacity
+                            key={item.id || idx}
+                            style={[
+                                styles.gridMedia,
+                                { width: count === 2 ? '48%' : '31%' }
+                            ]}
+                            onPress={() => {
+                                setImageViewerIndex(idx);
+                                setIsImageViewerVisible(true);
+                            }}
+                        >
+                            <Image
+                                source={{ uri: item.preview_url || item.url }}
+                                style={{ width: '100%', height: '100%', borderRadius: 8 }}
+                            />
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            );
         }
 
-        return (
-            <View style={styles.mediaGrid}>
-                {attachments.map((item, idx) => (
-                    <TouchableOpacity
-                        key={item.id || idx}
-                        style={[
-                            styles.gridMedia,
-                            { width: count === 2 ? '48%' : '31%' }
-                        ]}
-                        onPress={() => {
-                            setImageViewerIndex(idx);
-                            setIsImageViewerVisible(true);
-                        }}
-                    >
-                        <Image
-                            source={{ uri: item.preview_url || item.url }}
-                            style={{ width: '100%', height: '100%', borderRadius: 8 }}
-                        />
-                    </TouchableOpacity>
-                ))}
-            </View>
-        );
+        if (targetStatus.sensitive && !isMediaRevealed) {
+            return (
+                <View style={styles.blurContainer}>
+                    {mediaContent}
+                    <BlurView intensity={80} style={StyleSheet.absoluteFill}>
+                        <TouchableOpacity onPress={() => setIsMediaRevealed(true)} style={styles.revealButton}>
+                            <Ionicons name="eye-off" size={24} color="#FFF" />
+                            <Text style={styles.revealText}>Sensitive Content (Tap to show)</Text>
+                        </TouchableOpacity>
+                    </BlurView>
+                </View>
+            );
+        }
+
+        return mediaContent;
     };
 
     const imageViewerImages = targetStatus.media_attachments?.map(attachment => ({

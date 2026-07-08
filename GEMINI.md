@@ -47,6 +47,7 @@ When asked to build features, implement them in alignment with these standard Ma
 
 ### 4. User Settings
 - Use `yarn` this project was wrote to work with yarn
+- This projects uses [gitmoji-cli](https://github.com/carloscuesta/gitmoji-cli), the commit command is `gitmoji -c` the user is prompted to select what kind of commit it is and after select it, the title and the message of the commit
 
 ---
 
