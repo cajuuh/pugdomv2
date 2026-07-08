@@ -63,8 +63,6 @@ const Login = () => {
                 // get user information
                 const account = await getCurrentAccount();
                 login(account);
-
-                Alert.alert('Success', 'Logged in successfully!')
             }
         } catch (error: any) {
             console.error(error);

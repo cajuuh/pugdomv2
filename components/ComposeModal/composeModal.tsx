@@ -98,6 +98,7 @@ const ComposeModal: React.FC = () => {
                 sensitive,
                 spoiler_text: sensitive ? spoilerText : undefined,
                 language: language,
+                visibility: replyToStatus ? replyToStatus.visibility : 'public',
             });
 
             DeviceEventEmitter.emit('status_published');
