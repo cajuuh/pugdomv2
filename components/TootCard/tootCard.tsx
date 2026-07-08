@@ -146,7 +146,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const { compactMode } = useSettings();
     const { colors } = useTheme();
     const { openCompose } = useCompose();
-    const { width } = useWindowDimensions();
+    const { width, height } = useWindowDimensions();
     const isReblog = !!status.reblog;
     const targetStatus = isReblog ? status.reblog! : status;
 
@@ -256,6 +256,24 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const imageViewerImages = targetStatus.media_attachments?.map(attachment => ({
         uri: attachment.url
     })) || [];
+
+    const ImageViewerFooter = ({ imageIndex }: { imageIndex: number }) => {
+        if (imageViewerImages.length <= 1) return null;
+        return (
+            <View style={{ height, width: '100%', position: 'absolute', bottom: 0 }} pointerEvents="box-none">
+                {imageIndex > 0 && (
+                    <View style={[styles.imageViewerNavButton, styles.imageViewerNavLeft]}>
+                        <Ionicons name="chevron-back" size={24} color="#FFF" />
+                    </View>
+                )}
+                {imageIndex < imageViewerImages.length - 1 && (
+                    <View style={[styles.imageViewerNavButton, styles.imageViewerNavRight]}>
+                        <Ionicons name="chevron-forward" size={24} color="#FFF" />
+                    </View>
+                )}
+            </View>
+        );
+    };
 
     const CardContainer = onPress ? TouchableOpacity : View;
 
@@ -400,6 +418,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 swipeToCloseEnabled={true}
                 doubleTapToZoomEnabled={true}
                 backgroundColor="rgba(0, 0, 0, 0.85)"
+                FooterComponent={ImageViewerFooter}
             />
         </CardContainer>
     );
