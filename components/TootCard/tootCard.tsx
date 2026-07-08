@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Alert, Image as RNImage, StyleSheet } from 'react-native';
+import { Alert, Image as RNImage, StyleSheet, Modal } from 'react-native';
 import { Avatar, View, Text, Button, Image, TouchableOpacity } from 'react-native-ui-lib';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Video, ResizeMode } from 'expo-av';
 import * as WebBrowser from 'expo-web-browser';
 import RenderHtml, { HTMLElementModel, HTMLContentModel } from 'react-native-render-html';
 import { useWindowDimensions } from 'react-native';
@@ -162,6 +163,8 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const [isImageViewerVisible, setIsImageViewerVisible] = useState(false);
     const [imageViewerIndex, setImageViewerIndex] = useState(0);
     const [isMediaRevealed, setIsMediaRevealed] = useState(false);
+    const [isVideoVisible, setIsVideoVisible] = useState(false);
+    const [videoUrl, setVideoUrl] = useState<string | null>(null);
 
     const toggleFavorite = async () => {
         const previousIsFavorited = isFavorited;
@@ -224,8 +227,13 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 <TouchableOpacity 
                     style={[styles.mediaContainer, targetStatus.sensitive && !isMediaRevealed && { marginBottom: 0 }]}
                     onPress={() => {
-                        setImageViewerIndex(0);
-                        setIsImageViewerVisible(true);
+                        if (attachments[0].type === 'video' || attachments[0].type === 'gifv') {
+                            setVideoUrl(attachments[0].url);
+                            setIsVideoVisible(true);
+                        } else {
+                            setImageViewerIndex(0);
+                            setIsImageViewerVisible(true);
+                        }
                     }}
                 >
                     <Image
@@ -245,8 +253,13 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                                 { width: count === 2 ? '48%' : '31%' }
                             ]}
                             onPress={() => {
-                                setImageViewerIndex(idx);
-                                setIsImageViewerVisible(true);
+                                if (item.type === 'video' || item.type === 'gifv') {
+                                    setVideoUrl(item.url);
+                                    setIsVideoVisible(true);
+                                } else {
+                                    setImageViewerIndex(idx);
+                                    setIsImageViewerVisible(true);
+                                }
                             }}
                         >
                             <Image
@@ -487,6 +500,24 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 backgroundColor="rgba(0, 0, 0, 0.85)"
                 FooterComponent={ImageViewerFooter}
             />
+
+            <Modal visible={isVideoVisible} onRequestClose={() => setIsVideoVisible(false)} animationType="fade">
+                <View style={{ flex: 1, backgroundColor: '#000', justifyContent: 'center' }}>
+                    {videoUrl && (
+                        <Video
+                            source={{ uri: videoUrl }}
+                            style={{ width: '100%', height: '80%' }}
+                            useNativeControls
+                            resizeMode={ResizeMode.CONTAIN}
+                            shouldPlay
+                            isLooping={targetStatus.media_attachments?.find(a => a.url === videoUrl)?.type === 'gifv'}
+                        />
+                    )}
+                    <TouchableOpacity onPress={() => setIsVideoVisible(false)} style={styles.closeButton}>
+                        <Ionicons name="close" size={30} color="#FFF" />
+                    </TouchableOpacity>
+                </View>
+            </Modal>
         </CardContainer>
     );
 };

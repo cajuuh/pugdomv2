@@ -203,5 +203,14 @@ export const styles = StyleSheet.create({
         marginTop: 8,
         fontWeight: 'bold',
         fontSize: 14,
+    },
+    closeButton: {
+        position: 'absolute',
+        top: 50,
+        right: 20,
+        zIndex: 10,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        borderRadius: 20,
+        padding: 4,
     }
 });
