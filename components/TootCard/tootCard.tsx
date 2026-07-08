@@ -52,7 +52,7 @@ const StatusHtmlContent = React.memo(({ content, emojis, colors, compactMode, wi
     const processedHtml = React.useMemo(() => {
         let html = content || '';
         html = html.replace(/<span class="invisible">https?:\/\/<\/span>/gi, '');
-        html = html.replace(/<span class="invisible">.*?<\/span>/gi, (match) => {
+        html = html.replace(/<span class="invisible">.*?<\/span>/gi, (match: string) => {
             const inner = match.replace(/<[^>]*>/g, '');
             if (inner === '' || inner === '/') return inner;
             return '...';
@@ -147,9 +147,10 @@ interface TootCardProps {
     status: Status;
     onPressMention?: (acct: string) => void;
     onPressHashtag?: (hashtag: string) => void;
+    onPress?: () => void;
 }
 
-export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPressHashtag }) => {
+export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPressHashtag, onPress }) => {
     const { compactMode } = useSettings();
     const { colors } = useTheme();
     const { openCompose } = useCompose();
@@ -264,8 +265,12 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         uri: attachment.url
     })) || [];
 
+    const CardContainer = onPress ? TouchableOpacity : View;
+
     return (
-        <View style={[
+        <CardContainer 
+            onPress={onPress}
+            style={[
             styles.cardContainer,
             { backgroundColor: colors.cardBackground, borderColor: colors.borderColor },
             compactMode && { padding: 10, marginVertical: 4, marginHorizontal: 12, borderRadius: 10 }
@@ -398,6 +403,6 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 swipeToCloseEnabled={true}
                 doubleTapToZoomEnabled={true}
             />
-        </View>
+        </CardContainer>
     );
 };

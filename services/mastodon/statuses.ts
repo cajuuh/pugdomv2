@@ -34,3 +34,13 @@ export async function unreblogStatus(id: string): Promise<Status> {
     const response = await apiClient.post(`/statuses/${id}/unreblog`);
     return response.data;
 }
+
+export async function getStatus(id: string): Promise<Status> {
+    const response = await apiClient.get(`/statuses/${id}`);
+    return response.data;
+}
+
+export async function getStatusContext(id: string): Promise<{ ancestors: Status[], descendants: Status[] }> {
+    const response = await apiClient.get(`/statuses/${id}/context`);
+    return response.data;
+}

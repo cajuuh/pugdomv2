@@ -7,7 +7,11 @@ import { TootCard } from '../../components/TootCard/tootCard';
 import { useTheme } from '../../services/themeContext';
 import { styles } from './styles';
 
-const Timeline = () => {
+interface TimelineProps {
+    onStatusPress?: (id: string) => void;
+}
+
+const Timeline = ({ onStatusPress }: TimelineProps) => {
     const { colors } = useTheme();
     const [statuses, setStatuses] = useState<Status[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
@@ -111,7 +115,7 @@ const Timeline = () => {
             <FlatList
                 data={statuses}
                 keyExtractor={(item) => item.id}
-                renderItem={({ item }) => <TootCard status={item} />}
+                renderItem={({ item }) => <TootCard status={item} onPress={() => onStatusPress?.(item.id)} />}
                 onEndReached={handleLoadMore}
                 onEndReachedThreshold={0.5}
                 refreshControl={

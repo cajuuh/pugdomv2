@@ -13,12 +13,24 @@ import Timeline from './screens/Timeline/timeline';
 import { TopBar } from './components/TopBar/topBar';
 import { TabBar } from './components/TabBar/tabBar';
 import Settings from './screens/Settings/settings';
+import Thread from './screens/Thread/thread';
 
 function NavigationRoot() {
   const { user, loading, logout } = useAuth();
   const { colors, isDark } = useTheme();
   const [activeTab, setActiveTab] = useState<'home' | 'profile'>('home');
-  const [currentScreen, setCurrentScreen] = useState<'main' | 'settings'>('main');
+  const [currentScreen, setCurrentScreen] = useState<'main' | 'settings' | 'thread'>('main');
+  const [threadStatusId, setThreadStatusId] = useState<string | null>(null);
+
+  const openThread = (id: string) => {
+    setThreadStatusId(id);
+    setCurrentScreen('thread');
+  };
+
+  const closeThread = () => {
+    setCurrentScreen('main');
+    setThreadStatusId(null);
+  };
 
   const statusBarStyle = isDark ? 'light' : 'dark';
 
@@ -48,6 +60,15 @@ function NavigationRoot() {
     );
   }
 
+  if (currentScreen === 'thread' && threadStatusId) {
+    return (
+      <View flex style={[styles.container, { backgroundColor: colors.background }]}>
+        <StatusBar style={statusBarStyle} />
+        <Thread statusId={threadStatusId} onBack={closeThread} onStatusPress={openThread} />
+      </View>
+    );
+  }
+
   return (
     <View flex style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar style={statusBarStyle} />
@@ -62,7 +83,7 @@ function NavigationRoot() {
 
       {/* Screen content area */}
       <View flex>
-        {activeTab === 'home' ? <Timeline /> : <Profile />}
+        {activeTab === 'home' ? <Timeline onStatusPress={openThread} /> : <Profile />}
       </View>
       {/* Custom Tab Bar */}
       <TabBar activeTab={activeTab} onTabPress={setActiveTab} />
