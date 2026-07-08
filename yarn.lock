@@ -2114,6 +2114,11 @@ expo-asset@~56.0.19:
     "@expo/image-utils" "^0.10.2"
     expo-constants "~56.0.20"
 
+expo-blur@^57.0.0:
+  version "57.0.0"
+  resolved "https://registry.yarnpkg.com/expo-blur/-/expo-blur-57.0.0.tgz#971431708bb4f26acbbfd3dbc5ff172a7c8cf328"
+  integrity sha512-cn+LlmOdf7swx80v6yngW9AVl7m1F4cQGpfeJx/Jckgb6C4/sdA5jy/f4wBJCGCZs+2qpPEjlUkQ2Q2+7LQiuA==
+
 expo-constants@~56.0.20:
   version "56.0.20"
   resolved "https://registry.npmjs.org/expo-constants/-/expo-constants-56.0.20.tgz"

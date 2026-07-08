@@ -197,4 +197,69 @@ export const styles = StyleSheet.create({
         fontSize: 13,
         fontWeight: '700',
     },
+    /* Poll UI */
+    pollContainer: {
+        marginTop: 16,
+        padding: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        gap: 12,
+    },
+    pollOptionRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    pollInput: {
+        flex: 1,
+        height: 40,
+        borderWidth: 1,
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        fontSize: 14,
+    },
+    pollRemoveButton: {
+        padding: 4,
+    },
+    pollAddChoiceButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        alignSelf: 'flex-start',
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        gap: 4,
+        borderRadius: 16,
+        backgroundColor: 'rgba(0,0,0,0.05)',
+    },
+    pollAddChoiceText: {
+        fontSize: 13,
+        fontWeight: '600',
+    },
+    pollSettingsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginTop: 8,
+    },
+    pollSettingsLabel: {
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    pollDurationSelector: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    pollDurationPill: {
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: 'transparent',
+        backgroundColor: 'rgba(0,0,0,0.05)',
+    },
+    pollDurationText: {
+        fontSize: 12,
+        fontWeight: 'bold',
+    },
 });

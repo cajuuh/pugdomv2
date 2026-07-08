@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { ActivityIndicator, RefreshControl, DeviceEventEmitter } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { View, Text, SegmentedControl } from 'react-native-ui-lib';
@@ -18,6 +18,7 @@ const Timeline = ({ onStatusPress }: TimelineProps) => {
     const { colors } = useTheme();
     const [activeFeed, setActiveFeed] = useState<FeedType>('home');
     const queryClient = useQueryClient();
+    const listRef = useRef<FlashList<any>>(null);
 
     const {
         data,
@@ -38,8 +39,13 @@ const Timeline = ({ onStatusPress }: TimelineProps) => {
             queryClient.invalidateQueries({ queryKey: ['timeline', 'home'] });
         });
 
+        const scrollSub = DeviceEventEmitter.addListener('scroll_to_top_home', () => {
+            listRef.current?.scrollToOffset({ offset: 0, animated: true });
+        });
+
         return () => {
             subscription.remove();
+            scrollSub.remove();
         };
     }, [queryClient]);
 
@@ -98,6 +104,7 @@ const Timeline = ({ onStatusPress }: TimelineProps) => {
                 </View>
             ) : (
                 <FlashList
+                    ref={listRef}
                     estimatedItemSize={200}
                     data={statuses}
                     keyExtractor={(item) => item.id}

@@ -7,7 +7,7 @@ interface AuthContextType {
     user: Account | null;
     loading: boolean;
     login: (user: Account, token?: string, instanceUrl?: string) => void;
-    logout: (accountIdToLogout?: string) => Promise<void>;
+    logout: (accountIdToLogout?: string | any) => Promise<void>;
     checkLoginStatus: () => Promise<void>;
     savedAccounts: SavedAccount[];
     switchAccount: (accountId: string) => Promise<void>;
@@ -73,12 +73,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }
 
-    const logout = async (accountIdToLogout?: string) => {
+    const logout = async (accountIdToLogout?: string | any) => {
+        const cleanAccountId = typeof accountIdToLogout === 'string' ? accountIdToLogout : undefined;
         setLoading(true);
         try {
             const currentCreds = await getCredentials();
             const activeId = user && currentCreds.instanceUrl ? `${user.acct}@${currentCreds.instanceUrl}` : null;
-            const idToRemove = accountIdToLogout || activeId;
+            const idToRemove = cleanAccountId || activeId;
 
             if (idToRemove) {
                 await removeSavedAccount(idToRemove);

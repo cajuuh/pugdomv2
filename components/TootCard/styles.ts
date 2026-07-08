@@ -2,19 +2,22 @@ import { StyleSheet } from 'react-native';
 
 export const styles = StyleSheet.create({
     cardContainer: {
-        backgroundColor: '#1E293B',
         borderRadius: 16,
-        padding: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
         marginHorizontal: 16,
         marginVertical: 8,
         borderWidth: 1,
-        borderColor: '#334155'
     },
     boostedHeader: {
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 8,
         gap: 6
+    },
+    boostedAvatar: {
+        marginHorizontal: 6,
+        borderRadius: 9
     },
     boostedText: {
         fontSize: 12,
@@ -27,11 +30,15 @@ export const styles = StyleSheet.create({
         justifyContent: 'space-between',
         marginBottom: 10
     },
-    userInfo: {
+    mainRow: {
         flexDirection: 'row',
+    },
+    leftColumn: {
         alignItems: 'center',
+        marginRight: 10,
+    },
+    rightColumn: {
         flex: 1,
-        gap: 10
     },
     namesContainer: {
         flex: 1,
@@ -163,4 +170,38 @@ export const styles = StyleSheet.create({
         color: '#94A3B8',
         lineHeight: 16,
     },
-})
+    imageViewerNavButton: {
+        position: 'absolute',
+        top: '50%',
+        marginTop: -20,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    imageViewerNavLeft: {
+        left: 16,
+    },
+    imageViewerNavRight: {
+        right: 16,
+    },
+    blurContainer: {
+        overflow: 'hidden',
+        borderRadius: 12,
+        marginBottom: 12,
+    },
+    revealButton: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    },
+    revealText: {
+        color: '#FFF',
+        marginTop: 8,
+        fontWeight: 'bold',
+        fontSize: 14,
+    }
+});

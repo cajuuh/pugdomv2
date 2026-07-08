@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, ScrollView, Dimensions, Alert, Image, Share } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, ScrollView, Dimensions, Alert, Image, Share, RefreshControl } from 'react-native';
 import { View, Text, Button, Avatar, Card } from 'react-native-ui-lib';
 import { useAuth } from '../../services/authContext';
 import { useTheme } from '../../services/themeContext';
@@ -18,12 +18,22 @@ const stripHtml = (html: string) => {
 }
 
 const Profile = () => {
-    const { user, logout } = useAuth();
+    const { user, logout, checkLoginStatus } = useAuth();
     const { colors } = useTheme();
+    const [refreshing, setRefreshing] = useState(false);
 
     if (!user) {
         return null;
     }
+
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        try {
+            await checkLoginStatus();
+        } finally {
+            setRefreshing(false);
+        }
+    };
 
     const formattedBio = stripHtml(user.note || '');
 
@@ -57,7 +67,19 @@ const Profile = () => {
     }
 
     return (
-        <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
+        <ScrollView 
+            style={[styles.container, { backgroundColor: colors.background }]} 
+            contentContainerStyle={styles.contentContainer} 
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+                <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={handleRefresh}
+                    tintColor={colors.accentColor}
+                    colors={[colors.accentColor]}
+                />
+            }
+        >
             {/* header */}
             <View style={[styles.headerBannerContainer, { backgroundColor: colors.cardBackground }]}>
                 {checkHeader()}
@@ -127,7 +149,7 @@ const Profile = () => {
                     link
                     color={colors.dangerColor}
                     style={styles.logoutButton}
-                    onPress={logout}
+                    onPress={() => logout()}
                     labelStyle={[styles.logoutLabel, { color: colors.dangerColor }]}
                     iconSource={() => <Ionicons name="log-out-outline" size={18} color={colors.dangerColor} style={{ marginRight: 6 }} />}
                 />

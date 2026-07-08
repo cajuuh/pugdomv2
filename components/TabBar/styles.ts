@@ -21,32 +21,4 @@ export const styles = StyleSheet.create({
         marginTop: 4,
         fontWeight: '600',
     },
-    composeButtonContainer: {
-        width: 60,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    composeButton: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        justifyContent: 'center',
-        alignItems: 'center',
-        ...Platform.select({
-            ios: {
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.3,
-                shadowRadius: 4,
-            },
-            android: {
-                elevation: 6,
-            },
-            web: {
-                boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.3)',
-            }
-        }),
-        // Slight lift up
-        transform: [{ translateY: -6 }],
-    },
 });

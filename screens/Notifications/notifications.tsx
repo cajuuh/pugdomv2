@@ -5,7 +5,6 @@ import { View, Text, Avatar, Button } from 'react-native-ui-lib';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { fetchNotifications } from '../../services/mastodon/notifications';
 import { Notification } from '../../services/mastodon/types';
-import { TootCard } from '../../components/TootCard/tootCard';
 import { useTheme } from '../../services/themeContext';
 import { styles } from './styles';
 
@@ -80,47 +79,32 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
     };
 
     const renderNotification = ({ item }: { item: Notification }) => {
-        if (item.type === 'mention' && item.status) {
-            return <TootCard status={item.status} onPress={() => onStatusPress?.(item.status!.id)} />;
-        }
-
-        if (item.type === 'follow') {
-            return (
-                <View style={[styles.followCard, { borderBottomColor: colors.borderColor }]}>
-                    <View style={styles.followInfo}>
-                        <Avatar source={{ uri: item.account.avatar }} size={48} containerStyle={styles.avatar} />
-                        <View style={{ flex: 1 }}>
-                            <Text style={[styles.followName, { color: colors.textPrimary }]} numberOfLines={1}>
-                                {item.account.display_name || item.account.username}
-                            </Text>
-                            <Text style={[styles.followAcct, { color: colors.textSecondary }]} numberOfLines={1}>
-                                @{item.account.acct}
-                            </Text>
-                        </View>
-                    </View>
-                    <Button
-                        label="Follow back"
-                        size={Button.sizes.small}
-                        backgroundColor={colors.accentColor}
-                        style={styles.followButton}
-                        onPress={() => console.log('Follow back pressed')}
-                    />
-                </View>
-            );
-        }
-
         let iconName = '';
         let iconColor = '';
         let actionText = '';
+        let showPreview = false;
+        let isFollow = false;
 
         if (item.type === 'favourite') {
             iconName = 'star';
-            iconColor = '#EAB308'; // yellow
+            iconColor = colors.warningColor; 
             actionText = 'favourited your status';
+            showPreview = true;
         } else if (item.type === 'reblog') {
             iconName = 'repeat';
-            iconColor = '#22C55E'; // green
+            iconColor = colors.accentColor; 
             actionText = 'boosted your status';
+            showPreview = true;
+        } else if (item.type === 'mention') {
+            iconName = 'chatbubble';
+            iconColor = colors.accentColor; 
+            actionText = 'mentioned you';
+            showPreview = true;
+        } else if (item.type === 'follow') {
+            iconName = 'person-add';
+            iconColor = colors.accentColor; 
+            actionText = 'followed you';
+            isFollow = true;
         } else {
             return null; // Skip unsupported types
         }
@@ -129,25 +113,36 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
             <TouchableOpacity 
                 style={[styles.notificationCard, { borderBottomColor: colors.borderColor }]} 
                 onPress={() => item.status && onStatusPress?.(item.status.id)}
-                activeOpacity={0.8}
+                activeOpacity={item.status ? 0.8 : 1}
             >
                 <View style={styles.iconContainer}>
                     <Ionicons name={iconName as any} size={28} color={iconColor} />
                 </View>
                 <View style={styles.contentContainer}>
                     <View style={styles.headerRow}>
-                        <Avatar source={{ uri: item.account.avatar }} size={32} containerStyle={styles.avatar} />
+                        <Avatar source={{ uri: item.account.avatar }} size={36} containerStyle={styles.avatar} />
                         <Text style={[styles.actionText, { color: colors.textPrimary }]}>
                             <Text style={{ fontWeight: 'bold' }}>{item.account.display_name || item.account.username}</Text> {actionText}
                         </Text>
                     </View>
-                    {item.status && (
+                    {showPreview && item.status && (
                         <Text 
                             style={[styles.statusPreview, { color: colors.textSecondary }]} 
                             numberOfLines={3}
                         >
                             {stripHtml(item.status.content)}
                         </Text>
+                    )}
+                    {isFollow && (
+                        <View style={{ marginTop: 8, alignSelf: 'flex-start' }}>
+                            <Button
+                                label="Follow back"
+                                size={Button.sizes.small}
+                                backgroundColor={colors.accentColor}
+                                style={styles.followButton}
+                                onPress={() => console.log('Follow back pressed')}
+                            />
+                        </View>
                     )}
                 </View>
             </TouchableOpacity>

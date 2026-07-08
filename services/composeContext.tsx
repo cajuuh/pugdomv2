@@ -32,7 +32,7 @@ export const ComposeProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return (
         <ComposeContext.Provider value={{ isOpen, replyToStatus, openCompose, closeCompose }}>
             {children}
-            <ComposeModal />
+            <ComposeModal isOpen={isOpen} replyToStatus={replyToStatus} closeCompose={closeCompose} />
         </ComposeContext.Provider>
     );
 };

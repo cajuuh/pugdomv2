@@ -14,6 +14,7 @@ import { exchangeCodeForToken } from '../../services/mastodon/auth'
 import { saveCredentials } from '../../services/storage'
 import { getCurrentAccount } from '../../services/mastodon/accounts'
 import { useAuth } from '../../services/authContext'
+import { useTheme } from '../../services/themeContext'
 
 // web browser helper to complete authorizations on Android/Web
 WebBrowser.maybeCompleteAuthSession();
@@ -26,6 +27,7 @@ const Login: React.FC<LoginProps> = ({ onCancel }) => {
     const [instance, setInstance] = useState<string>('');
     const [loading, setLoading] = useState<boolean>(false);
     const { login } = useAuth();
+    const { colors } = useTheme();
 
     const handleLogin = async () => {
         if (!instance.trim()) {
@@ -77,8 +79,8 @@ const Login: React.FC<LoginProps> = ({ onCancel }) => {
     };
 
     return (
-        <View flex center padding-20 style={{ backgroundColor: '#0F172A' }}>
-            <Text blue50 text20 marginB-s5 style={{ color: '#F8FAFC' }}>
+        <View flex center padding-20 style={{ backgroundColor: colors.background }}>
+            <Text blue50 text20 marginB-s5 style={{ color: colors.textPrimary }}>
                 Welcome to Pugdom
             </Text>
             <View width="100%" marginT-s5>
@@ -89,20 +91,21 @@ const Login: React.FC<LoginProps> = ({ onCancel }) => {
                     value={instance}
                     disabled={loading}
                     autoCapitalize="none"
-                    fieldStyle={{ borderColor: '#334155', backgroundColor: '#1E293B' }}
-                    style={{ color: '#F8FAFC' }}
-                    placeholderTextColor={'#64748B'}
+                    fieldStyle={{ borderColor: colors.borderColor, backgroundColor: colors.inputBackground }}
+                    style={{ color: colors.textPrimary }}
+                    placeholderTextColor={colors.textMuted}
                 />
             </View>
             {loading ? (
-                <LoaderScreen message="Connecting to instance..." marginT-s5 messageStyle={{ color: '#94A3B8' }} />
+                <LoaderScreen message="Connecting to instance..." marginT-s5 messageStyle={{ color: colors.textSecondary }} />
             ) : (
                 <View width="100%">
                     <Button
                         label="Login with Mastodon"
                         marginT-s5
                         onPress={handleLogin}
-                        backgroundColor={'#6366F1'}
+                        backgroundColor={colors.accentColor}
+                        borderRadius={24}
                     />
                     {onCancel && (
                         <Button
@@ -110,7 +113,7 @@ const Login: React.FC<LoginProps> = ({ onCancel }) => {
                             marginT-s3
                             onPress={onCancel}
                             link
-                            color="#94A3B8"
+                            color={colors.textMuted}
                         />
                     )}
                 </View>
