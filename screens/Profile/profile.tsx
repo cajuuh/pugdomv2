@@ -149,7 +149,7 @@ const Profile = () => {
                     link
                     color={colors.dangerColor}
                     style={styles.logoutButton}
-                    onPress={logout}
+                    onPress={() => logout()}
                     labelStyle={[styles.logoutLabel, { color: colors.dangerColor }]}
                     iconSource={() => <Ionicons name="log-out-outline" size={18} color={colors.dangerColor} style={{ marginRight: 6 }} />}
                 />
