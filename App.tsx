@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, ActivityIndicator } from 'react-native';
+import { StyleSheet, ActivityIndicator, DeviceEventEmitter } from 'react-native';
 import { View } from 'react-native-ui-lib';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './services/authContext';
@@ -25,6 +25,14 @@ function NavigationRoot() {
   const [activeTab, setActiveTab] = useState<'home' | 'notifications' | 'profile'>('home');
   const [currentScreen, setCurrentScreen] = useState<'main' | 'settings' | 'thread'>('main');
   const [threadStatusId, setThreadStatusId] = useState<string | null>(null);
+
+  const handleTabPress = (tab: 'home' | 'notifications' | 'profile') => {
+      if (tab === 'home' && activeTab === 'home') {
+          DeviceEventEmitter.emit('scroll_to_top_home');
+      } else {
+          setActiveTab(tab);
+      }
+  };
 
   const openThread = (id: string) => {
     setThreadStatusId(id);
@@ -92,7 +100,7 @@ function NavigationRoot() {
         {activeTab === 'profile' && <Profile />}
       </View>
       {/* Custom Tab Bar */}
-      <TabBar activeTab={activeTab} onTabPress={setActiveTab} />
+      <TabBar activeTab={activeTab} onTabPress={handleTabPress} />
     </View>
   )
 }
