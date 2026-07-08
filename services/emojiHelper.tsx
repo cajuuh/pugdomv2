@@ -1,7 +1,6 @@
 import React from 'react';
-import { Image as RNImage } from 'react-native';
-import { Text } from 'react-native-ui-lib';
-import { CustomEmoji } from '../services/mastodon/types';
+import { Image as RNImage, Text } from 'react-native';
+import { CustomEmoji } from './mastodon/types';
 
 export const renderTextWithEmojis = (
     text: string,

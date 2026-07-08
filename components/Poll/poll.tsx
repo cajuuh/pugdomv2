@@ -5,7 +5,7 @@ import { votePoll } from '../../services/mastodon/polls';
 import { useTheme } from '../../services/themeContext';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { styles } from './styles';
-import { renderTextWithEmojis } from '../../utils/textUtils';
+import { renderTextWithEmojis } from '../../services/emojiHelper';
 
 interface PollProps {
     initialPoll: PollType;

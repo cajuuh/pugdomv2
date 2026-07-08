@@ -15,7 +15,7 @@ import { useCompose } from '../../services/composeContext';
 import { styles } from './styles';
 import { favouriteStatus, unfavouriteStatus, reblogStatus, unreblogStatus } from '../../services/mastodon/statuses';
 import { Poll } from '../Poll/poll';
-import { renderTextWithEmojis } from '../../utils/textUtils';
+import { renderTextWithEmojis } from '../../services/emojiHelper';
 
 const customHTMLElementModels = {
     emoji: HTMLElementModel.fromCustomModel({

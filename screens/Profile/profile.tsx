@@ -6,7 +6,7 @@ import { useTheme } from '../../services/themeContext';
 import * as WebBrowser from 'expo-web-browser';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { styles } from './styles'
-import { renderTextWithEmojis } from '../../components/TootCard/tootCard';
+import { renderTextWithEmojis } from '../../services/emojiHelper';
 
 const { width } = Dimensions.get('window');
 
