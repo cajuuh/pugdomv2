@@ -8,6 +8,11 @@ export interface CreateStatusParams {
     spoiler_text?: string;
     visibility?: 'public' | 'unlisted' | 'private' | 'direct';
     language?: string;
+    poll?: {
+        options: string[];
+        expires_in: number;
+        multiple?: boolean;
+    };
 }
 
 export async function createStatus(params: CreateStatusParams): Promise<Status> {

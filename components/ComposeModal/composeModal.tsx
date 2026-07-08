@@ -8,7 +8,8 @@ import {
     DeviceEventEmitter,
     Alert,
     Platform,
-    KeyboardAvoidingView
+    KeyboardAvoidingView,
+    Switch
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, Avatar } from 'react-native-ui-lib';
@@ -57,6 +58,12 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
     const [language, setLanguage] = useState('en-US');
     const [langModalVisible, setLangModalVisible] = useState(false);
 
+    // Poll States
+    const [showPoll, setShowPoll] = useState(false);
+    const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
+    const [pollDuration, setPollDuration] = useState<number>(86400); // 1 day in seconds
+    const [pollMultiple, setPollMultiple] = useState(false);
+
     const inputRef = useRef<TextInput>(null);
 
     useEffect(() => {
@@ -69,7 +76,12 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
             setSensitive(false);
             setSpoilerText('');
             setLanguage('en-US');
+            setLanguage('en-US');
             setLoading(false);
+            setShowPoll(false);
+            setPollOptions(['', '']);
+            setPollDuration(86400);
+            setPollMultiple(false);
             
             // Focus on mount/open
             const timer = setTimeout(() => {
@@ -98,6 +110,18 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
     const handlePublish = async () => {
         if (isPublishDisabled) return;
         setLoading(true);
+        let pollParams = undefined;
+        if (showPoll) {
+            const validOptions = pollOptions.filter(opt => opt.trim().length > 0);
+            if (validOptions.length >= 2) {
+                pollParams = {
+                    options: validOptions,
+                    expires_in: pollDuration,
+                    multiple: pollMultiple
+                };
+            }
+        }
+
         try {
             await createStatus({
                 status: text,
@@ -106,6 +130,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                 spoiler_text: sensitive ? spoilerText : undefined,
                 language: language,
                 visibility: replyToStatus ? replyToStatus.visibility : 'public',
+                poll: pollParams,
             });
 
             DeviceEventEmitter.emit('status_published');
@@ -259,6 +284,86 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                             onChangeText={setText}
                             maxLength={600}
                         />
+
+                        {/* Poll Creation UI */}
+                        {showPoll && (
+                            <View style={[styles.pollContainer, { backgroundColor: colors.cardBackground, borderColor: colors.borderColor }]}>
+                                {pollOptions.map((option, index) => (
+                                    <View key={index} style={styles.pollOptionRow}>
+                                        <TextInput
+                                            style={[styles.pollInput, { color: colors.textPrimary, borderColor: colors.borderColor }]}
+                                            placeholder={`Choice ${index + 1}`}
+                                            placeholderTextColor={colors.textMuted}
+                                            value={option}
+                                            onChangeText={(text) => {
+                                                const newOptions = [...pollOptions];
+                                                newOptions[index] = text;
+                                                setPollOptions(newOptions);
+                                            }}
+                                            maxLength={50}
+                                        />
+                                        {pollOptions.length > 2 && (
+                                            <TouchableOpacity
+                                                style={styles.pollRemoveButton}
+                                                onPress={() => {
+                                                    const newOptions = [...pollOptions];
+                                                    newOptions.splice(index, 1);
+                                                    setPollOptions(newOptions);
+                                                }}
+                                            >
+                                                <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
+                                ))}
+                                {pollOptions.length < 4 && (
+                                    <TouchableOpacity
+                                        style={styles.pollAddChoiceButton}
+                                        onPress={() => {
+                                            setPollOptions([...pollOptions, '']);
+                                        }}
+                                    >
+                                        <Ionicons name="add" size={16} color={colors.accentColor} />
+                                        <Text style={[styles.pollAddChoiceText, { color: colors.accentColor }]}>Add Choice</Text>
+                                    </TouchableOpacity>
+                                )}
+
+                                <View style={styles.pollSettingsRow}>
+                                    <Text style={[styles.pollSettingsLabel, { color: colors.textPrimary }]}>Poll Duration:</Text>
+                                    <View style={styles.pollDurationSelector}>
+                                        {[
+                                            { label: '1h', value: 3600 },
+                                            { label: '1d', value: 86400 },
+                                            { label: '1w', value: 604800 },
+                                        ].map(dur => (
+                                            <TouchableOpacity
+                                                key={dur.value}
+                                                style={[
+                                                    styles.pollDurationPill,
+                                                    pollDuration === dur.value && { backgroundColor: colors.accentColor }
+                                                ]}
+                                                onPress={() => setPollDuration(dur.value)}
+                                            >
+                                                <Text style={[
+                                                    styles.pollDurationText,
+                                                    { color: pollDuration === dur.value ? '#FFF' : colors.textSecondary }
+                                                ]}>{dur.label}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                </View>
+
+                                <View style={styles.pollSettingsRow}>
+                                    <Text style={[styles.pollSettingsLabel, { color: colors.textPrimary }]}>Multiple choice</Text>
+                                    <Switch
+                                        value={pollMultiple}
+                                        onValueChange={setPollMultiple}
+                                        trackColor={{ false: colors.borderColor, true: colors.accentColor }}
+                                        thumbColor={Platform.OS === 'ios' ? '#FFFFFF' : (pollMultiple ? '#FFFFFF' : '#f4f3f4')}
+                                    />
+                                </View>
+                            </View>
+                        )}
                     </ScrollView>
 
                     {/* Bottom Accessory Bar */}
@@ -283,6 +388,27 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                                     name={sensitive ? "eye-off-outline" : "eye-outline"}
                                     size={20}
                                     color={sensitive ? colors.accentColor : colors.textSecondary}
+                                />
+                            </TouchableOpacity>
+
+                            {/* Poll button */}
+                            <TouchableOpacity
+                                style={styles.accessoryButton}
+                                onPress={() => {
+                                    setShowPoll(!showPoll);
+                                    if (showPoll) {
+                                        // Reset when closing
+                                        setPollOptions(['', '']);
+                                        setPollDuration(86400);
+                                        setPollMultiple(false);
+                                    }
+                                }}
+                                activeOpacity={0.7}
+                            >
+                                <Ionicons 
+                                    name={showPoll ? "stats-chart" : "stats-chart-outline"} 
+                                    size={20} 
+                                    color={showPoll ? colors.accentColor : colors.textSecondary} 
                                 />
                             </TouchableOpacity>
                         </View>
