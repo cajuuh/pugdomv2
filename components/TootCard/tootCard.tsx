@@ -5,6 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as WebBrowser from 'expo-web-browser';
 import RenderHtml from 'react-native-render-html';
 import { useWindowDimensions } from 'react-native';
+import ImageViewing from 'react-native-image-viewing';
 import { Status, CustomEmoji, Attachment } from '../../services/mastodon/types';
 import { useSettings } from '../../services/settingsContext';
 import { useTheme } from '../../services/themeContext';
@@ -161,6 +162,8 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const [isReblogged, setIsreblogged] = useState(targetStatus.reblogged);
     const [favCount, setFavCount] = useState(targetStatus.favourites_count);
     const [boostCount, setBoostCount] = useState(targetStatus.reblogs_count);
+    const [isImageViewerVisible, setIsImageViewerVisible] = useState(false);
+    const [imageViewerIndex, setImageViewerIndex] = useState(0);
 
     const toggleFavorite = async () => {
         const previousIsFavorited = isFavorited;
@@ -218,30 +221,48 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         const count = attachments.length;
         if (count === 1) {
             return (
-                <View style={styles.mediaContainer}>
+                <TouchableOpacity 
+                    style={styles.mediaContainer}
+                    onPress={() => {
+                        setImageViewerIndex(0);
+                        setIsImageViewerVisible(true);
+                    }}
+                >
                     <Image
                         source={{ uri: attachments[0].preview_url || attachments[0].url }}
                         style={styles.singleMedia}
                     />
-                </View>
+                </TouchableOpacity>
             );
         }
 
         return (
             <View style={styles.mediaGrid}>
                 {attachments.map((item, idx) => (
-                    <Image
+                    <TouchableOpacity
                         key={item.id || idx}
-                        source={{ uri: item.preview_url || item.url }}
                         style={[
                             styles.gridMedia,
                             { width: count === 2 ? '48%' : '31%' }
                         ]}
-                    />
+                        onPress={() => {
+                            setImageViewerIndex(idx);
+                            setIsImageViewerVisible(true);
+                        }}
+                    >
+                        <Image
+                            source={{ uri: item.preview_url || item.url }}
+                            style={{ width: '100%', height: '100%', borderRadius: 8 }}
+                        />
+                    </TouchableOpacity>
                 ))}
             </View>
         );
     };
+
+    const imageViewerImages = targetStatus.media_attachments?.map(attachment => ({
+        uri: attachment.url
+    })) || [];
 
     return (
         <View style={[
@@ -368,6 +389,15 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     <Ionicons name="share-social-outline" size={18} color={colors.textMuted} />
                 </TouchableOpacity>
             </View>
+
+            <ImageViewing
+                images={imageViewerImages}
+                imageIndex={imageViewerIndex}
+                visible={isImageViewerVisible}
+                onRequestClose={() => setIsImageViewerVisible(false)}
+                swipeToCloseEnabled={true}
+                doubleTapToZoomEnabled={true}
+            />
         </View>
     );
 };
