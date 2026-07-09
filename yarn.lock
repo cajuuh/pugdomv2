@@ -2859,11 +2859,6 @@ expo-asset@~56.0.19:
     "@expo/image-utils" "^0.10.2"
     expo-constants "~56.0.20"
 
-expo-av@^16.0.8:
-  version "16.0.8"
-  resolved "https://registry.yarnpkg.com/expo-av/-/expo-av-16.0.8.tgz#b1671127f3b2ecaeb9c69fc2301cf791d4504dd6"
-  integrity sha512-cmVPftGR/ca7XBgs7R6ky36lF3OC0/MM/lpgX/yXqfv0jASTsh7AYX9JxHCwFmF+Z6JEB1vne9FDx4GiLcGreQ==
-
 expo-blur@^57.0.0:
   version "57.0.0"
   resolved "https://registry.yarnpkg.com/expo-blur/-/expo-blur-57.0.0.tgz#971431708bb4f26acbbfd3dbc5ff172a7c8cf328"
@@ -3019,6 +3014,11 @@ expo-updates@~56.0.21:
     ignore "^5.3.1"
     nullthrows "^1.1.1"
     resolve-from "^5.0.0"
+
+expo-video@~56.1.0:
+  version "56.1.4"
+  resolved "https://registry.yarnpkg.com/expo-video/-/expo-video-56.1.4.tgz#796426fb2b7b82007a844fa3be6b82611f4757f8"
+  integrity sha512-8mXZOnb7ZsWneDlcnRf0M2Ox9eb5dGnNiGiCkj9bwLPY+3jM2Pc1t5ymNUuhw8lSpT/rOnE0J0/81Y3+0k2Zcw==
 
 expo-web-browser@~56.0.5:
   version "56.0.5"

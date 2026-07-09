@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Alert, Image as RNImage, StyleSheet, Modal } from 'react-native';
 import { Avatar, View, Text, Button, Image, TouchableOpacity } from 'react-native-ui-lib';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Video, ResizeMode } from 'expo-av';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import * as WebBrowser from 'expo-web-browser';
 import RenderHtml, { HTMLElementModel, HTMLContentModel } from 'react-native-render-html';
 import { useWindowDimensions } from 'react-native';
@@ -165,6 +165,13 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const [isMediaRevealed, setIsMediaRevealed] = useState(false);
     const [isVideoVisible, setIsVideoVisible] = useState(false);
     const [videoUrl, setVideoUrl] = useState<string | null>(null);
+
+    const player = useVideoPlayer(videoUrl, player => {
+        if (targetStatus.media_attachments?.find(a => a.url === videoUrl)?.type === 'gifv') {
+            player.loop = true;
+        }
+        player.play();
+    });
 
     const toggleFavorite = async () => {
         const previousIsFavorited = isFavorited;
@@ -501,19 +508,18 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 FooterComponent={ImageViewerFooter}
             />
 
-            <Modal visible={isVideoVisible} onRequestClose={() => setIsVideoVisible(false)} animationType="fade">
+            <Modal visible={isVideoVisible} onRequestClose={() => { player.pause(); setIsVideoVisible(false); }} animationType="fade">
                 <View style={{ flex: 1, backgroundColor: '#000', justifyContent: 'center' }}>
                     {videoUrl && (
-                        <Video
-                            source={{ uri: videoUrl }}
+                        <VideoView
+                            player={player}
                             style={{ width: '100%', height: '80%' }}
-                            useNativeControls
-                            resizeMode={ResizeMode.CONTAIN}
-                            shouldPlay
-                            isLooping={targetStatus.media_attachments?.find(a => a.url === videoUrl)?.type === 'gifv'}
+                            allowsFullscreen
+                            allowsPictureInPicture
+                            contentFit="contain"
                         />
                     )}
-                    <TouchableOpacity onPress={() => setIsVideoVisible(false)} style={styles.closeButton}>
+                    <TouchableOpacity onPress={() => { player.pause(); setIsVideoVisible(false); }} style={styles.closeButton}>
                         <Ionicons name="close" size={30} color="#FFF" />
                     </TouchableOpacity>
                 </View>
