@@ -83,9 +83,9 @@ The navigation bar is the focal anchor of the application, utilizing a floating 
 * **Geometry:** High border-radius (fully rounded pill shape) with distinct padding separating it from the screen edges.
 * **Material:** Background blur layer (`backdrop-filter: blur(20px)`) coupled with a thin, low-opacity white border overlay to mimic physical glass.
 * **The Centerpiece (Compose Trigger):**
-* A perfectly circular floating button containing a crisp plus (`+`) or action icon.
-* The center button sits nested inside a subtle geometric dip or protrudes slightly over the dock boundary.
-* **Micro-interaction:** Tapping the center action expands a circular sub-dock or floating ring revealing direct quick-actions (e.g., Quick Post, Post Media, Audio Status).
+  * A perfectly circular floating button containing a crisp plus (`+`) or action icon.
+  * The center button sits nested inside a subtle geometric dip or protrudes slightly over the dock boundary.
+  * **Micro-interaction:** Tapping the center action expands a circular sub-dock or floating ring revealing direct quick-actions (e.g., Quick Post, Post Media, Audio Status).
 
 ---
 
@@ -103,12 +103,11 @@ The timeline prioritizes readability, high-fidelity media presentation, and inst
 
 * **Card Isolation:** Every status (toot) is housed within an independent card container featuring smooth, rounded corners (`border-radius: 16px` to `24px`).
 * **Grid-Based Media Layouts:**
-* Single images adapt fluidly to aspect ratios with high-quality cropping.
-* Multiple image attachments break into asymmetric mosaic grids (e.g., side-by-side or square quadrants) with tight, unified spacing.
-
+  * Single images adapt fluidly to aspect ratios with high-quality cropping.
+  * Multiple image attachments break into asymmetric mosaic grids (e.g., side-by-side or square quadrants) with tight, unified spacing.
 * **Meta Content Placement:**
-* User identification data (Avatar, Display Name, Instance Handle) cleanly separated at the top.
-* Clear timestamp and privacy scope indicators (Public, Unlisted, Followers Only).
+  * User identification data (Avatar, Display Name, Instance Handle) cleanly separated at the top.
+  * Clear timestamp and privacy scope indicators (Public, Unlisted, Followers Only).
 
 ### Footer Interaction Layer
 
@@ -129,4 +128,20 @@ The timeline prioritizes readability, high-fidelity media presentation, and inst
 * **Hero Section:** A full-bleed profile banner fading smoothly into the card surface below.
 * **Stat Trays:** Horizontal analytical panels displaying structural counts (Followers, Following, Total Posts) using clean dividing lines.
 * **Categorized Content Tabs:** Clean toggle buttons separating regular Posts, Media attachments, and Public Replies.
+
+### C. Notifications Screen (High-Contrast Activity Blocks)
+
+The Activity feed abandons standard thin list rows in favor of full-bleed, beautifully containerized notification blocks inspired by modern project UI blocks. Each notification is mapped to an expressive, high-contrast block layout.
+
+#### Core Card Blueprint
+* **Card Geometry:** Large rounded rectangles (`border-radius: 20px`) stacked vertically with explicit margins (`mb-4`) to establish physical separation.
+* **Asymmetric Tag Layer:** The top-right corner of each card contains sharp, minimalist pill badges indicating context (e.g., standard text tag like `MENTION`, or system status labels like `NEW`).
+* **Header Architecture:** The top-left corner features the performing user's Avatar/Instance Badge right alongside their clear plain-text display metadata.
+
+#### Color Coding by Notification Type (`GET /api/v1/notifications`)
+To maximize scan-ability, cards map to explicit glassmorphic tints depending on the Mastodon interaction type:
+* **Mentions (`mention`):** *Soft Lavender/Pink Tint.* Focused on body copy text. The toot snippet is typeset in a bold, stylized high-contrast font choice directly across the face of the card.
+* **Reblogs/Boosts (`reblog`):** *Warm Ochre/Amber Gold Tint.* Highlights the original content title and features a secondary structural mini-badge tracking the boosting account.
+* **Favorites (`favourite`):** *Sky Cyan/Vibrant Blue Tint.* Minimalist card focusing on the post summary alongside a clear micro-icon indicating engagement success.
+* **New Followers (`follow`):** *Lime/Emerald Green Tint.* Highly visual, highlighting the new follower's bio snippet or a prominent follow-back interactive state.
 """
