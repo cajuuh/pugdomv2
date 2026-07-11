@@ -16,6 +16,7 @@ import Login from './screens/Login/login';
 import Profile from './screens/Profile/profile';
 import Timeline from './screens/Timeline/timeline';
 import Notifications from './screens/Notifications/notifications';
+import Search from './screens/Search/search';
 import { TopBar } from './components/TopBar/topBar';
 import { TabBar } from './components/TabBar/tabBar';
 import Settings from './screens/Settings/settings';
@@ -28,11 +29,11 @@ function NavigationRoot() {
   const { user, loading, logout, isAddingAccount, setAddingAccount } = useAuth();
   const { openCompose } = useCompose();
   const { colors, isDark } = useTheme();
-  const [activeTab, setActiveTab] = useState<'home' | 'notifications' | 'profile'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'search' | 'notifications' | 'profile'>('home');
   const [currentScreen, setCurrentScreen] = useState<'main' | 'settings' | 'thread'>('main');
   const [threadStatusId, setThreadStatusId] = useState<string | null>(null);
 
-  const handleTabPress = (tab: 'home' | 'notifications' | 'profile') => {
+  const handleTabPress = (tab: 'home' | 'search' | 'notifications' | 'profile') => {
       if (tab === 'home' && activeTab === 'home') {
           DeviceEventEmitter.emit('scroll_to_top_home');
       } else {
@@ -86,20 +87,13 @@ function NavigationRoot() {
         {/* Screen content area */}
         <View flex>
           {activeTab === 'home' && <Timeline onStatusPress={openThread} />}
+          {activeTab === 'search' && <Search />}
           {activeTab === 'notifications' && <Notifications onStatusPress={openThread} />}
           {activeTab === 'profile' && <Profile />}
         </View>
 
-        <TouchableOpacity
-            onPress={() => openCompose()}
-            style={[styles.fabButton, { backgroundColor: colors.accentColor }]}
-            activeOpacity={0.8}
-        >
-            <Ionicons name="create" size={24} color="#FFF" />
-        </TouchableOpacity>
-
         {/* Custom Tab Bar */}
-        <TabBar activeTab={activeTab} onTabPress={handleTabPress} />
+        <TabBar activeTab={activeTab} onTabPress={handleTabPress} onComposePress={openCompose} />
       </View>
 
       {/* Render Thread as absolute overlay on top if active */}
@@ -145,20 +139,5 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center'
-  },
-  fabButton: {
-    position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 100 : 85,
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
   },
 });

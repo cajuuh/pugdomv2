@@ -2,12 +2,17 @@ import { StyleSheet } from 'react-native';
 
 export const styles = StyleSheet.create({
     cardContainer: {
-        borderRadius: 16,
+        borderRadius: 20,
         paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingVertical: 16,
         marginHorizontal: 16,
-        marginVertical: 8,
+        marginVertical: 10,
         borderWidth: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 4,
     },
     boostedHeader: {
         flexDirection: 'row',
@@ -121,9 +126,9 @@ export const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         borderTopWidth: 1,
-        borderTopColor: '#334155',
+        borderTopColor: 'rgba(150, 150, 150, 0.2)',
         paddingTop: 12,
-        marginTop: 4
+        marginTop: 8
     },
     actionButton: {
         flexDirection: 'row',
