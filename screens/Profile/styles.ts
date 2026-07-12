@@ -6,7 +6,7 @@ export const styles = StyleSheet.create({
         backgroundColor: '#0F172A'
     },
     contentContainer: {
-        paddingBottom: 40
+        paddingBottom: 100
     },
     headerBannerContainer: {
         width: '100%',
