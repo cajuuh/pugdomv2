@@ -67,6 +67,7 @@ export default function Thread({ statusId, onBack, onStatusPress }: ThreadProps)
                 <FlashList
                     data={statuses}
                     keyExtractor={(item, index) => item.id + index}
+                    contentContainerStyle={{ paddingBottom: 100 }}
                     renderItem={({ item, index }) => {
                         const isMain = (item as any).isMain;
                         return (
