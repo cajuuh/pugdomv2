@@ -37,7 +37,7 @@ const LANGUAGES = [
 ];
 
 import { Status } from '../../services/mastodon/types';
-import { renderTextWithEmojis } from '../TootCard/tootCard';
+import { renderTextWithEmojis } from '../../services/emojiHelper';
 
 interface ComposeModalProps {
     isOpen: boolean;

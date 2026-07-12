@@ -14,6 +14,7 @@
     "expo-secure-store": "~56.0.4",
     "expo-status-bar": "~56.0.4",
     "expo-updates": "~56.0.21",
+    "expo-video": "~56.1.0",
     "expo-web-browser": "~56.0.5",
     "react": "19.2.3",
     "react-dom": "19.2.3",

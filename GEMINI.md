@@ -51,100 +51,97 @@ When asked to build features, implement them in alignment with these standard Ma
 
 ---
 
-# Pugdom: Mobile Application Architecture & Interface Design Specification
+# Pugdom: Mobile Client Design Specification
 
-## 1. Executive Summary & Core Design Vision
-
-**Pugdom** is a highly specialized pet-wellness and social ecosystem crafted explicitly for Pug owners. Pugs have distinct physiological requirements that demand meticulous, proactive management—including respiratory observation, temperature-dependent exercise thresholds, strict weight management, and precise therapeutic routines (such as antibiotic cycles). 
-
-This design document bridges structured clinical data collection with an engaging decentralized social layer. The visual system translates complex, high-friction tracking tasks into a supportive and intuitive interface. By combining a calming, organic **Sage Olive and Warm Bone** theme for everyday tracking with a high-contrast **Midnight Glass** system for advanced data telemetry, the layout promotes daily tracking habits while lowering owner anxiety during health management periods.
+Here is the comprehensive technical design document for **Pugdom**, a modern mobile Mastodon client. This document translates the visual language and user flows from your reference materials into a clean, implementable spec sheet.
 
 ---
 
-## 2. Design Tokens & Design System
+## 1. Design Philosophy & System Core
 
-### 2.1 The Hybrid Color Strategy
-The interface relies on two distinct visual contexts optimized for specific tasks:
-1. **The Organic Canvas (Light Mode):** Applied to the primary medical tracker, chronological logging, and treatment sheets. It uses comforting, soft earth tones to reduce health-related stress.
-2. **The Deep Analytical Mesh (Dark Mode):** Applied to real-time telemetry, historical trend aggregations, and performance dashboards. This approach leverages high-contrast neon accents over dark backgrounds to ensure clean visibility of technical graphs.
+Pugdom combines the decentralized power of Mastodon with an ultra-modern, highly fluid interface. The visual identity relies heavily on **Glassmorphism**, depth layering, bold micro-interactions, and clear content containerization.
 
-| Design Token | Value / Mapping | Applied UX Component |
-| :--- | :--- | :--- |
-| **Primary Theme** | `HEX #556B2F` (Sage Olive) | Primary action sheets, page banners, navigation headers, confirmation buttons. |
-| **Secondary Accent** | `HEX #A3B18A` (Soft Moss) | Selected states, slider tracks, verified badges, tab navigation frames. |
-| **Base Surface** | `HEX #F4F3EF` (Warm Bone) | Light-mode canvas background, content containers, timeline dividers. |
-| **Analytics Surface** | `HEX #0F0E17` to `#1E1B2E` | Deep multi-stop gradient background reserved for dark-mode telemetry. |
-| **Alert / Priority** | `HEX #E63946` (Crimson) | Missed medication blocks, breathing anomalies, low inventory alerts. |
-| **Warning / Status** | `HEX #FFB703` (Amber) | Mid-tier pain indices, elevated regional temperatures, upcoming refills. |
+### Color Archetypes
 
-### 2.2 Typography & Spacing Hierarchy
-* **Primary System Font:** Inter, Roboto, or SF Pro Display.
-* **Component Corner Radius:** Standard card layouts utilize a `16px` border-radius; primary control buttons utilize a `24px` pill shape.
-* **Layout Margins:** Consistent `16px` horizontal padding across phone frames to align text boxes with screen boundaries.
+* **Light Mode (Pristine):** High-translucency pure white surfaces over soft, colorful ambient background gradients (pinks, blues, and teals).
+* **Dark Mode (Obsidian):** Deep charcoal tones (`#121318`) with emerald/lime green or neon cyan accent highlights to make key interactions pop.
 
 ---
 
-## 3. Core Structural Modules
+## 2. Navigation Architecture (Floating Dock Component)
 
-### 3.1 Chronological Treatment Console (Meals & Meds)
-A timeline layout focused on day-to-day operational execution. It prevents gaps in critical routines by grouping nutritional plans and clinical dosages into a single schedule.
+The navigation bar is the focal anchor of the application, utilizing a floating pill/dock layout isolated from the screen edges instead of a traditional bottom tab bar.
 
-* **Calibrated Feeding Logs:** Displays food measurements in grams alongside precise time labels (e.g., *"Breakfast: Fiber Mix x 230g at 8:00 AM"*).
-* **Clinical Dosage Management:** Highlights medication windows, dosage sizes, and completion tallies (e.g., *"Amoxicillin 100mg x 4 pills at 8:30 AM"*).
-* **Contextual Safety Cards:** Inline tips to assist with proper medication delivery (e.g., 💡 *"Amoxicillin is better tolerated when taken with a soft protein food pack to prevent digestive discomfort."*).
-
-### 3.2 Quantitative Symptom Engine (Pug-Specific Metrics)
-Simplifies complex symptom logging into clean, accessible controls. This makes it easier to track conditions related to brachycephalic airway obstruction syndrome (BAOS) and corneal vulnerabilities.
-
-* **Visual Parameter Sliders:** Interactive, color-coded sliders that allow owners to log soft metrics quickly:
-  * **Overall Mood:** (Green track / Relaxed state)
-  * **Energy & Vitality:** (Amber track / Moderate movement)
-  * **Pain & Respiratory Effort:** (Red track / High priority tracking)
-* **Dictation Box:** Features a floating microphone icon to log spoken observations immediately during vet evaluations.
-
-### 3.3 Decentralized Social Layer ("Hubline")
-Integrates decentralized social networking protocols (ActivityPub) directly into the pet-care ecosystem, connecting users with the broader community.
-
-* **The Local Timeline ("Hubline"):** Displays posts, photo updates, and advice streams shared by local dog owners.
-* **Cross-Instance Network Router:** A clean onboarding flow that lets users browse global registries, filter by popular tags, and connect seamlessly to federated servers (e.g., `pugdom.online`).
-
----
-
-## 4. Screen Component Architectures
-
-### Screen 1: The Daily Treatment Console
-* **Header Stack:** Clean text hierarchy displaying `Sync Meals & Meds` in bold, paired with a subtle confirmation sub-header: *"Syncing meals and pills boosts treatment results."*
-* **Item Framework:** High-contrast container elements featuring circular asset icons (e.g., salad icons, pill graphics) on the left, clear task descriptions in the center, and time alignments on the right.
-* **Action Footer:** Split buttons (`+ Add Meal` / `+ Add Med`) designed for quick updates on the move.
-
-### Screen 2: Diagnostics & Observation Sheet
-* **Status Header:** Displays `Mood & Symptoms` alongside an expressive mood indicator.
-* **Interactive Control Grid:** Stacked horizontal tracking rows with clear percentage indicators (e.g., `78%`, `61%`, `54%`). The progress tracks automatically shift color as sliders move toward critical thresholds.
-* **Audio Capture Box:** A text box labeled `Note` with an absolute-positioned audio input icon (`bottom: 12px`, `right: 12px`) for hands-free dictation.
-
-### Screen 3: Telemetry Dashboard & Supply Track
-* **Analytical Telemetry:** Features a deep dark-mode interface centered around a neon performance ring displaying the target score (`79% Team Performance Score`). It includes a vertical frequency spectrum to track time-based trends and efficiency metrics (`Efficiency: 89%`).
-* **Supply Ledger:** Displays inventory alerts (e.g., `12 pills left / 4 days remaining`) paired with an embedded verification QR code for quick scanning at pharmacy counters or veterinary check-ins.
-* **Primary Action Trigger:** A solid-color button labeled `Order Refill` that automatically handles pharmacy supply reorders.
-
----
-
-## 5. Technical Context Guidelines for AI Agents
-
-When utilizing this specification to write application code, your developer agents should adhere to the following execution guidelines:
-
-```javascript
-// Example component guideline for layout rendering
-const CardLayoutConfig = {
-  borderRadius: 16,
-  paddingHorizontal: 16,
-  paddingVertical: 12,
-  backgroundColor: '#F4F3EF', // Light Base Surface
-  alternativeColor: '#0F0E17', // Dark Analytical Surface
-};
-
-const PriorityRules = {
-  AlertThreshhold: 'value > 70% -> triggers Crimson styling',
-  WarningThreshhold: '50% < value <= 70% -> triggers Amber styling',
-};
 ```
+       [ Home ]   [ Search ]   (  +  )   [ Notifications ]   [ Profile ]
+     └───────────────────────────▲─────────────────────────────────────┘
+                          Central Action Anchor
+```
+
+### Visual Specifications
+
+* **Geometry:** High border-radius (fully rounded pill shape) with distinct padding separating it from the screen edges.
+* **Material:** Background blur layer (`backdrop-filter: blur(20px)`) coupled with a thin, low-opacity white border overlay to mimic physical glass.
+* **The Centerpiece (Compose Trigger):**
+  * A perfectly circular floating button containing a crisp plus (`+`) or action icon.
+  * The center button sits nested inside a subtle geometric dip or protrudes slightly over the dock boundary.
+  * **Micro-interaction:** Tapping the center action expands a circular sub-dock or floating ring revealing direct quick-actions (e.g., Quick Post, Post Media, Audio Status).
+
+---
+
+## 3. Timeline & Feed Spec (Card Architecture)
+
+The timeline prioritizes readability, high-fidelity media presentation, and instant context recognition.
+
+### Header Element: Active Peer Rings
+
+* Positioned directly at the top of the main timeline feed.
+* A horizontally scrollable row of high-resolution avatar circles representing active users, instances, or pinned hashtags.
+* Outlined with gradient status rings indicating unread content or live updates.
+
+### Post Container Design
+
+* **Card Isolation:** Every status (toot) is housed within an independent card container featuring smooth, rounded corners (`border-radius: 16px` to `24px`).
+* **Grid-Based Media Layouts:**
+  * Single images adapt fluidly to aspect ratios with high-quality cropping.
+  * Multiple image attachments break into asymmetric mosaic grids (e.g., side-by-side or square quadrants) with tight, unified spacing.
+* **Meta Content Placement:**
+  * User identification data (Avatar, Display Name, Instance Handle) cleanly separated at the top.
+  * Clear timestamp and privacy scope indicators (Public, Unlisted, Followers Only).
+
+### Footer Interaction Layer
+
+* Minimalist iconography for core Mastodon interactions: **Reply**, **Boost**, **Favorite**, and **Bookmark**.
+* Inline counters displaying dynamic engagement counts (e.g., "120+ Likes", "65 Comments") placed adjacent to the icons.
+
+---
+
+## 4. Interaction Flows & Screen States
+
+### A. Discover / Explore State
+
+* Clean category badges or segmented control pills nested under the main search input field (e.g., "For You", "Following", "Local", "Federated").
+* Asymmetric multi-column masonry grids for browsing discovery media tags.
+
+### B. Rich Profile View
+
+* **Hero Section:** A full-bleed profile banner fading smoothly into the card surface below.
+* **Stat Trays:** Horizontal analytical panels displaying structural counts (Followers, Following, Total Posts) using clean dividing lines.
+* **Categorized Content Tabs:** Clean toggle buttons separating regular Posts, Media attachments, and Public Replies.
+
+### C. Notifications Screen (High-Contrast Activity Blocks)
+
+The Activity feed abandons standard thin list rows in favor of full-bleed, beautifully containerized notification blocks inspired by modern project UI blocks. Each notification is mapped to an expressive, high-contrast block layout.
+
+#### Core Card Blueprint
+* **Card Geometry:** Large rounded rectangles (`border-radius: 20px`) stacked vertically with explicit margins (`mb-4`) to establish physical separation.
+* **Asymmetric Tag Layer:** The top-right corner of each card contains sharp, minimalist pill badges indicating context (e.g., standard text tag like `MENTION`, or system status labels like `NEW`).
+* **Header Architecture:** The top-left corner features the performing user's Avatar/Instance Badge right alongside their clear plain-text display metadata.
+
+#### Color Coding by Notification Type (`GET /api/v1/notifications`)
+To maximize scan-ability, cards map to explicit glassmorphic tints depending on the Mastodon interaction type:
+* **Mentions (`mention`):** *Soft Lavender/Pink Tint.* Focused on body copy text. The toot snippet is typeset in a bold, stylized high-contrast font choice directly across the face of the card.
+* **Reblogs/Boosts (`reblog`):** *Warm Ochre/Amber Gold Tint.* Highlights the original content title and features a secondary structural mini-badge tracking the boosting account.
+* **Favorites (`favourite`):** *Sky Cyan/Vibrant Blue Tint.* Minimalist card focusing on the post summary alongside a clear micro-icon indicating engagement success.
+* **New Followers (`follow`):** *Lime/Emerald Green Tint.* Highly visual, highlighting the new follower's bio snippet or a prominent follow-back interactive state.
+"""

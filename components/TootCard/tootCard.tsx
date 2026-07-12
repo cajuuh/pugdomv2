@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Alert, Image as RNImage, StyleSheet } from 'react-native';
+import { Alert, Image as RNImage, StyleSheet, Modal } from 'react-native';
 import { Avatar, View, Text, Button, Image, TouchableOpacity } from 'react-native-ui-lib';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import * as WebBrowser from 'expo-web-browser';
 import RenderHtml, { HTMLElementModel, HTMLContentModel } from 'react-native-render-html';
 import { useWindowDimensions } from 'react-native';
@@ -14,7 +15,7 @@ import { useCompose } from '../../services/composeContext';
 import { styles } from './styles';
 import { favouriteStatus, unfavouriteStatus, reblogStatus, unreblogStatus } from '../../services/mastodon/statuses';
 import { Poll } from '../Poll/poll';
-import { renderTextWithEmojis } from '../../utils/textUtils';
+import { renderTextWithEmojis } from '../../services/emojiHelper';
 
 const customHTMLElementModels = {
     emoji: HTMLElementModel.fromCustomModel({
@@ -162,6 +163,15 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const [isImageViewerVisible, setIsImageViewerVisible] = useState(false);
     const [imageViewerIndex, setImageViewerIndex] = useState(0);
     const [isMediaRevealed, setIsMediaRevealed] = useState(false);
+    const [isVideoVisible, setIsVideoVisible] = useState(false);
+    const [videoUrl, setVideoUrl] = useState<string | null>(null);
+
+    const player = useVideoPlayer(videoUrl, player => {
+        if (targetStatus.media_attachments?.find(a => a.url === videoUrl)?.type === 'gifv') {
+            player.loop = true;
+        }
+        player.play();
+    });
 
     const toggleFavorite = async () => {
         const previousIsFavorited = isFavorited;
@@ -224,8 +234,13 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 <TouchableOpacity 
                     style={[styles.mediaContainer, targetStatus.sensitive && !isMediaRevealed && { marginBottom: 0 }]}
                     onPress={() => {
-                        setImageViewerIndex(0);
-                        setIsImageViewerVisible(true);
+                        if (attachments[0].type === 'video' || attachments[0].type === 'gifv') {
+                            setVideoUrl(attachments[0].url);
+                            setIsVideoVisible(true);
+                        } else {
+                            setImageViewerIndex(0);
+                            setIsImageViewerVisible(true);
+                        }
                     }}
                 >
                     <Image
@@ -245,8 +260,13 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                                 { width: count === 2 ? '48%' : '31%' }
                             ]}
                             onPress={() => {
-                                setImageViewerIndex(idx);
-                                setIsImageViewerVisible(true);
+                                if (item.type === 'video' || item.type === 'gifv') {
+                                    setVideoUrl(item.url);
+                                    setIsVideoVisible(true);
+                                } else {
+                                    setImageViewerIndex(idx);
+                                    setIsImageViewerVisible(true);
+                                }
                             }}
                         >
                             <Image
@@ -326,9 +346,12 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 <View style={styles.boostedHeader}>
                     <Ionicons name="repeat" size={14} color={colors.textMuted} />
                     <Avatar source={{ uri: status.account.avatar }} size={18} containerStyle={styles.boostedAvatar} />
-                    <Text style={[styles.boostedText, { color: colors.textMuted }]}>
-                        {status.account.display_name || status.account.username} boosted
-                    </Text>
+                    {renderTextWithEmojis(
+                        (status.account.display_name || status.account.username) + ' boosted',
+                        status.account.emojis || [],
+                        [styles.boostedText, { color: colors.textMuted }],
+                        14
+                    )}
                 </View>
             )}
 
@@ -484,6 +507,23 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 backgroundColor="rgba(0, 0, 0, 0.85)"
                 FooterComponent={ImageViewerFooter}
             />
+
+            <Modal visible={isVideoVisible} onRequestClose={() => { player.pause(); setIsVideoVisible(false); }} animationType="fade">
+                <View style={{ flex: 1, backgroundColor: '#000', justifyContent: 'center' }}>
+                    {videoUrl && (
+                        <VideoView
+                            player={player}
+                            style={{ width: '100%', height: '80%' }}
+                            allowsFullscreen
+                            allowsPictureInPicture
+                            contentFit="contain"
+                        />
+                    )}
+                    <TouchableOpacity onPress={() => { player.pause(); setIsVideoVisible(false); }} style={styles.closeButton}>
+                        <Ionicons name="close" size={30} color="#FFF" />
+                    </TouchableOpacity>
+                </View>
+            </Modal>
         </CardContainer>
     );
 };
