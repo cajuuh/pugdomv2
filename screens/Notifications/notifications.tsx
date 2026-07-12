@@ -199,7 +199,6 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
     return (
         <View flex style={[styles.container, { backgroundColor: colors.background }]}>
             <FlashList
-                estimatedItemSize={150}
                 data={notifications}
                 keyExtractor={(item) => item.id}
                 renderItem={renderNotification}

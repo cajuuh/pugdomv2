@@ -65,7 +65,6 @@ export default function Thread({ statusId, onBack, onStatusPress }: ThreadProps)
                 </View>
             ) : (
                 <FlashList
-                    estimatedItemSize={200}
                     data={statuses}
                     keyExtractor={(item, index) => item.id + index}
                     renderItem={({ item, index }) => {

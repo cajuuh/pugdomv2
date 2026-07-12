@@ -46,7 +46,7 @@ const Timeline = ({ onStatusPress }: TimelineProps) => {
     const { colors } = useTheme();
     const [activeFeed, setActiveFeed] = useState<FeedType>('home');
     const queryClient = useQueryClient();
-    const listRef = useRef<FlashList<any>>(null);
+    const listRef = useRef<any>(null);
 
     const {
         data,
@@ -133,7 +133,6 @@ const Timeline = ({ onStatusPress }: TimelineProps) => {
             ) : (
                 <FlashList
                     ref={listRef}
-                    estimatedItemSize={200}
                     data={statuses}
                     keyExtractor={(item) => item.id}
                     renderItem={({ item }) => <TootCard status={item} onPress={() => onStatusPress?.(item.id)} />}
