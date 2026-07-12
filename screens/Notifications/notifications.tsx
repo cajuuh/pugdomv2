@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { ActivityIndicator, RefreshControl, TouchableOpacity } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
-import { View, Text, Avatar, Button } from 'react-native-ui-lib';
+import { View, Text, Avatar, Button, SegmentedControl } from 'react-native-ui-lib';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { fetchNotifications } from '../../services/mastodon/notifications';
 import { Notification } from '../../services/mastodon/types';
@@ -19,6 +19,20 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
     const [refreshing, setRefreshing] = useState(false);
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(true);
+    const [activeFilter, setActiveFilter] = useState<'all' | 'mentions' | 'follows'>('all');
+
+    const handleTabChange = (index: number) => {
+        const types: ('all' | 'mentions' | 'follows')[] = ['all', 'mentions', 'follows'];
+        setActiveFilter(types[index]);
+    };
+
+    const filteredNotifications = useMemo(() => {
+        if (activeFilter === 'all') return notifications;
+        if (activeFilter === 'mentions') return notifications.filter(n => n.type === 'mention');
+        if (activeFilter === 'follows') return notifications.filter(n => n.type === 'follow');
+        return notifications;
+    }, [notifications, activeFilter]);
+
 
     const loadNotifications = async (maxId?: string, isRefresh = false) => {
         try {
@@ -125,8 +139,8 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
         }
 
         return (
-            <TouchableOpacity 
-                style={[styles.notificationCard, { backgroundColor: cardBackgroundColor, borderColor }]} 
+            <TouchableOpacity
+                style={[styles.notificationCard, { backgroundColor: cardBackgroundColor, borderColor }]}
                 onPress={() => item.status && onStatusPress?.(item.status.id)}
                 activeOpacity={item.status ? 0.8 : 1}
             >
@@ -140,18 +154,19 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
                 <View style={styles.headerArchitecture}>
                     <Avatar source={{ uri: item.account.avatar }} size={42} containerStyle={styles.avatar} />
                     <Text style={[styles.actionText, { color: colors.textPrimary }]}>
-                        <Text style={{ fontWeight: 'bold' }}>{item.account.display_name || item.account.username}</Text> {actionText}
+                        <Text style={{ fontWeight: 'bold' }}>{item.account.display_name || item.account.username}</Text>
+                        <Text>{' '}{actionText}</Text>
                     </Text>
                 </View>
 
                 {/* Content Layer */}
                 {showPreview && item.status && (
-                    <Text 
+                    <Text
                         style={[
-                            styles.statusPreview, 
-                            { color: colors.textPrimary }, 
+                            styles.statusPreview,
+                            { color: colors.textPrimary },
                             item.type === 'mention' && { fontWeight: '600', fontSize: 16 }
-                        ]} 
+                        ]}
                         numberOfLines={3}
                     >
                         {stripHtml(item.status.content)}
@@ -198,8 +213,15 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
 
     return (
         <View flex style={[styles.container, { backgroundColor: colors.background }]}>
+            <View paddingH-16 paddingV-10 style={{ zIndex: 10 }}>
+                <SegmentedControl
+                    segments={[{ label: 'All' }, { label: 'Mentions' }, { label: 'Follows' }]}
+                    activeColor={colors.accentColor}
+                    onChangeIndex={handleTabChange}
+                />
+            </View>
             <FlashList
-                data={notifications}
+                data={filteredNotifications}
                 keyExtractor={(item) => item.id}
                 renderItem={renderNotification}
                 onEndReached={handleLoadMore}

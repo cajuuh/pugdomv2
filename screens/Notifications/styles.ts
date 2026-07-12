@@ -5,7 +5,7 @@ export const styles = StyleSheet.create({
         flex: 1,
     },
     listContent: {
-        paddingBottom: 20,
+        paddingBottom: 120,
         paddingTop: 10,
     },
     loadingContainer: {
@@ -62,6 +62,7 @@ export const styles = StyleSheet.create({
         marginRight: 12,
     },
     actionText: {
+        width: 150,
         fontSize: 15,
         fontWeight: '500',
         flexShrink: 1,
@@ -80,3 +81,4 @@ export const styles = StyleSheet.create({
         alignSelf: 'flex-start',
     }
 });
+
