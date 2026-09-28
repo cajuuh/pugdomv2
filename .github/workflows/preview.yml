@@ -6,8 +6,12 @@ on:
       - develop
 
 jobs:
+  checks:
+    uses: ./.github/workflows/checks.yml
+
   publish-ota:
     name: Publish OTA Update to Preview
+    needs: checks
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -26,7 +30,7 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Install dependencies
-        run: yarn install
+        run: yarn install --frozen-lockfile
 
       - name: Publish EAS Update
         run: eas update --branch preview --message "Automated update from GitHub Actions"

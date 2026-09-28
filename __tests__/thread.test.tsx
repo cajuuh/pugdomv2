@@ -2,7 +2,8 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { createTestQueryClient } from '../testUtils/queryClient';
 import Thread from '../screens/Thread/thread';
 import { getStatus, getStatusContext } from '../services/mastodon/statuses';
 import { Status } from '../services/mastodon/types';
@@ -60,7 +61,7 @@ const renderThread = (onStatusPress = jest.fn()) =>
                 insets: { top: 47, left: 0, right: 0, bottom: 34 },
             }}
         >
-            <QueryClientProvider client={new QueryClient()}>
+            <QueryClientProvider client={createTestQueryClient()}>
                 <Thread statusId="main" onBack={jest.fn()} onStatusPress={onStatusPress} />
             </QueryClientProvider>
         </SafeAreaProvider>

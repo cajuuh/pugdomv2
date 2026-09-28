@@ -77,7 +77,8 @@ interface ComposeModalProps {
 const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, closeCompose }) => {
     const { user } = useAuth();
     const { colors } = useTheme();
-    const instanceConfiguration = useInstanceConfiguration();
+    // The modal is always mounted, so only load the instance limits while composing
+    const instanceConfiguration = useInstanceConfiguration(isOpen && !!user);
 
     const [text, setText] = useState('');
     const [sensitive, setSensitive] = useState(false);

@@ -21,9 +21,8 @@ import { TopBar } from './components/TopBar/topBar';
 import { TabBar } from './components/TabBar/tabBar';
 import Settings from './screens/Settings/settings';
 import Thread from './screens/Thread/thread';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-
-const queryClient = new QueryClient();
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './services/queryClient';
 
 function NavigationRoot() {
   const { user, loading, logout, isAddingAccount, setAddingAccount } = useAuth();

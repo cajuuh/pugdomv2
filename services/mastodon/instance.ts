@@ -25,6 +25,9 @@ interface InstanceV2 {
 export async function fetchInstanceConfiguration(): Promise<InstanceConfiguration> {
     // apiClient's base URL is /api/v1, so the v2 endpoint needs the full URL
     const { instanceUrl } = await getCredentials();
+    if (!instanceUrl) {
+        throw new Error('No active instance');
+    }
     const response = await apiClient.get<InstanceV2>(`${instanceUrl}/api/v2/instance`);
     const { statuses, polls } = response.data.configuration ?? {};
     return {

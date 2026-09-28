@@ -2,6 +2,7 @@ import React from 'react';
 import { Alert, Platform, Share } from 'react-native';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createTestQueryClient } from '../testUtils/queryClient';
 import { TootCard } from '../components/TootCard/tootCard';
 import { Poll } from '../components/Poll/poll';
 import { favouriteStatus } from '../services/mastodon/statuses';
@@ -90,11 +91,8 @@ describe('TootCard recycling', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-        queryClient = new QueryClient();
+        queryClient = createTestQueryClient();
     });
-
-    // Cached queries schedule garbage-collection timers that would keep jest running
-    afterEach(() => queryClient.clear());
 
     it('does not carry favourite state over to a recycled status', async () => {
         mockedFavourite.mockResolvedValue({ ...statusA, favourited: true, favourites_count: 34 });
@@ -194,7 +192,7 @@ describe('Poll recycling', () => {
 describe('TootCard content', () => {
     const renderCard = (status: Status) =>
         render(
-            <QueryClientProvider client={new QueryClient()}>
+            <QueryClientProvider client={createTestQueryClient()}>
                 <TootCard status={status} />
             </QueryClientProvider>
         );
@@ -240,7 +238,7 @@ describe('TootCard content', () => {
 describe('TootCard share', () => {
     const renderCard = (status: Status) =>
         render(
-            <QueryClientProvider client={new QueryClient()}>
+            <QueryClientProvider client={createTestQueryClient()}>
                 <TootCard status={status} />
             </QueryClientProvider>
         );
@@ -279,7 +277,7 @@ describe('TootCard share', () => {
 describe('TootCard press', () => {
     const renderCard = (status: Status, onPress: (id: string) => void) =>
         render(
-            <QueryClientProvider client={new QueryClient()}>
+            <QueryClientProvider client={createTestQueryClient()}>
                 <TootCard status={status} onPress={onPress} />
             </QueryClientProvider>
         );
