@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { Alert, DeviceEventEmitter } from 'react-native';
+import { UNAUTHORIZED_EVENT } from './api/client';
 import { getCurrentAccount } from './mastodon/accounts';
 import { Account } from './mastodon/types';
 import { getCredentials, clearCredentials, saveCredentials, getSavedAccounts, addSavedAccount, removeSavedAccount, SavedAccount } from './storage';
@@ -22,6 +24,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [loading, setLoading] = useState<boolean>(true);
     const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([]);
     const [isAddingAccount, setAddingAccount] = useState<boolean>(false);
+    // Tokens already handled, so a burst of 401s from one token only logs out once
+    const handledUnauthorizedTokens = useRef(new Set<string>());
 
     const checkLoginStatus = async () => {
         try {
@@ -77,29 +81,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const cleanAccountId = typeof accountIdToLogout === 'string' ? accountIdToLogout : undefined;
         setLoading(true);
         try {
+            // Resolve the active account from storage, so this also works before `user` is loaded
             const currentCreds = await getCredentials();
-            const activeId = user && currentCreds.instanceUrl ? `${user.acct}@${currentCreds.instanceUrl}` : null;
+            const accounts = await getSavedAccounts();
+            const activeId = accounts.find(a => a.accessToken === currentCreds.accessToken)?.id ?? null;
             const idToRemove = cleanAccountId || activeId;
 
+            let remaining = accounts;
             if (idToRemove) {
                 await removeSavedAccount(idToRemove);
-                const remaining = await getSavedAccounts();
+                remaining = await getSavedAccounts();
                 setSavedAccounts(remaining);
+            }
 
-                if (idToRemove === activeId) {
-                    if (remaining.length > 0) {
-                        // Switch to next available account
-                        await switchAccount(remaining[0].id);
-                        return; // Switch account handles loading state
-                    } else {
-                        // No accounts left, fully logout
-                        await clearCredentials();
-                        setUser(null);
-                    }
+            if (!idToRemove || idToRemove === activeId) {
+                if (remaining.length > 0) {
+                    // Switch to next available account
+                    await switchAccount(remaining[0].id);
+                    return; // Switch account handles loading state
+                } else {
+                    // No accounts left, fully logout
+                    await clearCredentials();
+                    setUser(null);
                 }
-            } else {
-                await clearCredentials();
-                setUser(null);
             }
         } catch (error) {
             console.error('Error logging out. Status: ', error);
@@ -107,6 +111,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setLoading(false);
         }
     };
+
+    // Drop the account whose token the active instance rejected (revoked or expired)
+    const handleUnauthorized = async (accessToken: string) => {
+        if (handledUnauthorizedTokens.current.has(accessToken)) {
+            return;
+        }
+        const currentCreds = await getCredentials();
+        // Ignore late 401s from an account we already switched away from
+        if (currentCreds.accessToken !== accessToken || handledUnauthorizedTokens.current.has(accessToken)) {
+            return;
+        }
+        handledUnauthorizedTokens.current.add(accessToken);
+
+        const accounts = await getSavedAccounts();
+        const expired = accounts.find(a => a.accessToken === accessToken);
+        Alert.alert(
+            'Session expired',
+            expired
+                ? `Please log in again to @${expired.userInfo.acct}.`
+                : 'Please log in again.'
+        );
+        await logout(expired?.id);
+    };
+
+    const handleUnauthorizedRef = useRef(handleUnauthorized);
+    handleUnauthorizedRef.current = handleUnauthorized;
+
+    useEffect(() => {
+        const subscription = DeviceEventEmitter.addListener(UNAUTHORIZED_EVENT, ({ accessToken }: { accessToken: string }) => {
+            handleUnauthorizedRef.current(accessToken);
+        });
+        return () => subscription.remove();
+    }, []);
 
     return (
         <AuthContext.Provider value={{ user, loading, login, logout, checkLoginStatus, savedAccounts, switchAccount, isAddingAccount, setAddingAccount }}>
