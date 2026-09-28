@@ -19,13 +19,6 @@ jest.mock('../services/mastodon/polls', () => ({
     votePoll: jest.fn(),
 }));
 
-// Native media modules aren't available under jest and aren't what these tests cover
-jest.mock('expo-video', () => ({
-    useVideoPlayer: () => ({ play: jest.fn(), pause: jest.fn(), loop: false }),
-    VideoView: () => null,
-}));
-jest.mock('react-native-image-viewing', () => () => null);
-
 jest.mock('../services/settingsContext', () => ({
     useSettings: () => ({ compactMode: false, mediaAutoplay: false }),
 }));
@@ -280,5 +273,30 @@ describe('TootCard share', () => {
 
         await fireEvent.press(screen.getByLabelText('Share'));
         expect(Share.share).toHaveBeenCalledWith(expectedShare(statusA.uri));
+    });
+});
+
+describe('TootCard press', () => {
+    const renderCard = (status: Status, onPress: (id: string) => void) =>
+        render(
+            <QueryClientProvider client={new QueryClient()}>
+                <TootCard status={status} onPress={onPress} />
+            </QueryClientProvider>
+        );
+
+    it('opens the status itself', async () => {
+        const onPress = jest.fn();
+        await renderCard(statusA, onPress);
+
+        await fireEvent.press(screen.getByText(/status A/));
+        expect(onPress).toHaveBeenCalledWith('A');
+    });
+
+    it('opens the original status for a boost, not the boost wrapper', async () => {
+        const onPress = jest.fn();
+        await renderCard({ ...makeStatus('boost-1', { replies: 0, boosts: 0, favs: 0 }), reblog: statusA }, onPress);
+
+        await fireEvent.press(screen.getByText(/status A/));
+        expect(onPress).toHaveBeenCalledWith('A');
     });
 });

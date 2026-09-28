@@ -143,7 +143,8 @@ interface TootCardProps {
     status: Status;
     onPressMention?: (acct: string) => void;
     onPressHashtag?: (hashtag: string) => void;
-    onPress?: () => void;
+    // Receives the id of the status to open; for boosts that's the original, since a boost has no thread of its own
+    onPress?: (statusId: string) => void;
     threadMode?: boolean;
     hasThreadLineTop?: boolean;
     hasThreadLineBottom?: boolean;
@@ -356,7 +357,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
 
     return (
         <CardContainer 
-            onPress={onPress}
+            onPress={onPress ? () => onPress(targetStatus.id) : undefined}
             style={[
             styles.cardContainer,
             { backgroundColor: colors.cardBackground, borderColor: colors.borderColor },
