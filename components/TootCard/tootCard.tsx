@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef } from 'react';
 import { Alert, Image as RNImage, StyleSheet, Modal } from 'react-native';
 import { Avatar, View, Text, Button, Image, TouchableOpacity } from 'react-native-ui-lib';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -8,6 +8,7 @@ import RenderHtml, { HTMLElementModel, HTMLContentModel } from 'react-native-ren
 import { useWindowDimensions } from 'react-native';
 import ImageViewing from 'react-native-image-viewing';
 import { BlurView } from 'expo-blur';
+import { useRecyclingState } from '@shopify/flash-list';
 import { Status, CustomEmoji, Attachment } from '../../services/mastodon/types';
 import { useSettings } from '../../services/settingsContext';
 import { useTheme } from '../../services/themeContext';
@@ -16,6 +17,7 @@ import { styles } from './styles';
 import { favouriteStatus, unfavouriteStatus, reblogStatus, unreblogStatus } from '../../services/mastodon/statuses';
 import { Poll } from '../Poll/poll';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
+import { useUpdateCachedStatus } from '../../hooks/useUpdateCachedStatus';
 
 const customHTMLElementModels = {
     emoji: HTMLElementModel.fromCustomModel({
@@ -155,16 +157,24 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const isReblog = !!status.reblog;
     const targetStatus = isReblog ? status.reblog! : status;
 
-    const [isSpoilerCollapsed, setIsSpoilerCollapsed] = useState(targetStatus.sensitive);
-    const [isFavorited, setIsFavorited] = useState(targetStatus.favourited);
-    const [isReblogged, setIsreblogged] = useState(targetStatus.reblogged);
-    const [favCount, setFavCount] = useState(targetStatus.favourites_count);
-    const [boostCount, setBoostCount] = useState(targetStatus.reblogs_count);
-    const [isImageViewerVisible, setIsImageViewerVisible] = useState(false);
-    const [imageViewerIndex, setImageViewerIndex] = useState(0);
-    const [isMediaRevealed, setIsMediaRevealed] = useState(false);
-    const [isVideoVisible, setIsVideoVisible] = useState(false);
-    const [videoUrl, setVideoUrl] = useState<string | null>(null);
+    const updateCachedStatus = useUpdateCachedStatus();
+
+    // FlashList reuses this component for other statuses, so all per-status state resets when the status changes
+    const recyclingDeps = [targetStatus.id];
+    const [isSpoilerCollapsed, setIsSpoilerCollapsed] = useRecyclingState(targetStatus.sensitive, recyclingDeps);
+    const [isFavorited, setIsFavorited] = useRecyclingState(targetStatus.favourited, recyclingDeps);
+    const [isReblogged, setIsreblogged] = useRecyclingState(targetStatus.reblogged, recyclingDeps);
+    const [favCount, setFavCount] = useRecyclingState(targetStatus.favourites_count, recyclingDeps);
+    const [boostCount, setBoostCount] = useRecyclingState(targetStatus.reblogs_count, recyclingDeps);
+    const [isImageViewerVisible, setIsImageViewerVisible] = useRecyclingState(false, recyclingDeps);
+    const [imageViewerIndex, setImageViewerIndex] = useRecyclingState(0, recyclingDeps);
+    const [isMediaRevealed, setIsMediaRevealed] = useRecyclingState(false, recyclingDeps);
+    const [isVideoVisible, setIsVideoVisible] = useRecyclingState(false, recyclingDeps);
+    const [videoUrl, setVideoUrl] = useRecyclingState<string | null>(null, recyclingDeps);
+
+    // Lets async handlers skip state updates if the card was recycled while a request was in flight
+    const renderedStatusId = useRef(targetStatus.id);
+    renderedStatusId.current = targetStatus.id;
 
     const player = useVideoPlayer(videoUrl, player => {
         if (targetStatus.media_attachments?.find(a => a.url === videoUrl)?.type === 'gifv') {
@@ -181,12 +191,14 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         setFavCount((prev) => (previousIsFavorited ? prev - 1 : prev + 1));
 
         try {
-            if (previousIsFavorited) {
-                await unfavouriteStatus(targetStatus.id);
-            } else {
-                await favouriteStatus(targetStatus.id);
-            }
+            const updated = previousIsFavorited
+                ? await unfavouriteStatus(targetStatus.id)
+                : await favouriteStatus(targetStatus.id);
+            updateCachedStatus(updated);
         } catch (error) {
+            if (renderedStatusId.current !== targetStatus.id) {
+                return;
+            }
             setIsFavorited(previousIsFavorited);
             setFavCount(previousFavCount);
             Alert.alert('Error', 'Failed to update favorite status. Please try again.');
@@ -201,12 +213,15 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         setBoostCount((prev) => (previousIsReblogged ? prev - 1 : prev + 1));
 
         try {
-            if (previousIsReblogged) {
-                await unreblogStatus(targetStatus.id);
-            } else {
-                await reblogStatus(targetStatus.id);
-            }
+            const response = previousIsReblogged
+                ? await unreblogStatus(targetStatus.id)
+                : await reblogStatus(targetStatus.id);
+            // Reblogging returns the new boost wrapping the original; unreblogging returns the original
+            updateCachedStatus(response.reblog ?? response);
         } catch (error) {
+            if (renderedStatusId.current !== targetStatus.id) {
+                return;
+            }
             setIsreblogged(previousIsReblogged);
             setBoostCount(previousBoostCount);
             Alert.alert('Error', 'Failed to update boost status. Please try again.');
@@ -431,7 +446,10 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
 
                     {/* poll */}
                     {(!targetStatus.sensitive || !isSpoilerCollapsed) && targetStatus.poll && (
-                        <Poll initialPoll={targetStatus.poll} />
+                        <Poll
+                            initialPoll={targetStatus.poll}
+                            onPollUpdated={(poll) => updateCachedStatus({ ...targetStatus, poll })}
+                        />
                     )}
 
                     {/* media */}
