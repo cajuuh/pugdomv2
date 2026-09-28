@@ -39,3 +39,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# jest transform cache (CI)
+.jest-cache/

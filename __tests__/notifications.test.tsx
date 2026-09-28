@@ -2,6 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createTestQueryClient } from '../testUtils/queryClient';
 import Notifications from '../screens/Notifications/notifications';
 import { useNotifications } from '../hooks/useNotifications';
 import { fetchNotifications } from '../services/mastodon/notifications';
@@ -43,11 +44,9 @@ describe('Notifications', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        queryClient = new QueryClient();
+        queryClient = createTestQueryClient();
         mockedRelationships.mockResolvedValue([]);
     });
-
-    afterEach(() => queryClient.clear());
 
     it('asks the server only for the types it can render', async () => {
         mockedFetch.mockResolvedValue([notification('1', 'mention', account('a', 'alice'))]);

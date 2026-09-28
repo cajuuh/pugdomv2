@@ -1,0 +1,49 @@
+name: Checks
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+  # Also run by the preview and production workflows before they publish
+  workflow_call:
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Typecheck and test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Typecheck
+        run: yarn typecheck
+
+      # Transformed React Native / ui-lib code; entries are keyed by file content, so older caches are safe to reuse
+      - name: Restore jest cache
+        uses: actions/cache@v4
+        with:
+          path: .jest-cache
+          key: jest-${{ runner.os }}-${{ hashFiles('yarn.lock', 'jest.config.js') }}
+          restore-keys: jest-${{ runner.os }}-
+
+      - name: Unit tests
+        run: yarn test --ci --cacheDirectory .jest-cache
+
+      # Known SDK 56 version mismatches until chore/deps-align (Task 14); make this blocking then
+      - name: Expo dependency check
+        continue-on-error: true
+        run: npx expo install --check

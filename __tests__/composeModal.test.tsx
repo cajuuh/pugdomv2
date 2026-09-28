@@ -1,6 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createTestQueryClient } from '../testUtils/queryClient';
 import ComposeModal from '../components/ComposeModal/composeModal';
 import { createStatus } from '../services/mastodon/statuses';
 import { fetchInstanceConfiguration } from '../services/mastodon/instance';
@@ -42,7 +43,7 @@ describe('ComposeModal', () => {
     let queryClient: QueryClient;
 
     const renderCompose = (replyToStatus: Status | null = null) => {
-        queryClient = new QueryClient();
+        queryClient = createTestQueryClient();
         return render(
             <QueryClientProvider client={queryClient}>
                 <ComposeModal isOpen replyToStatus={replyToStatus} closeCompose={jest.fn()} />
@@ -58,7 +59,16 @@ describe('ComposeModal', () => {
         mockedInstance.mockResolvedValue({ maxCharacters: 500, maxPollOptions: 4, maxCharactersPerPollOption: 50 });
     });
 
-    afterEach(() => queryClient.clear());
+    it('does not load instance limits while closed', async () => {
+        queryClient = createTestQueryClient();
+        await render(
+            <QueryClientProvider client={queryClient}>
+                <ComposeModal isOpen={false} replyToStatus={null} closeCompose={jest.fn()} />
+            </QueryClientProvider>
+        );
+
+        expect(mockedInstance).not.toHaveBeenCalled();
+    });
 
     it('starts a reply with the author and other mentioned accounts by full acct', async () => {
         await renderCompose(replyTarget);

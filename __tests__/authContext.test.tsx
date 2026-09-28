@@ -2,6 +2,7 @@ import React from 'react';
 import { Alert, DeviceEventEmitter, Text } from 'react-native';
 import { act, render, screen, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createTestQueryClient } from '../testUtils/queryClient';
 import { AuthProvider, useAuth } from '../services/authContext';
 import { UNAUTHORIZED_EVENT } from '../services/api/client';
 import { getCurrentAccount } from '../services/mastodon/accounts';
@@ -61,7 +62,7 @@ const CurrentUser = () => {
 };
 
 const renderAuth = async () => {
-    queryClient = new QueryClient();
+    queryClient = createTestQueryClient();
     await render(
         <QueryClientProvider client={queryClient}>
             <AuthProvider>
@@ -149,8 +150,6 @@ describe('AuthProvider account changes', () => {
             return { ...account.userInfo, emojis: [] };
         });
     });
-
-    afterEach(() => queryClient.clear());
 
     it("drops the previous account's cached timelines when switching", async () => {
         mockedStorage.__setState({ accessToken: 'alice-token', instanceUrl: alice.instanceUrl }, [alice, bob]);
