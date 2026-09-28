@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Alert, Image as RNImage, StyleSheet, Modal } from 'react-native';
+import { Alert, Image as RNImage, StyleSheet, Modal, Platform, Share } from 'react-native';
 import { Avatar, View, Text, Button, Image, TouchableOpacity } from 'react-native-ui-lib';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useVideoPlayer, VideoView } from 'expo-video';
@@ -161,7 +161,10 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
 
     // FlashList reuses this component for other statuses, so all per-status state resets when the status changes
     const recyclingDeps = [targetStatus.id];
-    const [isSpoilerCollapsed, setIsSpoilerCollapsed] = useRecyclingState(targetStatus.sensitive, recyclingDeps);
+    // Only a content warning hides the text; `sensitive` alone just blurs the media
+    const hasContentWarning = !!targetStatus.spoiler_text;
+    const [isSpoilerCollapsed, setIsSpoilerCollapsed] = useRecyclingState(hasContentWarning, recyclingDeps);
+    const isContentVisible = !hasContentWarning || !isSpoilerCollapsed;
     const [isFavorited, setIsFavorited] = useRecyclingState(targetStatus.favourited, recyclingDeps);
     const [isReblogged, setIsreblogged] = useRecyclingState(targetStatus.reblogged, recyclingDeps);
     const [favCount, setFavCount] = useRecyclingState(targetStatus.favourites_count, recyclingDeps);
@@ -225,6 +228,17 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             setIsreblogged(previousIsReblogged);
             setBoostCount(previousBoostCount);
             Alert.alert('Error', 'Failed to update boost status. Please try again.');
+        }
+    };
+
+    const handleShare = async () => {
+        // Remote statuses may have no `url`; `uri` always points to the original post
+        const link = targetStatus.url || targetStatus.uri;
+        try {
+            // iOS builds a link preview from `url`; Android only shares `message`
+            await Share.share(Platform.OS === 'ios' ? { url: link } : { message: link });
+        } catch (error) {
+            console.error('Failed to share status:', error);
         }
     };
 
@@ -413,7 +427,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                         <Text style={[styles.timeText, { color: colors.textMuted }]}>{getRelativeTime(targetStatus.created_at)}</Text>
                     </View>
                     
-                    {targetStatus.sensitive && targetStatus.spoiler_text && (
+                    {hasContentWarning && (
                         <View style={[styles.spoilerContainer, { backgroundColor: colors.background, borderColor: colors.borderColor }]}>
                             <Text style={[styles.spoilerText, { color: colors.textPrimary }]} numberOfLines={1}>
                                 CW: {targetStatus.spoiler_text}
@@ -429,7 +443,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     )}
 
                     {/* content text */}
-                    {(!targetStatus.sensitive || !isSpoilerCollapsed) && (
+                    {isContentVisible && (
                         <View style={styles.contentContainer}>
                             <StatusHtmlContent
                                 content={targetStatus.content}
@@ -445,7 +459,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     )}
 
                     {/* poll */}
-                    {(!targetStatus.sensitive || !isSpoilerCollapsed) && targetStatus.poll && (
+                    {isContentVisible && targetStatus.poll && (
                         <Poll
                             initialPoll={targetStatus.poll}
                             onPollUpdated={(poll) => updateCachedStatus({ ...targetStatus, poll })}
@@ -453,17 +467,17 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     )}
 
                     {/* media */}
-                    {(!targetStatus.sensitive || !isSpoilerCollapsed) && (
+                    {isContentVisible && (
                         renderMedia(targetStatus.media_attachments)
                     )}
 
                     {/* link preview */}
-                    {(!targetStatus.sensitive || !isSpoilerCollapsed) && targetStatus.card && (
+                    {isContentVisible && targetStatus.card && (
                         <TouchableOpacity
                             style={[styles.linkPreviewContainer, { backgroundColor: colors.background, borderColor: colors.borderColor }]}
                             onPress={() => handlePressCard(targetStatus.card!.url)}
                         >
-                            {targetStatus.card.image && (
+                            {!!targetStatus.card.image && (
                                 <Image
                                     source={{ uri: targetStatus.card.image }}
                                     style={styles.linkPreviewImage}
@@ -508,7 +522,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                             <Text style={[styles.actionCount, { color: isFavorited ? colors.dangerColor : colors.textMuted }]}>{favCount || 0}</Text>
                         </TouchableOpacity>
                         {/* share */}
-                        <TouchableOpacity style={styles.actionButton}>
+                        <TouchableOpacity style={styles.actionButton} onPress={handleShare} accessibilityLabel="Share">
                             <Ionicons name="share-social-outline" size={18} color={colors.textMuted} />
                         </TouchableOpacity>
                     </View>

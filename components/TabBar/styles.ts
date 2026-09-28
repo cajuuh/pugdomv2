@@ -1,9 +1,15 @@
 import { StyleSheet, Platform } from 'react-native';
 
+export const DOCK_HEIGHT = 64;
+export const DOCK_BOTTOM_OFFSET = Platform.OS === 'ios' ? 30 : 20;
+
+// Bottom padding for scrollable tab screens so their last item can scroll above the floating dock
+export const TAB_BAR_CLEARANCE = DOCK_HEIGHT + DOCK_BOTTOM_OFFSET + 16;
+
 export const styles = StyleSheet.create({
     dockWrapper: {
         position: 'absolute',
-        bottom: Platform.OS === 'ios' ? 30 : 20,
+        bottom: DOCK_BOTTOM_OFFSET,
         left: 20,
         right: 20,
         alignItems: 'center',
@@ -11,8 +17,8 @@ export const styles = StyleSheet.create({
     },
     tabBarContainer: {
         flexDirection: 'row',
-        height: 64,
-        borderRadius: 32,
+        height: DOCK_HEIGHT,
+        borderRadius: DOCK_HEIGHT / 2,
         borderWidth: 1,
         alignItems: 'center',
         justifyContent: 'space-between',

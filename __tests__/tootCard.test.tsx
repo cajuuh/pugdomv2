@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert } from 'react-native';
+import { Alert, Platform, Share } from 'react-native';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TootCard } from '../components/TootCard/tootCard';
@@ -195,5 +195,90 @@ describe('Poll recycling', () => {
         expect(onPollUpdated).toHaveBeenCalledWith(votedP1);
         expect(screen.getByText('p2 yes')).toBeTruthy();
         expect(screen.queryByText('70%')).toBeNull();
+    });
+});
+
+describe('TootCard content', () => {
+    const renderCard = (status: Status) =>
+        render(
+            <QueryClientProvider client={new QueryClient()}>
+                <TootCard status={status} />
+            </QueryClientProvider>
+        );
+
+    const withMedia = (status: Status): Status => ({
+        ...status,
+        media_attachments: [{ id: 'm1', type: 'image', url: 'https://example.social/m1.png', preview_url: 'https://example.social/m1-small.png' }],
+    });
+
+    it('shows sensitive posts without a CW, blurring only the media', async () => {
+        await renderCard(withMedia({ ...statusA, sensitive: true, spoiler_text: '' }));
+
+        expect(screen.getByText(/status A/)).toBeTruthy();
+        expect(screen.queryByText('Show')).toBeNull();
+        expect(screen.getByText('Sensitive Content (Tap to show)')).toBeTruthy();
+    });
+
+    it('collapses posts with a CW until Show is pressed', async () => {
+        await renderCard({ ...statusA, sensitive: true, spoiler_text: 'Spoilers' });
+
+        expect(screen.getByText('CW: Spoilers')).toBeTruthy();
+        expect(screen.queryByText(/status A/)).toBeNull();
+
+        await fireEvent.press(screen.getByText('Show'));
+        expect(screen.getByText(/status A/)).toBeTruthy();
+        expect(screen.getByText('Hide')).toBeTruthy();
+    });
+
+    it('treats a CW as collapsible even when the post is not marked sensitive', async () => {
+        await renderCard({ ...statusA, sensitive: false, spoiler_text: 'Politics' });
+
+        expect(screen.getByText('CW: Politics')).toBeTruthy();
+        expect(screen.queryByText(/status A/)).toBeNull();
+    });
+
+    it('shows non-sensitive media without the blur', async () => {
+        await renderCard(withMedia(statusA));
+
+        expect(screen.queryByText('Sensitive Content (Tap to show)')).toBeNull();
+    });
+});
+
+describe('TootCard share', () => {
+    const renderCard = (status: Status) =>
+        render(
+            <QueryClientProvider client={new QueryClient()}>
+                <TootCard status={status} />
+            </QueryClientProvider>
+        );
+
+    const expectedShare = (link: string) => (Platform.OS === 'ios' ? { url: link } : { message: link });
+
+    beforeEach(() => {
+        jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.sharedAction });
+    });
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it('shares the post URL', async () => {
+        await renderCard(statusA);
+
+        await fireEvent.press(screen.getByLabelText('Share'));
+        expect(Share.share).toHaveBeenCalledWith(expectedShare(statusA.url!));
+    });
+
+    it('shares the original post, not the boost', async () => {
+        const boost = { ...makeStatus('boost-1', { replies: 0, boosts: 0, favs: 0 }), reblog: statusA };
+        await renderCard(boost);
+
+        await fireEvent.press(screen.getByLabelText('Share'));
+        expect(Share.share).toHaveBeenCalledWith(expectedShare(statusA.url!));
+    });
+
+    it('falls back to the URI when the status has no URL', async () => {
+        await renderCard({ ...statusA, url: null });
+
+        await fireEvent.press(screen.getByLabelText('Share'));
+        expect(Share.share).toHaveBeenCalledWith(expectedShare(statusA.uri));
     });
 });

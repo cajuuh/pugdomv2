@@ -48,7 +48,7 @@ export interface Status {
     visibility: 'public' | 'unlisted' | 'private' | 'direct';
     language: string | null;
     uri: string;
-    url: string;
+    url: string | null; // null for some remote statuses; `uri` is always set
     replies_count: number;
     reblogs_count: number;
     favourites_count: number;
