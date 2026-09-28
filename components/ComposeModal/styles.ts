@@ -235,6 +235,11 @@ export const styles = StyleSheet.create({
         fontSize: 13,
         fontWeight: '600',
     },
+    pollError: {
+        fontSize: 13,
+        marginTop: 4,
+        marginBottom: 4,
+    },
     pollSettingsRow: {
         flexDirection: 'row',
         alignItems: 'center',

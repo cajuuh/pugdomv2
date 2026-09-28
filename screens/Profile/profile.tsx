@@ -97,7 +97,7 @@ const Profile = () => {
                     [styles.displayName, { color: colors.textPrimary }],
                     20
                 )}
-                <Text style={[styles.username, { color: colors.textSecondary }]}>@{user.username}</Text>
+                <Text style={[styles.username, { color: colors.textSecondary }]}>@{user.acct}</Text>
                 {/* stats */}
                 <View style={styles.statsGrid}>
                     <Card style={[styles.statsCard, { backgroundColor: colors.cardBackground, borderColor: colors.borderColor }]} enableShadow={false}>

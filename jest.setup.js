@@ -8,3 +8,6 @@ jest.mock('expo-video', () => ({
     VideoView: () => null,
 }));
 jest.mock('react-native-image-viewing', () => () => null);
+
+// The real SafeAreaProvider renders nothing until native code reports insets
+jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
