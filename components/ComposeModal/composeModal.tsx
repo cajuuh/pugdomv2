@@ -28,16 +28,45 @@ const stripHtml = (html: string) => {
         .trim();
 };
 
-const LANGUAGES = [
-    { code: 'en-US', label: 'English (US)' },
-    { code: 'pt-BR', label: 'Português (Brasil)' },
-    { code: 'es-ES', label: 'Español (España)' },
-    { code: 'fr-FR', label: 'Français (France)' },
-    { code: 'de-DE', label: 'Deutsch (Deutschland)' },
+// Mastodon expects ISO 639-1 codes; region variants like en-US are ignored and the post falls
+// back to the account's default language
+export const LANGUAGES = [
+    { code: 'en', label: 'English' },
+    { code: 'pt', label: 'Português' },
+    { code: 'es', label: 'Español' },
+    { code: 'fr', label: 'Français' },
+    { code: 'de', label: 'Deutsch' },
 ];
 
-import { Status } from '../../services/mastodon/types';
+import { Account, Status } from '../../services/mastodon/types';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
+import { replyMentionsText } from '../../services/mastodon/mentions';
+import { statusLength } from '../../services/mastodon/statusLength';
+import { useInstanceConfiguration } from '../../hooks/useInstanceConfiguration';
+
+const deviceLanguage = () => {
+    try {
+        return Intl.DateTimeFormat().resolvedOptions().locale.split('-')[0];
+    } catch {
+        return undefined;
+    }
+};
+
+// The account's default posting language, else the device language, else English
+export const defaultLanguage = (user: Account | null) =>
+    [user?.source?.language, deviceLanguage()].find(code => code && LANGUAGES.some(l => l.code === code)) ?? 'en';
+
+// Mastodon rejects polls with fewer than two choices or repeated choices
+const pollValidationError = (options: string[]) => {
+    const filled = options.map(option => option.trim()).filter(option => option.length > 0);
+    if (filled.length < 2) {
+        return 'Add at least 2 choices';
+    }
+    if (new Set(filled).size !== filled.length) {
+        return 'Choices must be different';
+    }
+    return null;
+};
 
 interface ComposeModalProps {
     isOpen: boolean;
@@ -48,6 +77,7 @@ interface ComposeModalProps {
 const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, closeCompose }) => {
     const { user } = useAuth();
     const { colors } = useTheme();
+    const instanceConfiguration = useInstanceConfiguration();
 
     const [text, setText] = useState('');
     const [sensitive, setSensitive] = useState(false);
@@ -55,7 +85,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
     const [loading, setLoading] = useState(false);
     
     // Helper States
-    const [language, setLanguage] = useState('en-US');
+    const [language, setLanguage] = useState(() => defaultLanguage(user));
     const [langModalVisible, setLangModalVisible] = useState(false);
 
     // Poll States
@@ -68,15 +98,10 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
 
     useEffect(() => {
         if (isOpen) {
-            if (replyToStatus) {
-                setText(`@${replyToStatus.account.username} `);
-            } else {
-                setText('');
-            }
+            setText(replyToStatus ? replyMentionsText(replyToStatus, user) : '');
             setSensitive(false);
             setSpoilerText('');
-            setLanguage('en-US');
-            setLanguage('en-US');
+            setLanguage(defaultLanguage(user));
             setLoading(false);
             setShowPoll(false);
             setPollOptions(['', '']);
@@ -93,11 +118,11 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
 
     if (!isOpen) return null;
 
-    const charLimit = 500;
-    const remaining = charLimit - text.length;
+    const remaining = instanceConfiguration.maxCharacters - statusLength(text, sensitive ? spoilerText : '');
     const isOverLimit = remaining < 0;
     const isEmpty = text.trim().length === 0;
-    const isPublishDisabled = isEmpty || isOverLimit || loading;
+    const pollError = showPoll ? pollValidationError(pollOptions) : null;
+    const isPublishDisabled = isEmpty || isOverLimit || !!pollError || loading;
 
     // Determine character counter color
     let counterColor = colors.textSecondary;
@@ -110,17 +135,13 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
     const handlePublish = async () => {
         if (isPublishDisabled) return;
         setLoading(true);
-        let pollParams = undefined;
-        if (showPoll) {
-            const validOptions = pollOptions.filter(opt => opt.trim().length > 0);
-            if (validOptions.length >= 2) {
-                pollParams = {
-                    options: validOptions,
-                    expires_in: pollDuration,
-                    multiple: pollMultiple
-                };
+        const pollParams = showPoll
+            ? {
+                options: pollOptions.map(opt => opt.trim()).filter(opt => opt.length > 0),
+                expires_in: pollDuration,
+                multiple: pollMultiple
             }
-        }
+            : undefined;
 
         try {
             await createStatus({
@@ -226,7 +247,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                                             )}
                                         </Text>
                                         <Text style={[styles.replyUsername, { color: colors.textSecondary }]} numberOfLines={1}>
-                                            @{replyToStatus.account.username}
+                                            @{replyToStatus.account.acct}
                                         </Text>
                                     </View>
                                 </View>
@@ -282,7 +303,6 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                             multiline={true}
                             value={text}
                             onChangeText={setText}
-                            maxLength={600}
                         />
 
                         {/* Poll Creation UI */}
@@ -300,7 +320,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                                                 newOptions[index] = text;
                                                 setPollOptions(newOptions);
                                             }}
-                                            maxLength={50}
+                                            maxLength={instanceConfiguration.maxCharactersPerPollOption}
                                         />
                                         {pollOptions.length > 2 && (
                                             <TouchableOpacity
@@ -316,7 +336,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                                         )}
                                     </View>
                                 ))}
-                                {pollOptions.length < 4 && (
+                                {pollOptions.length < instanceConfiguration.maxPollOptions && (
                                     <TouchableOpacity
                                         style={styles.pollAddChoiceButton}
                                         onPress={() => {
@@ -326,6 +346,10 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                                         <Ionicons name="add" size={16} color={colors.accentColor} />
                                         <Text style={[styles.pollAddChoiceText, { color: colors.accentColor }]}>Add Choice</Text>
                                     </TouchableOpacity>
+                                )}
+
+                                {pollError && (
+                                    <Text style={[styles.pollError, { color: colors.dangerColor }]}>{pollError}</Text>
                                 )}
 
                                 <View style={styles.pollSettingsRow}>
@@ -393,6 +417,8 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
 
                             {/* Poll button */}
                             <TouchableOpacity
+                                testID="compose-poll-toggle"
+                                accessibilityLabel="Add poll"
                                 style={styles.accessoryButton}
                                 onPress={() => {
                                     setShowPoll(!showPoll);

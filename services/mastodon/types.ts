@@ -26,6 +26,17 @@ export interface Account {
     statuses_count?: number;
     url?: string;
     emojis: CustomEmoji[];
+    // Only present on the logged-in user's own account (verify_credentials)
+    source?: {
+        language?: string | null;
+    };
+}
+
+export interface Mention {
+    id: string;
+    username: string;
+    acct: string;
+    url: string;
 }
 
 export interface PreviewCard {
@@ -56,6 +67,7 @@ export interface Status {
     reblog: Status | null
     account: Account;
     media_attachments: Attachment[];
+    mentions?: Mention[];
     emojis: CustomEmoji[];
     favourited?: boolean;
     reblogged?: boolean;

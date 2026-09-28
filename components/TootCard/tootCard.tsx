@@ -422,7 +422,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                                 )}
                             </View>
                             <Text style={[styles.username, { color: colors.textSecondary }]} numberOfLines={1}>
-                                @{targetStatus.account.username}
+                                @{targetStatus.account.acct}
                             </Text>
                         </View>
                         <Text style={[styles.timeText, { color: colors.textMuted }]}>{getRelativeTime(targetStatus.created_at)}</Text>
