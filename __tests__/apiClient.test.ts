@@ -68,6 +68,12 @@ describe('apiClient', () => {
         expect(AxiosHeaders.from(config.headers).get('Authorization')).toBeFalsy();
     });
 
+    it("serializes array params as Mastodon's name[]=value", async () => {
+        const { data: config } = await apiClient.get('/notifications', { params: { types: ['mention', 'follow'] } });
+        const query = decodeURIComponent(apiClient.getUri(config).split('?')[1]);
+        expect(query).toBe('types[]=mention&types[]=follow');
+    });
+
     describe('401 handling', () => {
         let listener: jest.Mock;
         let subscription: { remove: () => void };

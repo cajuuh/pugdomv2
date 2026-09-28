@@ -93,6 +93,13 @@ export interface Poll {
     emojis: CustomEmoji[];
 }
 
+export interface Relationship {
+    id: string;
+    following: boolean;
+    requested: boolean;
+    followed_by: boolean;
+}
+
 export interface Notification {
     id: string;
     type: 'mention' | 'status' | 'reblog' | 'follow' | 'follow_request' | 'favourite' | 'poll' | 'update' | 'admin.sign_up' | 'admin.report' | 'severed_relationships' | 'moderation_warning';

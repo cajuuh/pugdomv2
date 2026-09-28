@@ -1,142 +1,121 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { ActivityIndicator, RefreshControl, TouchableOpacity } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
+import React, { useCallback, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, RefreshControl, TouchableOpacity } from 'react-native';
+import { FlashList, useRecyclingState } from '@shopify/flash-list';
 import { View, Text, Avatar, Button, SegmentedControl } from 'react-native-ui-lib';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { fetchNotifications } from '../../services/mastodon/notifications';
-import { Notification } from '../../services/mastodon/types';
+import { Notification, Relationship } from '../../services/mastodon/types';
 import { useTheme } from '../../services/themeContext';
+import { renderTextWithEmojis } from '../../services/emojiHelper';
+import { NotificationFilter, SUPPORTED_NOTIFICATION_TYPES, useNotifications } from '../../hooks/useNotifications';
+import { useFollowAccount, useRelationships } from '../../hooks/useRelationships';
 import { styles } from './styles';
 
 interface NotificationsProps {
     onStatusPress?: (id: string) => void;
 }
 
+const FILTERS: NotificationFilter[] = ['all', 'mentions', 'follows'];
+
+// Icon, tint and copy for each notification type the screen renders
+const TYPE_CONFIG: Record<string, { icon: string; color: string; rgb: string; tag: string; action: string }> = {
+    favourite: { icon: 'star', color: '#0EA5E9', rgb: '14, 165, 233', tag: 'FAVOURITE', action: 'favourited your status' },
+    reblog: { icon: 'repeat', color: '#F59E0B', rgb: '245, 158, 11', tag: 'BOOST', action: 'boosted your status' },
+    mention: { icon: 'chatbubble', color: '#EC4899', rgb: '236, 72, 153', tag: 'MENTION', action: 'mentioned you' },
+    follow: { icon: 'person-add', color: '#22C55E', rgb: '34, 197, 94', tag: 'NEW FOLLOWER', action: 'followed you' },
+};
+
+const stripHtml = (html?: string) => {
+    if (!html) return '';
+    return html.replace(/<[^>]*>?/gm, '').replace(/&apos;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+};
+
+interface FollowBackProps {
+    accountId: string;
+    relationship?: Relationship;
+    color: string;
+    textColor: string;
+}
+
+const FollowBack = ({ accountId, relationship, color, textColor }: FollowBackProps) => {
+    const followAccount = useFollowAccount();
+    // FlashList recycles rows, so reset when the row shows another account
+    const [pending, setPending] = useRecyclingState(false, [accountId]);
+
+    // Hide until the relationship is known, so we never offer to follow someone we already follow
+    if (!relationship) {
+        return null;
+    }
+    if (relationship.following || relationship.requested) {
+        return (
+            <Text style={[styles.followState, { color: textColor }]}>
+                {relationship.following ? 'Following' : 'Follow requested'}
+            </Text>
+        );
+    }
+
+    const handleFollow = async () => {
+        setPending(true);
+        try {
+            await followAccount(accountId);
+        } catch (error) {
+            Alert.alert('Error', 'Failed to follow this account. Please try again.');
+        } finally {
+            setPending(false);
+        }
+    };
+
+    return (
+        <Button
+            label={pending ? 'Following…' : 'Follow back'}
+            size={Button.sizes.small}
+            backgroundColor={color}
+            style={styles.followButton}
+            disabled={pending}
+            onPress={handleFollow}
+        />
+    );
+};
+
 const Notifications = ({ onStatusPress }: NotificationsProps) => {
     const { colors, isDark } = useTheme();
-    const [notifications, setNotifications] = useState<Notification[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
-    const [refreshing, setRefreshing] = useState(false);
-    const [loadingMore, setLoadingMore] = useState(false);
-    const [hasMore, setHasMore] = useState(true);
-    const [activeFilter, setActiveFilter] = useState<'all' | 'mentions' | 'follows'>('all');
+    const [activeFilter, setActiveFilter] = useState<NotificationFilter>('all');
+    const [isPullRefreshing, setIsPullRefreshing] = useState(false);
 
-    const handleTabChange = (index: number) => {
-        const types: ('all' | 'mentions' | 'follows')[] = ['all', 'mentions', 'follows'];
-        setActiveFilter(types[index]);
-    };
+    const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage, refetch } = useNotifications(activeFilter);
 
-    const filteredNotifications = useMemo(() => {
-        if (activeFilter === 'all') return notifications;
-        if (activeFilter === 'mentions') return notifications.filter(n => n.type === 'mention');
-        if (activeFilter === 'follows') return notifications.filter(n => n.type === 'follow');
-        return notifications;
-    }, [notifications, activeFilter]);
+    // The server already filters by type; this guards against types the screen can't render
+    const notifications = useMemo(
+        () => (data?.pages.flat() ?? []).filter(n => SUPPORTED_NOTIFICATION_TYPES.includes(n.type)),
+        [data]
+    );
 
+    const followerIds = useMemo(
+        () => notifications.filter(n => n.type === 'follow').map(n => n.account.id),
+        [notifications]
+    );
+    const relationships = useRelationships(followerIds);
 
-    const loadNotifications = async (maxId?: string, isRefresh = false) => {
+    // Track pull-to-refresh separately so background refetches (e.g. returning to the tab) don't show the spinner
+    const handleRefresh = useCallback(async () => {
+        setIsPullRefreshing(true);
         try {
-            if (isRefresh) {
-                setRefreshing(true);
-            } else if (maxId) {
-                setLoadingMore(true);
-            } else {
-                setLoading(true);
-            }
-
-            const data = await fetchNotifications(maxId);
-
-            if (data && data.length > 0) {
-                setNotifications(prev => {
-                    if (isRefresh || !maxId) {
-                        return data;
-                    }
-                    const existingIds = new Set(prev.map(n => n.id));
-                    const newItems = data.filter((n: Notification) => !existingIds.has(n.id));
-                    return [...prev, ...newItems];
-                });
-                setHasMore(data.length >= 20);
-            } else {
-                if (isRefresh || !maxId) {
-                    setNotifications([]);
-                }
-                setHasMore(false);
-            }
-        } catch (error) {
-            console.error('Failed to fetch notifications: ', error);
+            await refetch();
         } finally {
-            setLoading(false);
-            setRefreshing(false);
-            setLoadingMore(false);
+            setIsPullRefreshing(false);
         }
-    };
-
-    useEffect(() => {
-        loadNotifications();
-    }, []);
-
-    const handleRefresh = useCallback(() => {
-        loadNotifications(undefined, true);
-    }, []);
+    }, [refetch]);
 
     const handleLoadMore = () => {
-        if (loadingMore || !hasMore || notifications.length === 0) {
-            return;
+        if (!isFetchingNextPage && hasNextPage) {
+            fetchNextPage();
         }
-        const lastNotification = notifications[notifications.length - 1];
-        loadNotifications(lastNotification.id);
-    };
-
-    const stripHtml = (html?: string) => {
-        if (!html) return '';
-        return html.replace(/<[^>]*>?/gm, '').replace(/&apos;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&');
     };
 
     const renderNotification = ({ item }: { item: Notification }) => {
-        let iconName = '';
-        let iconColor = '';
-        let actionText = '';
-        let showPreview = false;
-        let isFollow = false;
-        let tagText = '';
-        let cardBackgroundColor = '';
-        let borderColor = '';
-
-        if (item.type === 'favourite') {
-            iconName = 'star';
-            iconColor = '#0EA5E9';
-            cardBackgroundColor = isDark ? 'rgba(14, 165, 233, 0.15)' : 'rgba(14, 165, 233, 0.08)';
-            borderColor = isDark ? 'rgba(14, 165, 233, 0.3)' : 'rgba(14, 165, 233, 0.2)';
-            tagText = 'FAVOURITE';
-            actionText = 'favourited your status';
-            showPreview = true;
-        } else if (item.type === 'reblog') {
-            iconName = 'repeat';
-            iconColor = '#F59E0B';
-            cardBackgroundColor = isDark ? 'rgba(245, 158, 11, 0.15)' : 'rgba(245, 158, 11, 0.08)';
-            borderColor = isDark ? 'rgba(245, 158, 11, 0.3)' : 'rgba(245, 158, 11, 0.2)';
-            tagText = 'BOOST';
-            actionText = 'boosted your status';
-            showPreview = true;
-        } else if (item.type === 'mention') {
-            iconName = 'chatbubble';
-            iconColor = '#EC4899';
-            cardBackgroundColor = isDark ? 'rgba(236, 72, 153, 0.15)' : 'rgba(236, 72, 153, 0.08)';
-            borderColor = isDark ? 'rgba(236, 72, 153, 0.3)' : 'rgba(236, 72, 153, 0.2)';
-            tagText = 'MENTION';
-            actionText = 'mentioned you';
-            showPreview = true;
-        } else if (item.type === 'follow') {
-            iconName = 'person-add';
-            iconColor = '#22C55E';
-            cardBackgroundColor = isDark ? 'rgba(34, 197, 94, 0.15)' : 'rgba(34, 197, 94, 0.08)';
-            borderColor = isDark ? 'rgba(34, 197, 94, 0.3)' : 'rgba(34, 197, 94, 0.2)';
-            tagText = 'NEW FOLLOWER';
-            actionText = 'followed you';
-            isFollow = true;
-        } else {
-            return null; // Skip unsupported types
-        }
+        const config = TYPE_CONFIG[item.type];
+        const cardBackgroundColor = `rgba(${config.rgb}, ${isDark ? 0.15 : 0.08})`;
+        const borderColor = `rgba(${config.rgb}, ${isDark ? 0.3 : 0.2})`;
+        const showPreview = item.type !== 'follow';
 
         return (
             <TouchableOpacity
@@ -144,22 +123,24 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
                 onPress={() => item.status && onStatusPress?.(item.status.id)}
                 activeOpacity={item.status ? 0.8 : 1}
             >
-                {/* Asymmetric Tag Layer */}
-                <View style={[styles.asymmetricTagLayer, { backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.7)', borderColor: borderColor, borderWidth: 1 }]}>
-                    <Ionicons name={iconName as any} size={14} color={iconColor} />
-                    <Text style={[styles.tagText, { color: iconColor }]}>{tagText}</Text>
-                </View>
-
-                {/* Header Architecture */}
                 <View style={styles.headerArchitecture}>
                     <Avatar source={{ uri: item.account.avatar }} size={42} containerStyle={styles.avatar} />
                     <Text style={[styles.actionText, { color: colors.textPrimary }]}>
-                        <Text style={{ fontWeight: 'bold' }}>{item.account.display_name || item.account.username}</Text>
-                        <Text>{' '}{actionText}</Text>
+                        {renderTextWithEmojis(
+                            item.account.display_name || item.account.username,
+                            item.account.emojis || [],
+                            styles.displayName,
+                            16
+                        )}
+                        <Text>{' '}{config.action}</Text>
                     </Text>
+                    {/* In the row, not absolutely positioned, so long names wrap instead of running under it */}
+                    <View style={[styles.asymmetricTagLayer, { backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.7)', borderColor }]}>
+                        <Ionicons name={config.icon as any} size={14} color={config.color} />
+                        <Text style={[styles.tagText, { color: config.color }]}>{config.tag}</Text>
+                    </View>
                 </View>
 
-                {/* Content Layer */}
                 {showPreview && item.status && (
                     <Text
                         style={[
@@ -172,13 +153,12 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
                         {stripHtml(item.status.content)}
                     </Text>
                 )}
-                {isFollow && (
-                    <Button
-                        label="Follow back"
-                        size={Button.sizes.small}
-                        backgroundColor={iconColor}
-                        style={styles.followButton}
-                        onPress={() => console.log('Follow back pressed')}
+                {item.type === 'follow' && (
+                    <FollowBack
+                        accountId={item.account.id}
+                        relationship={relationships.get(item.account.id)}
+                        color={config.color}
+                        textColor={colors.textSecondary}
                     />
                 )}
             </TouchableOpacity>
@@ -186,7 +166,7 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
     };
 
     const renderFooter = () => {
-        if (!loadingMore) return null;
+        if (!isFetchingNextPage) return null;
         return (
             <View paddingV-20 center>
                 <ActivityIndicator size={'small'} color={colors.accentColor} />
@@ -195,7 +175,7 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
     };
 
     const renderEmpty = () => {
-        if (loading) return null;
+        if (isLoading) return null;
         return (
             <View flex center padding-40 style={styles.emptyContainer}>
                 <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No notifications yet!</Text>
@@ -203,42 +183,43 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
         );
     };
 
-    if (loading && notifications.length === 0) {
-        return (
-            <View flex center style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
-                <ActivityIndicator size={'large'} color={colors.accentColor} />
-            </View>
-        );
-    }
-
     return (
         <View flex style={[styles.container, { backgroundColor: colors.background }]}>
             <View paddingH-16 paddingV-10 style={{ zIndex: 10 }}>
                 <SegmentedControl
                     segments={[{ label: 'All' }, { label: 'Mentions' }, { label: 'Follows' }]}
+                    initialIndex={FILTERS.indexOf(activeFilter)}
                     activeColor={colors.accentColor}
-                    onChangeIndex={handleTabChange}
+                    onChangeIndex={(index: number) => setActiveFilter(FILTERS[index])}
                 />
             </View>
-            <FlashList
-                data={filteredNotifications}
-                keyExtractor={(item) => item.id}
-                renderItem={renderNotification}
-                onEndReached={handleLoadMore}
-                onEndReachedThreshold={0.5}
-                refreshControl={
-                    <RefreshControl
-                        refreshing={refreshing}
-                        onRefresh={handleRefresh}
-                        tintColor={colors.accentColor}
-                        colors={[colors.accentColor]}
-                    />
-                }
-                ListFooterComponent={renderFooter}
-                ListEmptyComponent={renderEmpty}
-                contentContainerStyle={styles.listContent}
-                showsVerticalScrollIndicator={false}
-            />
+            {isLoading && notifications.length === 0 ? (
+                <View flex center style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+                    <ActivityIndicator size={'large'} color={colors.accentColor} />
+                </View>
+            ) : (
+                <FlashList
+                    data={notifications}
+                    keyExtractor={(item) => item.id}
+                    renderItem={renderNotification}
+                    // Rows read follow state from outside `data`, so re-render them when it changes
+                    extraData={relationships}
+                    onEndReached={handleLoadMore}
+                    onEndReachedThreshold={0.5}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={isPullRefreshing}
+                            onRefresh={handleRefresh}
+                            tintColor={colors.accentColor}
+                            colors={[colors.accentColor]}
+                        />
+                    }
+                    ListFooterComponent={renderFooter}
+                    ListEmptyComponent={renderEmpty}
+                    contentContainerStyle={styles.listContent}
+                    showsVerticalScrollIndicator={false}
+                />
+            )}
         </View>
     );
 };
