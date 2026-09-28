@@ -1,11 +1,12 @@
 import { StyleSheet } from 'react-native';
+import { TAB_BAR_CLEARANCE } from '../../components/TabBar/styles';
 
 export const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
     listContent: {
-        paddingBottom: 120,
+        paddingBottom: TAB_BAR_CLEARANCE,
         paddingTop: 10,
     },
     loadingContainer: {

@@ -1,4 +1,5 @@
 import { StyleSheet } from "react-native";
+import { TAB_BAR_CLEARANCE } from "../../components/TabBar/styles";
 
 export const styles = StyleSheet.create({
     container: {
@@ -6,7 +7,7 @@ export const styles = StyleSheet.create({
         backgroundColor: '#0F172A'
     },
     contentContainer: {
-        paddingBottom: 100
+        paddingBottom: TAB_BAR_CLEARANCE,
     },
     headerBannerContainer: {
         width: '100%',

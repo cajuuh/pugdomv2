@@ -1,4 +1,5 @@
 import { StyleSheet } from 'react-native';
+import { TAB_BAR_CLEARANCE } from '../../components/TabBar/styles';
 
 export const styles = StyleSheet.create({
     container: {
@@ -25,7 +26,8 @@ export const styles = StyleSheet.create({
         color: '#F8FAFC',
     },
     listContent: {
-        paddingVertical: 8
+        paddingTop: 8,
+        paddingBottom: TAB_BAR_CLEARANCE,
     },
     emptyContainer: {
         marginTop: 100,
