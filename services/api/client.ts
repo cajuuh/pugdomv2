@@ -1,5 +1,16 @@
-import axios from 'axios';
+import axios, { InternalAxiosRequestConfig } from 'axios';
+import { DeviceEventEmitter } from 'react-native';
 import { getCredentials } from '../storage';
+
+// Emitted with { accessToken } when the active instance rejects our token
+export const UNAUTHORIZED_EVENT = 'api_unauthorized';
+
+const ABSOLUTE_URL = /^https?:\/\//i;
+
+const getOrigin = (url: string) => url.match(/^https?:\/\/[^/?#]+/i)?.[0].toLowerCase() ?? null;
+
+// Token used to authenticate a request, so a 401 can be traced back to the account that sent it
+type AuthedRequestConfig = InternalAxiosRequestConfig & { pugdomAccessToken?: string };
 
 const apiClient = axios.create({
     timeout: 10000,
@@ -8,15 +19,32 @@ const apiClient = axios.create({
     }
 });
 
-// Request interceptor added to dynamically inject instance and wuth token
+// Unauthenticated client for OAuth and app registration, which talk to instances we may not be logged into
+export const publicClient = axios.create({
+    timeout: 10000,
+    headers: {
+        'Content-Type': 'application/json',
+    }
+});
+
+// Request interceptor added to dynamically inject instance and auth token
 apiClient.interceptors.request.use(
-    async (config) => {
+    async (config: AuthedRequestConfig) => {
         const { accessToken, instanceUrl } = await getCredentials();
-        if (instanceUrl && !config.url?.startsWith('https')) {
-            config.baseURL = `${instanceUrl}/api/v1`
+        if (!instanceUrl) {
+            return config;
         }
-        if (accessToken && !config.headers.Authorization) {
-            config.headers.Authorization = `Bearer ${accessToken}`
+
+        const isAbsolute = ABSOLUTE_URL.test(config.url ?? '');
+        if (!isAbsolute) {
+            config.baseURL = `${instanceUrl}/api/v1`;
+        }
+
+        // Never send the token to a different server than the one it belongs to
+        const targetsActiveInstance = !isAbsolute || getOrigin(config.url!) === getOrigin(instanceUrl);
+        if (accessToken && targetsActiveInstance && !config.headers.Authorization) {
+            config.headers.Authorization = `Bearer ${accessToken}`;
+            config.pugdomAccessToken = accessToken;
         }
         return config;
     },
@@ -25,12 +53,13 @@ apiClient.interceptors.request.use(
     }
 );
 
-// Response intercepetor to catch auth errors
+// Response interceptor to catch auth errors
 apiClient.interceptors.response.use(
     (response) => response,
     async (error) => {
-        if (error.response?.status === 401) {
-            //redirect to login screen
+        const accessToken = (error.config as AuthedRequestConfig | undefined)?.pugdomAccessToken;
+        if (error.response?.status === 401 && accessToken) {
+            DeviceEventEmitter.emit(UNAUTHORIZED_EVENT, { accessToken });
         }
         return Promise.reject(error);
     }

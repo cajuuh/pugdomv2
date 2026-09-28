@@ -1,4 +1,4 @@
-import apiClient from "../api/client";
+import { publicClient } from "../api/client";
 
 export interface AppRegistrationData {
     client_id: string;
@@ -6,7 +6,7 @@ export interface AppRegistrationData {
 }
 
 export async function registerApp(instanceUrl: string, redirectUri: string): Promise<AppRegistrationData> {
-    const response = await apiClient.post<AppRegistrationData>(
+    const response = await publicClient.post<AppRegistrationData>(
         `${instanceUrl}/api/v1/apps`,
         {
             client_name: 'Pugdom',

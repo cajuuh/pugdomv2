@@ -1,4 +1,4 @@
-import apiClient from "../api/client";
+import { publicClient } from "../api/client";
 
 export interface TokenResponse {
     access_token: string;
@@ -14,7 +14,7 @@ export async function exchangeCodeForToken(
     code: string,
     redirectUri: string
 ): Promise<TokenResponse> {
-    const response = await apiClient.post<TokenResponse>(
+    const response = await publicClient.post<TokenResponse>(
         `${instanceUrl}/oauth/token`,
         {
             client_id: clientId,
