@@ -7,6 +7,7 @@ import { useAuth } from '../../services/authContext';
 import { useSettings } from '../../services/settingsContext';
 import { useTheme } from '../../services/themeContext';
 import { styles } from './styles';
+import { appVersionLabel } from '../../services/appVersion';
 
 interface SettingsProps {
     onBack: () => void;
@@ -197,7 +198,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                             <Ionicons name="information-circle-outline" size={20} color={colors.accentColor} style={styles.rowIcon} />
                             <Text style={[styles.settingLabel, { color: colors.textPrimary }]}>App Version</Text>
                         </View>
-                        <Text style={[styles.settingValue, { color: colors.textSecondary }]}>1.0.0 (Expo v56)</Text>
+                        <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{appVersionLabel()}</Text>
                     </View>
 
                     <View style={[styles.divider, { backgroundColor: colors.borderColor }]} />
