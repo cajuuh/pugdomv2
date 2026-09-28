@@ -1,21 +1,28 @@
-import React, { useState } from 'react';
+import React, { useRef } from 'react';
 import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import { Poll as PollType, PollOption } from '../../services/mastodon/types';
 import { votePoll } from '../../services/mastodon/polls';
 import { useTheme } from '../../services/themeContext';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useRecyclingState } from '@shopify/flash-list';
 import { styles } from './styles';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
 
 interface PollProps {
     initialPoll: PollType;
+    onPollUpdated?: (poll: PollType) => void;
 }
 
-export const Poll: React.FC<PollProps> = ({ initialPoll }) => {
+export const Poll: React.FC<PollProps> = ({ initialPoll, onPollUpdated }) => {
     const { colors } = useTheme();
-    const [poll, setPoll] = useState<PollType>(initialPoll);
-    const [selectedChoices, setSelectedChoices] = useState<number[]>([]);
-    const [isVoting, setIsVoting] = useState(false);
+    // Reset when the parent card is recycled for a status with a different poll
+    const [poll, setPoll] = useRecyclingState<PollType>(initialPoll, [initialPoll.id]);
+    const [selectedChoices, setSelectedChoices] = useRecyclingState<number[]>([], [initialPoll.id]);
+    const [isVoting, setIsVoting] = useRecyclingState(false, [initialPoll.id]);
+
+    // Lets the vote handler skip state updates if the card was recycled while voting
+    const renderedPollId = useRef(initialPoll.id);
+    renderedPollId.current = initialPoll.id;
 
     const isClosed = poll.expired || poll.voted;
     const totalVotes = poll.voters_count || poll.votes_count || 0;
@@ -34,14 +41,20 @@ export const Poll: React.FC<PollProps> = ({ initialPoll }) => {
 
     const handleVote = async () => {
         if (selectedChoices.length === 0) return;
+        const pollId = poll.id;
         setIsVoting(true);
         try {
-            const updatedPoll = await votePoll(poll.id, { choices: selectedChoices });
-            setPoll(updatedPoll);
+            const updatedPoll = await votePoll(pollId, { choices: selectedChoices });
+            onPollUpdated?.(updatedPoll);
+            if (renderedPollId.current === pollId) {
+                setPoll(updatedPoll);
+            }
         } catch (error) {
             Alert.alert('Error', 'Failed to submit vote. Please try again.');
         } finally {
-            setIsVoting(false);
+            if (renderedPollId.current === pollId) {
+                setIsVoting(false);
+            }
         }
     };
 
