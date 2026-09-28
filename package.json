@@ -13,6 +13,7 @@
     "expo-linking": "~56.0.15",
     "expo-secure-store": "~56.0.4",
     "expo-status-bar": "~56.0.4",
+    "expo-system-ui": "~56.0.5",
     "expo-updates": "~56.0.21",
     "expo-video": "~56.1.0",
     "expo-web-browser": "~56.0.5",
