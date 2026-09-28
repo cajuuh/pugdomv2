@@ -547,7 +547,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                         <VideoView
                             player={player}
                             style={{ width: '100%', height: '80%' }}
-                            allowsFullscreen
+                            fullscreenOptions={{ enable: true }}
                             allowsPictureInPicture
                             contentFit="contain"
                         />
