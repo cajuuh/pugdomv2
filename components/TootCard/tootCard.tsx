@@ -1,12 +1,10 @@
 import React, { useRef } from 'react';
-import { Alert, Image as RNImage, StyleSheet, Modal, Platform, Share } from 'react-native';
+import { Alert, Image as RNImage, StyleSheet, Platform, Share } from 'react-native';
 import { Avatar, View, Text, Button, Image, TouchableOpacity } from 'react-native-ui-lib';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useVideoPlayer, VideoView } from 'expo-video';
 import * as WebBrowser from 'expo-web-browser';
 import RenderHtml, { HTMLElementModel, HTMLContentModel } from 'react-native-render-html';
 import { useWindowDimensions } from 'react-native';
-import ImageViewing from 'react-native-image-viewing';
 import { BlurView } from 'expo-blur';
 import { useRecyclingState } from '@shopify/flash-list';
 import { Status, CustomEmoji, Attachment } from '../../services/mastodon/types';
@@ -18,6 +16,7 @@ import { favouriteStatus, unfavouriteStatus, reblogStatus, unreblogStatus } from
 import { Poll } from '../Poll/poll';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
 import { useUpdateCachedStatus } from '../../hooks/useUpdateCachedStatus';
+import { useMediaViewer } from '../MediaViewer/mediaViewer';
 
 const customHTMLElementModels = {
     emoji: HTMLElementModel.fromCustomModel({
@@ -106,6 +105,16 @@ const StatusHtmlContent = React.memo(({ content, emojis, colors, compactMode, wi
     );
 });
 
+// Module-level so it's the same function on every render; a new one would defeat StatusHtmlContent's memo
+// and make RenderHtml rebuild the post's tree on every card re-render
+const openLink = async (url: string) => {
+    try {
+        await WebBrowser.openBrowserAsync(url);
+    } catch (error) {
+        console.error('Failed to open link:', error);
+    }
+};
+
 const getRelativeTime = (dateString: string) => {
     const now = new Date();
     const created = new Date(dateString);
@@ -125,6 +134,11 @@ const getRelativeTime = (dateString: string) => {
         return `${diffDays}d`;
     }
 };
+
+// Alt text when the author wrote one, otherwise the media's position in the post
+const MEDIA_KIND: Record<Attachment['type'], string> = { image: 'Image', video: 'Video', gifv: 'GIF', unknown: 'Attachment' };
+const mediaLabel = (attachment: Attachment, index: number, count: number) =>
+    attachment.description || `${MEDIA_KIND[attachment.type] ?? 'Attachment'} ${index + 1} of ${count}`;
 
 const getDomainName = (urlStr: string) => {
     try {
@@ -154,7 +168,8 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const { compactMode } = useSettings();
     const { colors } = useTheme();
     const { openCompose } = useCompose();
-    const { width, height } = useWindowDimensions();
+    const { width } = useWindowDimensions();
+    const { openMedia } = useMediaViewer();
     const isReblog = !!status.reblog;
     const targetStatus = isReblog ? status.reblog! : status;
 
@@ -170,22 +185,11 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const [isReblogged, setIsreblogged] = useRecyclingState(targetStatus.reblogged, recyclingDeps);
     const [favCount, setFavCount] = useRecyclingState(targetStatus.favourites_count, recyclingDeps);
     const [boostCount, setBoostCount] = useRecyclingState(targetStatus.reblogs_count, recyclingDeps);
-    const [isImageViewerVisible, setIsImageViewerVisible] = useRecyclingState(false, recyclingDeps);
-    const [imageViewerIndex, setImageViewerIndex] = useRecyclingState(0, recyclingDeps);
     const [isMediaRevealed, setIsMediaRevealed] = useRecyclingState(false, recyclingDeps);
-    const [isVideoVisible, setIsVideoVisible] = useRecyclingState(false, recyclingDeps);
-    const [videoUrl, setVideoUrl] = useRecyclingState<string | null>(null, recyclingDeps);
 
     // Lets async handlers skip state updates if the card was recycled while a request was in flight
     const renderedStatusId = useRef(targetStatus.id);
     renderedStatusId.current = targetStatus.id;
-
-    const player = useVideoPlayer(videoUrl, player => {
-        if (targetStatus.media_attachments?.find(a => a.url === videoUrl)?.type === 'gifv') {
-            player.loop = true;
-        }
-        player.play();
-    });
 
     const toggleFavorite = async () => {
         const previousIsFavorited = isFavorited;
@@ -243,14 +247,6 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         }
     };
 
-    const handlePressCard = async (url: string) => {
-        try {
-            await WebBrowser.openBrowserAsync(url);
-        } catch (error) {
-            console.error('Failed to open link:', error);
-        }
-    };
-
     const renderMedia = (attachments: Attachment[]) => {
         if (!attachments || attachments.length === 0) {
             return null;
@@ -263,15 +259,8 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             mediaContent = (
                 <TouchableOpacity 
                     style={[styles.mediaContainer, targetStatus.sensitive && !isMediaRevealed && { marginBottom: 0 }]}
-                    onPress={() => {
-                        if (attachments[0].type === 'video' || attachments[0].type === 'gifv') {
-                            setVideoUrl(attachments[0].url);
-                            setIsVideoVisible(true);
-                        } else {
-                            setImageViewerIndex(0);
-                            setIsImageViewerVisible(true);
-                        }
-                    }}
+                    onPress={() => openMedia(attachments, 0)}
+                    accessibilityLabel={mediaLabel(attachments[0], 0, count)}
                 >
                     <Image
                         source={{ uri: attachments[0].preview_url || attachments[0].url }}
@@ -289,15 +278,8 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                                 styles.gridMedia,
                                 { width: count === 2 ? '48%' : '31%' }
                             ]}
-                            onPress={() => {
-                                if (item.type === 'video' || item.type === 'gifv') {
-                                    setVideoUrl(item.url);
-                                    setIsVideoVisible(true);
-                                } else {
-                                    setImageViewerIndex(idx);
-                                    setIsImageViewerVisible(true);
-                                }
-                            }}
+                            onPress={() => openMedia(attachments, idx)}
+                            accessibilityLabel={mediaLabel(item, idx, count)}
                         >
                             <Image
                                 source={{ uri: item.preview_url || item.url }}
@@ -324,28 +306,6 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         }
 
         return mediaContent;
-    };
-
-    const imageViewerImages = targetStatus.media_attachments?.map(attachment => ({
-        uri: attachment.url
-    })) || [];
-
-    const ImageViewerFooter = ({ imageIndex }: { imageIndex: number }) => {
-        if (imageViewerImages.length <= 1) return null;
-        return (
-            <View style={{ height, width: '100%', position: 'absolute', bottom: 0 }} pointerEvents="box-none">
-                {imageIndex > 0 && (
-                    <View style={[styles.imageViewerNavButton, styles.imageViewerNavLeft]}>
-                        <Ionicons name="chevron-back" size={24} color="#FFF" />
-                    </View>
-                )}
-                {imageIndex < imageViewerImages.length - 1 && (
-                    <View style={[styles.imageViewerNavButton, styles.imageViewerNavRight]}>
-                        <Ionicons name="chevron-forward" size={24} color="#FFF" />
-                    </View>
-                )}
-            </View>
-        );
     };
 
     const avatarSize = compactMode ? 32 : 44;
@@ -454,7 +414,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                                 width={contentWidth + (compactMode ? 44 : 64)} // pass equivalent width to keep old behavior inside StatusHtmlContent or just modify StatusHtmlContent
                                 onPressMention={onPressMention}
                                 onPressHashtag={onPressHashtag}
-                                onPressLink={handlePressCard}
+                                onPressLink={openLink}
                             />
                         </View>
                     )}
@@ -476,7 +436,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     {isContentVisible && targetStatus.card && (
                         <TouchableOpacity
                             style={[styles.linkPreviewContainer, { backgroundColor: colors.background, borderColor: colors.borderColor }]}
-                            onPress={() => handlePressCard(targetStatus.card!.url)}
+                            onPress={() => openLink(targetStatus.card!.url)}
                         >
                             {!!targetStatus.card.image && (
                                 <Image
@@ -529,34 +489,6 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     </View>
                 </View>
             </View>
-
-            <ImageViewing
-                images={imageViewerImages}
-                imageIndex={imageViewerIndex}
-                visible={isImageViewerVisible}
-                onRequestClose={() => setIsImageViewerVisible(false)}
-                swipeToCloseEnabled={true}
-                doubleTapToZoomEnabled={true}
-                backgroundColor="rgba(0, 0, 0, 0.85)"
-                FooterComponent={ImageViewerFooter}
-            />
-
-            <Modal visible={isVideoVisible} onRequestClose={() => { player.pause(); setIsVideoVisible(false); }} animationType="fade">
-                <View style={{ flex: 1, backgroundColor: '#000', justifyContent: 'center' }}>
-                    {videoUrl && (
-                        <VideoView
-                            player={player}
-                            style={{ width: '100%', height: '80%' }}
-                            fullscreenOptions={{ enable: true }}
-                            allowsPictureInPicture
-                            contentFit="contain"
-                        />
-                    )}
-                    <TouchableOpacity onPress={() => { player.pause(); setIsVideoVisible(false); }} style={styles.closeButton}>
-                        <Ionicons name="close" size={30} color="#FFF" />
-                    </TouchableOpacity>
-                </View>
-            </Modal>
         </CardContainer>
     );
 };

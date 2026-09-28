@@ -3,6 +3,7 @@ import { Alert, Platform, Share } from 'react-native';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
+import { MediaViewerProvider } from '../components/MediaViewer/mediaViewer';
 import { TootCard } from '../components/TootCard/tootCard';
 import { Poll } from '../components/Poll/poll';
 import { favouriteStatus } from '../services/mastodon/statuses';
@@ -84,7 +85,9 @@ describe('TootCard recycling', () => {
     let queryClient: QueryClient;
     const wrap = (status: Status) => (
         <QueryClientProvider client={queryClient}>
-            <TootCard status={status} />
+            <MediaViewerProvider>
+                <TootCard status={status} />
+            </MediaViewerProvider>
         </QueryClientProvider>
     );
 
@@ -193,7 +196,9 @@ describe('TootCard content', () => {
     const renderCard = (status: Status) =>
         render(
             <QueryClientProvider client={createTestQueryClient()}>
-                <TootCard status={status} />
+                <MediaViewerProvider>
+                    <TootCard status={status} />
+                </MediaViewerProvider>
             </QueryClientProvider>
         );
 
@@ -239,7 +244,9 @@ describe('TootCard share', () => {
     const renderCard = (status: Status) =>
         render(
             <QueryClientProvider client={createTestQueryClient()}>
-                <TootCard status={status} />
+                <MediaViewerProvider>
+                    <TootCard status={status} />
+                </MediaViewerProvider>
             </QueryClientProvider>
         );
 
@@ -278,7 +285,9 @@ describe('TootCard press', () => {
     const renderCard = (status: Status, onPress: (id: string) => void) =>
         render(
             <QueryClientProvider client={createTestQueryClient()}>
-                <TootCard status={status} onPress={onPress} />
+                <MediaViewerProvider>
+                    <TootCard status={status} onPress={onPress} />
+                </MediaViewerProvider>
             </QueryClientProvider>
         );
 
