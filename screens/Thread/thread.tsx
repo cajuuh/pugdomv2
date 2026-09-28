@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { ActivityIndicator, RefreshControl, StyleSheet, TouchableOpacity } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { View, Text } from 'react-native-ui-lib';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { getStatus, getStatusContext } from '../../services/mastodon/statuses';
@@ -16,6 +17,7 @@ interface ThreadProps {
 
 export default function Thread({ statusId, onBack, onStatusPress }: ThreadProps) {
     const { colors } = useTheme();
+    const insets = useSafeAreaInsets();
     const [statuses, setStatuses] = useState<Status[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -51,7 +53,7 @@ export default function Thread({ statusId, onBack, onStatusPress }: ThreadProps)
 
     return (
         <View flex style={{ backgroundColor: colors.background }}>
-            <View style={[styles.header, { borderBottomColor: colors.borderColor, backgroundColor: colors.cardBackground }]}>
+            <View testID="thread-header" style={[styles.header, { paddingTop: insets.top + 10, borderBottomColor: colors.borderColor, backgroundColor: colors.cardBackground }]}>
                 <TouchableOpacity onPress={onBack} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
@@ -77,7 +79,7 @@ export default function Thread({ statusId, onBack, onStatusPress }: ThreadProps)
                             ]}>
                                  <TootCard 
                                     status={item} 
-                                    onPress={() => onStatusPress(item.id)} 
+                                    onPress={onStatusPress}
                                     threadMode={true} 
                                     hasThreadLineTop={index > 0} 
                                     hasThreadLineBottom={index < statuses.length - 1}
@@ -99,7 +101,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingTop: 50,
         paddingBottom: 10,
         paddingHorizontal: 16,
         borderBottomWidth: 1,

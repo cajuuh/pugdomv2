@@ -135,7 +135,7 @@ const Timeline = ({ onStatusPress }: TimelineProps) => {
                     ref={listRef}
                     data={statuses}
                     keyExtractor={(item) => item.id}
-                    renderItem={({ item }) => <TootCard status={item} onPress={() => onStatusPress?.(item.id)} />}
+                    renderItem={({ item }) => <TootCard status={item} onPress={onStatusPress} />}
                     onEndReached={handleLoadMore}
                     onEndReachedThreshold={0.5}
                     refreshControl={
