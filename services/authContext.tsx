@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { Alert, DeviceEventEmitter } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 import { UNAUTHORIZED_EVENT } from './api/client';
 import { getCurrentAccount } from './mastodon/accounts';
 import { Account } from './mastodon/types';
@@ -24,6 +25,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [loading, setLoading] = useState<boolean>(true);
     const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([]);
     const [isAddingAccount, setAddingAccount] = useState<boolean>(false);
+    const queryClient = useQueryClient();
     // Tokens already handled, so a burst of 401s from one token only logs out once
     const handledUnauthorizedTokens = useRef(new Set<string>());
 
@@ -49,7 +51,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         checkLoginStatus();
     }, []);
 
+    // Cached timelines etc. belong to the previous account, so drop them (and any in-flight
+    // fetches that would repopulate them) whenever the active account changes
+    const resetServerState = () => {
+        queryClient.cancelQueries();
+        queryClient.clear();
+    };
+
     const login = (newUser: Account, token?: string, instanceUrl?: string) => {
+        resetServerState();
         setUser(newUser);
         setAddingAccount(false);
         if (token && instanceUrl) {
@@ -66,6 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const target = accounts.find(a => a.id === accountId);
             if (target) {
                 await saveCredentials(target.accessToken, target.instanceUrl);
+                resetServerState();
                 const account = await getCurrentAccount();
                 setUser(account);
                 setAddingAccount(false);
@@ -102,6 +113,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 } else {
                     // No accounts left, fully logout
                     await clearCredentials();
+                    resetServerState();
                     setUser(null);
                 }
             }
