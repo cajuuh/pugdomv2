@@ -175,23 +175,6 @@ export const styles = StyleSheet.create({
         color: '#94A3B8',
         lineHeight: 16,
     },
-    imageViewerNavButton: {
-        position: 'absolute',
-        top: '50%',
-        marginTop: -20,
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    imageViewerNavLeft: {
-        left: 16,
-    },
-    imageViewerNavRight: {
-        right: 16,
-    },
     blurContainer: {
         overflow: 'hidden',
         borderRadius: 12,
@@ -208,14 +191,5 @@ export const styles = StyleSheet.create({
         marginTop: 8,
         fontWeight: 'bold',
         fontSize: 14,
-    },
-    closeButton: {
-        position: 'absolute',
-        top: 50,
-        right: 20,
-        zIndex: 10,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        borderRadius: 20,
-        padding: 4,
     }
 });

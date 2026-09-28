@@ -12,6 +12,7 @@ import { AuthProvider, useAuth } from './services/authContext';
 import { SettingsProvider } from './services/settingsContext';
 import { ThemeProvider, useTheme } from './services/themeContext';
 import { ComposeProvider, useCompose } from './services/composeContext';
+import { MediaViewerProvider } from './components/MediaViewer/mediaViewer';
 import Login from './screens/Login/login';
 import Profile from './screens/Profile/profile';
 import Timeline from './screens/Timeline/timeline';
@@ -121,7 +122,9 @@ export default function App() {
           <SettingsProvider>
             <AuthProvider>
               <ComposeProvider>
-                <NavigationRoot />
+                <MediaViewerProvider>
+                  <NavigationRoot />
+                </MediaViewerProvider>
               </ComposeProvider>
             </AuthProvider>
           </SettingsProvider>

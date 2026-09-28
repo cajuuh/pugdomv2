@@ -4,6 +4,7 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
+import { MediaViewerProvider } from '../components/MediaViewer/mediaViewer';
 import Thread from '../screens/Thread/thread';
 import { getStatus, getStatusContext } from '../services/mastodon/statuses';
 import { Status } from '../services/mastodon/types';
@@ -62,7 +63,9 @@ const renderThread = (onStatusPress = jest.fn()) =>
             }}
         >
             <QueryClientProvider client={createTestQueryClient()}>
-                <Thread statusId="main" onBack={jest.fn()} onStatusPress={onStatusPress} />
+                <MediaViewerProvider>
+                    <Thread statusId="main" onBack={jest.fn()} onStatusPress={onStatusPress} />
+                </MediaViewerProvider>
             </QueryClientProvider>
         </SafeAreaProvider>
     );
