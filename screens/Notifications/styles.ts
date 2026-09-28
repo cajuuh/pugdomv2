@@ -37,16 +37,15 @@ export const styles = StyleSheet.create({
         elevation: 3,
     },
     asymmetricTagLayer: {
-        position: 'absolute',
-        top: 16,
-        right: 16,
+        alignSelf: 'flex-start',
+        marginLeft: 8,
+        borderWidth: 1,
         paddingHorizontal: 10,
         paddingVertical: 6,
         borderRadius: 14,
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
-        zIndex: 2,
     },
     tagText: {
         fontSize: 11,
@@ -57,16 +56,17 @@ export const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 12,
-        paddingRight: 80, // Prevent overlap with asymmetric tag
     },
     avatar: {
         marginRight: 12,
     },
     actionText: {
-        width: 150,
+        flex: 1,
         fontSize: 15,
         fontWeight: '500',
-        flexShrink: 1,
+    },
+    displayName: {
+        fontWeight: 'bold',
     },
     statusPreview: {
         fontSize: 15,
@@ -80,6 +80,11 @@ export const styles = StyleSheet.create({
         borderRadius: 20,
         marginTop: 12,
         alignSelf: 'flex-start',
-    }
+    },
+    followState: {
+        marginTop: 12,
+        fontSize: 13,
+        fontWeight: '600',
+    },
 });
 
