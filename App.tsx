@@ -116,17 +116,18 @@ function NavigationRoot() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <ThemeProvider>
-        <SettingsProvider>
-          <AuthProvider>
-            <ComposeProvider>
-              <QueryClientProvider client={queryClient}>
+      {/* Above AuthProvider so it can reset cached server state when the account changes */}
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <SettingsProvider>
+            <AuthProvider>
+              <ComposeProvider>
                 <NavigationRoot />
-              </QueryClientProvider>
-            </ComposeProvider>
-          </AuthProvider>
-        </SettingsProvider>
-      </ThemeProvider>
+              </ComposeProvider>
+            </AuthProvider>
+          </SettingsProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
     </SafeAreaProvider>
   );
 }

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Alert, DeviceEventEmitter, Text } from 'react-native';
 import { act, render, screen, waitFor } from '@testing-library/react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from '../services/authContext';
 import { UNAUTHORIZED_EVENT } from '../services/api/client';
 import { getCurrentAccount } from '../services/mastodon/accounts';
@@ -27,7 +28,10 @@ jest.mock('../services/storage', () => {
             credentials = { accessToken: null, instanceUrl: null };
         }),
         getSavedAccounts: jest.fn(async () => accounts),
-        addSavedAccount: jest.fn(),
+        addSavedAccount: jest.fn(async (accessToken: string, instanceUrl: string, userInfo: any) => {
+            const id = `${userInfo.acct}@${instanceUrl}`;
+            accounts = [...accounts.filter(a => a.id !== id), { id, accessToken, instanceUrl, userInfo }];
+        }),
         removeSavedAccount: jest.fn(async (id: string) => {
             accounts = accounts.filter(a => a.id !== id);
         }),
@@ -47,19 +51,29 @@ const makeAccount = (acct: string, instanceUrl: string, accessToken: string) => 
 const alice = makeAccount('alice', 'https://one.social', 'alice-token');
 const bob = makeAccount('bob', 'https://two.social', 'bob-token');
 
+let auth: ReturnType<typeof useAuth>;
+let queryClient: QueryClient;
+
 const CurrentUser = () => {
-    const { user, loading } = useAuth();
+    auth = useAuth();
+    const { user, loading } = auth;
     return <Text>{loading ? 'loading' : user?.acct ?? 'logged-out'}</Text>;
 };
 
 const renderAuth = async () => {
+    queryClient = new QueryClient();
     await render(
-        <AuthProvider>
-            <CurrentUser />
-        </AuthProvider>
+        <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+                <CurrentUser />
+            </AuthProvider>
+        </QueryClientProvider>
     );
     await waitFor(() => expect(screen.queryByText('loading')).toBeNull());
 };
+
+const seedTimeline = () =>
+    queryClient.setQueryData(['timeline', 'home'], { pages: [[{ id: 'cached-status' }]], pageParams: [undefined] });
 
 const emitUnauthorized = (accessToken: string) =>
     act(async () => {
@@ -123,5 +137,62 @@ describe('AuthProvider 401 handling', () => {
         await waitFor(() => expect(screen.getByText('bob')).toBeTruthy());
         expect(mockedStorage.removeSavedAccount).toHaveBeenCalledTimes(1);
         expect(Alert.alert).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('AuthProvider account changes', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockedGetCurrentAccount.mockImplementation(async () => {
+            const { accessToken } = await mockedStorage.getCredentials();
+            const account = [alice, bob].find(a => a.accessToken === accessToken)!;
+            return { ...account.userInfo, emojis: [] };
+        });
+    });
+
+    afterEach(() => queryClient.clear());
+
+    it("drops the previous account's cached timelines when switching", async () => {
+        mockedStorage.__setState({ accessToken: 'alice-token', instanceUrl: alice.instanceUrl }, [alice, bob]);
+        await renderAuth();
+        seedTimeline();
+
+        await act(() => auth.switchAccount(bob.id));
+
+        expect(screen.getByText('bob')).toBeTruthy();
+        expect(queryClient.getQueryData(['timeline', 'home'])).toBeUndefined();
+    });
+
+    it('drops cached timelines on full logout', async () => {
+        mockedStorage.__setState({ accessToken: 'alice-token', instanceUrl: alice.instanceUrl }, [alice]);
+        await renderAuth();
+        seedTimeline();
+
+        await act(() => auth.logout());
+
+        expect(screen.getByText('logged-out')).toBeTruthy();
+        expect(queryClient.getQueryData(['timeline', 'home'])).toBeUndefined();
+    });
+
+    it('keeps the cache when removing an account that is not active', async () => {
+        mockedStorage.__setState({ accessToken: 'alice-token', instanceUrl: alice.instanceUrl }, [alice, bob]);
+        await renderAuth();
+        seedTimeline();
+
+        await act(() => auth.logout(bob.id));
+
+        expect(screen.getByText('alice')).toBeTruthy();
+        expect(queryClient.getQueryData(['timeline', 'home'])).toBeDefined();
+    });
+
+    it('drops cached timelines when a new account logs in', async () => {
+        mockedStorage.__setState({ accessToken: 'alice-token', instanceUrl: alice.instanceUrl }, [alice]);
+        await renderAuth();
+        seedTimeline();
+
+        await act(async () => auth.login({ ...bob.userInfo, emojis: [] }, bob.accessToken, bob.instanceUrl));
+
+        expect(screen.getByText('bob')).toBeTruthy();
+        expect(queryClient.getQueryData(['timeline', 'home'])).toBeUndefined();
     });
 });
