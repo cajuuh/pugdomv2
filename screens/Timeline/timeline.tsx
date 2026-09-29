@@ -94,7 +94,7 @@ const Timeline = ({ onStatusPress }: TimelineProps) => {
 
     return (
         <View flex style={styles.container}>
-            <View paddingH-16 paddingV-10>
+            <View paddingH-16 paddingT-6 paddingB-10>
                 <SegmentedPill options={FEEDS} value={activeFeed} onChange={setActiveFeed} />
             </View>
             

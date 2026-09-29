@@ -82,7 +82,7 @@ function NavigationRoot() {
         {/* Top Bar */}
         <TopBar
           user={user}
-          onAvatarPress={() => setActiveTab('profile')}
+          onProfilePress={() => setActiveTab('profile')}
           onSettingsPress={() => setCurrentScreen('settings')}
           onLogoutPress={logout}
         />
