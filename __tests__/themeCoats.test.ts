@@ -69,6 +69,11 @@ describe('coat palettes', () => {
         });
     });
 
+    it('uses a dark shadow in both modes', () => {
+        expect(buildColors('apricot', false, true).shadowColor).toBe(buildColors('apricot', false, true).textPrimary);
+        expect(buildColors('apricot', true, true).shadowColor).toBe('#000000');
+    });
+
     it('keeps the accent but mutes the neutrals when the tint is off', () => {
         const tinted = buildColors('sage', false, true);
         const untinted = buildColors('sage', false, false);

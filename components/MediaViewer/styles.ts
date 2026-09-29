@@ -1,9 +1,10 @@
 import { StyleSheet } from 'react-native';
+import { mediaColors } from '../../services/theme/media';
 
 export const styles = StyleSheet.create({
     videoContainer: {
         flex: 1,
-        backgroundColor: '#000',
+        backgroundColor: mediaColors.backdrop,
         justifyContent: 'center',
     },
     video: {
@@ -14,7 +15,7 @@ export const styles = StyleSheet.create({
         position: 'absolute',
         right: 20,
         zIndex: 10,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: mediaColors.scrim,
         borderRadius: 20,
         padding: 4,
     },
@@ -25,7 +26,7 @@ export const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: mediaColors.scrim,
         justifyContent: 'center',
         alignItems: 'center',
     },

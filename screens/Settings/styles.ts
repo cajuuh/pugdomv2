@@ -1,13 +1,14 @@
 import { StyleSheet, Platform } from 'react-native';
+import { ThemeColors } from '../../services/themeContext';
 
-export const styles = StyleSheet.create({
+export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: '#0F172A',
+        backgroundColor: colors.background,
     },
     container: {
         flex: 1,
-        backgroundColor: '#0F172A',
+        backgroundColor: colors.background,
     },
     contentContainer: {
         padding: 16,
@@ -20,8 +21,8 @@ export const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 8,
         borderBottomWidth: 1,
-        borderBottomColor: '#334155',
-        backgroundColor: '#1E293B',
+        borderBottomColor: colors.borderColor,
+        backgroundColor: colors.cardBackground,
     },
     backButton: {
         width: 44,
@@ -32,7 +33,7 @@ export const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#F8FAFC',
+        color: colors.textPrimary,
     },
     placeholder: {
         width: 44,
@@ -41,15 +42,15 @@ export const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         padding: 16,
-        backgroundColor: '#1E293B',
+        backgroundColor: colors.cardBackground,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#334155',
+        borderColor: colors.borderColor,
         marginBottom: 24,
     },
     userAvatar: {
         borderWidth: 2,
-        borderColor: '#6366F1',
+        borderColor: colors.accentColor,
     },
     userInfo: {
         marginLeft: 16,
@@ -58,32 +59,32 @@ export const styles = StyleSheet.create({
     displayName: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#F8FAFC',
+        color: colors.textPrimary,
     },
     username: {
         fontSize: 14,
-        color: '#94A3B8',
+        color: colors.textSecondary,
         marginTop: 2,
     },
     instanceText: {
         fontSize: 11,
-        color: '#6366F1',
+        color: colors.accentText,
         fontWeight: '600',
         marginTop: 4,
     },
     sectionTitle: {
         fontSize: 12,
         fontWeight: '700',
-        color: '#64748B',
+        color: colors.textMuted,
         letterSpacing: 1,
         marginBottom: 8,
         marginLeft: 4,
     },
     settingsGroup: {
-        backgroundColor: '#1E293B',
+        backgroundColor: colors.cardBackground,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#334155',
+        borderColor: colors.borderColor,
         marginBottom: 24,
         overflow: 'hidden',
     },
@@ -106,16 +107,16 @@ export const styles = StyleSheet.create({
     },
     settingLabel: {
         fontSize: 15,
-        color: '#F8FAFC',
+        color: colors.textPrimary,
         fontWeight: '500',
     },
     settingValue: {
         fontSize: 14,
-        color: '#94A3B8',
+        color: colors.textSecondary,
     },
     divider: {
         height: 1,
-        backgroundColor: '#334155',
+        backgroundColor: colors.borderColor,
         marginHorizontal: 16,
     },
     logoutButton: {

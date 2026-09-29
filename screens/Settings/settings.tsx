@@ -1,12 +1,14 @@
 import React from 'react';
-import { StyleSheet, ScrollView, Switch, TouchableOpacity } from 'react-native';
+import { StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, Avatar, Button, Card } from 'react-native-ui-lib';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '../../services/authContext';
 import { useSettings } from '../../services/settingsContext';
 import { useTheme } from '../../services/themeContext';
-import { styles } from './styles';
+import { makeStyles } from './styles';
+import { useThemedStyles } from '../../services/theme/useThemedStyles';
+import { ThemedSwitch } from '../../components/ui';
 import { appVersionLabel } from '../../services/appVersion';
 
 interface SettingsProps {
@@ -16,6 +18,7 @@ interface SettingsProps {
 const Settings: React.FC<SettingsProps> = ({ onBack }) => {
     const { user, logout, savedAccounts, switchAccount, setAddingAccount } = useAuth();
     const { colors, theme, setTheme } = useTheme();
+    const styles = useThemedStyles(makeStyles);
     const {
         notifications,
         setNotifications,
@@ -26,20 +29,20 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
     } = useSettings();
 
     return (
-        <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={styles.safeArea}>
             {/* Header */}
-            <View style={[styles.header, { backgroundColor: colors.cardBackground, borderBottomColor: colors.borderColor }]}>
+            <View style={styles.header}>
                 <TouchableOpacity onPress={onBack} style={styles.backButton} activeOpacity={0.7}>
                     <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
-                <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Settings</Text>
+                <Text style={styles.headerTitle}>Settings</Text>
                 <View style={styles.placeholder} />
             </View>
 
-            <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
+            <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
                 {/* Accounts Section */}
-                <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>ACCOUNTS</Text>
-                <Card style={[styles.settingsGroup, { backgroundColor: colors.cardBackground, borderColor: colors.borderColor }]} enableShadow={false}>
+                <Text style={styles.sectionTitle}>ACCOUNTS</Text>
+                <Card style={styles.settingsGroup} enableShadow={false}>
                     {savedAccounts.map((account, index) => {
                         const isActive = user?.id === account.userInfo.id;
                         return (
@@ -52,7 +55,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                                     <View style={styles.settingLeft}>
                                         <Avatar source={{ uri: account.userInfo.avatar }} size={40} containerStyle={{ borderWidth: 1, borderColor: colors.borderColor, borderRadius: 20 }} />
                                         <View style={{ marginLeft: 12, flex: 1 }}>
-                                            <Text style={[styles.settingLabel, { color: colors.textPrimary }]} numberOfLines={1}>
+                                            <Text style={styles.settingLabel} numberOfLines={1}>
                                                 {account.userInfo.display_name || account.userInfo.username}
                                             </Text>
                                             <Text style={{ color: colors.textSecondary, fontSize: 12 }} numberOfLines={1}>
@@ -61,14 +64,14 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                                         </View>
                                     </View>
                                     {isActive ? (
-                                        <Ionicons name="checkmark-circle" size={24} color={colors.accentColor} />
+                                        <Ionicons name="checkmark-circle" size={24} color={colors.accentText} />
                                     ) : (
                                         <TouchableOpacity onPress={() => logout(account.id)} hitSlop={{top:10, bottom:10, left:10, right:10}}>
                                             <Ionicons name="log-out-outline" size={20} color={colors.dangerColor} />
                                         </TouchableOpacity>
                                     )}
                                 </TouchableOpacity>
-                                <View style={[styles.divider, { backgroundColor: colors.borderColor }]} />
+                                <View style={styles.divider} />
                             </React.Fragment>
                         );
                     })}
@@ -78,67 +81,52 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                         activeOpacity={0.7}
                         onPress={() => setAddingAccount(true)}
                     >
-                        <Ionicons name="add-circle-outline" size={20} color={colors.accentColor} style={{ marginRight: 8 }} />
-                        <Text style={[styles.settingLabel, { color: colors.accentColor }]}>Add Account</Text>
+                        <Ionicons name="add-circle-outline" size={20} color={colors.accentText} style={{ marginRight: 8 }} />
+                        <Text style={[styles.settingLabel, { color: colors.accentText }]}>Add Account</Text>
                     </TouchableOpacity>
                 </Card>
 
                 {/* Preferences Section */}
-                <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>PREFERENCES</Text>
-                <Card style={[styles.settingsGroup, { backgroundColor: colors.cardBackground, borderColor: colors.borderColor }]} enableShadow={false}>
+                <Text style={styles.sectionTitle}>PREFERENCES</Text>
+                <Card style={styles.settingsGroup} enableShadow={false}>
                     {/* Push Notifications Row */}
                     <View style={styles.settingRow}>
                         <View style={styles.settingLeft}>
-                            <Ionicons name="notifications-outline" size={20} color={colors.accentColor} style={styles.rowIcon} />
-                            <Text style={[styles.settingLabel, { color: colors.textPrimary }]}>Push Notifications</Text>
+                            <Ionicons name="notifications-outline" size={20} color={colors.accentText} style={styles.rowIcon} />
+                            <Text style={styles.settingLabel}>Push Notifications</Text>
                         </View>
-                        <Switch
-                            value={notifications}
-                            onValueChange={setNotifications}
-                            trackColor={{ false: colors.borderColor, true: colors.accentColor }}
-                            thumbColor={colors.buttonTextColor}
-                        />
+                        <ThemedSwitch value={notifications} onValueChange={setNotifications} />
                     </View>
 
-                    <View style={[styles.divider, { backgroundColor: colors.borderColor }]} />
+                    <View style={styles.divider} />
 
                     {/* Autoplay Media Row */}
                     <View style={styles.settingRow}>
                         <View style={styles.settingLeft}>
-                            <Ionicons name="play-circle-outline" size={20} color={colors.accentColor} style={styles.rowIcon} />
-                            <Text style={[styles.settingLabel, { color: colors.textPrimary }]}>Autoplay Media</Text>
+                            <Ionicons name="play-circle-outline" size={20} color={colors.accentText} style={styles.rowIcon} />
+                            <Text style={styles.settingLabel}>Autoplay Media</Text>
                         </View>
-                        <Switch
-                            value={mediaAutoplay}
-                            onValueChange={setMediaAutoplay}
-                            trackColor={{ false: colors.borderColor, true: colors.accentColor }}
-                            thumbColor={colors.buttonTextColor}
-                        />
+                        <ThemedSwitch value={mediaAutoplay} onValueChange={setMediaAutoplay} />
                     </View>
 
-                    <View style={[styles.divider, { backgroundColor: colors.borderColor }]} />
+                    <View style={styles.divider} />
 
                     {/* Compact Mode Row */}
                     <View style={styles.settingRow}>
                         <View style={styles.settingLeft}>
-                            <Ionicons name="list-outline" size={20} color={colors.accentColor} style={styles.rowIcon} />
-                            <Text style={[styles.settingLabel, { color: colors.textPrimary }]}>Compact Mode</Text>
+                            <Ionicons name="list-outline" size={20} color={colors.accentText} style={styles.rowIcon} />
+                            <Text style={styles.settingLabel}>Compact Mode</Text>
                         </View>
-                        <Switch
-                            value={compactMode}
-                            onValueChange={setCompactMode}
-                            trackColor={{ false: colors.borderColor, true: colors.accentColor }}
-                            thumbColor={colors.buttonTextColor}
-                        />
+                        <ThemedSwitch value={compactMode} onValueChange={setCompactMode} />
                     </View>
 
-                    <View style={[styles.divider, { backgroundColor: colors.borderColor }]} />
+                    <View style={styles.divider} />
 
                     {/* Dynamic Theme Selector Row */}
                     <View style={[styles.settingRow, { height: 60 }]}>
                         <View style={styles.settingLeft}>
-                            <Ionicons name="color-palette-outline" size={20} color={colors.accentColor} style={styles.rowIcon} />
-                            <Text style={[styles.settingLabel, { color: colors.textPrimary }]}>Theme</Text>
+                            <Ionicons name="color-palette-outline" size={20} color={colors.accentText} style={styles.rowIcon} />
+                            <Text style={styles.settingLabel}>Theme</Text>
                         </View>
                         <View style={styles.themeSelectorContainer}>
                             <TouchableOpacity
@@ -191,22 +179,22 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                 </Card>
 
                 {/* About App Section */}
-                <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>ABOUT</Text>
-                <Card style={[styles.settingsGroup, { backgroundColor: colors.cardBackground, borderColor: colors.borderColor }]} enableShadow={false}>
+                <Text style={styles.sectionTitle}>ABOUT</Text>
+                <Card style={styles.settingsGroup} enableShadow={false}>
                     <View style={styles.settingRow}>
                         <View style={styles.settingLeft}>
-                            <Ionicons name="information-circle-outline" size={20} color={colors.accentColor} style={styles.rowIcon} />
-                            <Text style={[styles.settingLabel, { color: colors.textPrimary }]}>App Version</Text>
+                            <Ionicons name="information-circle-outline" size={20} color={colors.accentText} style={styles.rowIcon} />
+                            <Text style={styles.settingLabel}>App Version</Text>
                         </View>
-                        <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{appVersionLabel()}</Text>
+                        <Text style={styles.settingValue}>{appVersionLabel()}</Text>
                     </View>
 
-                    <View style={[styles.divider, { backgroundColor: colors.borderColor }]} />
+                    <View style={styles.divider} />
 
                     <TouchableOpacity style={styles.settingRow} activeOpacity={0.7}>
                         <View style={styles.settingLeft}>
-                            <Ionicons name="shield-checkmark-outline" size={20} color={colors.accentColor} style={styles.rowIcon} />
-                            <Text style={[styles.settingLabel, { color: colors.textPrimary }]}>Privacy Policy</Text>
+                            <Ionicons name="shield-checkmark-outline" size={20} color={colors.accentText} style={styles.rowIcon} />
+                            <Text style={styles.settingLabel}>Privacy Policy</Text>
                         </View>
                         <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
                     </TouchableOpacity>

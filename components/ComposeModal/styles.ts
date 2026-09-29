@@ -1,6 +1,7 @@
 import { StyleSheet, Platform } from 'react-native';
+import { ThemeColors } from '../../services/themeContext';
 
-export const styles = StyleSheet.create({
+export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     modalContainer: {
         flex: 1,
     },
@@ -68,7 +69,7 @@ export const styles = StyleSheet.create({
     langModalContainer: {
         flex: 1,
         justifyContent: 'flex-end',
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        backgroundColor: colors.scrim,
     },
     langSheet: {
         borderTopLeftRadius: 20,
@@ -78,7 +79,7 @@ export const styles = StyleSheet.create({
         maxHeight: '60%',
         ...Platform.select({
             ios: {
-                shadowColor: '#000',
+                shadowColor: colors.shadowColor,
                 shadowOffset: { width: 0, height: -4 },
                 shadowOpacity: 0.1,
                 shadowRadius: 4,
@@ -229,7 +230,7 @@ export const styles = StyleSheet.create({
         paddingHorizontal: 12,
         gap: 4,
         borderRadius: 16,
-        backgroundColor: 'rgba(0,0,0,0.05)',
+        backgroundColor: colors.inputBackground,
     },
     pollAddChoiceText: {
         fontSize: 13,
@@ -261,7 +262,7 @@ export const styles = StyleSheet.create({
         borderRadius: 14,
         borderWidth: 1,
         borderColor: 'transparent',
-        backgroundColor: 'rgba(0,0,0,0.05)',
+        backgroundColor: colors.inputBackground,
     },
     pollDurationText: {
         fontSize: 12,

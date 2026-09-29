@@ -95,7 +95,7 @@ export const Poll: React.FC<PollProps> = ({ initialPoll, onPollUpdated }) => {
                             isSelected && [styles.checkboxSelected, { backgroundColor: colors.accentColor }]
                         ]}>
                             {isSelected && (
-                                <Ionicons name="checkmark" size={14} color="#FFF" />
+                                <Ionicons name="checkmark" size={14} color={colors.buttonTextColor} />
                             )}
                         </View>
                         {renderTextWithEmojis(

@@ -1,29 +1,30 @@
 import { StyleSheet } from 'react-native';
+import { ThemeColors } from '../../services/themeContext';
 import { TAB_BAR_CLEARANCE } from '../../components/TabBar/styles';
 
-export const styles = StyleSheet.create({
+export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#0F172A'
+        backgroundColor: colors.background
     },
     loadingContainer: {
         flex: 1,
-        backgroundColor: '#0F172A',
+        backgroundColor: colors.background,
         justifyContent: 'center',
         alignItems: 'center'
     },
     header: {
         height: 60,
-        backgroundColor: '#1E293B',
+        backgroundColor: colors.cardBackground,
         justifyContent: 'center',
         alignItems: 'center',
         borderBottomWidth: 1,
-        borderBottomColor: '#334155'
+        borderBottomColor: colors.borderColor
     },
     headerTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#F8FAFC',
+        color: colors.textPrimary,
     },
     listContent: {
         paddingTop: 8,
@@ -35,7 +36,7 @@ export const styles = StyleSheet.create({
         justifyContent: 'center'
     },
     emptyText: {
-        color: '#94A3B8',
+        color: colors.textSecondary,
         fontSize: 16,
         textAlign: 'center'
     }

@@ -1,6 +1,8 @@
 import { StyleSheet } from 'react-native';
+import { ThemeColors } from '../../services/themeContext';
+import { mediaColors } from '../../services/theme/media';
 
-export const styles = StyleSheet.create({
+export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     cardContainer: {
         borderRadius: 20,
         paddingHorizontal: 16,
@@ -8,7 +10,7 @@ export const styles = StyleSheet.create({
         marginHorizontal: 16,
         marginVertical: 10,
         borderWidth: 1,
-        shadowColor: '#000',
+        shadowColor: colors.shadowColor,
         shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.1,
         shadowRadius: 8,
@@ -26,7 +28,7 @@ export const styles = StyleSheet.create({
     },
     boostedText: {
         fontSize: 12,
-        color: '#94A3B8',
+        color: colors.textMuted,
         fontWeight: '600'
     },
     headerRow: {
@@ -57,30 +59,30 @@ export const styles = StyleSheet.create({
     displayName: {
         fontSize: 15,
         fontWeight: 'bold',
-        color: '#F8FAFC',
+        color: colors.textPrimary,
         marginRight: 4
     },
     username: {
         fontSize: 13,
-        color: '#94A3B8'
+        color: colors.textSecondary
     },
     timeText: {
         fontSize: 12,
-        color: '#64748B'
+        color: colors.textMuted
     },
     spoilerContainer: {
-        backgroundColor: '#0F172A',
+        backgroundColor: colors.inputBackground,
         padding: 12,
         borderRadius: 10,
         marginBottom: 8,
         borderWidth: 1,
-        borderColor: '#334155',
+        borderColor: colors.borderColor,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center'
     },
     spoilerText: {
-        color: '#E2E8F0',
+        color: colors.textPrimary,
         fontSize: 14,
         fontWeight: '600',
         flex: 1
@@ -95,7 +97,7 @@ export const styles = StyleSheet.create({
     contentText: {
         fontSize: 15,
         lineHeight: 22,
-        color: '#E2E8F0'
+        color: colors.textPrimary
     },
     mediaContainer: {
         width: '100%',
@@ -103,7 +105,7 @@ export const styles = StyleSheet.create({
         borderRadius: 12,
         overflow: 'hidden',
         marginBottom: 12,
-        backgroundColor: '#0F172A'
+        backgroundColor: colors.inputBackground
     },
     singleMedia: {
         width: '100%',
@@ -119,14 +121,14 @@ export const styles = StyleSheet.create({
     gridMedia: {
         height: 120,
         borderRadius: 8,
-        backgroundColor: '#0F172A',
+        backgroundColor: colors.inputBackground,
         resizeMode: 'cover'
     },
     actionRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         borderTopWidth: 1,
-        borderTopColor: 'rgba(150, 150, 150, 0.2)',
+        borderTopColor: colors.borderColor,
         paddingTop: 12,
         marginTop: 8
     },
@@ -139,15 +141,15 @@ export const styles = StyleSheet.create({
     },
     actionCount: {
         fontSize: 12,
-        color: '#64748B',
+        color: colors.textMuted,
         fontWeight: '600'
     },
     linkPreviewContainer: {
-        backgroundColor: '#0F172A',
+        backgroundColor: colors.inputBackground,
         borderRadius: 12,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: '#334155',
+        borderColor: colors.borderColor,
         marginBottom: 12,
     },
     linkPreviewImage: {
@@ -161,18 +163,18 @@ export const styles = StyleSheet.create({
     },
     linkPreviewProvider: {
         fontSize: 11,
-        color: '#6366F1',
+        color: colors.accentText,
         fontWeight: '600',
         textTransform: 'uppercase',
     },
     linkPreviewTitle: {
         fontSize: 14,
         fontWeight: 'bold',
-        color: '#F8FAFC',
+        color: colors.textPrimary,
     },
     linkPreviewDescription: {
         fontSize: 12,
-        color: '#94A3B8',
+        color: colors.textSecondary,
         lineHeight: 16,
     },
     blurContainer: {
@@ -184,10 +186,10 @@ export const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+        backgroundColor: mediaColors.scrimLight,
     },
     revealText: {
-        color: '#FFF',
+        color: mediaColors.ink,
         marginTop: 8,
         fontWeight: 'bold',
         fontSize: 14,

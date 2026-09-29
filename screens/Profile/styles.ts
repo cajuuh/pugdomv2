@@ -1,10 +1,11 @@
 import { StyleSheet } from "react-native";
+import { ThemeColors } from '../../services/themeContext';
 import { TAB_BAR_CLEARANCE } from "../../components/TabBar/styles";
 
-export const styles = StyleSheet.create({
+export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#0F172A'
+        backgroundColor: colors.background
     },
     contentContainer: {
         paddingBottom: TAB_BAR_CLEARANCE,
@@ -12,7 +13,7 @@ export const styles = StyleSheet.create({
     headerBannerContainer: {
         width: '100%',
         height: 160, //magic numbers for now
-        backgroundColor: '#1E293B'
+        backgroundColor: colors.cardBackground
     },
     headerBanner: {
         width: '100%',
@@ -20,7 +21,7 @@ export const styles = StyleSheet.create({
         resizeMode: 'cover',
     },
     gradientFallback: {
-        backgroundColor: '#4F46E5'
+        backgroundColor: colors.accentColor
     },
     profileInfoContainer: {
         paddingHorizontal: 20,
@@ -32,18 +33,18 @@ export const styles = StyleSheet.create({
     },
     avatarBorder: {
         borderWidth: 4,
-        borderColor: '#0F172A',
+        borderColor: colors.background,
         borderRadius: 50
     },
     displayName: {
         fontSize: 24,
         fontWeight: 'bold',
-        color: '#F8FAFC',
+        color: colors.textPrimary,
         textAlign: 'center'
     },
     username: {
         fontSize: 14,
-        color: '#94A3B8',
+        color: colors.textSecondary,
         marginTop: 4,
         marginBottom: 24,
         textAlign: 'center'
@@ -57,36 +58,36 @@ export const styles = StyleSheet.create({
     },
     statsCard: {
         flex: 1,
-        backgroundColor: '#1E293B',
+        backgroundColor: colors.cardBackground,
         paddingVertical: 16,
         alignItems: 'center',
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#334155'
+        borderColor: colors.borderColor
     },
     statNumber: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#F8FAFC'
+        color: colors.textPrimary
     },
     statLabel: {
         fontSize: 12,
-        color: '#94A3B8',
+        color: colors.textSecondary,
         marginTop: 4
     },
     bioContainer: {
         width: '100%',
-        backgroundColor: '#1E293B',
+        backgroundColor: colors.cardBackground,
         padding: 20,
         borderRadius: 16,
         marginBottom: 24,
         borderWidth: 1,
-        borderColor: '#334155'
+        borderColor: colors.borderColor
     },
     bioTitle: {
         fontSize: 12,
         fontWeight: '600',
-        color: '#6366F1',
+        color: colors.accentText,
         marginBottom: 8,
         textTransform: 'uppercase',
         letterSpacing: 0.5
@@ -94,7 +95,7 @@ export const styles = StyleSheet.create({
     bioText: {
         fontSize: 15,
         lineHeight: 22,
-        color: '#E2E8F0'
+        color: colors.textPrimary
     },
     actionButtonsContainer: {
         flexDirection: 'row',

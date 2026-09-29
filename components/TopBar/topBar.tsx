@@ -5,7 +5,8 @@ import { View, Text, Avatar } from 'react-native-ui-lib';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Account } from '../../services/mastodon/types';
 import { useTheme } from '../../services/themeContext';
-import { styles } from './styles';
+import { makeStyles } from './styles';
+import { useThemedStyles } from '../../services/theme/useThemedStyles';
 
 interface TopBarProps {
     user: Account | null;
@@ -17,6 +18,7 @@ interface TopBarProps {
 export const TopBar: React.FC<TopBarProps> = ({ user, onAvatarPress, onSettingsPress, onLogoutPress }) => {
     const [menuVisible, setMenuVisible] = useState(false);
     const { colors, type } = useTheme();
+    const styles = useThemedStyles(makeStyles);
 
     return (
         <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.cardBackground, borderBottomColor: colors.borderColor }]}>

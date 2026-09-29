@@ -17,8 +17,10 @@ export interface ThemeColors {
     // Ink on an accent fill (dark for every coat but black pug in light mode)
     buttonTextColor: string;
     dangerColor: string;
-    /** @deprecated same as accentText; kept until the compose counter moves over */
-    warningColor: string;
+    // Ink in light mode; black in dark mode, where a light shadow would glow
+    shadowColor: string;
+    // Dims the screen behind modals and menus
+    scrim: string;
 }
 
 export type CoatKey = 'apricot' | 'fawn' | 'brindle' | 'black' | 'silver' | 'sage' | 'blueberry' | 'plum' | 'rose';
@@ -134,6 +136,7 @@ export function buildColors(coatKey: string, dark: boolean, tint: boolean): Them
         tabBarActiveColor: accent.accentText,
         tabBarInactiveColor: neutrals.ink3,
         dangerColor: neutrals.danger,
-        warningColor: accent.accentText,
+        shadowColor: dark ? '#000000' : neutrals.ink,
+        scrim: dark ? '#000000A6' : neutrals.ink + '66',
     };
 }

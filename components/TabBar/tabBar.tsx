@@ -3,7 +3,8 @@ import { View, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../../services/themeContext';
-import { styles } from './styles';
+import { makeStyles } from './styles';
+import { useThemedStyles } from '../../services/theme/useThemedStyles';
 
 interface TabBarProps {
     activeTab: 'home' | 'search' | 'notifications' | 'profile';
@@ -13,6 +14,7 @@ interface TabBarProps {
 
 export const TabBar: React.FC<TabBarProps> = ({ activeTab, onTabPress, onComposePress }) => {
     const { colors, isDark } = useTheme();
+    const styles = useThemedStyles(makeStyles);
 
     return (
         <View style={styles.dockWrapper} pointerEvents="box-none">
@@ -30,7 +32,7 @@ export const TabBar: React.FC<TabBarProps> = ({ activeTab, onTabPress, onCompose
                 {/* Center Compose */}
                 <View style={styles.centerActionWrapper}>
                     <TouchableOpacity onPress={onComposePress} style={[styles.centerActionButton, { backgroundColor: colors.accentColor }]} activeOpacity={0.9}>
-                        <Ionicons name="add" size={28} color="#FFF" />
+                        <Ionicons name="add" size={28} color={colors.buttonTextColor} />
                     </TouchableOpacity>
                 </View>
 
