@@ -128,7 +128,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
     // Determine character counter color
     let counterColor = colors.textSecondary;
     if (remaining < 50 && remaining >= 0) {
-        counterColor = '#F59E0B'; // Warn orange
+        counterColor = colors.warningColor;
     } else if (isOverLimit) {
         counterColor = colors.dangerColor; // Error red
     }
@@ -201,9 +201,9 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                             ]}
                         >
                             {loading ? (
-                                <ActivityIndicator size="small" color="#FFFFFF" />
+                                <ActivityIndicator size="small" color={colors.buttonTextColor} />
                             ) : (
-                                <Text style={[styles.publishButtonText, { color: '#FFFFFF' }]}>Post</Text>
+                                <Text style={[styles.publishButtonText, { color: colors.buttonTextColor }]}>Post</Text>
                             )}
                         </TouchableOpacity>
                     </View>
@@ -371,7 +371,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                                             >
                                                 <Text style={[
                                                     styles.pollDurationText,
-                                                    { color: pollDuration === dur.value ? '#FFF' : colors.textSecondary }
+                                                    { color: pollDuration === dur.value ? colors.buttonTextColor : colors.textSecondary }
                                                 ]}>{dur.label}</Text>
                                             </TouchableOpacity>
                                         ))}

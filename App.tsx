@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, ActivityIndicator, DeviceEventEmitter, TouchableOpacity, Platform, LogBox } from 'react-native';
 
+// react-native-ui-lib's View still imports React Native's deprecated SafeAreaView; the app itself
+// uses react-native-safe-area-context. Remove once ui-lib stops using it.
 LogBox.ignoreLogs([
     "SafeAreaView has been deprecated and will be removed in a future release",
 ]);

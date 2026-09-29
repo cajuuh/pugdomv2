@@ -140,7 +140,7 @@ export const Poll: React.FC<PollProps> = ({ initialPoll, onPollUpdated }) => {
                 >
                     <Text style={[
                         styles.voteButtonText,
-                        { color: selectedChoices.length > 0 ? '#FFF' : colors.textMuted }
+                        { color: selectedChoices.length > 0 ? colors.buttonTextColor : colors.textMuted }
                     ]}>
                         Vote
                     </Text>
