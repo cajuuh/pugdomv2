@@ -1,271 +1,340 @@
-import { StyleSheet, Platform } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { ThemeColors } from '../../services/themeContext';
+import { MIN_TOUCH, radii, space } from '../../services/theme/shape';
+
+export const PILL_HEIGHT = 30;
+export const EMOJI_CELL = 44;
 
 export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
-    modalContainer: {
+    root: {
         flex: 1,
     },
-    safeArea: {
+    keyboardAvoider: {
         flex: 1,
+    },
+    sheet: {
+        flex: 1,
+        borderTopLeftRadius: radii.sheet,
+        borderTopRightRadius: radii.sheet,
+        backgroundColor: colors.cardBackground,
+        shadowColor: colors.shadowColor,
+        shadowOffset: { width: 0, height: -8 },
+        shadowOpacity: 0.12,
+        shadowRadius: 30,
+        elevation: 12,
+    },
+    grabberRow: {
+        alignItems: 'center',
+        paddingTop: space.sm,
+    },
+    grabber: {
+        width: 38,
+        height: 5,
+        borderRadius: radii.pill,
+        backgroundColor: colors.borderColor,
     },
     header: {
-        height: 50,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        borderBottomWidth: 1,
+        paddingTop: space.sm,
+        paddingHorizontal: space.lg,
+    },
+    // Keeps the title centered whatever the button widths
+    headerSide: {
+        flex: 1,
+        flexDirection: 'row',
+    },
+    headerSideEnd: {
+        justifyContent: 'flex-end',
     },
     headerTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
+        color: colors.textPrimary,
     },
-    headerButton: {
-        paddingVertical: 6,
-        paddingHorizontal: 10,
-        borderRadius: 8,
+    cancel: {
+        paddingHorizontal: 6,
     },
-    headerButtonText: {
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    publishButton: {
-        borderRadius: 18,
-        paddingHorizontal: 14,
-        paddingVertical: 5,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    publishButtonDisabled: {
-        opacity: 0.5,
-    },
-    publishButtonText: {
-        fontSize: 13,
-        fontWeight: 'bold',
-    },
-    /* Helper Bar under header (now language-only) */
-    helperBar: {
-        height: 44,
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        borderBottomWidth: 1,
-    },
-    langPill: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 12,
-        borderWidth: 1,
-        gap: 4,
-    },
-    langPillText: {
-        fontSize: 11,
-        fontWeight: 'bold',
-        letterSpacing: 0.5,
-    },
-    /* Language Dialog Dropdown */
-    langModalContainer: {
-        flex: 1,
-        justifyContent: 'flex-end',
-        backgroundColor: colors.scrim,
-    },
-    langSheet: {
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        paddingVertical: 20,
-        paddingHorizontal: 16,
-        maxHeight: '60%',
-        ...Platform.select({
-            ios: {
-                shadowColor: colors.shadowColor,
-                shadowOffset: { width: 0, height: -4 },
-                shadowOpacity: 0.1,
-                shadowRadius: 4,
-            },
-            android: {
-                elevation: 10,
-            }
-        })
-    },
-    langSheetHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 16,
-        paddingHorizontal: 4,
-    },
-    langSheetTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    langOption: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingVertical: 14,
-        paddingHorizontal: 12,
-        borderRadius: 10,
-        marginVertical: 2,
-    },
-    langOptionText: {
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    scrollContainer: {
+    scroll: {
         flex: 1,
     },
     scrollContent: {
-        padding: 16,
-        paddingBottom: 20,
+        paddingTop: space.lg,
+        paddingBottom: space.xl,
+        gap: 14,
     },
-    /* Reply Preview Card */
-    replyPreview: {
-        borderWidth: 1,
-        borderRadius: 12,
-        padding: 12,
-        marginBottom: 16,
+    replyWell: {
+        marginHorizontal: space.lg,
+        gap: 6,
     },
     replyHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 6,
-        gap: 8,
+        gap: space.sm,
     },
-    replyDisplayName: {
+    replyNames: {
+        flex: 1,
+        minWidth: 0,
+    },
+    replyName: {
+        color: colors.textPrimary,
         fontSize: 13,
-        fontWeight: 'bold',
+        lineHeight: 17,
     },
-    replyUsername: {
-        fontSize: 11,
+    replyHandle: {
+        color: colors.textMuted,
+        fontSize: 12,
+        lineHeight: 16,
     },
     replyContent: {
-        fontSize: 13,
-        lineHeight: 18,
+        color: colors.textSecondary,
+        fontSize: 13.5,
+        lineHeight: 19,
     },
-    /* Author Section */
-    authorSection: {
+    author: {
         flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 16,
-        gap: 10,
+        gap: space.md,
+        paddingHorizontal: 20,
+    },
+    authorDetails: {
+        flex: 1,
+        minWidth: 0,
+        gap: 6,
     },
     authorName: {
-        fontSize: 14,
-        fontWeight: '600',
+        color: colors.textPrimary,
     },
-    /* Input Section */
-    spoilerInputContainer: {
-        marginBottom: 12,
+    pills: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 6,
     },
-    spoilerInput: {
-        height: 38,
-        borderWidth: 1,
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        fontSize: 13,
-    },
-    textArea: {
-        minHeight: 150,
-        fontSize: 15,
-        lineHeight: 22,
-        textAlignVertical: 'top',
-        padding: 0,
-    },
-    /* Bottom Accessory Bar */
-    footer: {
+    pill: {
+        height: PILL_HEIGHT,
+        paddingHorizontal: 10,
+        borderRadius: radii.pill,
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        height: 52,
-        borderTopWidth: 1,
-    },
-    leftAccessoryRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 14,
-    },
-    accessoryButton: {
-        width: 36,
-        height: 36,
-        borderRadius: 8,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    charCounter: {
-        fontSize: 13,
-        fontWeight: '700',
-    },
-    /* Poll UI */
-    pollContainer: {
-        marginTop: 16,
-        padding: 12,
-        borderRadius: 12,
-        borderWidth: 1,
-        gap: 12,
-    },
-    pollOptionRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    pollInput: {
-        flex: 1,
-        height: 40,
-        borderWidth: 1,
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        fontSize: 14,
-    },
-    pollRemoveButton: {
-        padding: 4,
-    },
-    pollAddChoiceButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        alignSelf: 'flex-start',
-        paddingVertical: 6,
-        paddingHorizontal: 12,
-        gap: 4,
-        borderRadius: 16,
+        gap: 5,
         backgroundColor: colors.inputBackground,
     },
-    pollAddChoiceText: {
-        fontSize: 13,
-        fontWeight: '600',
+    pillText: {
+        color: colors.textSecondary,
+        fontSize: 12.5,
+        lineHeight: 16,
     },
-    pollError: {
-        fontSize: 13,
-        marginTop: 4,
-        marginBottom: 4,
+    contentWarning: {
+        marginHorizontal: space.lg,
+        minHeight: MIN_TOUCH,
+        paddingHorizontal: 14,
+        borderRadius: radii.input,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.sm,
+        backgroundColor: colors.accentSoft,
     },
-    pollSettingsRow: {
+    contentWarningInput: {
+        flex: 1,
+        minHeight: MIN_TOUCH,
+        paddingVertical: 0,
+        color: colors.textPrimary,
+        fontSize: 15,
+    },
+    textArea: {
+        minHeight: 120,
+        paddingHorizontal: 20,
+        paddingVertical: 0,
+        color: colors.textPrimary,
+        fontSize: 17,
+        lineHeight: 24.5,
+        textAlignVertical: 'top',
+    },
+    toolbar: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.xs,
+        paddingTop: 10,
+        paddingHorizontal: space.md,
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderTopColor: colors.borderColor,
+    },
+    tool: {
+        borderRadius: radii.input,
+    },
+    toolActive: {
+        backgroundColor: colors.accentSoft,
+    },
+    toolbarSpacer: {
+        flex: 1,
+    },
+    counter: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.sm,
+        paddingRight: space.xs,
+    },
+    counterText: {
+        fontSize: 13,
+    },
+
+    /* Poll editor */
+    poll: {
+        marginHorizontal: space.lg,
+        padding: space.md,
+        gap: space.sm,
+    },
+    pollHeader: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginTop: 8,
+        paddingLeft: space.xs,
     },
-    pollSettingsLabel: {
+    pollRemove: {
+        minWidth: 32,
+        minHeight: 32,
+    },
+    choiceRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.xs,
+    },
+    choice: {
+        flex: 1,
+        height: MIN_TOUCH,
+        paddingHorizontal: 14,
+        borderRadius: radii.input,
+        borderWidth: 1.5,
+        borderColor: colors.borderColor,
+        backgroundColor: colors.cardBackground,
+        color: colors.textPrimary,
+        fontSize: 15,
+    },
+    // Thicker border without moving the text: 0.5pt less padding for the 0.5pt more border
+    choiceFocused: {
+        borderWidth: 2,
+        paddingHorizontal: 13.5,
+        borderColor: colors.accentColor,
+    },
+    addChoice: {
+        height: MIN_TOUCH,
+        borderRadius: radii.input,
+        borderWidth: 1.5,
+        borderStyle: 'dashed',
+        borderColor: colors.borderColor,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+    },
+    addChoiceText: {
+        color: colors.accentText,
         fontSize: 14,
-        fontWeight: '500',
     },
-    pollDurationSelector: {
+    pollError: {
+        color: colors.dangerColor,
+        paddingHorizontal: space.xs,
+    },
+    pollFooter: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: space.sm,
+        paddingTop: space.xs,
+        paddingHorizontal: 2,
+    },
+    duration: {
+        height: 34,
+        paddingHorizontal: space.md,
+        borderRadius: radii.pill,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: colors.borderColor,
+        backgroundColor: colors.cardBackground,
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
     },
-    pollDurationPill: {
-        paddingVertical: 6,
-        paddingHorizontal: 12,
-        borderRadius: 14,
-        borderWidth: 1,
-        borderColor: 'transparent',
-        backgroundColor: colors.inputBackground,
+    durationText: {
+        color: colors.textPrimary,
+        fontSize: 13,
     },
-    pollDurationText: {
-        fontSize: 12,
-        fontWeight: 'bold',
+    multiple: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.sm,
+    },
+    multipleText: {
+        color: colors.textSecondary,
+        fontSize: 13,
+    },
+
+    /* Bottom sheets (visibility, language, poll length, emoji) */
+    sheetRoot: {
+        flex: 1,
+        justifyContent: 'flex-end',
+    },
+    sheetBackdrop: {
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+        backgroundColor: colors.scrim,
+    },
+    pickerSheet: {
+        maxHeight: '75%',
+        paddingHorizontal: space.lg,
+        borderTopLeftRadius: radii.sheet,
+        borderTopRightRadius: radii.sheet,
+        backgroundColor: colors.cardBackground,
+    },
+    pickerTitle: {
+        color: colors.textPrimary,
+        paddingTop: space.md,
+        paddingBottom: space.sm,
+        paddingHorizontal: space.xs,
+    },
+    option: {
+        minHeight: 52,
+        paddingVertical: 10,
+        paddingHorizontal: space.md,
+        borderRadius: radii.input,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.md,
+    },
+    optionSelected: {
+        backgroundColor: colors.accentSoft,
+    },
+    optionText: {
+        flex: 1,
+        gap: 1,
+    },
+    optionLabel: {
+        color: colors.textPrimary,
+    },
+    optionDescription: {
+        color: colors.textMuted,
+    },
+    emojiGrid: {
+        height: 320,
+    },
+    emojiCell: {
+        width: EMOJI_CELL,
+        height: EMOJI_CELL,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: radii.input,
+    },
+    emojiImage: {
+        width: 28,
+        height: 28,
+    },
+    emojiStatus: {
+        height: 120,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    emojiStatusText: {
+        color: colors.textMuted,
     },
 });

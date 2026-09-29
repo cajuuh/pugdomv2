@@ -29,6 +29,8 @@ export interface Account {
     // Only present on the logged-in user's own account (verify_credentials)
     source?: {
         language?: string | null;
+        // Default visibility for new posts
+        privacy?: Status['visibility'];
     };
 }
 
