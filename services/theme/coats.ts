@@ -144,7 +144,8 @@ export function buildColors(coatKey: string, dark: boolean, tint: boolean): Them
         accentSoft: neutrals.accentSoft,
         buttonTextColor: accent.onAccent,
         // Surface at 95% opacity
-        tabBarBackground: neutrals.surface + 'F2',
+        // Faint coat tint over the dock's blur; any more and it hides the glass
+        tabBarBackground: neutrals.surface + '59',
         tabBarActiveColor: accent.accentText,
         tabBarInactiveColor: neutrals.ink3,
         dangerColor: neutrals.danger,
