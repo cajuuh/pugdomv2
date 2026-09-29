@@ -1,14 +1,21 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { ActivityIndicator, RefreshControl, DeviceEventEmitter } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
-import { View, Text, SegmentedControl } from 'react-native-ui-lib';
+import { View, Text } from 'react-native-ui-lib';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTimeline } from '../../hooks/useTimeline';
 import { TootCard } from '../../components/TootCard/tootCard';
+import { SegmentedPill } from '../../components/ui';
 import { useTheme } from '../../services/themeContext';
 import { styles } from './styles';
 
 type FeedType = 'home' | 'local' | 'federated';
+
+const FEEDS: { value: FeedType; label: string }[] = [
+    { value: 'home', label: 'Home' },
+    { value: 'local', label: 'Local' },
+    { value: 'federated', label: 'Federated' },
+];
 
 interface TimelineProps {
     onStatusPress?: (id: string) => void;
@@ -83,19 +90,10 @@ const Timeline = ({ onStatusPress }: TimelineProps) => {
         );
     };
 
-    const handleTabChange = (index: number) => {
-        const types: FeedType[] = ['home', 'local', 'federated'];
-        setActiveFeed(types[index]);
-    };
-
     return (
         <View flex style={[styles.container, { backgroundColor: colors.background }]}>
             <View paddingH-16 paddingV-10>
-                <SegmentedControl
-                    segments={[{ label: 'Home' }, { label: 'Local' }, { label: 'Federated' }]}
-                    activeColor={colors.accentColor}
-                    onChangeIndex={handleTabChange}
-                />
+                <SegmentedPill options={FEEDS} value={activeFeed} onChange={setActiveFeed} />
             </View>
             
             {isLoading && statuses.length === 0 ? (

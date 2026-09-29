@@ -55,7 +55,7 @@ jest.mock('../services/settingsContext', () => ({
     useSettings: () => ({ compactMode: false, mediaAutoplay: false }),
 }));
 jest.mock('../services/themeContext', () => ({
-    useTheme: () => ({ colors: jest.requireActual('../services/themeContext').lightColors, isDark: false }),
+    useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
 }));
 jest.mock('../services/composeContext', () => ({
     useCompose: () => ({ openCompose: jest.fn() }),
