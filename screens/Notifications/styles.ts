@@ -1,99 +1,193 @@
 import { StyleSheet } from 'react-native';
 import { ThemeColors } from '../../services/themeContext';
 import { TAB_BAR_CLEARANCE } from '../../components/TabBar/styles';
+import { radii, space } from '../../services/theme/shape';
+
+const ROW_PADDING = space.lg;
+const AVATAR_SIZE = 44;
+const ROW_GAP = space.md;
+const FAVOURITE_SIZE = 34;
 
 export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: colors.background,
     },
-    listContent: {
-        paddingBottom: TAB_BAR_CLEARANCE,
-        paddingTop: 10,
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingTop: 6,
+        paddingLeft: 20,
+        paddingRight: space.lg,
+    },
+    title: {
+        color: colors.textPrimary,
+    },
+    markRead: {
+        backgroundColor: colors.inputBackground,
+        borderRadius: radii.pill,
+    },
+    filters: {
+        paddingTop: 14,
+        paddingBottom: 6,
+        paddingLeft: 20,
+        paddingRight: space.lg,
     },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    emptyContainer: {
-        flex: 1,
-        justifyContent: 'center',
+    listContent: {
+        paddingHorizontal: space.md,
+        paddingTop: 10,
+        paddingBottom: TAB_BAR_CLEARANCE,
+    },
+    footer: {
+        paddingVertical: 20,
         alignItems: 'center',
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        padding: 40,
     },
     emptyText: {
         color: colors.textSecondary,
-        fontSize: 16,
-        fontWeight: '500',
     },
-    notificationCard: {
-        flexDirection: 'column',
-        padding: 16,
-        borderRadius: 20,
-        marginHorizontal: 16,
-        marginBottom: 16,
-        borderWidth: 1,
+    sectionLabel: {
+        marginHorizontal: space.sm,
+        marginTop: space.xs,
+        marginBottom: 10,
+    },
+    // Space between the previous group and the next section's label
+    sectionLabelSpaced: {
+        marginTop: 18,
+    },
+    // Each row is a slice of its section's card, so the list stays virtualized
+    segment: {
         backgroundColor: colors.cardBackground,
         borderColor: colors.borderColor,
-        shadowColor: colors.shadowColor,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 6,
-        elevation: 3,
+        borderLeftWidth: StyleSheet.hairlineWidth,
+        borderRightWidth: StyleSheet.hairlineWidth,
+        overflow: 'hidden',
     },
-    asymmetricTagLayer: {
-        alignSelf: 'flex-start',
-        marginLeft: 8,
-        backgroundColor: colors.accentSoft,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 14,
+    segmentFirst: {
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderTopLeftRadius: radii.card,
+        borderTopRightRadius: radii.card,
+    },
+    segmentLast: {
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomLeftRadius: radii.card,
+        borderBottomRightRadius: radii.card,
+    },
+    // Hairline indented to where the text starts
+    separator: {
+        height: StyleSheet.hairlineWidth,
+        marginLeft: ROW_PADDING + AVATAR_SIZE + ROW_GAP,
+        backgroundColor: colors.borderColor,
+    },
+    row: {
         flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: ROW_GAP,
+        paddingVertical: 14,
+        paddingHorizontal: ROW_PADDING,
+    },
+    rowCentered: {
         alignItems: 'center',
+    },
+    rowPressed: {
+        backgroundColor: colors.inputBackground,
+    },
+    content: {
+        flex: 1,
+        minWidth: 0,
         gap: 6,
     },
-    tagText: {
-        color: colors.accentText,
-        fontSize: 11,
-        fontWeight: 'bold',
-        textTransform: 'uppercase',
+    stack: {
+        gap: 6,
     },
-    headerArchitecture: {
+    followContent: {
+        gap: 1,
+    },
+    headline: {
         flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 12,
+        alignItems: 'baseline',
+        gap: space.sm,
     },
-    avatar: {
-        marginRight: 12,
-    },
-    actionText: {
+    // Wraps to two lines, then truncates, so long names never run under the time
+    headlineText: {
         flex: 1,
         color: colors.textPrimary,
-        fontSize: 15,
-        fontWeight: '500',
+        fontSize: 14.5,
+        lineHeight: 20,
     },
     displayName: {
-        fontWeight: 'bold',
-    },
-    // ui-lib's Text sets its own default color, so nested text doesn't inherit actionText's
-    actionVerb: {
         color: colors.textPrimary,
+        fontSize: 14.5,
     },
-    statusPreview: {
+    // ui-lib and nested Text don't inherit the parent's color reliably, so each part sets its own
+    action: {
+        color: colors.textSecondary,
+        fontSize: 14.5,
+    },
+    time: {
+        flexShrink: 0,
+        color: colors.textMuted,
+    },
+    mentionText: {
         color: colors.textPrimary,
         fontSize: 15,
-        lineHeight: 22,
-        marginTop: 4,
-        opacity: 0.9,
+        lineHeight: 21,
     },
-    followButton: {
-        marginTop: 12,
-        alignSelf: 'flex-start',
+    snippet: {
+        paddingVertical: space.sm,
+        paddingHorizontal: 10,
+        borderRadius: radii.input,
+    },
+    snippetText: {
+        color: colors.textSecondary,
+        fontSize: 13.5,
+        lineHeight: 19,
+    },
+    actions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.sm,
+        marginTop: space.xs,
+    },
+    favourite: {
+        width: FAVOURITE_SIZE,
+        height: FAVOURITE_SIZE,
+        borderRadius: FAVOURITE_SIZE / 2,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: colors.borderColor,
+        backgroundColor: colors.cardBackground,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    favouriteOn: {
+        borderColor: colors.accentSoft,
+        backgroundColor: colors.accentSoft,
+    },
+    handle: {
+        color: colors.textMuted,
     },
     followState: {
-        color: colors.textSecondary,
-        marginTop: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.xs,
+        height: 34,
+        paddingHorizontal: space.md,
+        borderRadius: radii.pill,
+        backgroundColor: colors.accentSoft,
+    },
+    followStateText: {
+        color: colors.accentText,
         fontSize: 13,
-        fontWeight: '600',
     },
 });
 
+export { FAVOURITE_SIZE };

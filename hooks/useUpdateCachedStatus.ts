@@ -1,8 +1,8 @@
 import { useCallback } from 'react';
 import { InfiniteData, useQueryClient } from '@tanstack/react-query';
-import { Status } from '../services/mastodon/types';
+import { Notification, Status } from '../services/mastodon/types';
 
-// Replaces a status in every cached timeline, including where it appears as a boost
+// Replaces a status in every cached timeline, including where it appears as a boost, and in cached notifications
 export const useUpdateCachedStatus = () => {
     const queryClient = useQueryClient();
 
@@ -22,6 +22,17 @@ export const useUpdateCachedStatus = () => {
                     }
                     return status;
                 })),
+            };
+        });
+        queryClient.setQueriesData<InfiniteData<Notification[]>>({ queryKey: ['notifications'] }, (data) => {
+            if (!data) {
+                return data;
+            }
+            return {
+                ...data,
+                pages: data.pages.map(page => page.map(notification =>
+                    notification.status?.id === updated.id ? { ...notification, status: updated } : notification
+                )),
             };
         });
     }, [queryClient]);

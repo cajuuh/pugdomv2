@@ -1,0 +1,57 @@
+import { Notification } from '../../services/mastodon/types';
+
+// One entry in the list: a section label, or a notification row inside that section's inset group
+export type ListItem =
+    | { kind: 'section'; key: string; label: string }
+    | { kind: 'row'; key: string; notification: Notification; first: boolean; last: boolean };
+
+const isSameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+
+// Splits notifications (newest first) into "Today" and "Earlier" groups
+export const buildListItems = (notifications: Notification[], now = new Date()): ListItem[] => {
+    const today = notifications.filter(n => isSameDay(new Date(n.created_at), now));
+    const earlier = notifications.filter(n => !isSameDay(new Date(n.created_at), now));
+
+    return [
+        { label: 'Today', items: today },
+        { label: 'Earlier', items: earlier },
+    ].flatMap(({ label, items }): ListItem[] =>
+        items.length === 0
+            ? []
+            : [
+                { kind: 'section', key: `section-${label}`, label },
+                ...items.map((notification, index): ListItem => ({
+                    kind: 'row',
+                    key: notification.id,
+                    notification,
+                    first: index === 0,
+                    last: index === items.length - 1,
+                })),
+            ]
+    );
+};
+
+// "now", "4m", "3h", then the weekday for the past week, then the date
+export const notificationTime = (createdAt: string, now = new Date()) => {
+    const created = new Date(createdAt);
+    const minutes = Math.floor((now.getTime() - created.getTime()) / 60000);
+    if (minutes < 1) return 'now';
+    if (minutes < 60) return `${minutes}m`;
+    if (minutes < 24 * 60) return `${Math.floor(minutes / 60)}h`;
+    if (minutes < 7 * 24 * 60) return created.toLocaleDateString(undefined, { weekday: 'short' });
+    return created.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+};
+
+const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", '#39': "'", nbsp: ' ' };
+
+// Post HTML as plain text, keeping paragraph and line breaks
+export const plainText = (html?: string) =>
+    (html ?? '')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/p>\s*<p[^>]*>/gi, '\n\n')
+        .replace(/<[^>]*>/g, '')
+        .replace(/&(amp|lt|gt|quot|apos|#39|nbsp);/g, (_, entity: string) => ENTITIES[entity])
+        .trim();
+
+// Replies start with the handles they're addressed to; drop them unless that's all the post says
+export const withoutLeadingMentions = (text: string) => text.replace(/^(?:@[\w.-]+(?:@[\w.-]+)?\s+)+/, '') || text;
