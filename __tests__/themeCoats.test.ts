@@ -51,7 +51,7 @@ describe('coat palettes', () => {
             dangerColor: '#B83A26',
             tabBarActiveColor: '#A4521A',
             tabBarInactiveColor: '#75685C',
-            tabBarBackground: '#FEFBF8F2',
+            tabBarBackground: '#FEFBF859',
         });
         expect(buildColors('apricot', true, true)).toMatchObject({
             background: '#16120E',
