@@ -1,15 +1,17 @@
-import React from 'react';
-import { StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { View, Text, Avatar, Button, Card } from 'react-native-ui-lib';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '../../services/authContext';
 import { useSettings } from '../../services/settingsContext';
 import { useTheme } from '../../services/themeContext';
-import { makeStyles } from './styles';
+import { getCoat } from '../../services/theme/coats';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
-import { ThemedSwitch } from '../../components/ui';
+import { Avatar, Card, IconButton, PugMark, SectionLabel, ThemedSwitch } from '../../components/ui';
 import { appVersionLabel } from '../../services/appVersion';
+import Appearance from './appearance';
+import { SettingsHeader } from './header';
+import { makeStyles } from './styles';
 
 interface SettingsProps {
     onBack: () => void;
@@ -17,7 +19,7 @@ interface SettingsProps {
 
 const Settings: React.FC<SettingsProps> = ({ onBack }) => {
     const { user, logout, savedAccounts, switchAccount, setAddingAccount } = useAuth();
-    const { colors, theme, setTheme } = useTheme();
+    const { colors, type, coat } = useTheme();
     const styles = useThemedStyles(makeStyles);
     const {
         notifications,
@@ -27,189 +29,117 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
         compactMode,
         setCompactMode,
     } = useSettings();
+    // Appearance is a second level inside Settings
+    const [page, setPage] = useState<'main' | 'appearance'>('main');
+
+    if (page === 'appearance') {
+        return (
+            <SafeAreaView style={styles.safeArea}>
+                <Appearance onBack={() => setPage('main')} />
+            </SafeAreaView>
+        );
+    }
+
+    const labelStyle = [type.name, styles.rowLabel];
+
+    const switchRow = (icon: React.ComponentProps<typeof Ionicons>['name'], label: string, value: boolean, onChange: (value: boolean) => void) => (
+        <View style={styles.row}>
+            <Ionicons name={icon} size={20} color={colors.accentText} />
+            <Text style={[labelStyle, styles.rowText]}>{label}</Text>
+            <ThemedSwitch value={value} onValueChange={onChange} accessibilityLabel={label} />
+        </View>
+    );
 
     return (
         <SafeAreaView style={styles.safeArea}>
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={onBack} style={styles.backButton} activeOpacity={0.7}>
-                    <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Settings</Text>
-                <View style={styles.placeholder} />
-            </View>
+            <SettingsHeader title="Settings" onBack={onBack} backLabel="Close settings" />
 
-            <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
-                {/* Accounts Section */}
-                <Text style={styles.sectionTitle}>ACCOUNTS</Text>
-                <Card style={styles.settingsGroup} enableShadow={false}>
-                    {savedAccounts.map((account, index) => {
+            <ScrollView contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
+                <SectionLabel style={styles.sectionLabel}>Accounts</SectionLabel>
+                <Card style={styles.group}>
+                    {savedAccounts.map(account => {
                         const isActive = user?.id === account.userInfo.id;
+                        const name = account.userInfo.display_name || account.userInfo.username;
                         return (
                             <React.Fragment key={account.id}>
-                                <TouchableOpacity 
-                                    style={styles.settingRow} 
-                                    activeOpacity={0.7}
+                                <Pressable
+                                    style={styles.row}
                                     onPress={() => !isActive && switchAccount(account.id)}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={isActive ? `${name}, current account` : `Switch to ${name}`}
                                 >
-                                    <View style={styles.settingLeft}>
-                                        <Avatar source={{ uri: account.userInfo.avatar }} size={40} containerStyle={{ borderWidth: 1, borderColor: colors.borderColor, borderRadius: 20 }} />
-                                        <View style={{ marginLeft: 12, flex: 1 }}>
-                                            <Text style={styles.settingLabel} numberOfLines={1}>
-                                                {account.userInfo.display_name || account.userInfo.username}
-                                            </Text>
-                                            <Text style={{ color: colors.textSecondary, fontSize: 12 }} numberOfLines={1}>
-                                                @{account.userInfo.acct} • {account.instanceUrl.replace(/^https?:\/\//, '')}
-                                            </Text>
-                                        </View>
+                                    <Avatar name={name} uri={account.userInfo.avatar} size={40} />
+                                    <View style={styles.rowText}>
+                                        <Text style={labelStyle} numberOfLines={1}>{name}</Text>
+                                        <Text style={[type.meta, styles.rowDetail]} numberOfLines={1}>
+                                            @{account.userInfo.acct} • {account.instanceUrl.replace(/^https?:\/\//, '')}
+                                        </Text>
                                     </View>
                                     {isActive ? (
                                         <Ionicons name="checkmark-circle" size={24} color={colors.accentText} />
                                     ) : (
-                                        <TouchableOpacity onPress={() => logout(account.id)} hitSlop={{top:10, bottom:10, left:10, right:10}}>
-                                            <Ionicons name="log-out-outline" size={20} color={colors.dangerColor} />
-                                        </TouchableOpacity>
+                                        <IconButton
+                                            icon="log-out-outline"
+                                            size={20}
+                                            color={colors.dangerColor}
+                                            accessibilityLabel={`Log out of ${name}`}
+                                            onPress={() => logout(account.id)}
+                                        />
                                     )}
-                                </TouchableOpacity>
+                                </Pressable>
                                 <View style={styles.divider} />
                             </React.Fragment>
                         );
                     })}
-                    
-                    <TouchableOpacity 
-                        style={[styles.settingRow, { justifyContent: 'center' }]} 
-                        activeOpacity={0.7}
-                        onPress={() => setAddingAccount(true)}
+                    <Pressable style={[styles.row, styles.rowCentered]} onPress={() => setAddingAccount(true)} accessibilityRole="button">
+                        <Ionicons name="add-circle-outline" size={20} color={colors.accentText} />
+                        <Text style={[type.name, styles.rowLabel, { color: colors.accentText }]}>Add Account</Text>
+                    </Pressable>
+                </Card>
+
+                <SectionLabel style={styles.sectionLabel}>Preferences</SectionLabel>
+                <Card style={styles.group}>
+                    <Pressable
+                        style={styles.row}
+                        onPress={() => setPage('appearance')}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Appearance, ${getCoat(coat).name}`}
                     >
-                        <Ionicons name="add-circle-outline" size={20} color={colors.accentText} style={{ marginRight: 8 }} />
-                        <Text style={[styles.settingLabel, { color: colors.accentText }]}>Add Account</Text>
-                    </TouchableOpacity>
+                        <Ionicons name="color-palette-outline" size={20} color={colors.accentText} />
+                        <Text style={[labelStyle, styles.rowText]}>Appearance</Text>
+                        <View style={styles.rowTrailing}>
+                            <PugMark coat={coat} size={22} />
+                            <Text style={[type.meta, styles.rowValue]}>{getCoat(coat).name}</Text>
+                            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                        </View>
+                    </Pressable>
+                    <View style={styles.divider} />
+                    {switchRow('notifications-outline', 'Push Notifications', notifications, setNotifications)}
+                    <View style={styles.divider} />
+                    {switchRow('play-circle-outline', 'Autoplay Media', mediaAutoplay, setMediaAutoplay)}
+                    <View style={styles.divider} />
+                    {switchRow('list-outline', 'Compact Mode', compactMode, setCompactMode)}
                 </Card>
 
-                {/* Preferences Section */}
-                <Text style={styles.sectionTitle}>PREFERENCES</Text>
-                <Card style={styles.settingsGroup} enableShadow={false}>
-                    {/* Push Notifications Row */}
-                    <View style={styles.settingRow}>
-                        <View style={styles.settingLeft}>
-                            <Ionicons name="notifications-outline" size={20} color={colors.accentText} style={styles.rowIcon} />
-                            <Text style={styles.settingLabel}>Push Notifications</Text>
-                        </View>
-                        <ThemedSwitch value={notifications} onValueChange={setNotifications} />
+                <SectionLabel style={styles.sectionLabel}>About</SectionLabel>
+                <Card style={styles.group}>
+                    <View style={styles.row}>
+                        <Ionicons name="information-circle-outline" size={20} color={colors.accentText} />
+                        <Text style={[labelStyle, styles.rowText]}>App Version</Text>
+                        <Text style={[type.meta, styles.rowValue]}>{appVersionLabel()}</Text>
                     </View>
-
                     <View style={styles.divider} />
-
-                    {/* Autoplay Media Row */}
-                    <View style={styles.settingRow}>
-                        <View style={styles.settingLeft}>
-                            <Ionicons name="play-circle-outline" size={20} color={colors.accentText} style={styles.rowIcon} />
-                            <Text style={styles.settingLabel}>Autoplay Media</Text>
-                        </View>
-                        <ThemedSwitch value={mediaAutoplay} onValueChange={setMediaAutoplay} />
-                    </View>
-
-                    <View style={styles.divider} />
-
-                    {/* Compact Mode Row */}
-                    <View style={styles.settingRow}>
-                        <View style={styles.settingLeft}>
-                            <Ionicons name="list-outline" size={20} color={colors.accentText} style={styles.rowIcon} />
-                            <Text style={styles.settingLabel}>Compact Mode</Text>
-                        </View>
-                        <ThemedSwitch value={compactMode} onValueChange={setCompactMode} />
-                    </View>
-
-                    <View style={styles.divider} />
-
-                    {/* Dynamic Theme Selector Row */}
-                    <View style={[styles.settingRow, { height: 60 }]}>
-                        <View style={styles.settingLeft}>
-                            <Ionicons name="color-palette-outline" size={20} color={colors.accentText} style={styles.rowIcon} />
-                            <Text style={styles.settingLabel}>Theme</Text>
-                        </View>
-                        <View style={styles.themeSelectorContainer}>
-                            <TouchableOpacity
-                                style={[
-                                    styles.themePill,
-                                    { borderColor: colors.borderColor },
-                                    theme === 'light' && { backgroundColor: colors.accentColor, borderColor: colors.accentColor }
-                                ]}
-                                onPress={() => setTheme('light')}
-                                activeOpacity={0.7}
-                            >
-                                <Text style={[
-                                    styles.themePillText,
-                                    { color: colors.textSecondary },
-                                    theme === 'light' && { color: colors.buttonTextColor }
-                                ]}>Light</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[
-                                    styles.themePill,
-                                    { borderColor: colors.borderColor },
-                                    theme === 'dark' && { backgroundColor: colors.accentColor, borderColor: colors.accentColor }
-                                ]}
-                                onPress={() => setTheme('dark')}
-                                activeOpacity={0.7}
-                            >
-                                <Text style={[
-                                    styles.themePillText,
-                                    { color: colors.textSecondary },
-                                    theme === 'dark' && { color: colors.buttonTextColor }
-                                ]}>Dark</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[
-                                    styles.themePill,
-                                    { borderColor: colors.borderColor },
-                                    theme === 'system' && { backgroundColor: colors.accentColor, borderColor: colors.accentColor }
-                                ]}
-                                onPress={() => setTheme('system')}
-                                activeOpacity={0.7}
-                            >
-                                <Text style={[
-                                    styles.themePillText,
-                                    { color: colors.textSecondary },
-                                    theme === 'system' && { color: colors.buttonTextColor }
-                                ]}>System</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
+                    <Pressable style={styles.row} accessibilityRole="button">
+                        <Ionicons name="shield-checkmark-outline" size={20} color={colors.accentText} />
+                        <Text style={[labelStyle, styles.rowText]}>Privacy Policy</Text>
+                        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                    </Pressable>
                 </Card>
 
-                {/* About App Section */}
-                <Text style={styles.sectionTitle}>ABOUT</Text>
-                <Card style={styles.settingsGroup} enableShadow={false}>
-                    <View style={styles.settingRow}>
-                        <View style={styles.settingLeft}>
-                            <Ionicons name="information-circle-outline" size={20} color={colors.accentText} style={styles.rowIcon} />
-                            <Text style={styles.settingLabel}>App Version</Text>
-                        </View>
-                        <Text style={styles.settingValue}>{appVersionLabel()}</Text>
-                    </View>
-
-                    <View style={styles.divider} />
-
-                    <TouchableOpacity style={styles.settingRow} activeOpacity={0.7}>
-                        <View style={styles.settingLeft}>
-                            <Ionicons name="shield-checkmark-outline" size={20} color={colors.accentText} style={styles.rowIcon} />
-                            <Text style={styles.settingLabel}>Privacy Policy</Text>
-                        </View>
-                        <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
-                    </TouchableOpacity>
-                </Card>
-
-                {/* Log Out Action */}
-                <Button
-                    label="Log Out"
-                    link
-                    color={colors.dangerColor}
-                    style={styles.logoutButton}
-                    onPress={() => logout()}
-                    labelStyle={[styles.logoutLabel, { color: colors.dangerColor }]}
-                    iconSource={() => <Ionicons name="log-out-outline" size={18} color={colors.dangerColor} style={{ marginRight: 6 }} />}
-                />
+                <Pressable style={styles.logoutButton} onPress={() => logout()} accessibilityRole="button">
+                    <Ionicons name="log-out-outline" size={18} color={colors.dangerColor} />
+                    <Text style={[type.name, styles.logoutLabel]}>Log Out</Text>
+                </Pressable>
             </ScrollView>
         </SafeAreaView>
     );

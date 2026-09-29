@@ -68,6 +68,18 @@ export const COATS: readonly Coat[] = [
 
 export const DEFAULT_COAT: CoatKey = 'apricot';
 
+// Ears, muzzle and eyes of the PugMark swatch; a black pug's mask has to be lighter than its coat to show
+const PUG_MASK = '#2A1D15';
+const BLACK_PUG_MASK = { light: '#8C7F75', dark: '#2A2320' };
+
+export const pugMarkColors = (coatKey: string, dark: boolean) => {
+    const coat = getCoat(coatKey);
+    return {
+        face: (dark ? coat.dark : coat.light).accent,
+        mask: coat.key === 'black' ? BLACK_PUG_MASK[dark ? 'dark' : 'light'] : PUG_MASK,
+    };
+};
+
 // With the tint switched off, neutrals keep a trace of the hue so they don't look cold
 const UNTINTED_NEUTRAL_TINT = 0.12;
 

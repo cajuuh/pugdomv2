@@ -1,4 +1,4 @@
-import { buildColors, COATS, hslToHex, isCoatKey, ThemeColors } from '../services/theme/coats';
+import { buildColors, COATS, hslToHex, isCoatKey, pugMarkColors, ThemeColors } from '../services/theme/coats';
 
 // WCAG 2.x relative luminance and contrast ratio
 const luminance = (hex: string) => {
@@ -84,6 +84,15 @@ describe('coat palettes', () => {
     it('falls back to Apricot for an unknown coat', () => {
         expect(isCoatKey('corgi')).toBe(false);
         expect(buildColors('corgi', false, true)).toEqual(buildColors('apricot', false, true));
+    });
+
+    it('draws the PugMark in the coat accent, with a mask that shows on a black pug', () => {
+        expect(pugMarkColors('fawn', false)).toEqual({ face: '#E2B45C', mask: '#2A1D15' });
+        expect(pugMarkColors('fawn', true).face).toBe('#E8BE6A');
+        for (const dark of [false, true]) {
+            const { face, mask } = pugMarkColors('black', dark);
+            expect(contrast(face, mask)).toBeGreaterThan(1.5);
+        }
     });
 
     it('converts HSL to hex', () => {

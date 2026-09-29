@@ -1,149 +1,210 @@
-import { StyleSheet, Platform } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { ThemeColors } from '../../services/themeContext';
+import { radii, space } from '../../services/theme/shape';
 
 export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     safeArea: {
         flex: 1,
         backgroundColor: colors.background,
     },
-    container: {
-        flex: 1,
-        backgroundColor: colors.background,
-    },
     contentContainer: {
-        padding: 16,
+        paddingHorizontal: space.lg,
+        paddingTop: 6,
         paddingBottom: 40,
+        gap: space.sm,
     },
-    header: {
-        height: 56,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.borderColor,
-        backgroundColor: colors.cardBackground,
+    sectionLabel: {
+        marginTop: space.md,
+        marginHorizontal: space.xs,
     },
-    backButton: {
-        width: 44,
-        height: 44,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: colors.textPrimary,
-    },
-    placeholder: {
-        width: 44,
-    },
-    userCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 16,
-        backgroundColor: colors.cardBackground,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: colors.borderColor,
-        marginBottom: 24,
-    },
-    userAvatar: {
-        borderWidth: 2,
-        borderColor: colors.accentColor,
-    },
-    userInfo: {
-        marginLeft: 16,
-        flex: 1,
-    },
-    displayName: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: colors.textPrimary,
-    },
-    username: {
-        fontSize: 14,
-        color: colors.textSecondary,
-        marginTop: 2,
-    },
-    instanceText: {
-        fontSize: 11,
-        color: colors.accentText,
-        fontWeight: '600',
-        marginTop: 4,
-    },
-    sectionTitle: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: colors.textMuted,
-        letterSpacing: 1,
-        marginBottom: 8,
-        marginLeft: 4,
-    },
-    settingsGroup: {
-        backgroundColor: colors.cardBackground,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: colors.borderColor,
-        marginBottom: 24,
+    group: {
         overflow: 'hidden',
     },
-    settingRow: {
+    row: {
+        minHeight: 54,
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingVertical: 14,
-        paddingHorizontal: 16,
-        height: 54,
+        gap: space.md,
+        paddingVertical: 10,
+        paddingHorizontal: space.lg,
     },
-    settingLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
+    rowCentered: {
+        justifyContent: 'center',
     },
-    rowIcon: {
-        marginRight: 12,
-        width: 24,
-        textAlign: 'center',
+    rowText: {
+        flex: 1,
     },
-    settingLabel: {
+    rowLabel: {
         fontSize: 15,
         color: colors.textPrimary,
-        fontWeight: '500',
     },
-    settingValue: {
+    rowDetail: {
+        fontSize: 12.5,
+        color: colors.textMuted,
+    },
+    rowValue: {
         fontSize: 14,
         color: colors.textSecondary,
     },
-    divider: {
-        height: 1,
-        backgroundColor: colors.borderColor,
-        marginHorizontal: 16,
-    },
-    logoutButton: {
-        marginTop: 8,
-        height: 48,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    logoutLabel: {
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    themeSelectorContainer: {
+    rowTrailing: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
     },
-    themePill: {
-        paddingVertical: 6,
-        paddingHorizontal: 10,
-        borderRadius: 8,
-        borderWidth: 1,
+    divider: {
+        height: StyleSheet.hairlineWidth,
+        backgroundColor: colors.borderColor,
+        marginHorizontal: space.lg,
+    },
+    logoutButton: {
+        marginTop: space.md,
+        minHeight: 48,
+        flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
+        gap: 6,
     },
-    themePillText: {
-        fontSize: 12,
-        fontWeight: 'bold',
+    logoutLabel: {
+        fontSize: 15,
+        color: colors.dangerColor,
+    },
+});
+
+export const makeAppearanceStyles = (colors: ThemeColors) => StyleSheet.create({
+    content: {
+        paddingHorizontal: space.lg,
+        paddingTop: 6,
+        paddingBottom: 40,
+        gap: space.sm,
+    },
+    sectionLabel: {
+        marginTop: 10,
+        marginHorizontal: space.xs,
+    },
+    coatHeader: {
+        marginTop: 10,
+        marginHorizontal: space.xs,
+        flexDirection: 'row',
+        alignItems: 'baseline',
+        justifyContent: 'space-between',
+    },
+    coatHint: {
+        color: colors.textMuted,
+    },
+    preview: {
+        paddingTop: 14,
+        paddingHorizontal: space.lg,
+        paddingBottom: space.sm,
+        gap: 10,
+    },
+    previewAuthor: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    previewNames: {
+        flex: 1,
+    },
+    previewName: {
+        fontSize: 14.5,
+        color: colors.textPrimary,
+    },
+    previewHandle: {
+        color: colors.textMuted,
+    },
+    previewBody: {
+        color: colors.textPrimary,
+    },
+    previewTag: {
+        color: colors.accentText,
+    },
+    pollBar: {
+        height: 36,
+        borderRadius: 10,
+        overflow: 'hidden',
+        backgroundColor: colors.inputBackground,
+        justifyContent: 'center',
+    },
+    pollFill: {
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        bottom: 0,
+        width: '64%',
+        backgroundColor: colors.accentColor,
+    },
+    pollLabels: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        paddingHorizontal: space.md,
+    },
+    pollOption: {
+        fontSize: 13.5,
+        color: colors.buttonTextColor,
+    },
+    pollPercent: {
+        fontSize: 13.5,
+        color: colors.textPrimary,
+    },
+    previewActions: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        paddingRight: 32,
+    },
+    previewAction: {
+        height: 32,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    previewCount: {
+        color: colors.textMuted,
+    },
+    previewCountActive: {
+        color: colors.accentText,
+    },
+    coatGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: space.sm,
+    },
+    coat: {
+        flexBasis: '30%',
+        flexGrow: 1,
+        height: 80,
+        borderRadius: radii.well,
+        borderWidth: 1,
+        borderColor: colors.borderColor,
+        backgroundColor: colors.cardBackground,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+    },
+    coatSelected: {
+        borderWidth: 2,
+        borderColor: colors.accentText,
+        backgroundColor: colors.accentSoft,
+    },
+    coatName: {
+        fontSize: 13,
+        color: colors.textPrimary,
+    },
+    tintRow: {
+        marginTop: 10,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.md,
+        paddingVertical: space.md,
+        paddingHorizontal: space.lg,
+    },
+    tintText: {
+        flex: 1,
+        gap: 2,
+    },
+    tintLabel: {
+        color: colors.textPrimary,
+    },
+    tintDetail: {
+        color: colors.textMuted,
     },
 });
