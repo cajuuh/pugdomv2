@@ -7,4 +7,5 @@ export const mockTheme = {
     colors: buildColors(DEFAULT_COAT, false, true),
     type: buildType(true),
     isDark: false,
+    coat: DEFAULT_COAT,
 };

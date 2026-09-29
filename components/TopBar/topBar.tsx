@@ -1,79 +1,67 @@
 import React, { useState } from 'react';
-import { StyleSheet, TouchableOpacity, Modal, Pressable } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { View, Text, Avatar } from 'react-native-ui-lib';
+import { Modal, Pressable, Text, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Account } from '../../services/mastodon/types';
 import { useTheme } from '../../services/themeContext';
-import { makeStyles } from './styles';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
+import { Avatar, IconButton, PugMark } from '../ui';
+import { HEADER_HEIGHT, makeStyles } from './styles';
 
 interface TopBarProps {
     user: Account | null;
-    onAvatarPress: () => void;
+    onProfilePress: () => void;
     onSettingsPress: () => void;
     onLogoutPress: () => void;
 }
 
-export const TopBar: React.FC<TopBarProps> = ({ user, onAvatarPress, onSettingsPress, onLogoutPress }) => {
+export const TopBar: React.FC<TopBarProps> = ({ user, onProfilePress, onSettingsPress, onLogoutPress }) => {
     const [menuVisible, setMenuVisible] = useState(false);
-    const { colors, type } = useTheme();
+    const { colors, type, coat } = useTheme();
     const styles = useThemedStyles(makeStyles);
+    const insets = useSafeAreaInsets();
+
+    const menuAction = (action: () => void) => () => {
+        setMenuVisible(false);
+        action();
+    };
 
     return (
-        <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.cardBackground, borderBottomColor: colors.borderColor }]}>
+        <SafeAreaView edges={['top']} style={styles.safeArea}>
             <View style={styles.container}>
-                <TouchableOpacity onPress={onAvatarPress} style={styles.avatarContainer} activeOpacity={0.7}>
-                    {user?.avatar ? (
-                        <Avatar source={{ uri: user.avatar }} size={34} containerStyle={[styles.avatar, { borderColor: colors.accentColor }]} />
-                    ) : (
-                        <Ionicons name="person-circle-outline" size={34} color={colors.textSecondary} />
-                    )}
-                </TouchableOpacity>
+                <Pressable
+                    onPress={() => setMenuVisible(true)}
+                    style={styles.avatarButton}
+                    accessibilityRole="button"
+                    accessibilityLabel="Account menu"
+                >
+                    <Avatar name={user?.display_name || user?.username || ''} uri={user?.avatar} size={36} ring />
+                </Pressable>
 
-                <View style={styles.titleContainer}>
-                    <Text style={[type.sheetTitle, { color: colors.accentText }]}>pugdom</Text>
+                <View style={styles.wordmark} accessible accessibilityRole="header" accessibilityLabel="pugdom">
+                    <PugMark coat={coat} size={28} />
+                    <Text style={[type.title, styles.wordmarkText]}>pugdom</Text>
                 </View>
 
-                <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuButton} activeOpacity={0.7}>
-                    <Ionicons name="ellipsis-vertical" size={22} color={colors.textPrimary} />
-                </TouchableOpacity>
+                <IconButton icon="options-outline" accessibilityLabel="Settings" onPress={onSettingsPress} color={colors.textSecondary} size={24} style={styles.settingsButton} />
             </View>
 
-            {/* 3-Dot Dropdown Menu Modal */}
-            <Modal
-                visible={menuVisible}
-                transparent={true}
-                animationType="fade"
-                onRequestClose={() => setMenuVisible(false)}
-            >
-                <Pressable style={styles.modalOverlay} onPress={() => setMenuVisible(false)}>
-                    <View style={[styles.dropdownContainer, { backgroundColor: colors.cardBackground, borderColor: colors.borderColor }]}>
-                        <TouchableOpacity
-                            style={styles.dropdownItem}
-                            onPress={() => {
-                                setMenuVisible(false);
-                                onSettingsPress();
-                            }}
-                        >
-                            <Ionicons name="settings-outline" size={18} color={colors.textPrimary} style={styles.dropdownIcon} />
-                            <Text style={[styles.dropdownText, { color: colors.textPrimary }]}>Settings</Text>
-                        </TouchableOpacity>
-
-                        <View style={[styles.divider, { backgroundColor: colors.borderColor }]} />
-
-                        <TouchableOpacity
-                            style={styles.dropdownItem}
-                            onPress={() => {
-                                setMenuVisible(false);
-                                onLogoutPress();
-                            }}
-                        >
-                            <Ionicons name="log-out-outline" size={18} color={colors.dangerColor} style={styles.dropdownIcon} />
-                            <Text style={[styles.dropdownText, { color: colors.dangerColor }]}>Log Out</Text>
-                        </TouchableOpacity>
+            <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
+                <View style={styles.modalRoot}>
+                    {/* A sibling of the menu, not its parent: an accessible parent would hide the items from screen readers */}
+                    <Pressable style={styles.modalOverlay} onPress={() => setMenuVisible(false)} accessibilityRole="button" accessibilityLabel="Close menu" />
+                    <View style={[styles.menu, { top: insets.top + HEADER_HEIGHT }]}>
+                        <Pressable style={styles.menuItem} onPress={menuAction(onProfilePress)} accessibilityRole="button" accessibilityLabel="Profile">
+                            <Ionicons name="person-outline" size={18} color={colors.textPrimary} />
+                            <Text style={[type.name, styles.menuText]}>Profile</Text>
+                        </Pressable>
+                        <View style={styles.divider} />
+                        <Pressable style={styles.menuItem} onPress={menuAction(onLogoutPress)} accessibilityRole="button" accessibilityLabel="Log Out">
+                            <Ionicons name="log-out-outline" size={18} color={colors.dangerColor} />
+                            <Text style={[type.name, styles.menuText, styles.menuTextDanger]}>Log Out</Text>
+                        </Pressable>
                     </View>
-                </Pressable>
+                </View>
             </Modal>
         </SafeAreaView>
     );
