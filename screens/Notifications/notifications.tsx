@@ -1,20 +1,25 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, RefreshControl, TouchableOpacity } from 'react-native';
 import { FlashList, useRecyclingState } from '@shopify/flash-list';
-import { View, Text, Avatar, Button, SegmentedControl } from 'react-native-ui-lib';
+import { View, Text, Avatar, Button } from 'react-native-ui-lib';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Notification, Relationship } from '../../services/mastodon/types';
 import { useTheme } from '../../services/themeContext';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
 import { NotificationFilter, SUPPORTED_NOTIFICATION_TYPES, useNotifications } from '../../hooks/useNotifications';
 import { useFollowAccount, useRelationships } from '../../hooks/useRelationships';
+import { SegmentedPill, SegmentOption } from '../../components/ui';
 import { styles } from './styles';
 
 interface NotificationsProps {
     onStatusPress?: (id: string) => void;
 }
 
-const FILTERS: NotificationFilter[] = ['all', 'mentions', 'follows'];
+const FILTERS: SegmentOption<NotificationFilter>[] = [
+    { value: 'all', label: 'All' },
+    { value: 'mentions', label: 'Mentions' },
+    { value: 'follows', label: 'Follows' },
+];
 
 // Icon, tint and copy for each notification type the screen renders
 const TYPE_CONFIG: Record<string, { icon: string; color: string; rgb: string; tag: string; action: string }> = {
@@ -186,12 +191,7 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
     return (
         <View flex style={[styles.container, { backgroundColor: colors.background }]}>
             <View paddingH-16 paddingV-10 style={{ zIndex: 10 }}>
-                <SegmentedControl
-                    segments={[{ label: 'All' }, { label: 'Mentions' }, { label: 'Follows' }]}
-                    initialIndex={FILTERS.indexOf(activeFilter)}
-                    activeColor={colors.accentColor}
-                    onChangeIndex={(index: number) => setActiveFilter(FILTERS[index])}
-                />
+                <SegmentedPill options={FILTERS} value={activeFilter} onChange={setActiveFilter} />
             </View>
             {isLoading && notifications.length === 0 ? (
                 <View flex center style={[styles.loadingContainer, { backgroundColor: colors.background }]}>

@@ -1,10 +1,9 @@
 import React from 'react';
 import { View } from 'react-native';
-import { fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
 import Notifications from '../screens/Notifications/notifications';
-import { useNotifications } from '../hooks/useNotifications';
 import { fetchNotifications } from '../services/mastodon/notifications';
 import { followAccount, getRelationships } from '../services/mastodon/accounts';
 import { Account, Notification } from '../services/mastodon/types';
@@ -12,7 +11,7 @@ import { Account, Notification } from '../services/mastodon/types';
 jest.mock('../services/mastodon/notifications', () => ({ fetchNotifications: jest.fn() }));
 jest.mock('../services/mastodon/accounts', () => ({ followAccount: jest.fn(), getRelationships: jest.fn() }));
 jest.mock('../services/themeContext', () => ({
-    useTheme: () => ({ colors: jest.requireActual('../services/themeContext').lightColors, isDark: false }),
+    useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
 }));
 
 const mockedFetch = fetchNotifications as jest.MockedFunction<typeof fetchNotifications>;
@@ -56,18 +55,19 @@ describe('Notifications', () => {
         expect(mockedFetch).toHaveBeenCalledWith(undefined, ['mention', 'reblog', 'favourite', 'follow']);
     });
 
-    // ui-lib's SegmentedControl can't be pressed under jest (it goes through Reanimated), so check the mapping on the hook
     it.each([
-        ['mentions', ['mention']],
-        ['follows', ['follow']],
-    ] as const)('filters %s on the server', async (filter, types) => {
+        ['Mentions', ['mention']],
+        ['Follows', ['follow']],
+    ] as const)('filters %s on the server from the switcher', async (tab, types) => {
         mockedFetch.mockResolvedValue([]);
-        const { result } = await renderHook(() => useNotifications(filter), {
-            wrapper: ({ children }) => <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>,
-        });
+        await renderScreen();
+        await screen.findByText('No notifications yet!');
 
-        await waitFor(() => expect(result.current.isSuccess).toBe(true));
-        expect(mockedFetch).toHaveBeenCalledWith(undefined, types);
+        await fireEvent.press(screen.getByRole('tab', { name: tab }));
+
+        await waitFor(() => expect(mockedFetch).toHaveBeenCalledWith(undefined, types));
+        expect(screen.getByRole('tab', { name: tab })).toBeSelected();
+        expect(screen.getByRole('tab', { name: 'All' })).not.toBeSelected();
     });
 
     it('skips notification types it cannot render', async () => {
