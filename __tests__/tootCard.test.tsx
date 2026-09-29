@@ -4,11 +4,11 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
 import { MediaViewerProvider } from '../components/MediaViewer/mediaViewer';
-import { TootCard } from '../components/TootCard/tootCard';
+import { TootCard, describeHidden } from '../components/TootCard/tootCard';
 import { Poll } from '../components/Poll/poll';
 import { favouriteStatus } from '../services/mastodon/statuses';
 import { votePoll } from '../services/mastodon/polls';
-import { Poll as PollType, Status } from '../services/mastodon/types';
+import { Attachment, Poll as PollType, Status } from '../services/mastodon/types';
 
 jest.mock('../services/mastodon/statuses', () => ({
     favouriteStatus: jest.fn(),
@@ -207,36 +207,91 @@ describe('TootCard content', () => {
         media_attachments: [{ id: 'm1', type: 'image', url: 'https://example.social/m1.png', preview_url: 'https://example.social/m1-small.png' }],
     });
 
-    it('shows sensitive posts without a CW, blurring only the media', async () => {
+    it('shows sensitive posts without a CW, veiling only the media', async () => {
         await renderCard(withMedia({ ...statusA, sensitive: true, spoiler_text: '' }));
 
         expect(screen.getByText(/status A/)).toBeTruthy();
-        expect(screen.queryByText('Show')).toBeNull();
-        expect(screen.getByText('Sensitive Content (Tap to show)')).toBeTruthy();
+        expect(screen.getByText('Sensitive · 1 photo')).toBeTruthy();
+        // The veiled image is hidden from screen readers until it's shown
+        expect(screen.queryByRole('imagebutton')).toBeNull();
     });
 
-    it('collapses posts with a CW until Show is pressed', async () => {
-        await renderCard({ ...statusA, sensitive: true, spoiler_text: 'Spoilers' });
+    it('shows sensitive media on request and can hide it again', async () => {
+        await renderCard(withMedia({ ...statusA, sensitive: true }));
 
-        expect(screen.getByText('CW: Spoilers')).toBeTruthy();
+        await fireEvent.press(screen.getByRole('button', { name: 'Show' }));
+        expect(screen.queryByText('Sensitive · 1 photo')).toBeNull();
+        expect(screen.getByRole('imagebutton', { name: 'Image 1 of 1' })).toBeTruthy();
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Hide media' }));
+        expect(screen.getByText('Sensitive · 1 photo')).toBeTruthy();
+    });
+
+    it('collapses posts with a CW into a ribbon that says what is hidden', async () => {
+        await renderCard(withMedia({ ...statusA, sensitive: true, spoiler_text: 'Spoilers' }));
+
+        expect(screen.getByText('Content warning')).toBeTruthy();
+        expect(screen.getByText('Spoilers')).toBeTruthy();
+        expect(screen.getByText('Text and 1 photo hidden')).toBeTruthy();
         expect(screen.queryByText(/status A/)).toBeNull();
 
-        await fireEvent.press(screen.getByText('Show'));
+        await fireEvent.press(screen.getByRole('button', { name: 'Show' }));
+        expect(screen.getByText('CW · Spoilers')).toBeTruthy();
         expect(screen.getByText(/status A/)).toBeTruthy();
-        expect(screen.getByText('Hide')).toBeTruthy();
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Hide' }));
+        expect(screen.queryByText(/status A/)).toBeNull();
+        expect(screen.getByText('Text and 1 photo hidden')).toBeTruthy();
     });
 
     it('treats a CW as collapsible even when the post is not marked sensitive', async () => {
         await renderCard({ ...statusA, sensitive: false, spoiler_text: 'Politics' });
 
-        expect(screen.getByText('CW: Politics')).toBeTruthy();
+        expect(screen.getByText('Politics')).toBeTruthy();
+        expect(screen.getByText('Text hidden')).toBeTruthy();
         expect(screen.queryByText(/status A/)).toBeNull();
     });
 
-    it('shows non-sensitive media without the blur', async () => {
+    it('shows non-sensitive media without the veil', async () => {
         await renderCard(withMedia(statusA));
 
-        expect(screen.queryByText('Sensitive Content (Tap to show)')).toBeNull();
+        expect(screen.queryByText(/Sensitive ·/)).toBeNull();
+        expect(screen.getByRole('imagebutton', { name: 'Image 1 of 1' })).toBeTruthy();
+    });
+
+    it('shows a link preview with its provider and title', async () => {
+        await renderCard({
+            ...statusA,
+            card: { url: 'https://www.tidepool.studio/post', title: 'Leaving the algorithm', description: '8 min read', type: 'link', image: 'https://tidepool.studio/cover.png', provider_name: '' },
+        } as Status);
+
+        expect(screen.getByRole('link', { name: 'Leaving the algorithm' })).toBeTruthy();
+        expect(screen.getByText('tidepool.studio')).toBeTruthy();
+        expect(screen.getByText('8 min read')).toBeTruthy();
+    });
+
+    it('shows the boost and favourite state on the action buttons', async () => {
+        await renderCard({ ...statusA, favourited: true, reblogged: false });
+
+        expect(screen.getByRole('button', { name: 'Favourited, 33 favourites' })).toBeSelected();
+        expect(screen.getByRole('button', { name: 'Boost, 22 boosts' })).not.toBeSelected();
+        expect(screen.getByRole('button', { name: 'Reply, 11 replies' })).toBeTruthy();
+    });
+});
+
+describe('describeHidden', () => {
+    const media = (type: Attachment['type'], id: string): Attachment => ({ id, type, url: '', preview_url: '' });
+
+    it('lists what a content warning hides', () => {
+        expect(describeHidden({ ...statusA, media_attachments: [] })).toBe('Text hidden');
+        expect(describeHidden({ ...statusA, media_attachments: [media('image', '1'), media('image', '2')] })).toBe('Text and 2 photos hidden');
+        expect(describeHidden({
+            ...statusA,
+            poll: { id: 'p' } as PollType,
+            media_attachments: [media('video', '1')],
+            card: { url: 'https://x.y' } as Status['card'],
+        })).toBe('Text, a poll, 1 video and a link hidden');
+        expect(describeHidden({ ...statusA, content: '<p></p>', media_attachments: [media('image', '1'), media('video', '2')] })).toBe('2 attachments hidden');
     });
 });
 

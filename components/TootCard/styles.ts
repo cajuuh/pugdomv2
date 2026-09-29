@@ -1,197 +1,262 @@
 import { StyleSheet } from 'react-native';
 import { ThemeColors } from '../../services/themeContext';
-import { mediaColors } from '../../services/theme/media';
+import { radii, space } from '../../services/theme/shape';
+
+export const CARD_MARGIN = 16;
+export const CARD_PADDING = 16;
+export const THREAD_AVATAR_GAP = 10;
 
 export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
-    cardContainer: {
-        borderRadius: 20,
-        paddingHorizontal: 16,
-        paddingVertical: 16,
-        marginHorizontal: 16,
-        marginVertical: 10,
-        borderWidth: 1,
-        shadowColor: colors.shadowColor,
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 4,
+    card: {
+        marginHorizontal: CARD_MARGIN,
+        marginBottom: space.md,
+        paddingTop: 14,
+        paddingHorizontal: CARD_PADDING,
+        paddingBottom: 6,
     },
-    boostedHeader: {
+    cardCompact: {
+        marginHorizontal: space.md,
+        marginBottom: space.sm,
+        paddingTop: 10,
+        paddingHorizontal: 10,
+        paddingBottom: 2,
+    },
+    // In a thread the card sits inside the thread's own container
+    cardThread: {
+        marginHorizontal: 0,
+        marginBottom: 0,
+        borderWidth: 0,
+        borderRadius: 0,
+        backgroundColor: 'transparent',
+        shadowOpacity: 0,
+        elevation: 0,
+    },
+    boostRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 8,
-        gap: 6
+        gap: 6,
+        marginBottom: 10,
+        marginLeft: 2,
     },
-    boostedAvatar: {
-        marginHorizontal: 6,
-        borderRadius: 9
-    },
-    boostedText: {
-        fontSize: 12,
+    boostText: {
+        flexShrink: 1,
         color: colors.textMuted,
-        fontWeight: '600'
     },
-    headerRow: {
+    authorRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 10
+        gap: 10,
     },
-    mainRow: {
-        flexDirection: 'row',
-    },
-    leftColumn: {
-        alignItems: 'center',
-        marginRight: 10,
-    },
-    rightColumn: {
+    names: {
         flex: 1,
-    },
-    namesContainer: {
-        flex: 1,
-        justifyContent: 'center'
-    },
-    nameRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        flexWrap: 'wrap'
+        minWidth: 0,
     },
     displayName: {
-        fontSize: 15,
-        fontWeight: 'bold',
         color: colors.textPrimary,
-        marginRight: 4
     },
-    username: {
+    handle: {
         fontSize: 13,
-        color: colors.textSecondary
+        color: colors.textMuted,
     },
-    timeText: {
-        fontSize: 12,
-        color: colors.textMuted
+    time: {
+        color: colors.textMuted,
     },
-    spoilerContainer: {
-        backgroundColor: colors.inputBackground,
-        padding: 12,
-        borderRadius: 10,
-        marginBottom: 8,
-        borderWidth: 1,
-        borderColor: colors.borderColor,
+    threadRow: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center'
     },
-    spoilerText: {
+    threadAvatarColumn: {
+        alignItems: 'center',
+        marginRight: THREAD_AVATAR_GAP,
+    },
+    threadLine: {
+        position: 'absolute',
+        width: 2,
+        backgroundColor: colors.borderColor,
+        zIndex: -1,
+    },
+    threadBody: {
+        flex: 1,
+        minWidth: 0,
+    },
+    content: {
+        marginTop: 10,
+        gap: space.md,
+    },
+    // Content warning, collapsed
+    cwRibbon: {
+        marginTop: space.md,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.md,
+        paddingVertical: space.md,
+        paddingRight: space.md,
+        paddingLeft: 14,
+        borderRadius: radii.well,
+        backgroundColor: colors.accentSoft,
+    },
+    cwText: {
+        flex: 1,
+        gap: 1,
+    },
+    cwLabel: {
+        fontSize: 11,
+        color: colors.accentText,
+    },
+    cwSpoiler: {
+        fontSize: 14.5,
         color: colors.textPrimary,
-        fontSize: 14,
-        fontWeight: '600',
-        flex: 1
     },
-    spoilerButtonLabel: {
-        fontSize: 12,
-        fontWeight: 'bold'
+    cwHidden: {
+        color: colors.textSecondary,
     },
-    contentContainer: {
-        marginBottom: 12
+    // Content warning, opened: the hidden content sits inside a dashed frame
+    cwFrame: {
+        marginTop: space.md,
+        gap: space.sm,
+        paddingTop: 10,
+        paddingRight: space.md,
+        paddingBottom: space.md,
+        paddingLeft: 14,
+        borderRadius: radii.well,
+        borderWidth: 1.5,
+        borderStyle: 'dashed',
+        borderColor: colors.accentColor,
     },
-    contentText: {
-        fontSize: 15,
-        lineHeight: 22,
-        color: colors.textPrimary
+    cwFrameHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.sm,
     },
-    mediaContainer: {
-        width: '100%',
-        height: 200,
-        borderRadius: 12,
+    cwFrameTitle: {
+        flex: 1,
+        fontSize: 13,
+        color: colors.accentText,
+    },
+    cwFrameContent: {
+        gap: space.md,
+    },
+    mediaFrame: {
+        borderRadius: radii.well,
         overflow: 'hidden',
-        marginBottom: 12,
-        backgroundColor: colors.inputBackground
     },
     singleMedia: {
         width: '100%',
+        height: 200,
+        borderRadius: radii.well,
+        overflow: 'hidden',
+        backgroundColor: colors.inputBackground,
+    },
+    mediaImage: {
+        width: '100%',
         height: '100%',
-        resizeMode: 'cover'
     },
     mediaGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: 8,
-        marginBottom: 12
+        gap: space.sm,
     },
     gridMedia: {
         height: 120,
-        borderRadius: 8,
+        borderRadius: space.md,
+        overflow: 'hidden',
         backgroundColor: colors.inputBackground,
-        resizeMode: 'cover'
+    },
+    veil: {
+        ...StyleSheet.absoluteFill,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+        backgroundColor: colors.veil,
+    },
+    veilLabel: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    veilText: {
+        fontSize: 12.5,
+        color: colors.textPrimary,
+    },
+    hideMediaChip: {
+        position: 'absolute',
+        left: space.sm,
+        top: space.sm,
+        width: 32,
+        height: 32,
+        borderRadius: radii.pill,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.veilStrong,
+    },
+    linkPreview: {
+        flexDirection: 'row',
+        alignItems: 'stretch',
+        borderRadius: radii.well,
+        overflow: 'hidden',
+        backgroundColor: colors.inputBackground,
+    },
+    linkThumb: {
+        width: 88,
+        minHeight: 88,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.accentSoft,
+    },
+    linkBody: {
+        flex: 1,
+        minWidth: 0,
+        gap: 3,
+        paddingVertical: 11,
+        paddingHorizontal: space.md,
+    },
+    linkProvider: {
+        fontSize: 11,
+        color: colors.accentText,
+    },
+    linkTitle: {
+        fontSize: 14,
+        lineHeight: 18,
+        color: colors.textPrimary,
+    },
+    linkMeta: {
+        color: colors.textMuted,
+    },
+    linkPlain: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.md,
+        paddingVertical: space.md,
+        paddingHorizontal: 14,
+        borderRadius: radii.well,
+        backgroundColor: colors.inputBackground,
+    },
+    linkIconBox: {
+        width: 36,
+        height: 36,
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.cardBackground,
     },
     actionRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        borderTopWidth: 1,
-        borderTopColor: colors.borderColor,
-        paddingTop: 12,
-        marginTop: 8
+        marginTop: 6,
     },
     actionButton: {
+        minWidth: 44,
+        minHeight: 44,
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: 6,
-        paddingHorizontal: 8,
-        paddingVertical: 4
+        paddingHorizontal: space.sm,
     },
     actionCount: {
-        fontSize: 12,
+        fontSize: 13,
         color: colors.textMuted,
-        fontWeight: '600'
     },
-    linkPreviewContainer: {
-        backgroundColor: colors.inputBackground,
-        borderRadius: 12,
-        overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: colors.borderColor,
-        marginBottom: 12,
-    },
-    linkPreviewImage: {
-        width: '100%',
-        height: 150,
-        resizeMode: 'cover',
-    },
-    linkPreviewContent: {
-        padding: 12,
-        gap: 4,
-    },
-    linkPreviewProvider: {
-        fontSize: 11,
+    actionCountActive: {
         color: colors.accentText,
-        fontWeight: '600',
-        textTransform: 'uppercase',
     },
-    linkPreviewTitle: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        color: colors.textPrimary,
-    },
-    linkPreviewDescription: {
-        fontSize: 12,
-        color: colors.textSecondary,
-        lineHeight: 16,
-    },
-    blurContainer: {
-        overflow: 'hidden',
-        borderRadius: 12,
-        marginBottom: 12,
-    },
-    revealButton: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: mediaColors.scrimLight,
-    },
-    revealText: {
-        color: mediaColors.ink,
-        marginTop: 8,
-        fontWeight: 'bold',
-        fontSize: 14,
-    }
 });
