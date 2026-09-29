@@ -21,6 +21,10 @@ export interface ThemeColors {
     shadowColor: string;
     // Dims the screen behind modals and menus
     scrim: string;
+    // Sunken at 78%, over sensitive media until it's shown
+    veil: string;
+    // Surface at 85%, for chips drawn over shown media
+    veilStrong: string;
 }
 
 export type CoatKey = 'apricot' | 'fawn' | 'brindle' | 'black' | 'silver' | 'sage' | 'blueberry' | 'plum' | 'rose';
@@ -151,5 +155,7 @@ export function buildColors(coatKey: string, dark: boolean, tint: boolean): Them
         dangerColor: neutrals.danger,
         shadowColor: dark ? '#000000' : neutrals.ink,
         scrim: dark ? '#000000A6' : neutrals.ink + '66',
+        veil: neutrals.sunken + 'C7',
+        veilStrong: neutrals.surface + 'D9',
     };
 }

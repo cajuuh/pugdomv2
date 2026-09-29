@@ -42,6 +42,7 @@ jest.mock('react-native-render-html', () => {
         default: jest.fn(({ source }: any) => <Text>{source.html}</Text>),
         HTMLElementModel: { fromCustomModel: (model: any) => model },
         HTMLContentModel: { textual: 'textual' },
+        defaultSystemFonts: [],
     };
 });
 
