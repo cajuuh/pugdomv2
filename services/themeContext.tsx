@@ -1,29 +1,20 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { useColorScheme } from 'react-native';
-import { getStringSetting, saveStringSetting } from './storage';
+import { getSetting, getStringSetting, saveSetting, saveStringSetting } from './storage';
+import { buildColors, CoatKey, DEFAULT_COAT, isCoatKey, ThemeColors } from './theme/coats';
 
 export type ThemeType = 'light' | 'dark' | 'system';
 
-export interface ThemeColors {
-    background: string;
-    cardBackground: string;
-    borderColor: string;
-    textPrimary: string;
-    textSecondary: string;
-    textMuted: string;
-    accentColor: string;
-    tabBarBackground: string;
-    tabBarActiveColor: string;
-    tabBarInactiveColor: string;
-    inputBackground: string;
-    buttonTextColor: string;
-    dangerColor: string;
-    warningColor: string;
-}
+export type { ThemeColors, CoatKey } from './theme/coats';
 
 interface ThemeContextType {
     theme: ThemeType;
     setTheme: (theme: ThemeType) => Promise<void>;
+    coat: CoatKey;
+    setCoat: (coat: CoatKey) => Promise<void>;
+    // Whether the coat's hue tints the neutrals (ground, surface, lines, ink)
+    tint: boolean;
+    setTint: (tint: boolean) => Promise<void>;
     colors: ThemeColors;
     isDark: boolean;
 }
@@ -31,50 +22,29 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const THEME_KEY = 'pugdom_settings_theme';
+const COAT_KEY = 'pugdom_settings_coat';
+const TINT_KEY = 'pugdom_settings_tint';
 
-export const lightColors: ThemeColors = {
-    background: '#F0F4F8',
-    cardBackground: 'rgba(255, 255, 255, 0.85)',
-    borderColor: 'rgba(255, 255, 255, 0.5)',
-    textPrimary: '#1E293B',
-    textSecondary: '#475569',
-    textMuted: '#94A3B8',
-    accentColor: '#3B82F6',
-    tabBarBackground: 'transparent',
-    tabBarActiveColor: '#3B82F6',
-    tabBarInactiveColor: '#94A3B8',
-    inputBackground: 'rgba(255, 255, 255, 0.6)',
-    buttonTextColor: '#FFFFFF',
-    dangerColor: '#EF4444',
-    warningColor: '#F59E0B',
-};
-
-export const darkColors: ThemeColors = {
-    background: '#121318',
-    cardBackground: 'rgba(30, 31, 38, 0.75)',
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    textPrimary: '#F8FAFC',
-    textSecondary: '#94A3B8',
-    textMuted: '#64748B',
-    accentColor: '#00E5FF',
-    tabBarBackground: 'transparent',
-    tabBarActiveColor: '#00E5FF',
-    tabBarInactiveColor: '#475569',
-    inputBackground: 'rgba(255, 255, 255, 0.05)',
-    buttonTextColor: '#121318',
-    dangerColor: '#EF4444',
-    warningColor: '#F59E0B',
-};
+export const lightColors: ThemeColors = buildColors(DEFAULT_COAT, false, true);
+export const darkColors: ThemeColors = buildColors(DEFAULT_COAT, true, true);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [theme, setThemeState] = useState<ThemeType>('system');
+    const [coat, setCoatState] = useState<CoatKey>(DEFAULT_COAT);
+    const [tint, setTintState] = useState(true);
     const systemColorScheme = useColorScheme();
 
     useEffect(() => {
         const loadTheme = async () => {
             try {
-                const storedTheme = await getStringSetting(THEME_KEY, 'system');
+                const [storedTheme, storedCoat, storedTint] = await Promise.all([
+                    getStringSetting(THEME_KEY, 'system'),
+                    getStringSetting(COAT_KEY, DEFAULT_COAT),
+                    getSetting(TINT_KEY, true),
+                ]);
                 setThemeState(storedTheme as ThemeType);
+                setCoatState(isCoatKey(storedCoat) ? storedCoat : DEFAULT_COAT);
+                setTintState(storedTint);
             } catch (error) {
                 console.error('Failed to load theme:', error);
             }
@@ -87,11 +57,21 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         await saveStringSetting(THEME_KEY, newTheme);
     };
 
+    const setCoat = async (newCoat: CoatKey) => {
+        setCoatState(newCoat);
+        await saveStringSetting(COAT_KEY, newCoat);
+    };
+
+    const setTint = async (newTint: boolean) => {
+        setTintState(newTint);
+        await saveSetting(TINT_KEY, newTint);
+    };
+
     const isDark = theme === 'system' ? systemColorScheme === 'dark' : theme === 'dark';
-    const colors = isDark ? darkColors : lightColors;
+    const colors = useMemo(() => buildColors(coat, isDark, tint), [coat, isDark, tint]);
 
     return (
-        <ThemeContext.Provider value={{ theme, setTheme, colors, isDark }}>
+        <ThemeContext.Provider value={{ theme, setTheme, coat, setCoat, tint, setTint, colors, isDark }}>
             {children}
         </ThemeContext.Provider>
     );
