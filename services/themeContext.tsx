@@ -1,11 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { useColorScheme } from 'react-native';
+import { useFonts } from 'expo-font';
 import { getSetting, getStringSetting, saveSetting, saveStringSetting } from './storage';
 import { buildColors, CoatKey, DEFAULT_COAT, isCoatKey, ThemeColors } from './theme/coats';
+import { buildType, fontAssets, TypeScale } from './theme/typography';
 
 export type ThemeType = 'light' | 'dark' | 'system';
 
 export type { ThemeColors, CoatKey } from './theme/coats';
+export type { TypeScale } from './theme/typography';
 
 interface ThemeContextType {
     theme: ThemeType;
@@ -16,6 +19,9 @@ interface ThemeContextType {
     tint: boolean;
     setTint: (tint: boolean) => Promise<void>;
     colors: ThemeColors;
+    type: TypeScale;
+    // Fonts finished loading, or failed and the type scale fell back to the system font
+    fontsReady: boolean;
     isDark: boolean;
 }
 
@@ -33,6 +39,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const [coat, setCoatState] = useState<CoatKey>(DEFAULT_COAT);
     const [tint, setTintState] = useState(true);
     const systemColorScheme = useColorScheme();
+    const [fontsLoaded, fontError] = useFonts(fontAssets);
 
     useEffect(() => {
         const loadTheme = async () => {
@@ -52,6 +59,12 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         loadTheme();
     }, []);
 
+    useEffect(() => {
+        if (fontError) {
+            console.warn('Failed to load fonts, using the system font:', fontError);
+        }
+    }, [fontError]);
+
     const setTheme = async (newTheme: ThemeType) => {
         setThemeState(newTheme);
         await saveStringSetting(THEME_KEY, newTheme);
@@ -69,9 +82,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     const isDark = theme === 'system' ? systemColorScheme === 'dark' : theme === 'dark';
     const colors = useMemo(() => buildColors(coat, isDark, tint), [coat, isDark, tint]);
+    const type = useMemo(() => buildType(fontsLoaded), [fontsLoaded]);
+    const fontsReady = fontsLoaded || !!fontError;
 
     return (
-        <ThemeContext.Provider value={{ theme, setTheme, coat, setCoat, tint, setTint, colors, isDark }}>
+        <ThemeContext.Provider value={{ theme, setTheme, coat, setCoat, tint, setTint, colors, type, fontsReady, isDark }}>
             {children}
         </ThemeContext.Provider>
     );

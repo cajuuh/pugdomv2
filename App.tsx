@@ -30,7 +30,7 @@ import { queryClient } from './services/queryClient';
 function NavigationRoot() {
   const { user, loading, logout, isAddingAccount, setAddingAccount } = useAuth();
   const { openCompose } = useCompose();
-  const { colors, isDark } = useTheme();
+  const { colors, isDark, fontsReady } = useTheme();
   const [activeTab, setActiveTab] = useState<'home' | 'search' | 'notifications' | 'profile'>('home');
   const [currentScreen, setCurrentScreen] = useState<'main' | 'settings' | 'thread'>('main');
   const [threadStatusId, setThreadStatusId] = useState<string | null>(null);
@@ -55,7 +55,8 @@ function NavigationRoot() {
 
   const statusBarStyle = isDark ? 'light' : 'dark';
 
-  if (loading) {
+  // No splash-screen module in the native build, so the themed loader covers font loading too
+  if (loading || !fontsReady) {
     return (
       <View flex center style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size='large' color={colors.accentColor} />

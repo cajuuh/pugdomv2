@@ -25,11 +25,6 @@ export const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    titleText: {
-        fontSize: 18,
-        fontWeight: '800',
-        letterSpacing: 0.5,
-    },
     menuButton: {
         width: 36,
         height: 36,
