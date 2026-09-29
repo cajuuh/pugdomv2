@@ -11,7 +11,7 @@ export const Card: React.FC<ViewProps> = ({ style, ...props }) => {
                 styles.card,
                 { backgroundColor: colors.cardBackground, borderColor: colors.borderColor },
                 // Shadows read as smudges on dark grounds, so only light mode gets one
-                !isDark && [styles.shadow, { shadowColor: colors.textPrimary }],
+                !isDark && [styles.shadow, { shadowColor: colors.shadowColor }],
                 style,
             ]}
             {...props}

@@ -9,7 +9,6 @@ import {
     Alert,
     Platform,
     KeyboardAvoidingView,
-    Switch
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, Avatar } from 'react-native-ui-lib';
@@ -17,7 +16,9 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '../../services/authContext';
 import { useTheme } from '../../services/themeContext';
 import { createStatus } from '../../services/mastodon/statuses';
-import { styles } from './styles';
+import { makeStyles } from './styles';
+import { useThemedStyles } from '../../services/theme/useThemedStyles';
+import { ThemedSwitch } from '../ui';
 
 const stripHtml = (html: string) => {
     if (!html) return '';
@@ -77,6 +78,7 @@ interface ComposeModalProps {
 const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, closeCompose }) => {
     const { user } = useAuth();
     const { colors } = useTheme();
+    const styles = useThemedStyles(makeStyles);
     // The modal is always mounted, so only load the instance limits while composing
     const instanceConfiguration = useInstanceConfiguration(isOpen && !!user);
 
@@ -128,7 +130,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
     // Determine character counter color
     let counterColor = colors.textSecondary;
     if (remaining < 50 && remaining >= 0) {
-        counterColor = colors.warningColor;
+        counterColor = colors.accentText;
     } else if (isOverLimit) {
         counterColor = colors.dangerColor; // Error red
     }
@@ -344,8 +346,8 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                                             setPollOptions([...pollOptions, '']);
                                         }}
                                     >
-                                        <Ionicons name="add" size={16} color={colors.accentColor} />
-                                        <Text style={[styles.pollAddChoiceText, { color: colors.accentColor }]}>Add Choice</Text>
+                                        <Ionicons name="add" size={16} color={colors.accentText} />
+                                        <Text style={[styles.pollAddChoiceText, { color: colors.accentText }]}>Add Choice</Text>
                                     </TouchableOpacity>
                                 )}
 
@@ -380,12 +382,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
 
                                 <View style={styles.pollSettingsRow}>
                                     <Text style={[styles.pollSettingsLabel, { color: colors.textPrimary }]}>Multiple choice</Text>
-                                    <Switch
-                                        value={pollMultiple}
-                                        onValueChange={setPollMultiple}
-                                        trackColor={{ false: colors.borderColor, true: colors.accentColor }}
-                                        thumbColor={Platform.OS === 'ios' ? '#FFFFFF' : (pollMultiple ? '#FFFFFF' : '#f4f3f4')}
-                                    />
+                                    <ThemedSwitch value={pollMultiple} onValueChange={setPollMultiple} accessibilityLabel="Multiple choice" />
                                 </View>
                             </View>
                         )}

@@ -62,7 +62,7 @@ export function SegmentedPill<T extends string>({ options, value, onChange, vari
                         accessibilityState={{ selected }}
                         style={[
                             styles.segment,
-                            selected && [styles.segmentSelected, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }],
+                            selected && [styles.segmentSelected, { backgroundColor: colors.cardBackground, shadowColor: colors.shadowColor }],
                         ]}
                     >
                         <Text style={[type.name, styles.segmentLabel, { color: selected ? colors.textPrimary : colors.textMuted }]}>

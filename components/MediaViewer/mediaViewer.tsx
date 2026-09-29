@@ -7,6 +7,7 @@ import * as WebBrowser from 'expo-web-browser';
 import ImageViewing from 'react-native-image-viewing';
 import { Attachment } from '../../services/mastodon/types';
 import { styles } from './styles';
+import { mediaColors } from '../../services/theme/media';
 
 interface MediaViewerContextType {
     openMedia: (attachments: Attachment[], index: number) => void;
@@ -45,7 +46,7 @@ const VideoModal = ({ attachment, onClose }: { attachment: Attachment; onClose: 
                     style={[styles.closeButton, { top: insets.top + 12 }]}
                     accessibilityLabel="Close video"
                 >
-                    <Ionicons name="close" size={30} color="#FFF" />
+                    <Ionicons name="close" size={30} color={mediaColors.ink} />
                 </TouchableOpacity>
             </View>
         </Modal>
@@ -84,12 +85,12 @@ export const MediaViewerProvider: React.FC<{ children: React.ReactNode }> = ({ c
             <View style={{ height, width: '100%', position: 'absolute', bottom: 0 }} pointerEvents="box-none">
                 {imageIndex > 0 && (
                     <View style={[styles.navButton, styles.navLeft]}>
-                        <Ionicons name="chevron-back" size={24} color="#FFF" />
+                        <Ionicons name="chevron-back" size={24} color={mediaColors.ink} />
                     </View>
                 )}
                 {imageIndex < imageCount - 1 && (
                     <View style={[styles.navButton, styles.navRight]}>
-                        <Ionicons name="chevron-forward" size={24} color="#FFF" />
+                        <Ionicons name="chevron-forward" size={24} color={mediaColors.ink} />
                     </View>
                 )}
             </View>
@@ -106,7 +107,7 @@ export const MediaViewerProvider: React.FC<{ children: React.ReactNode }> = ({ c
                 onRequestClose={close}
                 swipeToCloseEnabled={true}
                 doubleTapToZoomEnabled={true}
-                backgroundColor="rgba(0, 0, 0, 0.85)"
+                backgroundColor={mediaColors.scrimStrong}
                 FooterComponent={ImageViewerFooter}
             />
             {open?.kind === 'video' && <VideoModal attachment={open.attachment} onClose={close} />}

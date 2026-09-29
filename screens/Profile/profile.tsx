@@ -5,7 +5,8 @@ import { useAuth } from '../../services/authContext';
 import { useTheme } from '../../services/themeContext';
 import * as WebBrowser from 'expo-web-browser';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { styles } from './styles'
+import { makeStyles } from './styles';
+import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
 
 const { width } = Dimensions.get('window');
@@ -20,6 +21,7 @@ const stripHtml = (html: string) => {
 const Profile = () => {
     const { user, logout, checkLoginStatus } = useAuth();
     const { colors } = useTheme();
+    const styles = useThemedStyles(makeStyles);
     const [refreshing, setRefreshing] = useState(false);
 
     if (!user) {
@@ -68,7 +70,7 @@ const Profile = () => {
 
     return (
         <ScrollView 
-            style={[styles.container, { backgroundColor: colors.background }]} 
+            style={styles.container} 
             contentContainerStyle={styles.contentContainer} 
             showsVerticalScrollIndicator={false}
             refreshControl={
@@ -81,46 +83,46 @@ const Profile = () => {
             }
         >
             {/* header */}
-            <View style={[styles.headerBannerContainer, { backgroundColor: colors.cardBackground }]}>
+            <View style={styles.headerBannerContainer}>
                 {checkHeader()}
             </View>
             {/* profiel info */}
             <View style={styles.profileInfoContainer}>
                 {/* avatar */}
                 <View style={styles.avatarWrapper}>
-                    <Avatar source={{ uri: user.avatar }} size={90} containerStyle={[styles.avatarBorder, { borderColor: colors.background }]} />
+                    <Avatar source={{ uri: user.avatar }} size={90} containerStyle={styles.avatarBorder} />
                 </View>
                 {/* names */}
                 {renderTextWithEmojis(
                     user.display_name || user.username,
                     user.emojis || [],
-                    [styles.displayName, { color: colors.textPrimary }],
+                    styles.displayName,
                     20
                 )}
-                <Text style={[styles.username, { color: colors.textSecondary }]}>@{user.acct}</Text>
+                <Text style={styles.username}>@{user.acct}</Text>
                 {/* stats */}
                 <View style={styles.statsGrid}>
-                    <Card style={[styles.statsCard, { backgroundColor: colors.cardBackground, borderColor: colors.borderColor }]} enableShadow={false}>
-                        <Text style={[styles.statNumber, { color: colors.textPrimary }]}>
+                    <Card style={styles.statsCard} enableShadow={false}>
+                        <Text style={styles.statNumber}>
                             {user.statuses_count?.toLocaleString() || '0'}
                         </Text>
-                        <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Posts</Text>
+                        <Text style={styles.statLabel}>Posts</Text>
                     </Card>
-                    <Card style={[styles.statsCard, { backgroundColor: colors.cardBackground, borderColor: colors.borderColor }]} enableShadow={false}>
-                        <Text style={[styles.statNumber, { color: colors.textPrimary }]}>{user.following_count?.toLocaleString() || '0'}</Text>
-                        <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Following</Text>
+                    <Card style={styles.statsCard} enableShadow={false}>
+                        <Text style={styles.statNumber}>{user.following_count?.toLocaleString() || '0'}</Text>
+                        <Text style={styles.statLabel}>Following</Text>
                     </Card>
-                    <Card style={[styles.statsCard, { backgroundColor: colors.cardBackground, borderColor: colors.borderColor }]} enableShadow={false}>
-                        <Text style={[styles.statNumber, { color: colors.textPrimary }]}>{user.followers_count?.toLocaleString() || '0'}</Text>
-                        <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Followers</Text>
+                    <Card style={styles.statsCard} enableShadow={false}>
+                        <Text style={styles.statNumber}>{user.followers_count?.toLocaleString() || '0'}</Text>
+                        <Text style={styles.statLabel}>Followers</Text>
                     </Card>
                 </View>
                 {formattedBio ? (
-                    <View style={[styles.bioContainer, { backgroundColor: colors.cardBackground, borderColor: colors.borderColor }]}>
-                        <Text style={[styles.bioTitle, { color: colors.accentColor }]}>
+                    <View style={styles.bioContainer}>
+                        <Text style={styles.bioTitle}>
                             About Me
                         </Text>
-                        <Text style={[styles.bioText, { color: colors.textPrimary }]}>
+                        <Text style={styles.bioText}>
                             {formattedBio}
                         </Text>
                     </View>
@@ -132,7 +134,7 @@ const Profile = () => {
                         backgroundColor={colors.accentColor}
                         style={styles.actionButton}
                         onPress={handleOpenWeb}
-                        labelStyle={styles.buttonLabel}
+                        labelStyle={[styles.buttonLabel, { color: colors.buttonTextColor }]}
                     />
                     <Button
                         label="Share Profile"

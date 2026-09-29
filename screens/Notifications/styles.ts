@@ -1,7 +1,8 @@
 import { StyleSheet } from 'react-native';
+import { ThemeColors } from '../../services/themeContext';
 import { TAB_BAR_CLEARANCE } from '../../components/TabBar/styles';
 
-export const styles = StyleSheet.create({
+export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     container: {
         flex: 1,
     },
@@ -20,6 +21,7 @@ export const styles = StyleSheet.create({
         alignItems: 'center',
     },
     emptyText: {
+        color: colors.textSecondary,
         fontSize: 16,
         fontWeight: '500',
     },
@@ -30,7 +32,9 @@ export const styles = StyleSheet.create({
         marginHorizontal: 16,
         marginBottom: 16,
         borderWidth: 1,
-        shadowColor: '#000',
+        backgroundColor: colors.cardBackground,
+        borderColor: colors.borderColor,
+        shadowColor: colors.shadowColor,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
         shadowRadius: 6,
@@ -39,7 +43,7 @@ export const styles = StyleSheet.create({
     asymmetricTagLayer: {
         alignSelf: 'flex-start',
         marginLeft: 8,
-        borderWidth: 1,
+        backgroundColor: colors.accentSoft,
         paddingHorizontal: 10,
         paddingVertical: 6,
         borderRadius: 14,
@@ -48,6 +52,7 @@ export const styles = StyleSheet.create({
         gap: 6,
     },
     tagText: {
+        color: colors.accentText,
         fontSize: 11,
         fontWeight: 'bold',
         textTransform: 'uppercase',
@@ -62,26 +67,30 @@ export const styles = StyleSheet.create({
     },
     actionText: {
         flex: 1,
+        color: colors.textPrimary,
         fontSize: 15,
         fontWeight: '500',
     },
     displayName: {
         fontWeight: 'bold',
     },
+    // ui-lib's Text sets its own default color, so nested text doesn't inherit actionText's
+    actionVerb: {
+        color: colors.textPrimary,
+    },
     statusPreview: {
+        color: colors.textPrimary,
         fontSize: 15,
         lineHeight: 22,
         marginTop: 4,
         opacity: 0.9,
     },
     followButton: {
-        paddingHorizontal: 20,
-        paddingVertical: 8,
-        borderRadius: 20,
         marginTop: 12,
         alignSelf: 'flex-start',
     },
     followState: {
+        color: colors.textSecondary,
         marginTop: 12,
         fontSize: 13,
         fontWeight: '600',

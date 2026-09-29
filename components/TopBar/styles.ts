@@ -1,6 +1,7 @@
 import { StyleSheet, Platform } from 'react-native';
+import { ThemeColors } from '../../services/themeContext';
 
-export const styles = StyleSheet.create({
+export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     safeArea: {
         borderBottomWidth: 1,
     },
@@ -33,7 +34,7 @@ export const styles = StyleSheet.create({
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        backgroundColor: colors.scrim,
     },
     dropdownContainer: {
         position: 'absolute',
@@ -43,7 +44,7 @@ export const styles = StyleSheet.create({
         borderWidth: 1,
         paddingVertical: 4,
         minWidth: 150,
-        shadowColor: '#000',
+        shadowColor: colors.shadowColor,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 4,

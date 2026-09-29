@@ -11,7 +11,9 @@ import { Status, CustomEmoji, Attachment } from '../../services/mastodon/types';
 import { useSettings } from '../../services/settingsContext';
 import { useTheme } from '../../services/themeContext';
 import { useCompose } from '../../services/composeContext';
-import { styles } from './styles';
+import { makeStyles } from './styles';
+import { useThemedStyles } from '../../services/theme/useThemedStyles';
+import { mediaColors } from '../../services/theme/media';
 import { favouriteStatus, unfavouriteStatus, reblogStatus, unreblogStatus } from '../../services/mastodon/statuses';
 import { Poll } from '../Poll/poll';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
@@ -67,7 +69,7 @@ const StatusHtmlContent = React.memo(({ content, emojis, colors, compactMode, wi
             lineHeight: compactMode ? 18 : 22,
         },
         a: {
-            color: colors.accentColor,
+            color: colors.accentText,
             textDecorationLine: 'none' as const,
         },
         p: {
@@ -167,6 +169,7 @@ interface TootCardProps {
 export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPressHashtag, onPress, threadMode, hasThreadLineTop, hasThreadLineBottom }) => {
     const { compactMode } = useSettings();
     const { colors } = useTheme();
+    const styles = useThemedStyles(makeStyles);
     const { openCompose } = useCompose();
     const { width } = useWindowDimensions();
     const { openMedia } = useMediaViewer();
@@ -297,7 +300,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     {mediaContent}
                     <BlurView intensity={80} style={StyleSheet.absoluteFill}>
                         <TouchableOpacity onPress={() => setIsMediaRevealed(true)} style={styles.revealButton}>
-                            <Ionicons name="eye-off" size={24} color="#FFF" />
+                            <Ionicons name="eye-off" size={24} color={mediaColors.ink} />
                             <Text style={styles.revealText}>Sensitive Content (Tap to show)</Text>
                         </TouchableOpacity>
                     </BlurView>
@@ -339,7 +342,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     {renderTextWithEmojis(
                         (status.account.display_name || status.account.username) + ' boosted',
                         status.account.emojis || [],
-                        [styles.boostedText, { color: colors.textMuted }],
+                        styles.boostedText,
                         14
                     )}
                 </View>
@@ -378,19 +381,19 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                                 {renderTextWithEmojis(
                                     targetStatus.account.display_name || targetStatus.account.username,
                                     targetStatus.account.emojis,
-                                    [styles.displayName, { color: colors.textPrimary }, compactMode && { fontSize: 13 }]
+                                    [styles.displayName, compactMode && { fontSize: 13 }]
                                 )}
                             </View>
-                            <Text style={[styles.username, { color: colors.textSecondary }]} numberOfLines={1}>
+                            <Text style={styles.username} numberOfLines={1}>
                                 @{targetStatus.account.acct}
                             </Text>
                         </View>
-                        <Text style={[styles.timeText, { color: colors.textMuted }]}>{getRelativeTime(targetStatus.created_at)}</Text>
+                        <Text style={styles.timeText}>{getRelativeTime(targetStatus.created_at)}</Text>
                     </View>
                     
                     {hasContentWarning && (
-                        <View style={[styles.spoilerContainer, { backgroundColor: colors.background, borderColor: colors.borderColor }]}>
-                            <Text style={[styles.spoilerText, { color: colors.textPrimary }]} numberOfLines={1}>
+                        <View style={styles.spoilerContainer}>
+                            <Text style={styles.spoilerText} numberOfLines={1}>
                                 CW: {targetStatus.spoiler_text}
                             </Text>
                             <Button
@@ -398,7 +401,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                                 size={Button.sizes.xSmall}
                                 backgroundColor={isSpoilerCollapsed ? colors.accentColor : colors.textMuted}
                                 onPress={() => setIsSpoilerCollapsed(!isSpoilerCollapsed)}
-                                labelStyle={styles.spoilerButtonLabel}
+                                labelStyle={[styles.spoilerButtonLabel, { color: isSpoilerCollapsed ? colors.buttonTextColor : colors.cardBackground }]}
                             />
                         </View>
                     )}
@@ -435,7 +438,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     {/* link preview */}
                     {isContentVisible && targetStatus.card && (
                         <TouchableOpacity
-                            style={[styles.linkPreviewContainer, { backgroundColor: colors.background, borderColor: colors.borderColor }]}
+                            style={styles.linkPreviewContainer}
                             onPress={() => openLink(targetStatus.card!.url)}
                         >
                             {!!targetStatus.card.image && (
@@ -445,14 +448,14 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                                 />
                             )}
                             <View style={styles.linkPreviewContent}>
-                                <Text style={[styles.linkPreviewProvider, { color: colors.accentColor }]}>
+                                <Text style={styles.linkPreviewProvider}>
                                     {targetStatus.card.provider_name || getDomainName(targetStatus.card.url)}
                                 </Text>
-                                <Text style={[styles.linkPreviewTitle, { color: colors.textPrimary }]} numberOfLines={2}>
+                                <Text style={styles.linkPreviewTitle} numberOfLines={2}>
                                     {targetStatus.card.title}
                                 </Text>
                                 {targetStatus.card.description ? (
-                                    <Text style={[styles.linkPreviewDescription, { color: colors.textSecondary }]} numberOfLines={2}>
+                                    <Text style={styles.linkPreviewDescription} numberOfLines={2}>
                                         {targetStatus.card.description}
                                     </Text>
                                 ) : null}
@@ -461,19 +464,19 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     )}
 
                     {/* action buttons */}
-                    <View style={[styles.actionRow, { borderTopColor: colors.borderColor }]}>
+                    <View style={styles.actionRow}>
                         {/* reply action */}
                         <TouchableOpacity 
                             style={styles.actionButton} 
                             onPress={() => openCompose({ replyToStatus: targetStatus })}
                         >
                             <Ionicons name="chatbubble-outline" size={18} color={colors.textMuted} />
-                            <Text style={[styles.actionCount, { color: colors.textMuted }]}>{targetStatus.replies_count || 0}</Text>
+                            <Text style={styles.actionCount}>{targetStatus.replies_count || 0}</Text>
                         </TouchableOpacity>
                         {/* reblog */}
                         <TouchableOpacity style={styles.actionButton} onPress={toggleReblog}>
-                            <Ionicons name="repeat" size={18} color={isReblogged ? colors.accentColor : colors.textMuted} />
-                            <Text style={[styles.actionCount, { color: isReblogged ? colors.accentColor : colors.textMuted }]}>
+                            <Ionicons name="repeat" size={18} color={isReblogged ? colors.accentText : colors.textMuted} />
+                            <Text style={[styles.actionCount, { color: isReblogged ? colors.accentText : colors.textMuted }]}>
                                 {boostCount || 0}
                             </Text>
                         </TouchableOpacity>

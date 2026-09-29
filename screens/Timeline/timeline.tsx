@@ -7,7 +7,8 @@ import { useTimeline } from '../../hooks/useTimeline';
 import { TootCard } from '../../components/TootCard/tootCard';
 import { SegmentedPill } from '../../components/ui';
 import { useTheme } from '../../services/themeContext';
-import { styles } from './styles';
+import { makeStyles } from './styles';
+import { useThemedStyles } from '../../services/theme/useThemedStyles';
 
 type FeedType = 'home' | 'local' | 'federated';
 
@@ -23,6 +24,7 @@ interface TimelineProps {
 
 const Timeline = ({ onStatusPress }: TimelineProps) => {
     const { colors } = useTheme();
+    const styles = useThemedStyles(makeStyles);
     const [activeFeed, setActiveFeed] = useState<FeedType>('home');
     const queryClient = useQueryClient();
     const listRef = useRef<any>(null);
@@ -83,7 +85,7 @@ const Timeline = ({ onStatusPress }: TimelineProps) => {
         }
         return (
             <View flex center padding-40 style={styles.emptyContainer}>
-                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                <Text style={styles.emptyText}>
                     No toots on your {activeFeed} timeline yet!
                 </Text>
             </View>
@@ -91,13 +93,13 @@ const Timeline = ({ onStatusPress }: TimelineProps) => {
     };
 
     return (
-        <View flex style={[styles.container, { backgroundColor: colors.background }]}>
+        <View flex style={styles.container}>
             <View paddingH-16 paddingV-10>
                 <SegmentedPill options={FEEDS} value={activeFeed} onChange={setActiveFeed} />
             </View>
             
             {isLoading && statuses.length === 0 ? (
-                <View flex center style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+                <View flex center style={styles.loadingContainer}>
                     <ActivityIndicator size={'large'} color={colors.accentColor} />
                 </View>
             ) : (

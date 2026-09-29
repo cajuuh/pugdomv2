@@ -1,15 +1,16 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, RefreshControl, TouchableOpacity } from 'react-native';
 import { FlashList, useRecyclingState } from '@shopify/flash-list';
-import { View, Text, Avatar, Button } from 'react-native-ui-lib';
+import { View, Text, Avatar } from 'react-native-ui-lib';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Notification, Relationship } from '../../services/mastodon/types';
 import { useTheme } from '../../services/themeContext';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
 import { NotificationFilter, SUPPORTED_NOTIFICATION_TYPES, useNotifications } from '../../hooks/useNotifications';
 import { useFollowAccount, useRelationships } from '../../hooks/useRelationships';
-import { SegmentedPill, SegmentOption } from '../../components/ui';
-import { styles } from './styles';
+import { PillButton, SegmentedPill, SegmentOption } from '../../components/ui';
+import { makeStyles } from './styles';
+import { useThemedStyles } from '../../services/theme/useThemedStyles';
 
 interface NotificationsProps {
     onStatusPress?: (id: string) => void;
@@ -21,12 +22,12 @@ const FILTERS: SegmentOption<NotificationFilter>[] = [
     { value: 'follows', label: 'Follows' },
 ];
 
-// Icon, tint and copy for each notification type the screen renders
-const TYPE_CONFIG: Record<string, { icon: string; color: string; rgb: string; tag: string; action: string }> = {
-    favourite: { icon: 'star', color: '#0EA5E9', rgb: '14, 165, 233', tag: 'FAVOURITE', action: 'favourited your status' },
-    reblog: { icon: 'repeat', color: '#F59E0B', rgb: '245, 158, 11', tag: 'BOOST', action: 'boosted your status' },
-    mention: { icon: 'chatbubble', color: '#EC4899', rgb: '236, 72, 153', tag: 'MENTION', action: 'mentioned you' },
-    follow: { icon: 'person-add', color: '#22C55E', rgb: '34, 197, 94', tag: 'NEW FOLLOWER', action: 'followed you' },
+// Icon and copy for each notification type the screen renders; types share the accent and differ by icon and label
+const TYPE_CONFIG: Record<string, { icon: React.ComponentProps<typeof Ionicons>['name']; tag: string; action: string }> = {
+    favourite: { icon: 'star', tag: 'FAVOURITE', action: 'favourited your status' },
+    reblog: { icon: 'repeat', tag: 'BOOST', action: 'boosted your status' },
+    mention: { icon: 'chatbubble', tag: 'MENTION', action: 'mentioned you' },
+    follow: { icon: 'person-add', tag: 'NEW FOLLOWER', action: 'followed you' },
 };
 
 const stripHtml = (html?: string) => {
@@ -37,11 +38,10 @@ const stripHtml = (html?: string) => {
 interface FollowBackProps {
     accountId: string;
     relationship?: Relationship;
-    color: string;
-    textColor: string;
 }
 
-const FollowBack = ({ accountId, relationship, color, textColor }: FollowBackProps) => {
+const FollowBack = ({ accountId, relationship }: FollowBackProps) => {
+    const styles = useThemedStyles(makeStyles);
     const followAccount = useFollowAccount();
     // FlashList recycles rows, so reset when the row shows another account
     const [pending, setPending] = useRecyclingState(false, [accountId]);
@@ -52,7 +52,7 @@ const FollowBack = ({ accountId, relationship, color, textColor }: FollowBackPro
     }
     if (relationship.following || relationship.requested) {
         return (
-            <Text style={[styles.followState, { color: textColor }]}>
+            <Text style={styles.followState}>
                 {relationship.following ? 'Following' : 'Follow requested'}
             </Text>
         );
@@ -70,10 +70,9 @@ const FollowBack = ({ accountId, relationship, color, textColor }: FollowBackPro
     };
 
     return (
-        <Button
+        <PillButton
             label={pending ? 'Following…' : 'Follow back'}
-            size={Button.sizes.small}
-            backgroundColor={color}
+            size="small"
             style={styles.followButton}
             disabled={pending}
             onPress={handleFollow}
@@ -82,7 +81,8 @@ const FollowBack = ({ accountId, relationship, color, textColor }: FollowBackPro
 };
 
 const Notifications = ({ onStatusPress }: NotificationsProps) => {
-    const { colors, isDark } = useTheme();
+    const { colors } = useTheme();
+    const styles = useThemedStyles(makeStyles);
     const [activeFilter, setActiveFilter] = useState<NotificationFilter>('all');
     const [isPullRefreshing, setIsPullRefreshing] = useState(false);
 
@@ -118,31 +118,29 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
 
     const renderNotification = ({ item }: { item: Notification }) => {
         const config = TYPE_CONFIG[item.type];
-        const cardBackgroundColor = `rgba(${config.rgb}, ${isDark ? 0.15 : 0.08})`;
-        const borderColor = `rgba(${config.rgb}, ${isDark ? 0.3 : 0.2})`;
         const showPreview = item.type !== 'follow';
 
         return (
             <TouchableOpacity
-                style={[styles.notificationCard, { backgroundColor: cardBackgroundColor, borderColor }]}
+                style={styles.notificationCard}
                 onPress={() => item.status && onStatusPress?.(item.status.id)}
                 activeOpacity={item.status ? 0.8 : 1}
             >
                 <View style={styles.headerArchitecture}>
                     <Avatar source={{ uri: item.account.avatar }} size={42} containerStyle={styles.avatar} />
-                    <Text style={[styles.actionText, { color: colors.textPrimary }]}>
+                    <Text style={styles.actionText}>
                         {renderTextWithEmojis(
                             item.account.display_name || item.account.username,
                             item.account.emojis || [],
                             styles.displayName,
                             16
                         )}
-                        <Text>{' '}{config.action}</Text>
+                        <Text style={styles.actionVerb}>{' '}{config.action}</Text>
                     </Text>
                     {/* In the row, not absolutely positioned, so long names wrap instead of running under it */}
-                    <View style={[styles.asymmetricTagLayer, { backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.7)', borderColor }]}>
-                        <Ionicons name={config.icon as any} size={14} color={config.color} />
-                        <Text style={[styles.tagText, { color: config.color }]}>{config.tag}</Text>
+                    <View style={styles.asymmetricTagLayer}>
+                        <Ionicons name={config.icon} size={14} color={colors.accentText} />
+                        <Text style={styles.tagText}>{config.tag}</Text>
                     </View>
                 </View>
 
@@ -150,7 +148,6 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
                     <Text
                         style={[
                             styles.statusPreview,
-                            { color: colors.textPrimary },
                             item.type === 'mention' && { fontWeight: '600', fontSize: 16 }
                         ]}
                         numberOfLines={3}
@@ -162,8 +159,6 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
                     <FollowBack
                         accountId={item.account.id}
                         relationship={relationships.get(item.account.id)}
-                        color={config.color}
-                        textColor={colors.textSecondary}
                     />
                 )}
             </TouchableOpacity>
@@ -183,7 +178,7 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
         if (isLoading) return null;
         return (
             <View flex center padding-40 style={styles.emptyContainer}>
-                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No notifications yet!</Text>
+                <Text style={styles.emptyText}>No notifications yet!</Text>
             </View>
         );
     };
