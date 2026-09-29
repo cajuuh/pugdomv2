@@ -676,6 +676,16 @@
   dependencies:
     "@types/hammerjs" "^2.0.36"
 
+"@expo-google-fonts/fraunces@^0.4.1":
+  version "0.4.1"
+  resolved "https://registry.yarnpkg.com/@expo-google-fonts/fraunces/-/fraunces-0.4.1.tgz#1dd641c322436dccb7cc156e07e247d146cd000c"
+  integrity sha512-gYc9P92ObyWvz1rWPOeWSvVKyBFIuA8hgOdhvo4DSiPBaWLbFA6v8uLIEIBwW+0oWTlXbBzjeBReHQI2H7UNjQ==
+
+"@expo-google-fonts/nunito@^0.4.2":
+  version "0.4.2"
+  resolved "https://registry.yarnpkg.com/@expo-google-fonts/nunito/-/nunito-0.4.2.tgz#9ce15e924dc7fc29a2257afb7f78a3f0e7d0d39f"
+  integrity sha512-1KCWphw/I2ugqfs9iRHUCkPTnomNgGPtF4AvqVquoEKxr0EL+mcLNLgeixsslbaSFevRR6/KJAE3sc8g0VaY0Q==
+
 "@expo/cli@^56.1.19":
   version "56.1.19"
   resolved "https://registry.npmjs.org/@expo/cli/-/cli-56.1.19.tgz"

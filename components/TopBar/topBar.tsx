@@ -16,7 +16,7 @@ interface TopBarProps {
 
 export const TopBar: React.FC<TopBarProps> = ({ user, onAvatarPress, onSettingsPress, onLogoutPress }) => {
     const [menuVisible, setMenuVisible] = useState(false);
-    const { colors } = useTheme();
+    const { colors, type } = useTheme();
 
     return (
         <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.cardBackground, borderBottomColor: colors.borderColor }]}>
@@ -30,7 +30,7 @@ export const TopBar: React.FC<TopBarProps> = ({ user, onAvatarPress, onSettingsP
                 </TouchableOpacity>
 
                 <View style={styles.titleContainer}>
-                    <Text style={[styles.titleText, { color: colors.accentColor }]}>pugdom</Text>
+                    <Text style={[type.sheetTitle, { color: colors.accentText }]}>pugdom</Text>
                 </View>
 
                 <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuButton} activeOpacity={0.7}>
