@@ -27,7 +27,10 @@ describe('App', () => {
     it('boots to the login screen when no account is saved', async () => {
         await render(<App />);
 
-        expect(await screen.findByText('Welcome to Pugdom')).toBeTruthy();
+       expect(await screen.findByText('pugdom')).toBeTruthy();
+expect(
+    screen.getByText('A friendly home for your federated social conversations.')
+).toBeTruthy();
         expect(screen.getByPlaceholderText('e.g. mastodon.social')).toBeTruthy();
         // Nothing should be fetched before anyone logs in
         expect(queryClient.getQueryCache().getAll().filter(query => query.state.fetchStatus !== 'idle')).toHaveLength(0);
