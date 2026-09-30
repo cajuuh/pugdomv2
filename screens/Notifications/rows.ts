@@ -1,16 +1,16 @@
-import { Notification } from '../../services/mastodon/types';
+import { NotificationGroup } from '../../services/mastodon/types';
 
 // One entry in the list: a section label, or a notification row inside that section's inset group
 export type ListItem =
     | { kind: 'section'; key: string; label: string }
-    | { kind: 'row'; key: string; notification: Notification; first: boolean; last: boolean };
+    | { kind: 'row'; key: string; group: NotificationGroup; first: boolean; last: boolean };
 
 const isSameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
 
-// Splits notifications (newest first) into "Today" and "Earlier" groups
-export const buildListItems = (notifications: Notification[], now = new Date()): ListItem[] => {
-    const today = notifications.filter(n => isSameDay(new Date(n.created_at), now));
-    const earlier = notifications.filter(n => !isSameDay(new Date(n.created_at), now));
+// Splits rows (newest first) into "Today" and "Earlier" sections
+export const buildListItems = (groups: NotificationGroup[], now = new Date()): ListItem[] => {
+    const today = groups.filter(g => isSameDay(new Date(g.created_at), now));
+    const earlier = groups.filter(g => !isSameDay(new Date(g.created_at), now));
 
     return [
         { label: 'Today', items: today },
@@ -20,10 +20,10 @@ export const buildListItems = (notifications: Notification[], now = new Date()):
             ? []
             : [
                 { kind: 'section', key: `section-${label}`, label },
-                ...items.map((notification, index): ListItem => ({
+                ...items.map((group, index): ListItem => ({
                     kind: 'row',
-                    key: notification.id,
-                    notification,
+                    key: group.key,
+                    group,
                     first: index === 0,
                     last: index === items.length - 1,
                 })),
@@ -52,6 +52,14 @@ export const plainText = (html?: string) =>
         .replace(/<[^>]*>/g, '')
         .replace(/&(amp|lt|gt|quot|apos|#39|nbsp);/g, (_, entity: string) => ENTITIES[entity])
         .trim();
+
+// "Ana", "Ana and Joon", "Ana, Joon and 4 others": who a row is from, given the names it can show and how many there are
+export const actorsText = (names: string[], count: number) => {
+    const shown = names.slice(0, count > 2 ? 2 : count);
+    const others = count - shown.length;
+    if (others > 0) return `${shown.join(', ')} and ${others} ${others === 1 ? 'other' : 'others'}`;
+    return shown.length === 2 ? `${shown[0]} and ${shown[1]}` : shown[0] ?? '';
+};
 
 // Replies start with the handles they're addressed to; drop them unless that's all the post says
 export const withoutLeadingMentions = (text: string) => text.replace(/^(?:@[\w.-]+(?:@[\w.-]+)?\s+)+/, '') || text;

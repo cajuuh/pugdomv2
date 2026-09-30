@@ -109,3 +109,39 @@ export interface Notification {
     account: Account;
     status?: Status;
 }
+
+// One row on the notifications screen: a single notification, or several favourites / boosts of the same post
+export interface NotificationGroup {
+    key: string;
+    type: Notification['type'];
+    // Most recent first; a sample when the group is large
+    accounts: Account[];
+    // How many notifications the group stands for
+    count: number;
+    status?: Status;
+    created_at: string;
+    // Newest notification id in the group, for read markers
+    newestId: string;
+    // Built on the client from v1 pages, so the same post on a later page adds to it
+    partial?: boolean;
+}
+
+// GET /api/v2/notifications (Mastodon 4.3+)
+export interface NotificationGroupV2 {
+    group_key: string;
+    notifications_count: number;
+    type: Notification['type'];
+    most_recent_notification_id: string;
+    page_min_id?: string;
+    page_max_id?: string;
+    latest_page_notification_at?: string;
+    sample_account_ids: string[];
+    status_id?: string | null;
+}
+
+export interface GroupedNotificationsResponse {
+    accounts: Account[];
+    statuses: Status[];
+    notification_groups: NotificationGroupV2[];
+}
+

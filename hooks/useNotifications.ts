@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { fetchNotifications } from '../services/mastodon/notifications';
+import { fetchNotificationGroups, NotificationGroupsPage } from '../services/mastodon/notifications';
 import { Notification } from '../services/mastodon/types';
 
 export type NotificationFilter = 'all' | 'mentions' | 'follows';
@@ -17,9 +17,8 @@ const FILTER_TYPES: Record<NotificationFilter, Notification['type'][]> = {
 export const useNotifications = (filter: NotificationFilter) => {
     return useInfiniteQuery({
         queryKey: ['notifications', filter],
-        queryFn: ({ pageParam }) => fetchNotifications(pageParam, FILTER_TYPES[filter]),
+        queryFn: ({ pageParam }) => fetchNotificationGroups(pageParam, FILTER_TYPES[filter]),
         initialPageParam: undefined as string | undefined,
-        getNextPageParam: (lastPage: Notification[]) =>
-            lastPage.length > 0 ? lastPage[lastPage.length - 1].id : undefined,
+        getNextPageParam: (lastPage: NotificationGroupsPage) => lastPage.nextMaxId,
     });
 };

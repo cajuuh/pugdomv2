@@ -24,6 +24,16 @@ export const initialsOf = (name: string) =>
 
 const BADGE_SIZE = 22;
 
+// Type glyph in an accent circle, pinned to the bottom-right of the avatar (or avatar stack) it sits in
+export const AvatarBadge: React.FC<{ icon: React.ComponentProps<typeof Ionicons>['name'] }> = ({ icon }) => {
+    const { colors } = useTheme();
+    return (
+        <View testID="avatar-badge" style={[styles.badge, { backgroundColor: colors.accentColor, borderColor: colors.cardBackground }]}>
+            <Ionicons name={icon} size={12} color={colors.buttonTextColor} />
+        </View>
+    );
+};
+
 export const Avatar: React.FC<AvatarProps> = ({ name, uri, size = 42, badge, ring = false }) => {
     const { colors, type } = useTheme();
     const [failedUri, setFailedUri] = useState<string | null>(null);
@@ -42,14 +52,7 @@ export const Avatar: React.FC<AvatarProps> = ({ name, uri, size = 42, badge, rin
                 </View>
             )}
             {ring && <View pointerEvents="none" style={[StyleSheet.absoluteFill, circle, styles.ring, { borderColor: colors.accentColor }]} />}
-            {badge && (
-                <View
-                    testID="avatar-badge"
-                    style={[styles.badge, { backgroundColor: colors.accentColor, borderColor: colors.cardBackground }]}
-                >
-                    <Ionicons name={badge} size={12} color={colors.buttonTextColor} />
-                </View>
-            )}
+            {badge && <AvatarBadge icon={badge} />}
         </View>
     );
 };
