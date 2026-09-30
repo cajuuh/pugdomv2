@@ -1,7 +1,13 @@
 import React from 'react';
 import { cleanup, render, screen } from '@testing-library/react-native';
+import * as SplashScreen from 'expo-splash-screen';
 import App from '../App';
 import { queryClient } from '../services/queryClient';
+
+jest.mock('expo-splash-screen', () => ({
+    preventAutoHideAsync: jest.fn(async () => true),
+    hideAsync: jest.fn(async () => {}),
+}));
 
 // Fresh install: nothing stored yet
 jest.mock('../services/storage', () => ({
@@ -31,5 +37,14 @@ describe('App', () => {
         expect(screen.getByPlaceholderText('e.g. mastodon.social')).toBeTruthy();
         // Nothing should be fetched before anyone logs in
         expect(queryClient.getQueryCache().getAll().filter(query => query.state.fetchStatus !== 'idle')).toHaveLength(0);
+    });
+
+    it('holds the splash until the app is ready, then hides it', async () => {
+        expect(SplashScreen.preventAutoHideAsync).toHaveBeenCalled();
+
+        await render(<App />);
+        await screen.findByText('Welcome to Pugdom');
+
+        expect(SplashScreen.hideAsync).toHaveBeenCalled();
     });
 });

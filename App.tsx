@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import * as SplashScreen from 'expo-splash-screen';
 import { StyleSheet, ActivityIndicator, DeviceEventEmitter, TouchableOpacity, Platform, LogBox } from 'react-native';
 
 // react-native-ui-lib's View still imports React Native's deprecated SafeAreaView; the app itself
@@ -26,6 +27,9 @@ import Settings from './screens/Settings/settings';
 import Thread from './screens/Thread/thread';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './services/queryClient';
+
+// Keep the pug splash up until the fonts and the saved account are loaded
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function NavigationRoot() {
   const { user, loading, logout, isAddingAccount, setAddingAccount } = useAuth();
@@ -54,9 +58,16 @@ function NavigationRoot() {
   };
 
   const statusBarStyle = isDark ? 'light' : 'dark';
+  const ready = !loading && fontsReady;
 
-  // No splash-screen module in the native build, so the themed loader covers font loading too
-  if (loading || !fontsReady) {
+  useEffect(() => {
+    if (ready) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [ready]);
+
+  // Hidden behind the splash; only shows if the splash is dismissed early
+  if (!ready) {
     return (
       <View flex center style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size='large' color={colors.accentColor} />
