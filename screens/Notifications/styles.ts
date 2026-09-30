@@ -7,6 +7,7 @@ const ROW_PADDING = space.lg;
 const AVATAR_SIZE = 44;
 const ROW_GAP = space.md;
 const FAVOURITE_SIZE = 34;
+const STACKED_AVATAR = 30;
 
 export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     container: {
@@ -101,6 +102,26 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     rowPressed: {
         backgroundColor: colors.inputBackground,
     },
+    stack44: {
+        width: AVATAR_SIZE,
+        height: AVATAR_SIZE,
+    },
+    // Each stacked avatar gets a surface-colored ring so the overlap reads as two faces
+    stacked: {
+        position: 'absolute',
+        padding: 2,
+        margin: -2,
+        borderRadius: radii.pill,
+        backgroundColor: colors.cardBackground,
+    },
+    stackedBack: {
+        left: 0,
+        top: 0,
+    },
+    stackedFront: {
+        right: 0,
+        bottom: 0,
+    },
     content: {
         flex: 1,
         minWidth: 0,
@@ -190,4 +211,4 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     },
 });
 
-export { FAVOURITE_SIZE };
+export { FAVOURITE_SIZE, STACKED_AVATAR };

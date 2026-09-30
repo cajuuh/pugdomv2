@@ -1,4 +1,4 @@
-export { Avatar } from './avatar';
+export { Avatar, AvatarBadge } from './avatar';
 export { Card } from './card';
 export { IconButton } from './iconButton';
 export { PillButton } from './pillButton';

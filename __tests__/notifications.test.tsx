@@ -4,14 +4,26 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
 import Notifications from '../screens/Notifications/notifications';
-import { fetchNotifications } from '../services/mastodon/notifications';
+import { groupsFromNotifications } from '../services/mastodon/notifications';
 import { followAccount, getRelationships } from '../services/mastodon/accounts';
 import { favouriteStatus } from '../services/mastodon/statuses';
 import { markNotificationsRead } from '../services/mastodon/markers';
 import { Account, Notification } from '../services/mastodon/types';
-import { buildListItems, notificationTime, plainText, withoutLeadingMentions } from '../screens/Notifications/rows';
+import { actorsText, buildListItems, notificationTime, plainText, withoutLeadingMentions } from '../screens/Notifications/rows';
 
-jest.mock('../services/mastodon/notifications', () => ({ fetchNotifications: jest.fn() }));
+// Tests give v1-shaped lists; the screen gets them as rows, grouped the way the v1 fallback groups them.
+// The v2 shape is covered in notificationGroups.test.ts.
+const mockV1 = jest.fn();
+jest.mock('../services/mastodon/notifications', () => {
+    const actual = jest.requireActual('../services/mastodon/notifications');
+    return {
+        ...actual,
+        fetchNotificationGroups: jest.fn(async (maxId?: string, types?: string[]) => ({
+            groups: actual.groupsFromNotifications(await mockV1(maxId, types)),
+            nextMaxId: undefined,
+        })),
+    };
+});
 jest.mock('../services/mastodon/accounts', () => ({ followAccount: jest.fn(), getRelationships: jest.fn() }));
 jest.mock('../services/mastodon/statuses', () => ({ favouriteStatus: jest.fn(), unfavouriteStatus: jest.fn() }));
 jest.mock('../services/mastodon/markers', () => ({ markNotificationsRead: jest.fn() }));
@@ -23,7 +35,7 @@ jest.mock('../services/composeContext', () => ({
     useCompose: () => ({ openCompose: mockOpenCompose }),
 }));
 
-const mockedFetch = fetchNotifications as jest.MockedFunction<typeof fetchNotifications>;
+const mockedFetch = mockV1;
 const mockedFollow = followAccount as jest.MockedFunction<typeof followAccount>;
 const mockedRelationships = getRelationships as jest.MockedFunction<typeof getRelationships>;
 const mockedFavourite = favouriteStatus as jest.MockedFunction<typeof favouriteStatus>;
@@ -242,11 +254,58 @@ describe('Notifications', () => {
         expect(mockedMarkRead).toHaveBeenCalledWith('110');
         expect(screen.getByRole('button', { name: 'Mark all as read' })).toBeSelected();
     });
+
+    describe('grouped rows', () => {
+        const favouriteOf = (id: string, from: Account) => ({
+            ...notification(id, 'favourite', from),
+            status: { id: 'mine', content: '<p>which coat?</p>', spoiler_text: '', emojis: [] } as any,
+        });
+
+        it('folds favourites of the same post into one row', async () => {
+            const onStatusPress = jest.fn();
+            mockedFetch.mockResolvedValue([
+                favouriteOf('3', account('a', 'alice')),
+                favouriteOf('2', account('b', 'bob')),
+                favouriteOf('1', account('c', 'carol')),
+            ]);
+            await render(
+                <QueryClientProvider client={queryClient}>
+                    <Notifications onStatusPress={onStatusPress} />
+                </QueryClientProvider>
+            );
+
+            const row = await screen.findByRole('button', { name: /^alice, bob and 1 other favourited your post/ });
+            expect(screen.getAllByText(/favourited your post/)).toHaveLength(1);
+            expect(screen.getByTestId('avatar-stack')).toBeTruthy();
+
+            await fireEvent.press(row);
+            expect(onStatusPress).toHaveBeenCalledWith('mine');
+        });
+
+        it('names both people when there are two', async () => {
+            mockedFetch.mockResolvedValue([favouriteOf('2', account('a', 'alice')), favouriteOf('1', account('b', 'bob'))]);
+            await renderScreen();
+
+            expect(await screen.findByLabelText(/^alice and bob favourited your post/)).toBeTruthy();
+        });
+
+        it('keeps follows as separate rows with their own Follow back', async () => {
+            mockedFetch.mockResolvedValue([
+                notification('2', 'follow', account('a', 'alice')),
+                notification('1', 'follow', account('b', 'bob')),
+            ]);
+            mockedRelationships.mockResolvedValue([relationship('a', false), relationship('b', false)]);
+            await renderScreen();
+
+            expect(await screen.findAllByText('Follow back')).toHaveLength(2);
+            expect(screen.queryByTestId('avatar-stack')).toBeNull();
+        });
+    });
 });
 
 describe('notification rows', () => {
     const now = new Date(2026, 8, 29, 15, 0);
-    const at = (date: Date) => notification(String(date.getTime()), 'favourite', account('a', 'alice'), date);
+    const at = (date: Date) => groupsFromNotifications([notification(String(date.getTime()), 'favourite', account('a', 'alice'), date)])[0];
 
     it('splits into Today and Earlier and marks each group\'s first and last row', () => {
         const items = buildListItems([at(new Date(2026, 8, 29, 14)), at(new Date(2026, 8, 29, 9)), at(new Date(2026, 8, 28, 23))], now);
@@ -273,6 +332,15 @@ describe('notification rows', () => {
 
     it('turns post HTML into plain text with its line breaks', () => {
         expect(plainText('<p>Tom &amp; Jerry&#39;s</p><p>line<br>break</p>')).toBe("Tom & Jerry's\n\nline\nbreak");
+    });
+
+    it.each([
+        [['Ana'], 1, 'Ana'],
+        [['Ana', 'Joon'], 2, 'Ana and Joon'],
+        [['Ana', 'Joon', 'Rui'], 3, 'Ana, Joon and 1 other'],
+        [['Ana', 'Joon', 'Rui'], 6, 'Ana, Joon and 4 others'],
+    ])('names %j (%i in all) as "%s"', (names, count, expected) => {
+        expect(actorsText(names, count)).toBe(expected);
     });
 
     it('drops the handles a reply starts with, unless that is the whole post', () => {
