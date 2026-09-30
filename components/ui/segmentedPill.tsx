@@ -12,8 +12,8 @@ interface SegmentedPillProps<T extends string> {
     options: SegmentOption<T>[];
     value: T;
     onChange: (value: T) => void;
-    // "segmented" switches views (feeds); "chips" filters a list
-    variant?: 'segmented' | 'chips';
+    // "segmented" switches views (feeds); "chips" filters a list; "underline" is tabs under a header
+    variant?: 'segmented' | 'chips' | 'underline';
 }
 
 const CHIP_HEIGHT = 34;
@@ -41,6 +41,29 @@ export function SegmentedPill<T extends string>({ options, value, onChange, vari
                             ]}
                         >
                             <Text style={[type.name, styles.chipLabel, { color: selected ? colors.buttonTextColor : colors.textSecondary }]}>
+                                {option.label}
+                            </Text>
+                        </Pressable>
+                    );
+                })}
+            </View>
+        );
+    }
+
+    if (variant === 'underline') {
+        return (
+            <View accessibilityRole="tablist" style={[styles.underlineRow, { borderBottomColor: colors.borderColor }]}>
+                {options.map(option => {
+                    const selected = option.value === value;
+                    return (
+                        <Pressable
+                            key={option.value}
+                            onPress={() => onChange(option.value)}
+                            accessibilityRole="tab"
+                            accessibilityState={{ selected }}
+                            style={[styles.underlineTab, { borderBottomColor: selected ? colors.accentColor : 'transparent' }]}
+                        >
+                            <Text style={[type.name, styles.underlineLabel, { color: selected ? colors.textPrimary : colors.textMuted }]}>
                                 {option.label}
                             </Text>
                         </Pressable>
@@ -113,5 +136,19 @@ const styles = StyleSheet.create({
     },
     chipLabel: {
         fontSize: 13,
+    },
+    underlineRow: {
+        flexDirection: 'row',
+        gap: space.xl,
+        paddingHorizontal: 20,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+    },
+    underlineTab: {
+        minHeight: 44,
+        justifyContent: 'center',
+        borderBottomWidth: 3,
+    },
+    underlineLabel: {
+        fontSize: 15,
     },
 });

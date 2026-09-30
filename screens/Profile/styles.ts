@@ -1,130 +1,126 @@
-import { StyleSheet } from "react-native";
+import { StyleSheet } from 'react-native';
 import { ThemeColors } from '../../services/themeContext';
-import { TAB_BAR_CLEARANCE } from "../../components/TabBar/styles";
+import { TAB_BAR_CLEARANCE } from '../../components/TabBar/styles';
+import { radii, space } from '../../services/theme/shape';
+
+export const AVATAR_SIZE = 88;
+export const SHARE_SIZE = 38;
+const BANNER_HEIGHT = 168;
+const RING = 5;
 
 export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.background
+        backgroundColor: colors.background,
     },
-    contentContainer: {
+    listContent: {
         paddingBottom: TAB_BAR_CLEARANCE,
     },
-    headerBannerContainer: {
-        width: '100%',
-        height: 160, //magic numbers for now
-        backgroundColor: colors.cardBackground
+    header: {
+        marginBottom: space.md,
     },
-    headerBanner: {
+    banner: {
+        height: BANNER_HEIGHT,
+        overflow: 'hidden',
+        backgroundColor: colors.accentSoft,
+    },
+    bannerImage: {
         width: '100%',
         height: '100%',
         resizeMode: 'cover',
     },
-    gradientFallback: {
-        backgroundColor: colors.accentColor
+    // A large, faint pug in the coat's colors when there's no header image
+    bannerMark: {
+        position: 'absolute',
+        right: -36,
+        top: 10,
+        opacity: 0.35,
     },
-    profileInfoContainer: {
-        paddingHorizontal: 20,
-        alignItems: 'center'
-    },
-    avatarWrapper: {
-        marginTop: -45,
-        marginBottom: 16
-    },
-    avatarBorder: {
-        borderWidth: 4,
-        borderColor: colors.background,
-        borderRadius: 50
-    },
-    displayName: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: colors.textPrimary,
-        textAlign: 'center'
-    },
-    username: {
-        fontSize: 14,
-        color: colors.textSecondary,
-        marginTop: 4,
-        marginBottom: 24,
-        textAlign: 'center'
-    },
-    statsGrid: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        width: '100%',
-        marginBottom: 28,
-        gap: 12
-    },
-    statsCard: {
-        flex: 1,
+    bannerButton: {
+        position: 'absolute',
+        right: space.lg,
+        top: space.md,
+        borderRadius: radii.pill,
         backgroundColor: colors.cardBackground,
-        paddingVertical: 16,
+        shadowColor: colors.shadowColor,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.12,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    info: {
+        paddingHorizontal: 20,
+        gap: space.md,
+    },
+    avatarRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-end',
+        justifyContent: 'space-between',
+        marginTop: -(AVATAR_SIZE / 2),
+    },
+    // The ground color around the avatar cuts it out of the banner
+    avatarRing: {
+        padding: RING,
+        margin: -RING,
+        borderRadius: radii.pill,
+        backgroundColor: colors.background,
+    },
+    actions: {
+        flexDirection: 'row',
         alignItems: 'center',
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: colors.borderColor
+        gap: space.sm,
+        paddingBottom: space.xs,
+    },
+    share: {
+        width: SHARE_SIZE,
+        height: SHARE_SIZE,
+        borderRadius: SHARE_SIZE / 2,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: colors.borderColor,
+        backgroundColor: colors.cardBackground,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    names: {
+        gap: 2,
+    },
+    name: {
+        color: colors.textPrimary,
+        fontSize: 26,
+        lineHeight: 32,
+    },
+    handle: {
+        color: colors.textMuted,
+        fontSize: 14,
+        lineHeight: 19,
+    },
+    stats: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        columnGap: 18,
+        rowGap: space.xs,
+    },
+    stat: {
+        color: colors.textMuted,
+        fontSize: 14,
+        lineHeight: 19,
     },
     statNumber: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: colors.textPrimary
+        color: colors.textPrimary,
+        fontSize: 14,
+        lineHeight: 19,
     },
-    statLabel: {
-        fontSize: 12,
-        color: colors.textSecondary,
-        marginTop: 4
+    tabs: {
+        marginTop: 18,
     },
-    bioContainer: {
-        width: '100%',
-        backgroundColor: colors.cardBackground,
-        padding: 20,
-        borderRadius: 16,
-        marginBottom: 24,
-        borderWidth: 1,
-        borderColor: colors.borderColor
-    },
-    bioTitle: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: colors.accentText,
-        marginBottom: 8,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5
-    },
-    bioText: {
-        fontSize: 15,
-        lineHeight: 22,
-        color: colors.textPrimary
-    },
-    actionButtonsContainer: {
-        flexDirection: 'row',
-        width: '100%',
-        justifyContent: 'space-between',
-        gap: 12,
-        marginBottom: 20
-    },
-    actionButton: {
-        flex: 1,
-        height: 48,
-        borderRadius: 12
-    },
-    outlineButton: {
-        backgroundColor: 'transparent'
-    },
-    buttonLabel: {
-        fontSize: 15,
-        fontWeight: '600'
-    },
-    logoutButton: {
-        marginTop: 12,
-        height: 44,
-        flexDirection: 'row',
+    empty: {
         alignItems: 'center',
-        justifyContent: 'center'
+        padding: 40,
     },
-    logoutLabel: {
-        fontSize: 15,
-        fontWeight: '600'
-    }
-})
+    emptyText: {
+        color: colors.textSecondary,
+    },
+    footer: {
+        paddingVertical: 20,
+    },
+});

@@ -92,7 +92,7 @@ function NavigationRoot() {
           {activeTab === 'home' && <Timeline onStatusPress={openThread} />}
           {activeTab === 'search' && <Search />}
           {activeTab === 'notifications' && <Notifications onStatusPress={openThread} />}
-          {activeTab === 'profile' && <Profile />}
+          {activeTab === 'profile' && <Profile onStatusPress={openThread} onSettingsPress={() => setCurrentScreen('settings')} />}
         </View>
 
         {/* Custom Tab Bar */}

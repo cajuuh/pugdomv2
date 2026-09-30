@@ -6,9 +6,14 @@ export async function getCurrentAccount(): Promise<Account> {
     return response.data;
 }
 
-// get toots
-export async function getAccountStatuses(accountId: string, maxId?: string): Promise<Status[]> {
-    const response = await apiClient.get<Status[]>(`/accounts/${accountId}/statuses`, { params: { max_id: maxId } });
+export interface AccountStatusesFilter {
+    exclude_replies?: boolean;
+    only_media?: boolean;
+}
+
+// An account's posts, newest first
+export async function getAccountStatuses(accountId: string, maxId?: string, filter: AccountStatusesFilter = {}): Promise<Status[]> {
+    const response = await apiClient.get<Status[]>(`/accounts/${accountId}/statuses`, { params: { max_id: maxId, ...filter } });
     return response.data;
 }
 

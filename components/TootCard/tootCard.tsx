@@ -1,125 +1,21 @@
 import React, { useRef } from 'react';
 import { Alert, Image, Platform, Pressable, Share, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import * as WebBrowser from 'expo-web-browser';
-import RenderHtml, { HTMLElementModel, HTMLContentModel, defaultSystemFonts } from 'react-native-render-html';
 import { BlurView } from 'expo-blur';
 import { useRecyclingState } from '@shopify/flash-list';
-import { Status, CustomEmoji, Attachment, PreviewCard } from '../../services/mastodon/types';
+import { Status, Attachment, PreviewCard } from '../../services/mastodon/types';
+import { StatusHtmlContent, openLink } from './htmlContent';
 import { useSettings } from '../../services/settingsContext';
 import { useTheme } from '../../services/themeContext';
 import { useCompose } from '../../services/composeContext';
 import { CARD_MARGIN, CARD_PADDING, THREAD_AVATAR_GAP, makeStyles } from './styles';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
-import { fontFamilies } from '../../services/theme/typography';
 import { favouriteStatus, unfavouriteStatus, reblogStatus, unreblogStatus } from '../../services/mastodon/statuses';
 import { Poll } from '../Poll/poll';
 import { Avatar, Card, PillButton } from '../ui';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
 import { useUpdateCachedStatus } from '../../hooks/useUpdateCachedStatus';
 import { useMediaViewer } from '../MediaViewer/mediaViewer';
-
-const customHTMLElementModels = {
-    emoji: HTMLElementModel.fromCustomModel({
-        tagName: 'emoji',
-        mixedUAStyles: {
-            width: 16,
-            height: 16,
-        },
-        contentModel: HTMLContentModel.textual
-    })
-};
-
-const renderers = {
-    emoji: ({ tnode }: any) => {
-        return (
-            <Image
-                source={{ uri: tnode.attributes.src }}
-                style={{ width: 16, height: 16, resizeMode: 'contain', marginHorizontal: 2 }}
-            />
-        );
-    }
-};
-
-// RenderHtml ignores font families it wasn't told about
-const systemFonts = [...defaultSystemFonts, ...Object.values(fontFamilies)];
-
-const StatusHtmlContent = React.memo(({ content, emojis, colors, bodyFont, compactMode, width, onPressMention, onPressHashtag, onPressLink }: any) => {
-    const renderersProps = React.useMemo(() => ({
-        a: {
-            onPress: (event: any, href: string, htmlAttribs: any) => {
-                const className = htmlAttribs.class || '';
-                if (className.includes('mention')) {
-                    const acct = href.split('/').pop()?.replace(/^@/, '');
-                    if (onPressMention && acct) onPressMention(acct);
-                    else onPressLink(href);
-                } else if (className.includes('hashtag')) {
-                    const tag = href.split('/').pop()?.replace(/^#/, '');
-                    if (onPressHashtag && tag) onPressHashtag(tag);
-                    else onPressLink(href);
-                } else {
-                    onPressLink(href);
-                }
-            }
-        }
-    }), [onPressMention, onPressHashtag, onPressLink]);
-
-    const tagsStyles = React.useMemo(() => ({
-        body: {
-            ...bodyFont,
-            color: colors.textPrimary,
-            fontSize: compactMode ? 13 : 15.5,
-            lineHeight: compactMode ? 18 : 22.5,
-        },
-        a: {
-            color: colors.accentText,
-            textDecorationLine: 'none' as const,
-        },
-        p: {
-            marginTop: 0,
-            marginBottom: 10,
-        }
-    }), [colors, bodyFont, compactMode]);
-
-    const processedHtml = React.useMemo(() => {
-        let html = content || '';
-        html = html.replace(/<span class="invisible">https?:\/\/<\/span>/gi, '');
-        html = html.replace(/<span class="invisible">.*?<\/span>/gi, (match: string) => {
-            const inner = match.replace(/<[^>]*>/g, '');
-            if (inner === '' || inner === '/') return inner;
-            return '...';
-        });
-        if (emojis && emojis.length > 0) {
-            emojis.forEach((emoji: CustomEmoji) => {
-                const regex = new RegExp(`:${emoji.shortcode}:`, 'g');
-                html = html.replace(regex, `<emoji src="${emoji.url}" />`);
-            });
-        }
-        return html;
-    }, [content, emojis]);
-
-    return (
-        <RenderHtml
-            contentWidth={width}
-            source={{ html: processedHtml }}
-            tagsStyles={tagsStyles}
-            systemFonts={systemFonts}
-            renderersProps={renderersProps}
-            customHTMLElementModels={customHTMLElementModels}
-            renderers={renderers}
-        />
-    );
-});
-
-// Module-level so it's the same function on every render; a new one would defeat StatusHtmlContent's memo
-// and make RenderHtml rebuild the post's tree on every card re-render
-const openLink = async (url: string) => {
-    try {
-        await WebBrowser.openBrowserAsync(url);
-    } catch (error) {
-        console.error('Failed to open link:', error);
-    }
-};
 
 const getRelativeTime = (dateString: string) => {
     const now = new Date();
