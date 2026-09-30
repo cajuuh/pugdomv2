@@ -1,4 +1,4 @@
-import { buildColors, COATS, hslToHex, isCoatKey, pugMarkColors, ThemeColors } from '../services/theme/coats';
+import { buildColors, COATS, hslToHex, isCoatKey, mixHex, pugMarkColors, ThemeColors } from '../services/theme/coats';
 
 // WCAG 2.x relative luminance and contrast ratio
 const luminance = (hex: string) => {
@@ -86,13 +86,29 @@ describe('coat palettes', () => {
         expect(buildColors('corgi', false, true)).toEqual(buildColors('apricot', false, true));
     });
 
-    it('draws the PugMark in the coat accent, with a mask that shows on a black pug', () => {
-        expect(pugMarkColors('fawn', false)).toEqual({ face: '#E2B45C', mask: '#2A1D15' });
-        expect(pugMarkColors('fawn', true).face).toBe('#E8BE6A');
-        for (const dark of [false, true]) {
-            const { face, mask } = pugMarkColors('black', dark);
-            expect(contrast(face, mask)).toBeGreaterThan(1.5);
+    it('draws the PugMark face as a gradient into the coat accent', () => {
+        expect(pugMarkColors('fawn', false).faceBottom).toBe('#E2B45C');
+        expect(pugMarkColors('fawn', true).faceBottom).toBe('#E8BE6A');
+        expect(pugMarkColors('apricot', false).faceTop).not.toBe(pugMarkColors('apricot', false).faceBottom);
+    });
+
+    it("keeps the PugMark's ears visible on the background and its features visible on the face", () => {
+        for (const coat of COATS) {
+            for (const dark of [false, true]) {
+                const mark = pugMarkColors(coat.key, dark);
+                const { background } = buildColors(coat.key, dark, true);
+                const label = `${coat.key} ${dark ? 'dark' : 'light'}`;
+                expect({ label, ears: contrast(mark.maskBottom, background) >= 2 }).toEqual({ label, ears: true });
+                expect({ label, mask: contrast(mark.maskTop, mark.faceBottom) >= 1.5 }).toEqual({ label, mask: true });
+                expect({ label, wrinkle: contrast(mark.wrinkle, mark.faceTop) >= 1.5 }).toEqual({ label, wrinkle: true });
+            }
         }
+    });
+
+    it('mixes hex colours', () => {
+        expect(mixHex('#000000', '#FFFFFF', 0)).toBe('#000000');
+        expect(mixHex('#000000', '#FFFFFF', 0.5)).toBe('#808080');
+        expect(mixHex('#E8995A', '#FFEBB0', 1)).toBe('#FFEBB0');
     });
 
     it('converts HSL to hex', () => {

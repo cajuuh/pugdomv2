@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import { Avatar, Card, IconButton, PillButton, SectionLabel, SegmentedPill, ThemedSwitch, Well } from '../components/ui';
+import { Avatar, Card, IconButton, PillButton, PugMark, SectionLabel, SegmentedPill, ThemedSwitch, Well } from '../components/ui';
 import { initialsOf } from '../components/ui/avatar';
 import { mockTheme } from '../testUtils/theme';
 
@@ -144,5 +144,23 @@ describe('ThemedSwitch and SectionLabel', () => {
         await render(<SectionLabel>Appearance</SectionLabel>);
         const label = screen.getByRole('header', { name: 'Appearance' });
         expect(StyleSheet.flatten(label.props.style)).toMatchObject({ color: colors.textMuted, textTransform: 'uppercase' });
+    });
+});
+
+describe('PugMark', () => {
+    const hasWrinkle = () => JSON.stringify(screen.toJSON()).includes('q 1.45');
+
+    it('draws the forehead wrinkle only when there is room for it', async () => {
+        await render(<PugMark coat="apricot" size={36} />);
+        expect(hasWrinkle()).toBe(true);
+
+        await render(<PugMark coat="apricot" size={22} />);
+        expect(hasWrinkle()).toBe(false);
+    });
+
+    it('gives each mark its own gradient ids', async () => {
+        await render(<><PugMark coat="apricot" /><PugMark coat="plum" /></>);
+        const ids = JSON.stringify(screen.toJSON()).match(/"name":"pug[a-zA-Z0-9]+face"/g) ?? [];
+        expect(new Set(ids).size).toBe(2);
     });
 });

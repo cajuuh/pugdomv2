@@ -72,17 +72,49 @@ export const COATS: readonly Coat[] = [
 
 export const DEFAULT_COAT: CoatKey = 'apricot';
 
-// Ears, muzzle and eyes of the PugMark swatch; a black pug's mask has to be lighter than its coat to show
-const PUG_MASK = '#2A1D15';
-const BLACK_PUG_MASK = { light: '#8C7F75', dark: '#2A2320' };
+// PugMark colours. The face is a gradient from a creamy top to the coat accent; ears, eye patches and muzzle are a
+// warm brown that stays lighter than the dark ground so the ears don't vanish in dark mode
+const FACE_HIGHLIGHT = '#FFEBB0';
+const PUG_MASK = { light: ['#6E5650', '#4B3531'], dark: ['#8E6F65', '#6A4D45'] } as const;
+const PUG_INK = '#2B1B18';
+// A black pug's face is darker than the usual mask, so its mask is a lighter grey-brown
+const BLACK_PUG = { faceHighlight: '#8C7F75', mask: ['#A39790', '#7E7169'], ink: '#1A1512' } as const;
 
-export const pugMarkColors = (coatKey: string, dark: boolean) => {
+export interface PugMarkColors {
+    faceTop: string;
+    faceBottom: string;
+    maskTop: string;
+    maskBottom: string;
+    // Eyes and nose
+    ink: string;
+    // Forehead wrinkle, drawn on the face
+    wrinkle: string;
+}
+
+export const pugMarkColors = (coatKey: string, dark: boolean): PugMarkColors => {
     const coat = getCoat(coatKey);
-    return {
-        face: (dark ? coat.dark : coat.light).accent,
-        mask: coat.key === 'black' ? BLACK_PUG_MASK[dark ? 'dark' : 'light'] : PUG_MASK,
-    };
+    const face = (dark ? coat.dark : coat.light).accent;
+    // In dark mode the black pug's accent is a light cream, so it draws like any other coat
+    if (coat.key === 'black' && !dark) {
+        return {
+            faceTop: mixHex(face, BLACK_PUG.faceHighlight, 0.25),
+            faceBottom: face,
+            maskTop: BLACK_PUG.mask[0],
+            maskBottom: BLACK_PUG.mask[1],
+            ink: BLACK_PUG.ink,
+            wrinkle: BLACK_PUG.mask[0],
+        };
+    }
+    const [maskTop, maskBottom] = PUG_MASK[dark ? 'dark' : 'light'];
+    return { faceTop: mixHex(face, FACE_HIGHLIGHT, 0.62), faceBottom: face, maskTop, maskBottom, ink: PUG_INK, wrinkle: PUG_INK };
 };
+
+// Blend two #RRGGBB colours; t = 0 gives `from`, 1 gives `to`
+export function mixHex(from: string, to: string, t: number): string {
+    const channels = (hex: string) => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+    const [a, b] = [channels(from), channels(to)];
+    return '#' + a.map((value, i) => Math.round(value + (b[i] - value) * t).toString(16).padStart(2, '0')).join('').toUpperCase();
+}
 
 // With the tint switched off, neutrals keep a trace of the hue so they don't look cold
 const UNTINTED_NEUTRAL_TINT = 0.12;
