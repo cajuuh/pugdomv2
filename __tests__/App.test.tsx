@@ -43,7 +43,7 @@ describe('App', () => {
         expect(SplashScreen.preventAutoHideAsync).toHaveBeenCalled();
 
         await render(<App />);
-        await screen.findByText('Welcome to Pugdom');
+        await screen.findByPlaceholderText('e.g. mastodon.social');
 
         expect(SplashScreen.hideAsync).toHaveBeenCalled();
     });
