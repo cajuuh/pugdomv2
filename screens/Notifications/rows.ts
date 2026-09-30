@@ -35,11 +35,21 @@ export const buildListItems = (groups: NotificationGroup[], now = new Date()): L
 export const notificationTime = (createdAt: string, now = new Date()) => {
     const created = new Date(createdAt);
     const minutes = Math.floor((now.getTime() - created.getTime()) / 60000);
+
     if (minutes < 1) return 'now';
     if (minutes < 60) return `${minutes}m`;
     if (minutes < 24 * 60) return `${Math.floor(minutes / 60)}h`;
-    if (minutes < 7 * 24 * 60) return created.toLocaleDateString(undefined, { weekday: 'short' });
-    return created.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+    if (minutes < 7 * 24 * 60) {
+        return created.toLocaleDateString('en-US', {
+            weekday: 'short',
+        });
+    }
+
+    return created.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+    });
 };
 
 const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", '#39': "'", nbsp: ' ' };
