@@ -1,15 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
-import { StyleSheet, ActivityIndicator, DeviceEventEmitter, TouchableOpacity, Platform, LogBox } from 'react-native';
+import { StyleSheet, ActivityIndicator, DeviceEventEmitter, TouchableOpacity, Platform, LogBox, View } from 'react-native';
 
-// react-native-ui-lib's View still imports React Native's deprecated SafeAreaView; the app itself
-// uses react-native-safe-area-context. Remove once ui-lib stops using it.
+// react-native-image-viewing's default header (the media viewer's close button) still uses React Native's
+// deprecated SafeAreaView; the app itself uses react-native-safe-area-context. Remove once that header is replaced.
 LogBox.ignoreLogs([
     "SafeAreaView has been deprecated and will be removed in a future release",
 ]);
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { View } from 'react-native-ui-lib';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './services/authContext';
 import { SettingsProvider } from './services/settingsContext';
@@ -69,7 +68,7 @@ function NavigationRoot() {
   // Hidden behind the splash; only shows if the splash is dismissed early
   if (!ready) {
     return (
-      <View flex center style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size='large' color={colors.accentColor} />
       </View>
     )
@@ -77,7 +76,7 @@ function NavigationRoot() {
 
   if (!user || isAddingAccount) {
     return (
-      <View flex style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <StatusBar style={statusBarStyle} />
         <Login onCancel={isAddingAccount && user ? () => setAddingAccount(false) : undefined} />
       </View>
@@ -85,11 +84,11 @@ function NavigationRoot() {
   };
 
   return (
-    <View flex style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar style={statusBarStyle} />
 
       {/* Render main navigation stack always */}
-      <View flex>
+      <View style={styles.container}>
         {/* Top Bar */}
         <TopBar
           user={user}
@@ -99,7 +98,7 @@ function NavigationRoot() {
         />
 
         {/* Screen content area */}
-        <View flex>
+        <View style={styles.container}>
           {activeTab === 'home' && <Timeline onStatusPress={openThread} />}
           {activeTab === 'search' && <Search />}
           {activeTab === 'notifications' && <Notifications onStatusPress={openThread} />}

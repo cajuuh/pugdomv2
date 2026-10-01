@@ -56,7 +56,8 @@
             "backgroundColor": "#16120E"
           }
         }
-      ]
+      ],
+      "expo-web-browser"
     ]
   }
 }
