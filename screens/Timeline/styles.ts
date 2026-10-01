@@ -26,12 +26,23 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         fontWeight: 'bold',
         color: colors.textPrimary,
     },
+    feedPicker: {
+        paddingHorizontal: 16,
+        paddingTop: 6,
+        paddingBottom: 10,
+    },
+    footer: {
+        paddingVertical: 20,
+        alignItems: 'center',
+    },
     listContent: {
         paddingTop: 8,
         paddingBottom: TAB_BAR_CLEARANCE,
     },
     emptyContainer: {
+        flex: 1,
         marginTop: 100,
+        padding: 40,
         alignItems: 'center',
         justifyContent: 'center'
     },

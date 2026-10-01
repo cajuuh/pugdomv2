@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { ActivityIndicator, RefreshControl, DeviceEventEmitter } from 'react-native';
+import { ActivityIndicator, RefreshControl, DeviceEventEmitter, Text, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
-import { View, Text } from 'react-native-ui-lib';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTimeline } from '../../hooks/useTimeline';
 import { TootCard } from '../../components/TootCard/tootCard';
@@ -73,7 +72,7 @@ const Timeline = ({ onStatusPress }: TimelineProps) => {
             return null;
         }
         return (
-            <View paddingV-20 center>
+            <View style={styles.footer}>
                 <ActivityIndicator size={'small'} color={colors.accentColor} />
             </View>
         );
@@ -84,7 +83,7 @@ const Timeline = ({ onStatusPress }: TimelineProps) => {
             return null;
         }
         return (
-            <View flex center padding-40 style={styles.emptyContainer}>
+            <View style={styles.emptyContainer}>
                 <Text style={styles.emptyText}>
                     No toots on your {activeFeed} timeline yet!
                 </Text>
@@ -93,13 +92,13 @@ const Timeline = ({ onStatusPress }: TimelineProps) => {
     };
 
     return (
-        <View flex style={styles.container}>
-            <View paddingH-16 paddingT-6 paddingB-10>
+        <View style={styles.container}>
+            <View style={styles.feedPicker}>
                 <SegmentedPill options={FEEDS} value={activeFeed} onChange={setActiveFeed} />
             </View>
             
             {isLoading && statuses.length === 0 ? (
-                <View flex center style={styles.loadingContainer}>
+                <View style={styles.loadingContainer}>
                     <ActivityIndicator size={'large'} color={colors.accentColor} />
                 </View>
             ) : (
