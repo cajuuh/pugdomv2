@@ -14,7 +14,7 @@
         "dark": "./assets/icon-dark.png",
         "tinted": "./assets/icon-tinted.png"
       },
-      "bundleIdentifier": "com.cajuuh1337.pugdom",
+      "bundleIdentifier": "com.cajuuh.pugdom",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
