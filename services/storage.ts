@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Account } from './mastodon/types';
 
 const TOKEN_KEY = 'pugdom_access_token';
@@ -144,20 +145,36 @@ export async function removeSavedAccount(id: string) {
     await deleteItem(accountStorageKey(id));
 }
 
+// Preferences aren't secret, so they live in AsyncStorage and SecureStore (the keychain) is kept for tokens and
+// accounts. Builds before 1.1.0 kept preferences in SecureStore: one that isn't in AsyncStorage yet is moved over
+// the first time it's read. On web both were already localStorage, which AsyncStorage uses too.
+async function getPreference(key: string): Promise<string | null> {
+    const value = await AsyncStorage.getItem(key);
+    if (value !== null || Platform.OS === 'web') {
+        return value;
+    }
+    const legacy = await SecureStore.getItemAsync(key);
+    if (legacy !== null) {
+        await AsyncStorage.setItem(key, legacy);
+        await SecureStore.deleteItemAsync(key);
+    }
+    return legacy;
+}
+
 export async function saveSetting(key: string, value: boolean) {
-    await setItem(key, value ? 'true' : 'false');
+    await AsyncStorage.setItem(key, value ? 'true' : 'false');
 }
 
 export async function getSetting(key: string, defaultValue: boolean): Promise<boolean> {
-    const val = await getItem(key);
+    const val = await getPreference(key);
     return val !== null ? val === 'true' : defaultValue;
 }
 
 export async function saveStringSetting(key: string, value: string) {
-    await setItem(key, value);
+    await AsyncStorage.setItem(key, value);
 }
 
 export async function getStringSetting(key: string, defaultValue: string): Promise<string> {
-    const val = await getItem(key);
+    const val = await getPreference(key);
     return val !== null ? val : defaultValue;
 }

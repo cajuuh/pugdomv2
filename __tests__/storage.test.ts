@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Account } from '../services/mastodon/types';
 
 // In-memory SecureStore that enforces the platform's key charset and rejects large values
@@ -172,5 +173,64 @@ describe('saved accounts storage', () => {
             expect(await storage.getCredentials()).toEqual({ accessToken: 'a', instanceUrl: 'https://one.social' });
             expect(SecureStore.setItemAsync).not.toHaveBeenCalled();
         });
+    });
+});
+
+describe('settings storage', () => {
+    beforeEach(async () => {
+        mockStore.clear();
+        await AsyncStorage.clear();
+        jest.clearAllMocks();
+    });
+
+    it('keeps settings in AsyncStorage, not the keychain', async () => {
+        const storage = loadStorage();
+        await storage.saveStringSetting('pugdom_settings_coat', 'plum');
+        await storage.saveSetting('pugdom_settings_compact', true);
+
+        expect(await storage.getStringSetting('pugdom_settings_coat', 'apricot')).toBe('plum');
+        expect(await storage.getSetting('pugdom_settings_compact', false)).toBe(true);
+        expect(await AsyncStorage.getItem('pugdom_settings_coat')).toBe('plum');
+        expect(SecureStore.setItemAsync).not.toHaveBeenCalled();
+    });
+
+    it('falls back to the default when a setting was never saved', async () => {
+        const storage = loadStorage();
+        expect(await storage.getStringSetting('pugdom_settings_theme', 'system')).toBe('system');
+        expect(await storage.getSetting('pugdom_settings_autoplay', false)).toBe(false);
+    });
+
+    it('moves a setting saved by an older build out of SecureStore on first read', async () => {
+        mockStore.set('pugdom_settings_theme', 'dark');
+        mockStore.set('pugdom_settings_tint', 'false');
+        const storage = loadStorage();
+
+        expect(await storage.getStringSetting('pugdom_settings_theme', 'system')).toBe('dark');
+        expect(await storage.getSetting('pugdom_settings_tint', true)).toBe(false);
+        expect(await AsyncStorage.getItem('pugdom_settings_theme')).toBe('dark');
+        expect(mockStore.has('pugdom_settings_theme')).toBe(false);
+        expect(mockStore.has('pugdom_settings_tint')).toBe(false);
+
+        // Later reads come from AsyncStorage only
+        jest.clearAllMocks();
+        expect(await storage.getStringSetting('pugdom_settings_theme', 'system')).toBe('dark');
+        expect(SecureStore.getItemAsync).not.toHaveBeenCalled();
+    });
+
+    it('prefers the AsyncStorage value over a leftover SecureStore one', async () => {
+        mockStore.set('pugdom_settings_coat', 'sage');
+        await AsyncStorage.setItem('pugdom_settings_coat', 'rose');
+        const storage = loadStorage();
+
+        expect(await storage.getStringSetting('pugdom_settings_coat', 'apricot')).toBe('rose');
+        expect(SecureStore.getItemAsync).not.toHaveBeenCalled();
+    });
+
+    it('keeps credentials in SecureStore', async () => {
+        const storage = loadStorage();
+        await storage.saveCredentials('token', 'https://one.social');
+
+        expect(mockStore.get('pugdom_access_token')).toBe('token');
+        expect(await AsyncStorage.getItem('pugdom_access_token')).toBeNull();
     });
 });

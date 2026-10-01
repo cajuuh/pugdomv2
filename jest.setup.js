@@ -9,5 +9,8 @@ jest.mock('expo-video', () => ({
 }));
 jest.mock('react-native-image-viewing', () => () => null);
 
+// AsyncStorage's native module isn't available in jest; the package ships an in-memory mock
+jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
+
 // The real SafeAreaProvider renders nothing until native code reports insets
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
