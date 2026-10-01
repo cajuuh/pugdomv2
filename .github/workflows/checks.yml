@@ -32,7 +32,7 @@ jobs:
       - name: Typecheck
         run: yarn typecheck
 
-      # Transformed React Native / ui-lib code; entries are keyed by file content, so older caches are safe to reuse
+      # Transformed React Native code; entries are keyed by file content, so older caches are safe to reuse
       - name: Restore jest cache
         uses: actions/cache@v4
         with:
@@ -43,7 +43,6 @@ jobs:
       - name: Unit tests
         run: yarn test --ci --cacheDirectory .jest-cache
 
-      # Known SDK 56 version mismatches until chore/deps-align (Task 14); make this blocking then
+      # Native modules must match the Expo SDK (flash-list is excluded in package.json: it's JS-only)
       - name: Expo dependency check
-        continue-on-error: true
         run: npx expo install --check
