@@ -1,10 +1,12 @@
 import React from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Text } from 'react-native';
 import { act, render, screen, waitFor } from '@testing-library/react-native';
 import { ThemeProvider, useTheme } from '../services/themeContext';
 import { buildColors } from '../services/theme/coats';
 import { buildType } from '../services/theme/typography';
 
+// Settings live in AsyncStorage (jest.setup.js mock); SecureStore only holds settings saved by builds before 1.1.0
 const mockStore = new Map<string, string>();
 jest.mock('expo-secure-store', () => ({
     getItemAsync: jest.fn(async (key: string) => mockStore.get(key) ?? null),
@@ -38,8 +40,9 @@ const renderTheme = async (expected: string) => {
     return view;
 };
 
-beforeEach(() => {
+beforeEach(async () => {
     mockStore.clear();
+    await AsyncStorage.clear();
     mockFontState = [true, null];
 });
 
@@ -64,8 +67,8 @@ describe('ThemeProvider', () => {
     });
 
     it('falls back to Apricot when the stored coat is unknown', async () => {
-        mockStore.set('pugdom_settings_coat', 'corgi');
-        mockStore.set('pugdom_settings_tint', 'false');
+        await AsyncStorage.setItem('pugdom_settings_coat', 'corgi');
+        await AsyncStorage.setItem('pugdom_settings_tint', 'false');
         await renderTheme('apricot:false');
     });
 

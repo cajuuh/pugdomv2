@@ -1,8 +1,10 @@
 import React from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import Settings from '../screens/Settings/settings';
 import { ThemeProvider } from '../services/themeContext';
 
+// Settings live in AsyncStorage (jest.setup.js mock); SecureStore only holds settings saved by builds before 1.1.0
 const mockStore = new Map<string, string>();
 jest.mock('expo-secure-store', () => ({
     getItemAsync: jest.fn(async (key: string) => mockStore.get(key) ?? null),
@@ -49,7 +51,10 @@ const renderAppearance = async () => {
     await screen.findByRole('radio', { name: 'Apricot' });
 };
 
-beforeEach(() => mockStore.clear());
+beforeEach(async () => {
+    mockStore.clear();
+    await AsyncStorage.clear();
+});
 
 describe('Appearance settings', () => {
     it('opens from Settings and goes back', async () => {
@@ -70,7 +75,7 @@ describe('Appearance settings', () => {
         expect(screen.getByRole('radio', { name: 'Sage' })).toBeChecked();
         expect(screen.getByRole('radio', { name: 'Apricot' })).not.toBeChecked();
         expect(screen.getByLabelText('Preview of the Sage coat')).toBeTruthy();
-        await waitFor(() => expect(mockStore.get('pugdom_settings_coat')).toBe('sage'));
+        await waitFor(async () => expect(await AsyncStorage.getItem('pugdom_settings_coat')).toBe('sage'));
 
         await fireEvent.press(screen.getByRole('button', { name: 'Back to settings' }));
         expect(await screen.findByRole('button', { name: 'Appearance, Sage' })).toBeTruthy();
@@ -83,7 +88,7 @@ describe('Appearance settings', () => {
         await fireEvent.press(screen.getByRole('tab', { name: 'Dark' }));
 
         expect(screen.getByRole('tab', { name: 'Dark' })).toBeSelected();
-        await waitFor(() => expect(mockStore.get('pugdom_settings_theme')).toBe('dark'));
+        await waitFor(async () => expect(await AsyncStorage.getItem('pugdom_settings_theme')).toBe('dark'));
     });
 
     it('turns the surface tint off and saves it', async () => {
@@ -94,6 +99,6 @@ describe('Appearance settings', () => {
         await fireEvent(tint, 'valueChange', false);
 
         expect(screen.getByRole('switch', { name: 'Tint surfaces with coat' })).not.toBeChecked();
-        await waitFor(() => expect(mockStore.get('pugdom_settings_tint')).toBe('false'));
+        await waitFor(async () => expect(await AsyncStorage.getItem('pugdom_settings_tint')).toBe('false'));
     });
 });
