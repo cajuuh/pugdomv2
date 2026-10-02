@@ -3,7 +3,6 @@ import {
     Alert,
     Animated,
     DeviceEventEmitter,
-    Easing,
     Keyboard,
     KeyboardAvoidingView,
     Modal,
@@ -33,6 +32,7 @@ import { CharacterCounter } from './characterCounter';
 import { EmojiPicker } from './emojiPicker';
 import { OptionSheet, SheetOption } from './optionSheet';
 import { DEFAULT_POLL_DURATION, PollEditor } from './pollEditor';
+import { useDragToDismiss, useSheetTransition } from './sheetTransition';
 import { PILL_HEIGHT, makeStyles } from './styles';
 
 const stripHtml = (html: string) => {
@@ -104,19 +104,30 @@ const insertAt = (text: string, cursor: number, insert: string) => {
     return { text: before + piece + after, cursor: cursor + piece.length };
 };
 
+// How much of the window the keyboard covers, measured up from the bottom edge
+export const keyboardInset = (windowHeight: number, keyboardTop: number) => Math.max(windowHeight - keyboardTop, 0);
+
 // iOS reports the keyboard before it moves, Android only after
-const useKeyboardVisible = () => {
-    const [visible, setVisible] = useState(false);
+const useKeyboard = (windowHeight: number) => {
+    const [keyboard, setKeyboard] = useState({ visible: false, inset: 0 });
     useEffect(() => {
-        const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => setVisible(true));
-        const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setVisible(false));
+        const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', event =>
+            setKeyboard({ visible: true, inset: keyboardInset(windowHeight, event.endCoordinates.screenY) })
+        );
+        const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () =>
+            setKeyboard({ visible: false, inset: 0 })
+        );
         return () => {
             show.remove();
             hide.remove();
         };
-    }, []);
-    return visible;
+    }, [windowHeight]);
+    return keyboard;
 };
+
+// Anything typed beyond the reply mentions the sheet opened with, a poll, or a content warning
+export const hasDraft = ({ text, initialText, showPoll, spoilerText }: { text: string; initialText: string; showPoll: boolean; spoilerText: string }) =>
+    text.trim() !== initialText.trim() || showPoll || spoilerText.trim().length > 0;
 
 interface ComposeModalProps {
     isOpen: boolean;
@@ -130,7 +141,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
     const styles = useThemedStyles(makeStyles);
     const insets = useSafeAreaInsets();
     const { height: windowHeight } = useWindowDimensions();
-    const keyboardVisible = useKeyboardVisible();
+    const keyboard = useKeyboard(windowHeight);
     // The modal is always mounted, so only load the instance limits while composing
     const instanceConfiguration = useInstanceConfiguration(isOpen && !!user);
 
@@ -151,29 +162,33 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
     const inputRef = useRef<TextInput>(null);
     const cursor = useRef(0);
 
-    // Stays mounted while the sheet slides away after closing
-    const [mounted, setMounted] = useState(isOpen);
-    const progress = useRef(new Animated.Value(0)).current;
+    const { mounted, progress } = useSheetTransition(isOpen);
+    // The text the sheet opened with (reply mentions), to tell whether there's a draft to lose
+    const initialText = useRef('');
     // closeCompose clears the reply right away; keep showing it while the sheet slides out
     const shownReply = useRef(replyToStatus);
     if (isOpen) shownReply.current = replyToStatus;
     const reply = shownReply.current;
 
-    useEffect(() => {
-        if (isOpen) {
-            setMounted(true);
-            Animated.timing(progress, { toValue: 1, duration: 280, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
-        } else {
-            Animated.timing(progress, { toValue: 0, duration: 200, easing: Easing.in(Easing.cubic), useNativeDriver: true })
-                .start(({ finished }) => finished && setMounted(false));
+    // Swiping the sheet down closes it, asking first if there's a draft
+    const { drag, panHandlers } = useDragToDismiss(cancel => {
+        if (!hasDraft({ text, initialText: initialText.current, showPoll, spoilerText })) {
+            closeCompose();
+            return;
         }
-    }, [isOpen, progress]);
+        Alert.alert('Discard this post?', 'Your draft will be lost.', [
+            { text: 'Keep editing', style: 'cancel', onPress: cancel },
+            { text: 'Discard', style: 'destructive', onPress: closeCompose },
+        ], { cancelable: true, onDismiss: cancel });
+    });
 
     useEffect(() => {
         if (isOpen) {
-            const initialText = replyToStatus ? replyMentionsText(replyToStatus, user) : '';
-            setText(initialText);
-            cursor.current = initialText.length;
+            const startText = replyToStatus ? replyMentionsText(replyToStatus, user) : '';
+            initialText.current = startText;
+            drag.setValue(0);
+            setText(startText);
+            cursor.current = startText.length;
             setSensitive(false);
             setSpoilerText('');
             setLanguage(defaultLanguage(user));
@@ -191,7 +206,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
             }, 150);
             return () => clearTimeout(timer);
         }
-    }, [isOpen, replyToStatus]);
+    }, [isOpen, replyToStatus, drag]);
 
     if (!mounted) return null;
 
@@ -262,151 +277,167 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
         />
     );
 
-    const translateY = progress.interpolate({ inputRange: [0, 1], outputRange: [windowHeight, 0] });
+    const translateY = Animated.add(progress.interpolate({ inputRange: [0, 1], outputRange: [windowHeight, 0] }), drag);
+
+    const sheet = (
+        <Animated.View
+            accessibilityViewIsModal
+            style={[styles.sheet, { marginTop: insets.top + space.sm, transform: [{ translateY }] }]}
+        >
+            {/* The grabber and header are the drag handle */}
+            <View {...panHandlers}>
+                <View style={styles.grabberRow} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+                    <View style={styles.grabber} />
+                </View>
+
+                <View style={styles.header}>
+                    <View style={styles.headerSide}>
+                        <PillButton label="Cancel" variant="ghost" onPress={closeCompose} style={styles.cancel} />
+                    </View>
+                    <Text accessibilityRole="header" style={[type.sheetTitle, styles.headerTitle]}>
+                        {reply ? 'Reply' : 'New post'}
+                    </Text>
+                    <View style={[styles.headerSide, styles.headerSideEnd]}>
+                        <PillButton label="Post" onPress={handlePublish} disabled={isPublishDisabled && !loading} loading={loading} />
+                    </View>
+                </View>
+            </View>
+
+            <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+                {reply && (
+                    <Well style={styles.replyWell}>
+                        <View style={styles.replyHeader}>
+                            <Avatar name={reply.account.display_name || reply.account.username} uri={reply.account.avatar} size={24} />
+                            <View style={styles.replyNames}>
+                                <Text style={[type.name, styles.replyName]} numberOfLines={1}>
+                                    {renderTextWithEmojis(
+                                        reply.account.display_name || reply.account.username,
+                                        reply.account.emojis,
+                                        [type.name, styles.replyName],
+                                        14
+                                    )}
+                                </Text>
+                                <Text style={[type.meta, styles.replyHandle]} numberOfLines={1}>@{reply.account.acct}</Text>
+                            </View>
+                        </View>
+                        <Text style={[type.body, styles.replyContent]} numberOfLines={3}>
+                            {stripHtml(reply.content)}
+                        </Text>
+                    </Well>
+                )}
+
+                {user && (
+                    <View style={styles.author}>
+                        <Avatar name={user.display_name || user.username} uri={user.avatar} size={42} />
+                        <View style={styles.authorDetails}>
+                            <Text style={[type.name, styles.authorName]} numberOfLines={1}>
+                                {renderTextWithEmojis(user.display_name || user.username, user.emojis, [type.name, styles.authorName])}
+                            </Text>
+                            <View style={styles.pills}>
+                                <Pressable
+                                    onPress={() => setPicker('visibility')}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={`Visibility: ${selectedVisibility.label}`}
+                                    hitSlop={hitSlopFor(0, PILL_HEIGHT)}
+                                    style={({ pressed }) => [styles.pill, pressed && { opacity: 0.7 }]}
+                                >
+                                    <Ionicons name={selectedVisibility.icon} size={14} color={colors.accentText} />
+                                    <Text style={[type.name, styles.pillText]}>{selectedVisibility.label}</Text>
+                                    <Ionicons name="chevron-down" size={12} color={colors.textSecondary} />
+                                </Pressable>
+                                <Pressable
+                                    onPress={() => setPicker('language')}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={`Language: ${selectedLanguage.label}`}
+                                    hitSlop={hitSlopFor(0, PILL_HEIGHT)}
+                                    style={({ pressed }) => [styles.pill, pressed && { opacity: 0.7 }]}
+                                >
+                                    <Text style={[type.name, styles.pillText]}>
+                                        {selectedLanguage.code.toUpperCase()} · {selectedLanguage.label}
+                                    </Text>
+                                    <Ionicons name="chevron-down" size={12} color={colors.textSecondary} />
+                                </Pressable>
+                            </View>
+                        </View>
+                    </View>
+                )}
+
+                {sensitive && (
+                    <View style={styles.contentWarning}>
+                        <Ionicons name="warning-outline" size={18} color={colors.accentText} />
+                        <TextInput
+                            style={[type.body, styles.contentWarningInput]}
+                            placeholder="Write a content warning, shown before your post"
+                            accessibilityLabel="Content warning text"
+                            accessibilityHint="Readers see this before they open your post"
+                            // Only mounted once the tool is turned on, so this focuses it right away
+                            autoFocus
+                            placeholderTextColor={colors.textMuted}
+                            value={spoilerText}
+                            onChangeText={setSpoilerText}
+                            maxLength={100}
+                        />
+                    </View>
+                )}
+
+                <TextInput
+                    ref={inputRef}
+                    style={[type.body, styles.textArea]}
+                    placeholder={reply ? 'Write your reply...' : "What's on your mind?"}
+                    accessibilityLabel="Post text"
+                    placeholderTextColor={colors.textMuted}
+                    multiline
+                    value={text}
+                    onChangeText={setText}
+                    onSelectionChange={event => {
+                        cursor.current = event.nativeEvent.selection.end;
+                    }}
+                />
+
+                {showPoll && (
+                    <PollEditor
+                        options={pollOptions}
+                        onChangeOptions={setPollOptions}
+                        duration={pollDuration}
+                        onChangeDuration={setPollDuration}
+                        multiple={pollMultiple}
+                        onChangeMultiple={setPollMultiple}
+                        maxOptions={instanceConfiguration.maxPollOptions}
+                        maxCharactersPerOption={instanceConfiguration.maxCharactersPerPollOption}
+                        error={pollError}
+                        onRemove={resetPoll}
+                    />
+                )}
+            </ScrollView>
+
+            <View
+                accessibilityRole="toolbar"
+                style={[styles.toolbar, { paddingBottom: keyboard.visible ? 10 : Math.max(insets.bottom, 10) }]}
+            >
+                {tool('image-outline', 'Add media', () => Alert.alert('Add Media', 'Media attachments feature coming soon!'))}
+                {tool(showPoll ? 'stats-chart' : 'stats-chart-outline', 'Poll', () => (showPoll ? resetPoll() : setShowPoll(true)), showPoll)}
+                {tool('warning-outline', 'Content warning', () => setSensitive(!sensitive), sensitive)}
+                {tool('happy-outline', 'Custom emoji', () => setPicker('emoji'))}
+                <View style={styles.toolbarSpacer} />
+                <CharacterCounter remaining={remaining} max={instanceConfiguration.maxCharacters} />
+            </View>
+        </Animated.View>
+    );
 
     return (
         <Modal visible transparent animationType="none" statusBarTranslucent navigationBarTranslucent onRequestClose={closeCompose}>
             <View style={styles.root}>
                 <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: colors.scrim, opacity: progress }]} />
-                {/* On Android too: the app draws edge to edge, so the window no longer resizes for the keyboard */}
-                <KeyboardAvoidingView behavior="padding" style={styles.keyboardAvoider}>
-                    <Animated.View
-                        accessibilityViewIsModal
-                        style={[styles.sheet, { marginTop: insets.top + space.sm, transform: [{ translateY }] }]}
-                    >
-                        <View style={styles.grabberRow} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
-                            <View style={styles.grabber} />
-                        </View>
-
-                        <View style={styles.header}>
-                            <View style={styles.headerSide}>
-                                <PillButton label="Cancel" variant="ghost" onPress={closeCompose} style={styles.cancel} />
-                            </View>
-                            <Text accessibilityRole="header" style={[type.sheetTitle, styles.headerTitle]}>
-                                {reply ? 'Reply' : 'New post'}
-                            </Text>
-                            <View style={[styles.headerSide, styles.headerSideEnd]}>
-                                <PillButton label="Post" onPress={handlePublish} disabled={isPublishDisabled && !loading} loading={loading} />
-                            </View>
-                        </View>
-
-                        <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-                            {reply && (
-                                <Well style={styles.replyWell}>
-                                    <View style={styles.replyHeader}>
-                                        <Avatar name={reply.account.display_name || reply.account.username} uri={reply.account.avatar} size={24} />
-                                        <View style={styles.replyNames}>
-                                            <Text style={[type.name, styles.replyName]} numberOfLines={1}>
-                                                {renderTextWithEmojis(
-                                                    reply.account.display_name || reply.account.username,
-                                                    reply.account.emojis,
-                                                    [type.name, styles.replyName],
-                                                    14
-                                                )}
-                                            </Text>
-                                            <Text style={[type.meta, styles.replyHandle]} numberOfLines={1}>@{reply.account.acct}</Text>
-                                        </View>
-                                    </View>
-                                    <Text style={[type.body, styles.replyContent]} numberOfLines={3}>
-                                        {stripHtml(reply.content)}
-                                    </Text>
-                                </Well>
-                            )}
-
-                            {user && (
-                                <View style={styles.author}>
-                                    <Avatar name={user.display_name || user.username} uri={user.avatar} size={42} />
-                                    <View style={styles.authorDetails}>
-                                        <Text style={[type.name, styles.authorName]} numberOfLines={1}>
-                                            {renderTextWithEmojis(user.display_name || user.username, user.emojis, [type.name, styles.authorName])}
-                                        </Text>
-                                        <View style={styles.pills}>
-                                            <Pressable
-                                                onPress={() => setPicker('visibility')}
-                                                accessibilityRole="button"
-                                                accessibilityLabel={`Visibility: ${selectedVisibility.label}`}
-                                                hitSlop={hitSlopFor(0, PILL_HEIGHT)}
-                                                style={({ pressed }) => [styles.pill, pressed && { opacity: 0.7 }]}
-                                            >
-                                                <Ionicons name={selectedVisibility.icon} size={14} color={colors.accentText} />
-                                                <Text style={[type.name, styles.pillText]}>{selectedVisibility.label}</Text>
-                                                <Ionicons name="chevron-down" size={12} color={colors.textSecondary} />
-                                            </Pressable>
-                                            <Pressable
-                                                onPress={() => setPicker('language')}
-                                                accessibilityRole="button"
-                                                accessibilityLabel={`Language: ${selectedLanguage.label}`}
-                                                hitSlop={hitSlopFor(0, PILL_HEIGHT)}
-                                                style={({ pressed }) => [styles.pill, pressed && { opacity: 0.7 }]}
-                                            >
-                                                <Text style={[type.name, styles.pillText]}>
-                                                    {selectedLanguage.code.toUpperCase()} · {selectedLanguage.label}
-                                                </Text>
-                                                <Ionicons name="chevron-down" size={12} color={colors.textSecondary} />
-                                            </Pressable>
-                                        </View>
-                                    </View>
-                                </View>
-                            )}
-
-                            {sensitive && (
-                                <View style={styles.contentWarning}>
-                                    <Ionicons name="warning-outline" size={18} color={colors.accentText} />
-                                    <TextInput
-                                        style={[type.body, styles.contentWarningInput]}
-                                        placeholder="Content warning"
-                                        accessibilityLabel="Content warning"
-                                        placeholderTextColor={colors.textMuted}
-                                        value={spoilerText}
-                                        onChangeText={setSpoilerText}
-                                        maxLength={100}
-                                    />
-                                </View>
-                            )}
-
-                            <TextInput
-                                ref={inputRef}
-                                style={[type.body, styles.textArea]}
-                                placeholder={reply ? 'Write your reply...' : "What's on your mind?"}
-                                accessibilityLabel="Post text"
-                                placeholderTextColor={colors.textMuted}
-                                multiline
-                                value={text}
-                                onChangeText={setText}
-                                onSelectionChange={event => {
-                                    cursor.current = event.nativeEvent.selection.end;
-                                }}
-                            />
-
-                            {showPoll && (
-                                <PollEditor
-                                    options={pollOptions}
-                                    onChangeOptions={setPollOptions}
-                                    duration={pollDuration}
-                                    onChangeDuration={setPollDuration}
-                                    multiple={pollMultiple}
-                                    onChangeMultiple={setPollMultiple}
-                                    maxOptions={instanceConfiguration.maxPollOptions}
-                                    maxCharactersPerOption={instanceConfiguration.maxCharactersPerPollOption}
-                                    error={pollError}
-                                    onRemove={resetPoll}
-                                />
-                            )}
-                        </ScrollView>
-
-                        <View
-                            accessibilityRole="toolbar"
-                            style={[styles.toolbar, { paddingBottom: keyboardVisible ? 10 : Math.max(insets.bottom, 10) }]}
-                        >
-                            {tool('image-outline', 'Add media', () => Alert.alert('Add Media', 'Media attachments feature coming soon!'))}
-                            {tool(showPoll ? 'stats-chart' : 'stats-chart-outline', 'Poll', () => (showPoll ? resetPoll() : setShowPoll(true)), showPoll)}
-                            {tool('warning-outline', 'Content warning', () => setSensitive(!sensitive), sensitive)}
-                            {tool('happy-outline', 'Custom emoji', () => setPicker('emoji'))}
-                            <View style={styles.toolbarSpacer} />
-                            <CharacterCounter remaining={remaining} max={instanceConfiguration.maxCharacters} />
-                        </View>
-                    </Animated.View>
-                </KeyboardAvoidingView>
+                {/* The app draws edge to edge, so the window doesn't resize for the keyboard. On Android,
+                    KeyboardAvoidingView measures against the app window, which ends above the navigation bar,
+                    and left a gap that tall under the sheet once the keyboard closed; pad by the keyboard instead. */}
+                {Platform.OS === 'ios' ? (
+                    <KeyboardAvoidingView behavior="padding" style={styles.keyboardAvoider}>
+                        {sheet}
+                    </KeyboardAvoidingView>
+                ) : (
+                    <View style={[styles.keyboardAvoider, { paddingBottom: keyboard.inset }]}>{sheet}</View>
+                )}
             </View>
 
             <OptionSheet

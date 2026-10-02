@@ -1,11 +1,14 @@
-import React from 'react';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import React, { useEffect } from 'react';
+import { Animated, Modal, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../../services/themeContext';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { space } from '../../services/theme/shape';
 import { makeStyles } from './styles';
+import { useDragToDismiss, useSheetTransition } from './sheetTransition';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 interface BottomSheetProps {
     visible: boolean;
@@ -19,19 +22,36 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({ visible, title, onClos
     const { type } = useTheme();
     const styles = useThemedStyles(makeStyles);
     const insets = useSafeAreaInsets();
+    const { height } = useWindowDimensions();
+    // The backdrop fades while only the sheet slides; a sliding Modal would carry the backdrop up like a curtain
+    const { mounted, progress } = useSheetTransition(visible);
+    const { drag, panHandlers } = useDragToDismiss(onClose);
+
+    useEffect(() => {
+        if (visible) drag.setValue(0);
+    }, [visible, drag]);
+
+    const translateY = Animated.add(progress.interpolate({ inputRange: [0, 1], outputRange: [height, 0] }), drag);
 
     return (
-        <Modal visible={visible} transparent animationType="slide" statusBarTranslucent onRequestClose={onClose}>
+        <Modal visible={mounted} transparent animationType="none" statusBarTranslucent onRequestClose={onClose}>
             <View style={styles.sheetRoot}>
                 {/* A sibling of the sheet, not its parent: an accessible parent would hide the options from screen readers */}
-                <Pressable style={styles.sheetBackdrop} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close" />
-                <View style={[styles.pickerSheet, { paddingBottom: insets.bottom + space.lg }]}>
-                    <View style={styles.grabberRow}>
-                        <View style={styles.grabber} />
+                <AnimatedPressable
+                    style={[styles.sheetBackdrop, { opacity: progress }]}
+                    onPress={onClose}
+                    accessibilityRole="button"
+                    accessibilityLabel="Close"
+                />
+                <Animated.View style={[styles.pickerSheet, { paddingBottom: insets.bottom + space.lg, transform: [{ translateY }] }]}>
+                    <View {...panHandlers}>
+                        <View style={styles.grabberRow}>
+                            <View style={styles.grabber} />
+                        </View>
+                        <Text accessibilityRole="header" style={[type.sheetTitle, styles.pickerTitle]}>{title}</Text>
                     </View>
-                    <Text accessibilityRole="header" style={[type.sheetTitle, styles.pickerTitle]}>{title}</Text>
                     {children}
-                </View>
+                </Animated.View>
             </View>
         </Modal>
     );
