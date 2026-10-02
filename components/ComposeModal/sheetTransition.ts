@@ -37,7 +37,12 @@ export const useDragToDismiss = (onDismiss: (cancel: () => void) => void) => {
 
     const panHandlers = useRef(
         PanResponder.create({
-            // Only claim clear downward drags, so taps still reach the header buttons
+            // Claim touches that start on the handle itself: waiting for a move lets a view higher up claim
+            // the touch first, and then the handle is never asked. Buttons inside the handle are deeper, so
+            // they still get their taps; drags that start on them are taken over once they clearly go down.
+            onStartShouldSetPanResponder: () => true,
+            // Hold on to the drag once it has started
+            onPanResponderTerminationRequest: () => false,
             onMoveShouldSetPanResponder: (_, { dx, dy }) => dy > 8 && Math.abs(dy) > Math.abs(dx),
             onPanResponderMove: (_, { dy }) => drag.setValue(Math.max(dy, 0)),
             onPanResponderRelease: (_, { dy, vy }) => {
