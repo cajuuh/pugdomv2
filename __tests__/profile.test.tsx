@@ -6,6 +6,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { createTestQueryClient } from '../testUtils/queryClient';
 import Profile, { fullHandle } from '../screens/Profile/profile';
 import { getAccountStatuses } from '../services/mastodon/accounts';
+import { getBookmarks } from '../services/mastodon/bookmarks';
 import { Account, Status } from '../services/mastodon/types';
 
 const me: Account = {
@@ -30,6 +31,7 @@ jest.mock('../services/themeContext', () => ({
     useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
 }));
 jest.mock('../services/mastodon/accounts', () => ({ getAccountStatuses: jest.fn() }));
+jest.mock('../services/mastodon/bookmarks', () => ({ getBookmarks: jest.fn() }));
 jest.mock('../services/storage', () => ({
     getCredentials: jest.fn().mockResolvedValue({ accessToken: 't', instanceUrl: 'https://mastodon.social' }),
 }));
@@ -43,6 +45,7 @@ jest.mock('../components/TootCard/tootCard', () => ({
 }));
 
 const mockedStatuses = getAccountStatuses as jest.MockedFunction<typeof getAccountStatuses>;
+const mockedBookmarks = getBookmarks as jest.MockedFunction<typeof getBookmarks>;
 const status = (id: string) => ({ id, content: `post ${id}` } as Status);
 
 describe('Profile', () => {
@@ -83,6 +86,31 @@ describe('Profile', () => {
         await waitFor(() => expect(mockedStatuses).toHaveBeenLastCalledWith('7', undefined, filter));
         expect(screen.getByRole('tab', { name: tab })).toBeSelected();
         expect(screen.getByRole('tab', { name: 'Posts' })).not.toBeSelected();
+    });
+
+    it('lists your bookmarks on the Bookmarks tab', async () => {
+        mockedBookmarks.mockResolvedValue({ statuses: [status('b1')], nextMaxId: '5' });
+        await renderProfile();
+        await screen.findByText('post 1');
+        // Not fetched until the tab is opened
+        expect(mockedBookmarks).not.toHaveBeenCalled();
+
+        await fireEvent.press(screen.getByRole('tab', { name: 'Bookmarks' }));
+
+        expect(await screen.findByText('post b1')).toBeTruthy();
+        expect(screen.queryByText('post 1')).toBeNull();
+        expect(mockedBookmarks).toHaveBeenCalledWith(undefined);
+        expect(screen.getByRole('tab', { name: 'Bookmarks' })).toBeSelected();
+    });
+
+    it('says when there are no bookmarks', async () => {
+        mockedBookmarks.mockResolvedValue({ statuses: [] });
+        await renderProfile();
+        await screen.findByText('post 1');
+
+        await fireEvent.press(screen.getByRole('tab', { name: 'Bookmarks' }));
+
+        expect(await screen.findByText('No bookmarks yet')).toBeTruthy();
     });
 
     it('says when a tab is empty', async () => {

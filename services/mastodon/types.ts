@@ -73,6 +73,7 @@ export interface Status {
     emojis: CustomEmoji[];
     favourited?: boolean;
     reblogged?: boolean;
+    bookmarked?: boolean;
     card?: PreviewCard | null;
     poll?: Poll | null;
 }
