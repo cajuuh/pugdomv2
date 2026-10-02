@@ -1,6 +1,7 @@
 import { StyleSheet } from 'react-native';
 import { ThemeColors } from '../../services/themeContext';
 import { radii, space } from '../../services/theme/shape';
+import { TAB_BAR_CLEARANCE } from '../../components/TabBar/styles';
 
 export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     safeArea: {
@@ -10,7 +11,7 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     contentContainer: {
         paddingHorizontal: space.lg,
         paddingTop: 6,
-        paddingBottom: 40,
+        paddingBottom: TAB_BAR_CLEARANCE, // the dock floats over Settings
         gap: space.sm,
     },
     sectionLabel: {
@@ -74,7 +75,7 @@ export const makeAppearanceStyles = (colors: ThemeColors) => StyleSheet.create({
     content: {
         paddingHorizontal: space.lg,
         paddingTop: 6,
-        paddingBottom: 40,
+        paddingBottom: TAB_BAR_CLEARANCE, // the dock floats over Settings
         gap: space.sm,
     },
     sectionLabel: {
