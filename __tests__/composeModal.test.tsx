@@ -2,7 +2,9 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
-import ComposeModal, { defaultVisibility } from '../components/ComposeModal/composeModal';
+import ComposeModal, { defaultVisibility, hasDraft, keyboardInset } from '../components/ComposeModal/composeModal';
+import { OptionSheet } from '../components/ComposeModal/optionSheet';
+import { shouldDismiss } from '../components/ComposeModal/sheetTransition';
 import { counterState } from '../components/ComposeModal/characterCounter';
 import { fetchCustomEmojis } from '../services/mastodon/customEmojis';
 import { createStatus } from '../services/mastodon/statuses';
@@ -187,7 +189,53 @@ describe('ComposeModal', () => {
         expect(screen.getByRole('button', { name: 'Content warning' })).not.toBeSelected();
         await fireEvent.press(screen.getByRole('button', { name: 'Content warning' }));
         expect(screen.getByRole('button', { name: 'Content warning' })).toBeSelected();
-        expect(screen.getByPlaceholderText('Content warning')).toBeTruthy();
+    });
+
+    it('asks for the content warning text and focuses it when the tool is turned on', async () => {
+        await renderCompose();
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Content warning' }));
+
+        const field = screen.getByPlaceholderText('Write a content warning, shown before your post');
+        expect(field.props.autoFocus).toBe(true);
+        expect(field.props.accessibilityHint).toBeTruthy();
+    });
+
+    it('only counts real changes as a draft worth confirming before a swipe-away', () => {
+        const empty = { text: '', initialText: '', showPoll: false, spoilerText: '' };
+        expect(hasDraft(empty)).toBe(false);
+        // A reply that still only has the mentions it opened with
+        expect(hasDraft({ ...empty, text: '@bob@other.social ', initialText: '@bob@other.social ' })).toBe(false);
+        expect(hasDraft({ ...empty, text: 'hello' })).toBe(true);
+        expect(hasDraft({ ...empty, showPoll: true })).toBe(true);
+        expect(hasDraft({ ...empty, spoilerText: 'spoilers' })).toBe(true);
+    });
+
+    it.each([
+        [40, 0.2, false],
+        [40, 1.5, true],
+        [150, 0, true],
+        [-200, -3, false],
+    ])('dismisses a sheet dragged %ipx at %f px/ms: %s', (dy, vy, dismissed) => {
+        expect(shouldDismiss(dy, vy)).toBe(dismissed);
+    });
+
+    it('pads the sheet by exactly what the keyboard covers', () => {
+        // Measured on a Galaxy S24 Ultra (832dp window, keyboard top at 511.6dp)
+        expect(keyboardInset(832, 511.6)).toBeCloseTo(320.4);
+        // A keyboard reported below the window covers nothing
+        expect(keyboardInset(832, 900)).toBe(0);
+    });
+
+    it('fades the picker backdrop instead of sliding the whole modal up', async () => {
+        await render(
+            <OptionSheet visible title="Who can see this" options={[{ value: 'public', label: 'Public' }]} value="public" onSelect={jest.fn()} onClose={jest.fn()} />
+        );
+
+        const modal = screen.toJSON() as { type: string; props: { animationType?: string } };
+        expect(modal.type).toBe('Modal');
+        expect(modal.props.animationType).toBe('none');
+        expect(screen.getByRole('radio', { name: 'Public' })).toBeTruthy();
     });
 
     it('removes the poll from the poll editor', async () => {
