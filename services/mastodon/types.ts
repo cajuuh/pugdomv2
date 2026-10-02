@@ -3,6 +3,8 @@ export interface CustomEmoji {
     url: string;
     static_url: string;
     visible_in_picker: boolean;
+    // Set by the server's admins; many servers sort large emoji sets this way
+    category?: string | null;
 }
 
 export interface Attachment {

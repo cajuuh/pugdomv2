@@ -318,6 +318,21 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     emojiGrid: {
         height: 320,
     },
+    emojiChips: {
+        paddingBottom: space.sm,
+        paddingHorizontal: space.xs,
+    },
+    emojiSectionTitle: {
+        color: colors.textMuted,
+        paddingTop: space.sm,
+        paddingBottom: space.xs,
+        paddingHorizontal: space.xs,
+        backgroundColor: colors.cardBackground,
+    },
+    emojiRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+    },
     emojiCell: {
         width: EMOJI_CELL,
         height: EMOJI_CELL,
