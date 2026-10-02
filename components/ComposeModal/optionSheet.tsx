@@ -44,7 +44,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({ visible, title, onClos
                     accessibilityLabel="Close"
                 />
                 <Animated.View style={[styles.pickerSheet, { paddingBottom: insets.bottom + space.lg, transform: [{ translateY }] }]}>
-                    <View {...panHandlers}>
+                    <View collapsable={false} {...panHandlers}>
                         <View style={styles.grabberRow}>
                             <View style={styles.grabber} />
                         </View>

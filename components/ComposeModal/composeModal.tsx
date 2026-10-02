@@ -284,8 +284,9 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
             accessibilityViewIsModal
             style={[styles.sheet, { marginTop: insets.top + space.sm, transform: [{ translateY }] }]}
         >
-            {/* The grabber and header are the drag handle */}
-            <View {...panHandlers}>
+            {/* The grabber and header are the drag handle. Not collapsable: Android drops views that draw
+                nothing, and touches would then land on the sheet behind the handle */}
+            <View collapsable={false} {...panHandlers}>
                 <View style={styles.grabberRow} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
                     <View style={styles.grabber} />
                 </View>
@@ -367,7 +368,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                         <Ionicons name="warning-outline" size={18} color={colors.accentText} />
                         <TextInput
                             style={[type.body, styles.contentWarningInput]}
-                            placeholder="Write a content warning, shown before your post"
+                            placeholder="Write your warning"
                             accessibilityLabel="Content warning text"
                             accessibilityHint="Readers see this before they open your post"
                             // Only mounted once the tool is turned on, so this focuses it right away

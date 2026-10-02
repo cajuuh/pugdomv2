@@ -196,7 +196,7 @@ describe('ComposeModal', () => {
 
         await fireEvent.press(screen.getByRole('button', { name: 'Content warning' }));
 
-        const field = screen.getByPlaceholderText('Write a content warning, shown before your post');
+        const field = screen.getByPlaceholderText('Write your warning');
         expect(field.props.autoFocus).toBe(true);
         expect(field.props.accessibilityHint).toBeTruthy();
     });
@@ -218,6 +218,33 @@ describe('ComposeModal', () => {
         [-200, -3, false],
     ])('dismisses a sheet dragged %ipx at %f px/ms: %s', (dy, vy, dismissed) => {
         expect(shouldDismiss(dy, vy)).toBe(dismissed);
+    });
+
+    // Android drops views that draw nothing; the drag handle would vanish and only touches on its buttons would drag
+    const dragHandleOf = (element: any) => {
+        let node = element;
+        while (node && !node.props.onMoveShouldSetResponder) node = node.parent;
+        return node;
+    };
+
+    it('keeps the compose drag handle as a real view around the title', async () => {
+        await renderCompose();
+
+        const handle = dragHandleOf(screen.getByRole('header', { name: 'New post' }));
+        expect(handle).toBeTruthy();
+        expect(handle.props.collapsable).toBe(false);
+        // Claims the touch as it starts, before a view higher up can (then only drags from Cancel worked)
+        expect(handle.props.onStartShouldSetResponder({})).toBe(true);
+    });
+
+    it('keeps the picker drag handle as a real view around its title', async () => {
+        await render(
+            <OptionSheet visible title="Who can see this" options={[{ value: 'public', label: 'Public' }]} value="public" onSelect={jest.fn()} onClose={jest.fn()} />
+        );
+
+        const handle = dragHandleOf(screen.getByRole('header', { name: 'Who can see this' }));
+        expect(handle).toBeTruthy();
+        expect(handle.props.collapsable).toBe(false);
     });
 
     it('pads the sheet by exactly what the keyboard covers', () => {
