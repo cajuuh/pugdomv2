@@ -5,6 +5,11 @@ import { radii, space } from '../../services/theme/shape';
 export const CARD_MARGIN = 16;
 export const CARD_PADDING = 16;
 export const THREAD_AVATAR_GAP = 10;
+// Compact Mode: list rows with an avatar column, smaller media and a slimmer action row
+export const COMPACT_AVATAR = 32;
+export const COMPACT_PADDING = 12;
+export const COMPACT_ACTION_HEIGHT = 32;
+export const COMPACT_ACTION_ICON = 18;
 
 export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     card: {
@@ -14,12 +19,50 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         paddingHorizontal: CARD_PADDING,
         paddingBottom: 6,
     },
+    // Compact posts read as a list: full width, no card chrome, a hairline between posts
     cardCompact: {
-        marginHorizontal: space.md,
-        marginBottom: space.sm,
+        marginHorizontal: 0,
+        marginBottom: 0,
         paddingTop: 10,
-        paddingHorizontal: 10,
+        paddingHorizontal: COMPACT_PADDING,
         paddingBottom: 2,
+        borderWidth: 0,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderRadius: 0,
+        shadowOpacity: 0,
+        elevation: 0,
+    },
+    boostRowCompact: {
+        marginBottom: 6,
+    },
+    // Display name and handle share one line
+    namesInline: {
+        flexDirection: 'row',
+        alignItems: 'baseline',
+        gap: 4,
+    },
+    handleInline: {
+        flexShrink: 1,
+    },
+    contentCompact: {
+        marginTop: 2,
+        gap: space.sm,
+    },
+    singleMediaCompact: {
+        height: 140,
+    },
+    gridMediaCompact: {
+        height: 80,
+    },
+    linkPlainCompact: {
+        paddingVertical: space.sm,
+        paddingHorizontal: 10,
+    },
+    actionRowCompact: {
+        marginTop: 2,
+    },
+    actionButtonCompact: {
+        minHeight: COMPACT_ACTION_HEIGHT,
     },
     // In a thread the card sits inside the thread's own container
     cardThread: {

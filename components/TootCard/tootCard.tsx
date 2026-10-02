@@ -8,7 +8,16 @@ import { StatusHtmlContent, openLink } from './htmlContent';
 import { useSettings } from '../../services/settingsContext';
 import { useTheme } from '../../services/themeContext';
 import { useCompose } from '../../services/composeContext';
-import { CARD_MARGIN, CARD_PADDING, THREAD_AVATAR_GAP, makeStyles } from './styles';
+import {
+    CARD_MARGIN,
+    CARD_PADDING,
+    COMPACT_ACTION_HEIGHT,
+    COMPACT_ACTION_ICON,
+    COMPACT_AVATAR,
+    COMPACT_PADDING,
+    THREAD_AVATAR_GAP,
+    makeStyles,
+} from './styles';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { favouriteStatus, unfavouriteStatus, reblogStatus, unreblogStatus } from '../../services/mastodon/statuses';
 import { Poll } from '../Poll/poll';
@@ -16,6 +25,7 @@ import { Avatar, Card, PillButton } from '../ui';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
 import { useUpdateCachedStatus } from '../../hooks/useUpdateCachedStatus';
 import { useMediaViewer } from '../MediaViewer/mediaViewer';
+import { hitSlopFor } from '../../services/theme/shape';
 
 const getRelativeTime = (dateString: string) => {
     const now = new Date();
@@ -166,12 +176,14 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         }
     };
 
-    const avatarSize = compactMode ? 32 : 42;
-    const cardPadding = compactMode ? 10 : CARD_PADDING;
-    // Width the post body gets: the card's inner width, minus the avatar column in a thread
-    const bodyWidth = threadMode
+    const avatarSize = compactMode ? COMPACT_AVATAR : 42;
+    const cardPadding = compactMode ? COMPACT_PADDING : CARD_PADDING;
+    // Threads and Compact Mode put the avatar in its own column, beside the post
+    const avatarColumn = threadMode || compactMode;
+    // Width the post body gets: the card's inner width, minus the avatar column. Compact and thread cards are full width
+    const bodyWidth = avatarColumn
         ? width - cardPadding * 2 - avatarSize - THREAD_AVATAR_GAP
-        : width - (compactMode ? 12 : CARD_MARGIN) * 2 - cardPadding * 2;
+        : width - CARD_MARGIN * 2 - cardPadding * 2;
     // The opened CW frame adds its own padding and border
     const contentWidth = hasContentWarning ? bodyWidth - 28 : bodyWidth;
 
@@ -184,7 +196,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         const veiled = targetStatus.sensitive && !isMediaRevealed;
         const tiles = count === 1 ? (
             <Pressable
-                style={styles.singleMedia}
+                style={[styles.singleMedia, compactMode && styles.singleMediaCompact]}
                 onPress={() => openMedia(attachments, 0)}
                 accessibilityRole="imagebutton"
                 accessibilityLabel={mediaLabel(attachments[0], 0, count)}
@@ -196,7 +208,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 {attachments.map((item, idx) => (
                     <Pressable
                         key={item.id || idx}
-                        style={[styles.gridMedia, { width: count === 2 ? '48%' : '31%' }]}
+                        style={[styles.gridMedia, compactMode && styles.gridMediaCompact, { width: count === 2 ? '48%' : '31%' }]}
                         onPress={() => openMedia(attachments, idx)}
                         accessibilityRole="imagebutton"
                         accessibilityLabel={mediaLabel(item, idx, count)}
@@ -245,15 +257,16 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
 
     const renderLinkPreview = (card: PreviewCard) => {
         const domain = getDomainName(card.url);
-        if (!card.image) {
+        // Compact Mode skips the thumbnail: a title + domain row
+        if (!card.image || compactMode) {
             return (
-                <Pressable style={styles.linkPlain} onPress={() => openLink(card.url)} accessibilityRole="link" accessibilityLabel={card.title || domain}>
+                <Pressable style={[styles.linkPlain, compactMode && styles.linkPlainCompact]} onPress={() => openLink(card.url)} accessibilityRole="link" accessibilityLabel={card.title || domain}>
                     <View style={styles.linkIconBox}>
                         <Ionicons name="link" size={18} color={colors.accentText} />
                     </View>
                     <View style={styles.linkBody}>
                         <Text style={[type.name, styles.linkTitle]} numberOfLines={1}>{card.title || domain}</Text>
-                        <Text style={[type.meta, styles.linkMeta]} numberOfLines={1}>{card.description || domain}</Text>
+                        <Text style={[type.meta, styles.linkMeta]} numberOfLines={1}>{compactMode ? domain : card.description || domain}</Text>
                     </View>
                 </Pressable>
             );
@@ -302,7 +315,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
 
     const renderContent = () => {
         if (!hasContentWarning) {
-            return <View style={styles.content}>{body}</View>;
+            return <View style={[styles.content, compactMode && styles.contentCompact]}>{body}</View>;
         }
         if (isSpoilerCollapsed) {
             const hidden = describeHidden(targetStatus);
@@ -336,9 +349,9 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         compactMode ? 13 : 15
     );
     const names = (
-        <View style={styles.names}>
+        <View style={[styles.names, compactMode && styles.namesInline]}>
             {displayName}
-            <Text style={[type.meta, styles.handle]} numberOfLines={1}>@{targetStatus.account.acct}</Text>
+            <Text style={[type.meta, styles.handle, compactMode && styles.handleInline]} numberOfLines={1}>@{targetStatus.account.acct}</Text>
         </View>
     );
     const time = <Text style={[type.meta, styles.time]}>{getRelativeTime(targetStatus.created_at)}</Text>;
@@ -350,39 +363,46 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         />
     );
 
+    // Compact buttons are shorter but keep a MIN_TOUCH hit area
+    const actionIcon = compactMode ? COMPACT_ACTION_ICON : 20;
+    const actionButtonStyle = [styles.actionButton, compactMode && styles.actionButtonCompact];
+    const actionHitSlop = compactMode ? hitSlopFor(44, COMPACT_ACTION_HEIGHT) : undefined;
     const actions = (
-        <View style={styles.actionRow}>
+        <View style={[styles.actionRow, compactMode && styles.actionRowCompact]}>
             <Pressable
-                style={styles.actionButton}
+                style={actionButtonStyle}
+                hitSlop={actionHitSlop}
                 onPress={() => openCompose({ replyToStatus: targetStatus })}
                 accessibilityRole="button"
                 accessibilityLabel={`Reply, ${targetStatus.replies_count || 0} replies`}
             >
-                <Ionicons name="arrow-undo-outline" size={20} color={colors.textMuted} />
+                <Ionicons name="arrow-undo-outline" size={actionIcon} color={colors.textMuted} />
                 <Text style={[type.meta, styles.actionCount]}>{targetStatus.replies_count || 0}</Text>
             </Pressable>
             <Pressable
-                style={styles.actionButton}
+                style={actionButtonStyle}
+                hitSlop={actionHitSlop}
                 onPress={toggleReblog}
                 accessibilityRole="button"
                 accessibilityLabel={`${isReblogged ? 'Boosted' : 'Boost'}, ${boostCount || 0} boosts`}
                 accessibilityState={{ selected: isReblogged }}
             >
-                <Ionicons name="repeat" size={20} color={isReblogged ? colors.accentText : colors.textMuted} />
+                <Ionicons name="repeat" size={actionIcon} color={isReblogged ? colors.accentText : colors.textMuted} />
                 <Text style={[type.meta, styles.actionCount, isReblogged && styles.actionCountActive]}>{boostCount || 0}</Text>
             </Pressable>
             <Pressable
-                style={styles.actionButton}
+                style={actionButtonStyle}
+                hitSlop={actionHitSlop}
                 onPress={toggleFavorite}
                 accessibilityRole="button"
                 accessibilityLabel={`${isFavorited ? 'Favourited' : 'Favourite'}, ${favCount || 0} favourites`}
                 accessibilityState={{ selected: isFavorited }}
             >
-                <Ionicons name={isFavorited ? 'star' : 'star-outline'} size={20} color={isFavorited ? colors.accentText : colors.textMuted} />
+                <Ionicons name={isFavorited ? 'star' : 'star-outline'} size={actionIcon} color={isFavorited ? colors.accentText : colors.textMuted} />
                 <Text style={[type.meta, styles.actionCount, isFavorited && styles.actionCountActive]}>{favCount || 0}</Text>
             </Pressable>
-            <Pressable style={styles.actionButton} onPress={handleShare} accessibilityRole="button" accessibilityLabel="Share">
-                <Ionicons name="share-outline" size={20} color={colors.textMuted} />
+            <Pressable style={actionButtonStyle} hitSlop={actionHitSlop} onPress={handleShare} accessibilityRole="button" accessibilityLabel="Share">
+                <Ionicons name="share-outline" size={actionIcon} color={colors.textMuted} />
             </Pressable>
         </View>
     );
@@ -390,7 +410,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const card = (
         <Card style={[styles.card, compactMode && styles.cardCompact, threadMode && styles.cardThread]}>
             {isReblog && (
-                <View style={styles.boostRow}>
+                <View style={[styles.boostRow, compactMode && styles.boostRowCompact]}>
                     <Ionicons name="repeat" size={14} color={colors.textMuted} />
                     <Avatar name={status.account.display_name || status.account.username} uri={status.account.avatar} size={18} />
                     {renderTextWithEmojis(
@@ -402,8 +422,8 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 </View>
             )}
 
-            {threadMode ? (
-                // In a thread the avatar keeps its own column so the connecting lines can run through it
+            {avatarColumn ? (
+                // The avatar keeps its own column: in a thread the connecting lines run through it
                 <View style={styles.threadRow}>
                     <View style={[styles.threadAvatarColumn, { width: avatarSize }]}>
                         {hasThreadLineTop && (

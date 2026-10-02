@@ -1,10 +1,12 @@
 import React from 'react';
-import { Alert, Platform, Share } from 'react-native';
+import { Alert, Platform, Share, StyleSheet } from 'react-native';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
 import { MediaViewerProvider } from '../components/MediaViewer/mediaViewer';
 import { TootCard, describeHidden } from '../components/TootCard/tootCard';
+import { COMPACT_ACTION_HEIGHT } from '../components/TootCard/styles';
+import { MIN_TOUCH } from '../services/theme/shape';
 import { Poll } from '../components/Poll/poll';
 import { favouriteStatus } from '../services/mastodon/statuses';
 import { votePoll } from '../services/mastodon/polls';
@@ -21,8 +23,10 @@ jest.mock('../services/mastodon/polls', () => ({
     votePoll: jest.fn(),
 }));
 
+// Mutable so the Compact Mode tests can turn it on
+const mockSettings = { compactMode: false, mediaAutoplay: false };
 jest.mock('../services/settingsContext', () => ({
-    useSettings: () => ({ compactMode: false, mediaAutoplay: false }),
+    useSettings: () => mockSettings,
 }));
 
 jest.mock('../services/themeContext', () => ({
@@ -276,6 +280,56 @@ describe('TootCard content', () => {
         expect(screen.getByRole('button', { name: 'Favourited, 33 favourites' })).toBeSelected();
         expect(screen.getByRole('button', { name: 'Boost, 22 boosts' })).not.toBeSelected();
         expect(screen.getByRole('button', { name: 'Reply, 11 replies' })).toBeTruthy();
+    });
+});
+
+describe('TootCard in Compact Mode', () => {
+    beforeEach(() => {
+        mockSettings.compactMode = true;
+    });
+    afterEach(() => {
+        mockSettings.compactMode = false;
+    });
+
+    const renderCard = (status: Status) =>
+        render(
+            <QueryClientProvider client={createTestQueryClient()}>
+                <MediaViewerProvider>
+                    <TootCard status={status} />
+                </MediaViewerProvider>
+            </QueryClientProvider>
+        );
+
+    it('shows link previews as a title + domain row without the thumbnail', async () => {
+        await renderCard({
+            ...statusA,
+            card: { url: 'https://www.tidepool.studio/post', title: 'Leaving the algorithm', description: '8 min read', type: 'link', image: 'https://tidepool.studio/cover.png', provider_name: '' },
+        } as Status);
+
+        const link = screen.getByRole('link', { name: 'Leaving the algorithm' });
+        expect(link).toBeTruthy();
+        expect(screen.getByText('tidepool.studio')).toBeTruthy();
+        expect(screen.queryByText('8 min read')).toBeNull();
+        // No cover image inside the preview
+        expect(screen.toJSON() && JSON.stringify(screen.toJSON())).not.toContain('tidepool.studio/cover.png');
+    });
+
+    it('caps a single image at 140 high', async () => {
+        await renderCard({
+            ...statusA,
+            media_attachments: [{ id: 'm1', type: 'image', url: 'https://example.social/m1.png', preview_url: 'https://example.social/m1-small.png' }],
+        } as Status);
+
+        expect(StyleSheet.flatten(screen.getByRole('imagebutton', { name: 'Image 1 of 1' }).props.style).height).toBe(140);
+    });
+
+    it('slims the action buttons but keeps a full-size touch area', async () => {
+        await renderCard(statusA);
+
+        const reply = screen.getByRole('button', { name: 'Reply, 11 replies' });
+        expect(StyleSheet.flatten(reply.props.style).minHeight).toBe(COMPACT_ACTION_HEIGHT);
+        const slop = reply.props.hitSlop;
+        expect(COMPACT_ACTION_HEIGHT + slop.top + slop.bottom).toBeGreaterThanOrEqual(MIN_TOUCH);
     });
 });
 
