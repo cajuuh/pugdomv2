@@ -16,6 +16,9 @@ interface AuthContextType {
     switchAccount: (accountId: string) => Promise<void>;
     isAddingAccount: boolean;
     setAddingAccount: (val: boolean) => void;
+    // True right after logging in (or adding an account), until the setup screen is done
+    needsSetup: boolean;
+    finishSetup: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,6 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [loading, setLoading] = useState<boolean>(true);
     const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([]);
     const [isAddingAccount, setAddingAccount] = useState<boolean>(false);
+    const [needsSetup, setNeedsSetup] = useState<boolean>(false);
     const queryClient = useQueryClient();
     // Tokens already handled, so a burst of 401s from one token only logs out once
     const handledUnauthorizedTokens = useRef(new Set<string>());
@@ -62,6 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         resetServerState();
         setUser(newUser);
         setAddingAccount(false);
+        setNeedsSetup(true);
         if (token && instanceUrl) {
             addSavedAccount(token, instanceUrl, newUser).then(() => {
                 getSavedAccounts().then(setSavedAccounts);
@@ -158,7 +163,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, []);
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, logout, checkLoginStatus, savedAccounts, switchAccount, isAddingAccount, setAddingAccount }}>
+        <AuthContext.Provider value={{
+                user,
+                loading,
+                login,
+                logout,
+                checkLoginStatus,
+                savedAccounts,
+                switchAccount,
+                isAddingAccount,
+                setAddingAccount,
+                needsSetup,
+                finishSetup: () => setNeedsSetup(false),
+            }}>
             {children}
         </AuthContext.Provider>
     );
