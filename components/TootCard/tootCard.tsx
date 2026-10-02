@@ -19,7 +19,16 @@ import {
     makeStyles,
 } from './styles';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
-import { favouriteStatus, unfavouriteStatus, reblogStatus, unreblogStatus } from '../../services/mastodon/statuses';
+import {
+    bookmarkStatus,
+    favouriteStatus,
+    reblogStatus,
+    unbookmarkStatus,
+    unfavouriteStatus,
+    unreblogStatus,
+} from '../../services/mastodon/statuses';
+import { useQueryClient } from '@tanstack/react-query';
+import { BOOKMARKS_KEY } from '../../hooks/useBookmarks';
 import { Poll } from '../Poll/poll';
 import { Avatar, Card, PillButton } from '../ui';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
@@ -104,6 +113,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const targetStatus = isReblog ? status.reblog! : status;
 
     const updateCachedStatus = useUpdateCachedStatus();
+    const queryClient = useQueryClient();
 
     // FlashList reuses this component for other statuses, so all per-status state resets when the status changes
     const recyclingDeps = [targetStatus.id];
@@ -114,6 +124,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const [isReblogged, setIsreblogged] = useRecyclingState(targetStatus.reblogged, recyclingDeps);
     const [favCount, setFavCount] = useRecyclingState(targetStatus.favourites_count, recyclingDeps);
     const [boostCount, setBoostCount] = useRecyclingState(targetStatus.reblogs_count, recyclingDeps);
+    const [isBookmarked, setIsBookmarked] = useRecyclingState(!!targetStatus.bookmarked, recyclingDeps);
     const [isMediaRevealed, setIsMediaRevealed] = useRecyclingState(false, recyclingDeps);
 
     // Lets async handlers skip state updates if the card was recycled while a request was in flight
@@ -139,6 +150,26 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             setIsFavorited(previousIsFavorited);
             setFavCount(previousFavCount);
             Alert.alert('Error', 'Failed to update favorite status. Please try again.');
+        }
+    };
+
+    const toggleBookmark = async () => {
+        const previousIsBookmarked = isBookmarked;
+        setIsBookmarked(!previousIsBookmarked);
+
+        try {
+            const updated = previousIsBookmarked
+                ? await unbookmarkStatus(targetStatus.id)
+                : await bookmarkStatus(targetStatus.id);
+            updateCachedStatus(updated);
+            // The Bookmarks list gains or loses this post
+            queryClient.invalidateQueries({ queryKey: BOOKMARKS_KEY });
+        } catch (error) {
+            if (renderedStatusId.current !== targetStatus.id) {
+                return;
+            }
+            setIsBookmarked(previousIsBookmarked);
+            Alert.alert('Error', 'Failed to update the bookmark. Please try again.');
         }
     };
 
@@ -400,6 +431,16 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             >
                 <Ionicons name={isFavorited ? 'star' : 'star-outline'} size={actionIcon} color={isFavorited ? colors.accentText : colors.textMuted} />
                 <Text style={[type.meta, styles.actionCount, isFavorited && styles.actionCountActive]}>{favCount || 0}</Text>
+            </Pressable>
+            <Pressable
+                style={actionButtonStyle}
+                hitSlop={actionHitSlop}
+                onPress={toggleBookmark}
+                accessibilityRole="button"
+                accessibilityLabel={isBookmarked ? 'Bookmarked' : 'Bookmark'}
+                accessibilityState={{ selected: isBookmarked }}
+            >
+                <Ionicons name={isBookmarked ? 'bookmark' : 'bookmark-outline'} size={actionIcon} color={isBookmarked ? colors.accentText : colors.textMuted} />
             </Pressable>
             <Pressable style={actionButtonStyle} hitSlop={actionHitSlop} onPress={handleShare} accessibilityRole="button" accessibilityLabel="Share">
                 <Ionicons name="share-outline" size={actionIcon} color={colors.textMuted} />

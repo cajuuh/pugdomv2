@@ -8,7 +8,7 @@ import { TootCard, describeHidden } from '../components/TootCard/tootCard';
 import { COMPACT_ACTION_HEIGHT } from '../components/TootCard/styles';
 import { MIN_TOUCH } from '../services/theme/shape';
 import { Poll } from '../components/Poll/poll';
-import { favouriteStatus } from '../services/mastodon/statuses';
+import { bookmarkStatus, favouriteStatus, unbookmarkStatus } from '../services/mastodon/statuses';
 import { votePoll } from '../services/mastodon/polls';
 import { Attachment, Poll as PollType, Status } from '../services/mastodon/types';
 
@@ -17,6 +17,8 @@ jest.mock('../services/mastodon/statuses', () => ({
     unfavouriteStatus: jest.fn(),
     reblogStatus: jest.fn(),
     unreblogStatus: jest.fn(),
+    bookmarkStatus: jest.fn(),
+    unbookmarkStatus: jest.fn(),
 }));
 
 jest.mock('../services/mastodon/polls', () => ({
@@ -38,6 +40,8 @@ jest.mock('../services/composeContext', () => ({
 }));
 
 const mockedFavourite = favouriteStatus as jest.MockedFunction<typeof favouriteStatus>;
+const mockedBookmark = bookmarkStatus as jest.MockedFunction<typeof bookmarkStatus>;
+const mockedUnbookmark = unbookmarkStatus as jest.MockedFunction<typeof unbookmarkStatus>;
 const mockedVote = votePoll as jest.MockedFunction<typeof votePoll>;
 
 const makeStatus = (id: string, counts: { replies: number; boosts: number; favs: number }, favourited = false): Status => ({
@@ -144,6 +148,67 @@ describe('TootCard recycling', () => {
         expect(home.pages[0][0]).toMatchObject({ id: 'A', favourited: true, favourites_count: 34 });
         expect(home.pages[0][1]).toBe(statusB);
         expect(local.pages[0][0].reblog).toMatchObject({ id: 'A', favourited: true, favourites_count: 34 });
+    });
+});
+
+describe('TootCard bookmarks', () => {
+    let queryClient: QueryClient;
+    const renderCard = (status: Status) =>
+        render(
+            <QueryClientProvider client={queryClient}>
+                <MediaViewerProvider>
+                    <TootCard status={status} />
+                </MediaViewerProvider>
+            </QueryClientProvider>
+        );
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+        queryClient = createTestQueryClient();
+    });
+
+    it('bookmarks a post and shows it as bookmarked', async () => {
+        mockedBookmark.mockResolvedValue({ ...statusA, bookmarked: true });
+        await renderCard(statusA);
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Bookmark' }));
+
+        expect(mockedBookmark).toHaveBeenCalledWith('A');
+        expect(screen.getByRole('button', { name: 'Bookmarked' })).toBeSelected();
+    });
+
+    it('removes a bookmark', async () => {
+        mockedUnbookmark.mockResolvedValue({ ...statusA, bookmarked: false });
+        await renderCard({ ...statusA, bookmarked: true });
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Bookmarked' }));
+
+        expect(mockedUnbookmark).toHaveBeenCalledWith('A');
+        expect(screen.getByRole('button', { name: 'Bookmark' })).not.toBeSelected();
+    });
+
+    it('rolls back and says so when bookmarking fails', async () => {
+        mockedBookmark.mockRejectedValue(new Error('network'));
+        await renderCard(statusA);
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Bookmark' }));
+
+        expect(screen.getByRole('button', { name: 'Bookmark' })).not.toBeSelected();
+        expect(Alert.alert).toHaveBeenCalled();
+    });
+
+    it('updates the post inside cached bookmark pages and refreshes the list', async () => {
+        queryClient.setQueryData(['timeline', 'bookmarks'], { pages: [{ statuses: [statusA, statusB], nextMaxId: '9' }], pageParams: [undefined] });
+        mockedBookmark.mockResolvedValue({ ...statusA, bookmarked: true });
+        await renderCard(statusA);
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Bookmark' }));
+
+        const bookmarks = queryClient.getQueryData<{ pages: { statuses: Status[]; nextMaxId?: string }[] }>(['timeline', 'bookmarks'])!;
+        expect(bookmarks.pages[0].statuses[0]).toMatchObject({ id: 'A', bookmarked: true });
+        expect(bookmarks.pages[0].nextMaxId).toBe('9');
+        expect(queryClient.getQueryState(['timeline', 'bookmarks'])?.isInvalidated).toBe(true);
     });
 });
 

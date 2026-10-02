@@ -9,6 +9,7 @@ import { getCredentials } from '../../services/storage';
 import { Account, Status } from '../../services/mastodon/types';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
 import { accountStatusesKey, ProfileTab, useAccountStatuses } from '../../hooks/useAccountStatuses';
+import { useBookmarks } from '../../hooks/useBookmarks';
 import { TootCard } from '../../components/TootCard/tootCard';
 import { StatusHtmlContent, openLink } from '../../components/TootCard/htmlContent';
 import { Avatar, IconButton, PillButton, PugMark, SegmentOption, SegmentedPill } from '../../components/ui';
@@ -21,16 +22,21 @@ interface ProfileProps {
     onSettingsPress?: () => void;
 }
 
-const TABS: SegmentOption<ProfileTab>[] = [
+// Bookmarks are private to you, and this is always your own profile
+type Tab = ProfileTab | 'bookmarks';
+
+const TABS: SegmentOption<Tab>[] = [
     { value: 'posts', label: 'Posts' },
     { value: 'replies', label: 'Replies' },
     { value: 'media', label: 'Media' },
+    { value: 'bookmarks', label: 'Bookmarks' },
 ];
 
-const EMPTY_TEXT: Record<ProfileTab, string> = {
+const EMPTY_TEXT: Record<Tab, string> = {
     posts: 'No posts yet',
     replies: 'No posts or replies yet',
     media: 'No media yet',
+    bookmarks: 'No bookmarks yet',
 };
 
 const originOf = (url?: string) => url?.match(/^https?:\/\/[^/?#]+/i)?.[0];
@@ -47,8 +53,8 @@ const hasHeaderImage = (account: Account) => !!account.header && !account.header
 
 interface ProfileHeaderProps {
     user: Account;
-    tab: ProfileTab;
-    onChangeTab: (tab: ProfileTab) => void;
+    tab: Tab;
+    onChangeTab: (tab: Tab) => void;
     onSettingsPress?: () => void;
 }
 
@@ -153,11 +159,16 @@ const Profile = ({ onStatusPress, onSettingsPress }: ProfileProps) => {
     const { colors, type } = useTheme();
     const styles = useThemedStyles(makeStyles);
     const queryClient = useQueryClient();
-    const [tab, setTab] = useState<ProfileTab>('posts');
+    const [tab, setTab] = useState<Tab>('posts');
     const [isPullRefreshing, setIsPullRefreshing] = useState(false);
 
-    const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage, refetch } = useAccountStatuses(user?.id, tab);
-    const statuses = data?.pages.flat() ?? [];
+    const showBookmarks = tab === 'bookmarks';
+    const accountStatuses = useAccountStatuses(user?.id, showBookmarks ? 'posts' : tab, !showBookmarks);
+    const bookmarks = useBookmarks(showBookmarks);
+    const { isLoading, isFetchingNextPage, hasNextPage, fetchNextPage, refetch } = showBookmarks ? bookmarks : accountStatuses;
+    const statuses = showBookmarks
+        ? bookmarks.data?.pages.flatMap(page => page.statuses) ?? []
+        : accountStatuses.data?.pages.flat() ?? [];
 
     // A new post belongs at the top of your own lists
     useEffect(() => {

@@ -15,13 +15,13 @@ export const PROFILE_TAB_FILTERS: Record<ProfileTab, AccountStatusesFilter> = {
 export const accountStatusesKey = (accountId: string, tab?: ProfileTab) =>
     tab ? ['timeline', 'account', accountId, tab] : ['timeline', 'account', accountId];
 
-export const useAccountStatuses = (accountId: string | undefined, tab: ProfileTab) => {
+export const useAccountStatuses = (accountId: string | undefined, tab: ProfileTab, enabled = true) => {
     return useInfiniteQuery({
         queryKey: accountStatusesKey(accountId ?? '', tab),
         queryFn: ({ pageParam }) => getAccountStatuses(accountId!, pageParam, PROFILE_TAB_FILTERS[tab]),
         initialPageParam: undefined as string | undefined,
         getNextPageParam: (lastPage: Status[]) =>
             lastPage.length > 0 ? lastPage[lastPage.length - 1].id : undefined,
-        enabled: !!accountId,
+        enabled: enabled && !!accountId,
     });
 };

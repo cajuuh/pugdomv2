@@ -40,6 +40,16 @@ export async function unreblogStatus(id: string): Promise<Status> {
     return response.data;
 }
 
+export async function bookmarkStatus(id: string): Promise<Status> {
+    const response = await apiClient.post(`/statuses/${id}/bookmark`);
+    return response.data;
+}
+
+export async function unbookmarkStatus(id: string): Promise<Status> {
+    const response = await apiClient.post(`/statuses/${id}/unbookmark`);
+    return response.data;
+}
+
 export async function getStatus(id: string): Promise<Status> {
     const response = await apiClient.get(`/statuses/${id}`);
     return response.data;
