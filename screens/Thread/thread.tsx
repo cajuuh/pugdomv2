@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { IconButton } from '../../components/ui';
 import { space } from '../../services/theme/shape';
+import { TAB_BAR_CLEARANCE } from '../../components/TabBar/styles';
 import { getStatus, getStatusContext } from '../../services/mastodon/statuses';
 import { Status } from '../../services/mastodon/types';
 import { TootCard } from '../../components/TootCard/tootCard';
@@ -199,7 +200,7 @@ const styles = StyleSheet.create({
     },
 
     listContent: {
-        paddingBottom: 100,
+        paddingBottom: TAB_BAR_CLEARANCE,
     },
 
     postContainer: {

@@ -39,7 +39,12 @@ function NavigationRoot() {
   const [threadStatusId, setThreadStatusId] = useState<string | null>(null);
 
   const handleTabPress = (tab: 'home' | 'search' | 'notifications' | 'profile') => {
-      if (tab === 'home' && activeTab === 'home') {
+      // The dock floats over Settings and Thread: a tab press closes them and shows that tab
+      if (currentScreen !== 'main') {
+          setCurrentScreen('main');
+          setThreadStatusId(null);
+          setActiveTab(tab);
+      } else if (tab === 'home' && activeTab === 'home') {
           DeviceEventEmitter.emit('scroll_to_top_home');
       } else {
           setActiveTab(tab);
@@ -104,9 +109,6 @@ function NavigationRoot() {
           {activeTab === 'notifications' && <Notifications onStatusPress={openThread} />}
           {activeTab === 'profile' && <Profile onStatusPress={openThread} onSettingsPress={() => setCurrentScreen('settings')} />}
         </View>
-
-        {/* Custom Tab Bar */}
-        <TabBar activeTab={activeTab} onTabPress={handleTabPress} onComposePress={openCompose} />
       </View>
 
       {/* Render Thread as absolute overlay on top if active */}
@@ -122,6 +124,9 @@ function NavigationRoot() {
               <Settings onBack={() => setCurrentScreen('main')} />
           </View>
       )}
+
+      {/* Custom Tab Bar, last so it stays on top of the overlays on both platforms */}
+      <TabBar activeTab={activeTab} onTabPress={handleTabPress} onComposePress={openCompose} />
     </View>
   );
 }
