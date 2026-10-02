@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { ActivityIndicator, RefreshControl, DeviceEventEmitter, Text, View } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
+import { FlashList, FlashListRef } from '@shopify/flash-list';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTimeline } from '../../hooks/useTimeline';
+import { Status } from '../../services/mastodon/types';
 import { TootCard } from '../../components/TootCard/tootCard';
 import { SegmentedPill } from '../../components/ui';
 import { useTheme } from '../../services/themeContext';
@@ -17,6 +18,15 @@ const FEEDS: { value: FeedType; label: string }[] = [
     { value: 'federated', label: 'Federated' },
 ];
 
+// FlashList keeps the first visible post in place while posts above it get measured, which cut an
+// animated scrollToOffset(0) short after scrolling far. scrollToIndex pauses that correction, jumps
+// near the top and animates the rest; then settle on offset 0 (the list's top padding).
+export const scrollListToTop = async (list: Pick<FlashListRef<Status>, 'scrollToIndex' | 'scrollToOffset'> | null) => {
+    if (!list) return;
+    await list.scrollToIndex({ index: 0, animated: true });
+    list.scrollToOffset({ offset: 0, animated: true });
+};
+
 interface TimelineProps {
     onStatusPress?: (id: string) => void;
 }
@@ -26,7 +36,7 @@ const Timeline = ({ onStatusPress }: TimelineProps) => {
     const styles = useThemedStyles(makeStyles);
     const [activeFeed, setActiveFeed] = useState<FeedType>('home');
     const queryClient = useQueryClient();
-    const listRef = useRef<any>(null);
+    const listRef = useRef<FlashListRef<Status>>(null);
 
     const {
         data,
@@ -48,7 +58,7 @@ const Timeline = ({ onStatusPress }: TimelineProps) => {
         });
 
         const scrollSub = DeviceEventEmitter.addListener('scroll_to_top_home', () => {
-            listRef.current?.scrollToOffset({ offset: 0, animated: true });
+            scrollListToTop(listRef.current);
         });
 
         return () => {
