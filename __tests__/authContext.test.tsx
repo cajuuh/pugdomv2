@@ -194,4 +194,26 @@ describe('AuthProvider account changes', () => {
         expect(screen.getByText('bob')).toBeTruthy();
         expect(queryClient.getQueryData(['timeline', 'home'])).toBeUndefined();
     });
+
+    it('asks for setup after a login, until it is finished', async () => {
+        mockedStorage.__setState({ accessToken: 'alice-token', instanceUrl: alice.instanceUrl }, [alice]);
+        await renderAuth();
+        // Launching with a saved account goes straight in
+        expect(auth.needsSetup).toBe(false);
+
+        await act(async () => auth.login({ ...bob.userInfo, emojis: [] }, bob.accessToken, bob.instanceUrl));
+        expect(auth.needsSetup).toBe(true);
+
+        await act(async () => auth.finishSetup());
+        expect(auth.needsSetup).toBe(false);
+    });
+
+    it('does not ask for setup when switching to a saved account', async () => {
+        mockedStorage.__setState({ accessToken: 'alice-token', instanceUrl: alice.instanceUrl }, [alice, bob]);
+        await renderAuth();
+
+        await act(() => auth.switchAccount(bob.id));
+
+        expect(auth.needsSetup).toBe(false);
+    });
 });

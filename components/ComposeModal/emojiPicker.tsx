@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, SectionList, Text, View } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
-import { fetchCustomEmojis } from '../../services/mastodon/customEmojis';
+import { useCustomEmojis } from '../../hooks/useCustomEmojis';
 import { CustomEmoji } from '../../services/mastodon/types';
 import { useTheme } from '../../services/themeContext';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
@@ -54,12 +53,7 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ visible, onPick, onClo
     const { colors, type } = useTheme();
     const styles = useThemedStyles(makeStyles);
     const [category, setCategory] = useState(ALL_CATEGORIES);
-    const { data, isLoading, isError } = useQuery({
-        queryKey: ['customEmojis'],
-        queryFn: fetchCustomEmojis,
-        staleTime: 60 * 60 * 1000,
-        enabled: visible,
-    });
+    const { data, isLoading, isError } = useCustomEmojis(visible);
     const groups = useMemo(() => groupByCategory((data ?? []).filter(emoji => emoji.visible_in_picker)), [data]);
     // Servers without categories keep the plain grid: no chips, no headers
     const categorized = groups.length > 1;

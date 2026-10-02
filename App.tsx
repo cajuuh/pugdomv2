@@ -24,6 +24,8 @@ import { TopBar } from './components/TopBar/topBar';
 import { TabBar } from './components/TabBar/tabBar';
 import Settings from './screens/Settings/settings';
 import Thread from './screens/Thread/thread';
+import Setup from './screens/Setup/setup';
+import { useEmojiCachePrimer } from './hooks/useCustomEmojis';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './services/queryClient';
 
@@ -31,12 +33,14 @@ import { queryClient } from './services/queryClient';
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function NavigationRoot() {
-  const { user, loading, logout, isAddingAccount, setAddingAccount } = useAuth();
+  const { user, loading, logout, isAddingAccount, setAddingAccount, needsSetup, finishSetup } = useAuth();
   const { openCompose } = useCompose();
   const { colors, isDark, fontsReady } = useTheme();
   const [activeTab, setActiveTab] = useState<'home' | 'search' | 'notifications' | 'profile'>('home');
   const [currentScreen, setCurrentScreen] = useState<'main' | 'settings' | 'thread'>('main');
   const [threadStatusId, setThreadStatusId] = useState<string | null>(null);
+  // The server's stored custom emoji, ready before anyone opens the picker
+  useEmojiCachePrimer(user?.id);
 
   const handleTabPress = (tab: 'home' | 'search' | 'notifications' | 'profile') => {
       // The dock floats over Settings and Thread: a tab press closes them and shows that tab
@@ -87,6 +91,15 @@ function NavigationRoot() {
       </View>
     );
   };
+
+  if (needsSetup) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <StatusBar style={statusBarStyle} />
+        <Setup onDone={finishSetup} />
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
