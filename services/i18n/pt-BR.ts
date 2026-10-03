@@ -70,6 +70,10 @@ export const ptBR: Dictionary = {
         emptyHome: 'Nenhuma publicação na sua página inicial ainda!',
         emptyLocal: 'Nenhuma publicação na linha do tempo local ainda!',
         emptyFederated: 'Nenhuma publicação na linha do tempo federada ainda!',
+        newPosts_one: '{{count}} nova publicação',
+        newPosts_other: '{{count}} novas publicações',
+        newPostsMany: '{{count}}+ novas publicações',
+        newPostsHint: 'Carrega e vai para o topo',
     },
     search: {
         comingSoon: 'A busca está chegando',

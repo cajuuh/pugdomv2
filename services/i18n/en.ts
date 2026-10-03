@@ -72,6 +72,10 @@ export const en = {
         emptyHome: 'No posts on your home timeline yet!',
         emptyLocal: 'No posts on your local timeline yet!',
         emptyFederated: 'No posts on your federated timeline yet!',
+        newPosts_one: '{{count}} new post',
+        newPosts_other: '{{count}} new posts',
+        newPostsMany: '{{count}}+ new posts',
+        newPostsHint: 'Loads them and goes to the top',
     },
     search: {
         comingSoon: 'Search is on its way',
