@@ -38,8 +38,8 @@ export const StatusHtmlContent = React.memo(({ content, emojis, colors, bodyFont
             onPress: (event: any, href: string, htmlAttribs: any) => {
                 const className = htmlAttribs.class || '';
                 if (className.includes('mention')) {
-                    const acct = href.split('/').pop()?.replace(/^@/, '');
-                    if (onPressMention && acct) onPressMention(acct);
+                    // The profile URL; callers match it against the post's mentions to find the account
+                    if (onPressMention) onPressMention(href);
                     else onPressLink(href);
                 } else if (className.includes('hashtag')) {
                     const tag = href.split('/').pop()?.replace(/^#/, '');

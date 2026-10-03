@@ -11,7 +11,8 @@ import { useTheme } from '../../services/themeContext';
 import { useCompose } from '../../services/composeContext';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
 import { NotificationFilter, SUPPORTED_NOTIFICATION_TYPES, useNotifications } from '../../hooks/useNotifications';
-import { useFollowAccount, useRelationships } from '../../hooks/useRelationships';
+import { useRelationships } from '../../hooks/useRelationships';
+import { FollowButton } from '../../components/FollowButton/followButton';
 import { useUpdateCachedStatus } from '../../hooks/useUpdateCachedStatus';
 import { Avatar, AvatarBadge, IconButton, PillButton, SectionLabel, SegmentOption, SegmentedPill, Well } from '../../components/ui';
 import { hitSlopFor } from '../../services/theme/shape';
@@ -20,6 +21,7 @@ import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { ListItem, actorsText, buildListItems, notificationTime, plainText, withoutLeadingMentions } from './rows';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { TKey, Translator } from '../../services/i18n/translate';
+import { useOpenAccount } from '../../hooks/useOpenAccount';
 
 interface NotificationsProps {
     onStatusPress?: (id: string) => void;
@@ -42,55 +44,6 @@ const statusText = (status: Status, type: Notification['type'], { t }: Translato
     if (status.spoiler_text) return t('notifications.cw', { text: status.spoiler_text });
     const text = plainText(status.content);
     return type === 'mention' ? withoutLeadingMentions(text) : text;
-};
-
-interface FollowBackProps {
-    accountId: string;
-    relationship?: Relationship;
-}
-
-const FollowBack = ({ accountId, relationship }: FollowBackProps) => {
-    const { colors, type } = useTheme();
-    const styles = useThemedStyles(makeStyles);
-    const { t } = useI18n();
-    const followAccount = useFollowAccount();
-    // FlashList recycles rows, so reset when the row shows another account
-    const [pending, setPending] = useRecyclingState(false, [accountId]);
-
-    // Hide until the relationship is known, so we never offer to follow someone we already follow
-    if (!relationship) {
-        return null;
-    }
-    if (relationship.following || relationship.requested) {
-        // Locked accounts approve follows first, so a follow sent to them stays "Requested"
-        const label = relationship.following ? t('notifications.following') : t('notifications.requested');
-        return (
-            <View style={styles.followState} accessible accessibilityLabel={label}>
-                <Ionicons name={relationship.following ? 'checkmark' : 'time-outline'} size={15} color={colors.accentText} />
-                <Text style={[type.name, styles.followStateText]}>{label}</Text>
-            </View>
-        );
-    }
-
-    const handleFollow = async () => {
-        setPending(true);
-        try {
-            await followAccount(accountId);
-        } catch (error) {
-            Alert.alert(t('common.error'), t('notifications.followFailed'));
-        } finally {
-            setPending(false);
-        }
-    };
-
-    return (
-        <PillButton
-            label={pending ? t('notifications.followingPending') : t('notifications.followBack')}
-            size="small"
-            disabled={pending}
-            onPress={handleFollow}
-        />
-    );
 };
 
 const MentionActions = ({ status }: { status: Status }) => {
@@ -170,6 +123,7 @@ const NotificationRow = ({ group, relationship, onStatusPress }: NotificationRow
     const styles = useThemedStyles(makeStyles);
     const i18n = useI18n();
     const { t, tn } = i18n;
+    const { openAccount } = useOpenAccount();
     const config = TYPE_CONFIG[group.type];
     const action = t(config.action);
     const { status } = group;
@@ -197,19 +151,35 @@ const NotificationRow = ({ group, relationship, onStatusPress }: NotificationRow
             </Text>
         </Text>
     );
-    const avatar = shown.length > 1
-        ? <StackedAvatars accounts={shown} badge={config.badge} />
-        : <Avatar name={name} uri={account?.avatar} size={44} badge={config.badge} />;
+    // The avatar opens the (first) person's profile
+    const avatar = (
+        <Pressable
+            onPress={account ? () => openAccount(account) : undefined}
+            disabled={!account}
+            accessibilityRole="link"
+            accessibilityLabel={t('post.openProfile', { name })}
+        >
+            {shown.length > 1
+                ? <StackedAvatars accounts={shown} badge={config.badge} />
+                : <Avatar name={name} uri={account?.avatar} size={44} badge={config.badge} />}
+        </Pressable>
+    );
 
     if (group.type === 'follow' && account) {
         return (
             <View style={[styles.row, styles.rowCentered]}>
                 {avatar}
-                <View style={[styles.content, styles.followContent]}>
+                {/* The whole name block opens the new follower's profile */}
+                <Pressable
+                    onPress={() => openAccount(account)}
+                    accessibilityRole="link"
+                    accessibilityLabel={t('post.openProfile', { name })}
+                    style={[styles.content, styles.followContent]}
+                >
                     {headline}
                     <Text style={[type.meta, styles.handle]} numberOfLines={1}>@{account.acct} · {time}</Text>
-                </View>
-                <FollowBack accountId={account.id} relationship={relationship} />
+                </Pressable>
+                <FollowButton accountId={account.id} name={nameOf(account)} relationship={relationship} />
             </View>
         );
     }

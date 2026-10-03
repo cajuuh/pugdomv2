@@ -30,6 +30,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './services/queryClient';
 import { I18nProvider, useI18n } from './services/i18n/i18nContext';
 import { NavigationProvider, StackEntry, useNavigator } from './services/navigationContext';
+import Account from './screens/Account/account';
 
 // Keep the pug splash up until the fonts and the saved account are loaded
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -81,6 +82,9 @@ function NavigationRoot() {
         return <Thread statusId={route.statusId} onBack={reset} onStatusPress={openThread} />;
       case 'settings':
         return <Settings onBack={pop} />;
+      // Back from a profile returns to the post or notification it was opened from
+      case 'account':
+        return <Account accountId={route.accountId} account={route.account} onBack={pop} onStatusPress={openThread} onSettingsPress={openSettings} />;
     }
   };
 

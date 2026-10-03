@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { Alert, Image, Platform, Pressable, Share, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { BlurView } from 'expo-blur';
@@ -37,6 +37,7 @@ import { useMediaViewer } from '../MediaViewer/mediaViewer';
 import { hitSlopFor } from '../../services/theme/shape';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { defaultTranslator, Translator } from '../../services/i18n/translate';
+import { useOpenAccount } from '../../hooks/useOpenAccount';
 
 const getRelativeTime = (dateString: string, { t }: Translator) => {
     const now = new Date();
@@ -100,6 +101,7 @@ interface TootCardProps {
     status: Status;
     onPressMention?: (acct: string) => void;
     onPressHashtag?: (hashtag: string) => void;
+    // Gets the mention's profile URL; by default the profile opens in pugdom
     // Receives the id of the status to open; for boosts that's the original, since a boost has no thread of its own
     onPress?: (statusId: string) => void;
     threadMode?: boolean;
@@ -119,6 +121,9 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
 
     const updateCachedStatus = useUpdateCachedStatus();
     const queryClient = useQueryClient();
+    const { openAccount, openMention } = useOpenAccount();
+    // Stable for StatusHtmlContent's memo: mentions resolve against this post's mention list
+    const handleMention = useCallback((href: string) => openMention(href, targetStatus.mentions), [openMention, targetStatus.mentions]);
     const i18n = useI18n();
     const { t, tn } = i18n;
 
@@ -335,7 +340,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     bodyFont={type.body}
                     compactMode={compactMode}
                     width={contentWidth}
-                    onPressMention={onPressMention}
+                    onPressMention={onPressMention ?? handleMention}
                     onPressHashtag={onPressHashtag}
                     onPressLink={openLink}
                 />
@@ -386,19 +391,29 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         [type.name, styles.displayName, compactMode && { fontSize: 13 }],
         compactMode ? 13 : 15
     );
+    const authorName = targetStatus.account.display_name || targetStatus.account.username;
+    const openAuthor = () => openAccount(targetStatus.account);
+    // Name and handle open the author's profile
     const names = (
-        <View style={[styles.names, compactMode && styles.namesInline]}>
+        <Pressable
+            onPress={openAuthor}
+            accessibilityRole="link"
+            accessibilityLabel={t('post.openProfile', { name: authorName })}
+            style={[styles.names, compactMode && styles.namesInline]}
+        >
             {displayName}
             <Text style={[type.meta, styles.handle, compactMode && styles.handleInline]} numberOfLines={1}>@{targetStatus.account.acct}</Text>
-        </View>
+        </Pressable>
     );
     const time = <Text style={[type.meta, styles.time]}>{getRelativeTime(targetStatus.created_at, i18n)}</Text>;
     const avatar = (
-        <Avatar
-            name={targetStatus.account.display_name || targetStatus.account.username}
-            uri={targetStatus.account.avatar}
-            size={avatarSize}
-        />
+        <Pressable onPress={openAuthor} accessibilityRole="link" accessibilityLabel={t('post.openProfile', { name: authorName })}>
+            <Avatar
+                name={targetStatus.account.display_name || targetStatus.account.username}
+                uri={targetStatus.account.avatar}
+                size={avatarSize}
+            />
+        </Pressable>
     );
 
     // Compact buttons are shorter but keep a MIN_TOUCH hit area
@@ -458,7 +473,11 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const card = (
         <Card style={[styles.card, compactMode && styles.cardCompact, threadMode && styles.cardThread]}>
             {isReblog && (
-                <View style={[styles.boostRow, compactMode && styles.boostRowCompact]}>
+                <Pressable
+                    onPress={() => openAccount(status.account)}
+                    accessibilityRole="link"
+                    style={[styles.boostRow, compactMode && styles.boostRowCompact]}
+                >
                     <Ionicons name="repeat" size={14} color={colors.textMuted} />
                     <Avatar name={status.account.display_name || status.account.username} uri={status.account.avatar} size={18} />
                     {renderTextWithEmojis(
@@ -467,7 +486,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                         [type.meta, styles.boostText],
                         12.5
                     )}
-                </View>
+                </Pressable>
             )}
 
             {avatarColumn ? (
