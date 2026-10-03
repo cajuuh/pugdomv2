@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { ActivityIndicator, RefreshControl, DeviceEventEmitter, Text, View } from 'react-native';
 import { FlashList, FlashListRef } from '@shopify/flash-list';
-import { useQueryClient } from '@tanstack/react-query';
+import { InfiniteData, useQueryClient } from '@tanstack/react-query';
 import { useTimeline } from '../../hooks/useTimeline';
 import { Status } from '../../services/mastodon/types';
 import { TootCard } from '../../components/TootCard/tootCard';
@@ -10,6 +10,8 @@ import { useTheme } from '../../services/themeContext';
 import { makeStyles } from './styles';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { useI18n } from '../../services/i18n/i18nContext';
+import { useNewPosts } from '../../hooks/useNewPosts';
+import { NewPostsPill } from './newPostsPill';
 
 type FeedType = 'home' | 'local' | 'federated';
 
@@ -51,6 +53,24 @@ const Timeline = ({ onStatusPress }: TimelineProps) => {
     const statuses = useMemo(() => {
         return data?.pages.flatMap(page => page) || [];
     }, [data]);
+
+    const newPosts = useNewPosts(activeFeed, statuses[0]?.id);
+    const [loadingNewPosts, setLoadingNewPosts] = useState(false);
+
+    // Reload only the first page (dropping the older ones, so it's one request), then go to the top.
+    // Scrolling first would keep the old top post in view, with the new ones above it.
+    const showNewPosts = useCallback(async () => {
+        setLoadingNewPosts(true);
+        try {
+            queryClient.setQueryData<InfiniteData<Status[], string | undefined>>(['timeline', activeFeed], current =>
+                current && { pages: current.pages.slice(0, 1), pageParams: current.pageParams.slice(0, 1) }
+            );
+            await refetch();
+            await scrollListToTop(listRef.current);
+        } finally {
+            setLoadingNewPosts(false);
+        }
+    }, [queryClient, activeFeed, refetch]);
 
     useEffect(() => {
         const subscription = DeviceEventEmitter.addListener('status_published', () => {
@@ -112,26 +132,29 @@ const Timeline = ({ onStatusPress }: TimelineProps) => {
                     <ActivityIndicator size={'large'} color={colors.accentColor} />
                 </View>
             ) : (
-                <FlashList
-                    ref={listRef}
-                    data={statuses}
-                    keyExtractor={(item) => item.id}
-                    renderItem={({ item }) => <TootCard status={item} onPress={onStatusPress} />}
-                    onEndReached={handleLoadMore}
-                    onEndReachedThreshold={0.5}
-                    refreshControl={
-                        <RefreshControl
-                            refreshing={isRefetching}
-                            onRefresh={handleRefresh}
-                            tintColor={colors.accentColor}
-                            colors={[colors.accentColor]}
-                        />
-                    }
-                    ListFooterComponent={renderFooter}
-                    ListEmptyComponent={renderEmpty}
-                    contentContainerStyle={styles.listContent}
-                    showsVerticalScrollIndicator={false}
-                />
+                <View style={styles.list}>
+                    {newPosts.count > 0 && <NewPostsPill newPosts={newPosts} loading={loadingNewPosts} onPress={showNewPosts} />}
+                    <FlashList
+                        ref={listRef}
+                        data={statuses}
+                        keyExtractor={(item) => item.id}
+                        renderItem={({ item }) => <TootCard status={item} onPress={onStatusPress} />}
+                        onEndReached={handleLoadMore}
+                        onEndReachedThreshold={0.5}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={isRefetching}
+                                onRefresh={handleRefresh}
+                                tintColor={colors.accentColor}
+                                colors={[colors.accentColor]}
+                            />
+                        }
+                        ListFooterComponent={renderFooter}
+                        ListEmptyComponent={renderEmpty}
+                        contentContainerStyle={styles.listContent}
+                        showsVerticalScrollIndicator={false}
+                    />
+                </View>
             )}
         </View>
     );
