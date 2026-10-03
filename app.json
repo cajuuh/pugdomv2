@@ -26,7 +26,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.cajuuh1337.pugdom"
+      "package": "com.cajuuh.pugdom"
     },
     "web": {
       "favicon": "./assets/favicon.png"
