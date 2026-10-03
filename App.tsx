@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
-import { StyleSheet, ActivityIndicator, DeviceEventEmitter, TouchableOpacity, Platform, LogBox, View } from 'react-native';
+import { StyleSheet, ActivityIndicator, BackHandler, DeviceEventEmitter, TouchableOpacity, Platform, LogBox, View } from 'react-native';
 
 // react-native-image-viewing's default header (the media viewer's close button) still uses React Native's
 // deprecated SafeAreaView; the app itself uses react-native-safe-area-context. Remove once that header is replaced.
@@ -29,6 +29,7 @@ import { useEmojiCachePrimer } from './hooks/useCustomEmojis';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './services/queryClient';
 import { I18nProvider, useI18n } from './services/i18n/i18nContext';
+import { NavigationProvider, StackEntry, useNavigator } from './services/navigationContext';
 
 // Keep the pug splash up until the fonts and the saved account are loaded
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -39,16 +40,14 @@ function NavigationRoot() {
   const { colors, isDark, fontsReady } = useTheme();
   const { languageReady } = useI18n();
   const [activeTab, setActiveTab] = useState<'home' | 'search' | 'notifications' | 'profile'>('home');
-  const [currentScreen, setCurrentScreen] = useState<'main' | 'settings' | 'thread'>('main');
-  const [threadStatusId, setThreadStatusId] = useState<string | null>(null);
+  const { stack, push, pop, reset } = useNavigator();
   // The server's stored custom emoji, ready before anyone opens the picker
   useEmojiCachePrimer(user?.id);
 
   const handleTabPress = (tab: 'home' | 'search' | 'notifications' | 'profile') => {
-      // The dock floats over Settings and Thread: a tab press closes them and shows that tab
-      if (currentScreen !== 'main') {
-          setCurrentScreen('main');
-          setThreadStatusId(null);
+      // The dock floats over the stacked screens: a tab press closes them all and shows that tab
+      if (stack.length > 0) {
+          reset();
           setActiveTab(tab);
       } else if (tab === 'home' && activeTab === 'home') {
           DeviceEventEmitter.emit('scroll_to_top_home');
@@ -57,14 +56,32 @@ function NavigationRoot() {
       }
   };
 
-  const openThread = (id: string) => {
-    setThreadStatusId(id);
-    setCurrentScreen('thread');
-  };
+  const openThread = (id: string) => push({ name: 'thread', statusId: id });
+  const openSettings = () => push({ name: 'settings' });
 
-  const closeThread = () => {
-    setCurrentScreen('main');
-    setThreadStatusId(null);
+  // A screen stack belongs to one account
+  useEffect(() => {
+    reset();
+  }, [user?.id, reset]);
+
+  // Android's back button closes the top screen; with none open it leaves the app as usual
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (stack.length === 0) return false;
+      pop();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [stack.length, pop]);
+
+  const renderScreen = ({ route }: StackEntry) => {
+    switch (route.name) {
+      case 'thread':
+        // The header's ← goes back to the tabs; Android's back button steps through the posts one by one
+        return <Thread statusId={route.statusId} onBack={reset} onStatusPress={openThread} />;
+      case 'settings':
+        return <Settings onBack={pop} />;
+    }
   };
 
   const statusBarStyle = isDark ? 'light' : 'dark';
@@ -107,13 +124,17 @@ function NavigationRoot() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar style={statusBarStyle} />
 
-      {/* Render main navigation stack always */}
-      <View style={styles.container}>
+      {/* The tabs, always mounted. Hidden from screen readers while a screen is open over them */}
+      <View
+        style={styles.container}
+        importantForAccessibility={stack.length > 0 ? 'no-hide-descendants' : 'auto'}
+        accessibilityElementsHidden={stack.length > 0}
+      >
         {/* Top Bar */}
         <TopBar
           user={user}
           onProfilePress={() => setActiveTab('profile')}
-          onSettingsPress={() => setCurrentScreen('settings')}
+          onSettingsPress={openSettings}
           onLogoutPress={logout}
         />
 
@@ -122,23 +143,22 @@ function NavigationRoot() {
           {activeTab === 'home' && <Timeline onStatusPress={openThread} />}
           {activeTab === 'search' && <Search />}
           {activeTab === 'notifications' && <Notifications onStatusPress={openThread} />}
-          {activeTab === 'profile' && <Profile onStatusPress={openThread} onSettingsPress={() => setCurrentScreen('settings')} />}
+          {activeTab === 'profile' && <Profile onStatusPress={openThread} onSettingsPress={openSettings} />}
         </View>
       </View>
 
-      {/* Render Thread as absolute overlay on top if active */}
-      {currentScreen === 'thread' && threadStatusId && (
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.background }]}>
-              <Thread statusId={threadStatusId} onBack={closeThread} onStatusPress={openThread} />
+      {/* Stacked screens over the tabs. Only the top one shows; the ones below stay mounted, so going
+          back keeps their scroll position */}
+      {stack.map((entry, index) => (
+          <View
+              key={entry.key}
+              style={[StyleSheet.absoluteFill, { backgroundColor: colors.background }, index < stack.length - 1 && styles.hidden]}
+              importantForAccessibility={index < stack.length - 1 ? 'no-hide-descendants' : 'auto'}
+              accessibilityElementsHidden={index < stack.length - 1}
+          >
+              {renderScreen(entry)}
           </View>
-      )}
-
-      {/* Render Settings as absolute overlay on top if active */}
-      {currentScreen === 'settings' && (
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.background }]}>
-              <Settings onBack={() => setCurrentScreen('main')} />
-          </View>
-      )}
+      ))}
 
       {/* Custom Tab Bar, last so it stays on top of the overlays on both platforms */}
       <TabBar activeTab={activeTab} onTabPress={handleTabPress} onComposePress={openCompose} />
@@ -157,7 +177,9 @@ export default function App() {
             <AuthProvider>
               <ComposeProvider>
                 <MediaViewerProvider>
-                  <NavigationRoot />
+                  <NavigationProvider>
+                    <NavigationRoot />
+                  </NavigationProvider>
                 </MediaViewerProvider>
               </ComposeProvider>
             </AuthProvider>
@@ -172,6 +194,9 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  hidden: {
+    display: 'none',
   },
   loadingContainer: {
     flex: 1,

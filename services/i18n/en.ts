@@ -77,6 +77,10 @@ export const en = {
         newPostsMany: '{{count}}+ new posts',
         newPostsHint: 'Loads them and goes to the top',
     },
+    thread: {
+        title: 'Post',
+        titleBy: 'Post by {{name}}',
+    },
     search: {
         comingSoon: 'Search is on its way',
     },

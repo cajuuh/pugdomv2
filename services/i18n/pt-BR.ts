@@ -75,6 +75,10 @@ export const ptBR: Dictionary = {
         newPostsMany: '{{count}}+ novas publicações',
         newPostsHint: 'Carrega e vai para o topo',
     },
+    thread: {
+        title: 'Publicação',
+        titleBy: 'Publicação de {{name}}',
+    },
     search: {
         comingSoon: 'A busca está chegando',
     },
