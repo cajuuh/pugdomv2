@@ -19,6 +19,7 @@ import { Status } from '../../services/mastodon/types';
 import { TootCard } from '../../components/TootCard/tootCard';
 import { useTheme } from '../../services/themeContext';
 import { useI18n } from '../../services/i18n/i18nContext';
+import { renderTextWithEmojis } from '../../services/emojiHelper';
 
 interface ThreadProps {
     statusId: string;
@@ -42,6 +43,8 @@ export default function Thread({
     const [statuses, setStatuses] = useState<ThreadStatus[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    // The post this thread is about (for a boost, the original's author)
+    const mainAccount = statuses.find(status => status.isMain)?.account;
 
     const loadThread = async () => {
         try {
@@ -105,16 +108,24 @@ export default function Thread({
                     onPress={onBack}
                 />
 
-                <Text
-                    style={[
-                        type.name,
-                        {
-                            color: colors.textPrimary,
-                        },
-                    ]}
-                >
-                    Thread
-                </Text>
+                {/* Which post this is: "Publicação de Ana" and the author's handle */}
+                <View style={styles.headerTitle} accessible accessibilityRole="header">
+                    <Text style={[type.name, { color: colors.textPrimary }]} numberOfLines={1}>
+                        {mainAccount
+                            ? renderTextWithEmojis(
+                                  t('thread.titleBy', { name: mainAccount.display_name || mainAccount.username }),
+                                  mainAccount.emojis || [],
+                                  [type.name, { color: colors.textPrimary }],
+                                  15
+                              )
+                            : t('thread.title')}
+                    </Text>
+                    {mainAccount && (
+                        <Text style={[type.meta, { color: colors.textMuted }]} numberOfLines={1}>
+                            @{mainAccount.acct}
+                        </Text>
+                    )}
+                </View>
 
                 <View style={styles.headerSpacer} />
             </View>
@@ -189,6 +200,12 @@ const styles = StyleSheet.create({
         paddingBottom: space.sm,
         paddingHorizontal: space.lg,
         borderBottomWidth: StyleSheet.hairlineWidth,
+    },
+
+    headerTitle: {
+        flex: 1,
+        alignItems: 'center',
+        paddingHorizontal: space.sm,
     },
 
     headerSpacer: {

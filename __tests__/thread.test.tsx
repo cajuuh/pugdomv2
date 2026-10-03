@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, within } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
@@ -94,5 +94,18 @@ describe('Thread', () => {
 
         await fireEvent.press(screen.getByText(/status reply/));
         expect(onStatusPress).toHaveBeenCalledWith('reply');
+    });
+
+    it('says whose post it is in the header', async () => {
+        mockedGetStatus.mockResolvedValue({
+            ...makeStatus('main'),
+            account: { id: 'a2', username: 'ana', acct: 'ana@pug.social', display_name: 'Ana', avatar: '', emojis: [] },
+        });
+        await renderThread();
+
+        await screen.findByText('Post by Ana');
+        const header = within(screen.getByTestId('thread-header'));
+        expect(header.getByText('Post by Ana')).toBeTruthy();
+        expect(header.getByText('@ana@pug.social')).toBeTruthy();
     });
 });
