@@ -1,161 +1,235 @@
-import React, { useState } from 'react';
-import { StyleSheet, ScrollView, Dimensions, Alert, Image, Share, RefreshControl } from 'react-native';
-import { View, Text, Button, Avatar, Card } from 'react-native-ui-lib';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, DeviceEventEmitter, Image, Pressable, RefreshControl, Share, Text, View, useWindowDimensions } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
+import { useQueryClient } from '@tanstack/react-query';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '../../services/authContext';
 import { useTheme } from '../../services/themeContext';
-import * as WebBrowser from 'expo-web-browser';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { styles } from './styles'
+import { getCredentials } from '../../services/storage';
+import { Account, Status } from '../../services/mastodon/types';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
+import { accountStatusesKey, ProfileTab, useAccountStatuses } from '../../hooks/useAccountStatuses';
+import { useBookmarks } from '../../hooks/useBookmarks';
+import { TootCard } from '../../components/TootCard/tootCard';
+import { StatusHtmlContent, openLink } from '../../components/TootCard/htmlContent';
+import { Avatar, IconButton, PillButton, PugMark, SegmentOption, SegmentedPill } from '../../components/ui';
+import { hitSlopFor } from '../../services/theme/shape';
+import { useThemedStyles } from '../../services/theme/useThemedStyles';
+import { AVATAR_SIZE, SHARE_SIZE, makeStyles } from './styles';
+import { useI18n } from '../../services/i18n/i18nContext';
 
-const { width } = Dimensions.get('window');
-
-const stripHtml = (html: string) => {
-    if (!html) {
-        return '';
-    }
-    return html.replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n\n').replace(/<[^>]*>/g, '').trim();
+interface ProfileProps {
+    onStatusPress?: (id: string) => void;
+    onSettingsPress?: () => void;
 }
 
-const Profile = () => {
-    const { user, logout, checkLoginStatus } = useAuth();
-    const { colors } = useTheme();
-    const [refreshing, setRefreshing] = useState(false);
+// Bookmarks are private to you, and this is always your own profile
+type Tab = ProfileTab | 'bookmarks';
+
+const TABS: Tab[] = ['posts', 'replies', 'media', 'bookmarks'];
+
+const EMPTY_TEXT = {
+    posts: 'profile.emptyPosts',
+    replies: 'profile.emptyReplies',
+    media: 'profile.emptyMedia',
+    bookmarks: 'profile.emptyBookmarks',
+} as const;
+
+const originOf = (url?: string) => url?.match(/^https?:\/\/[^/?#]+/i)?.[0];
+
+// "@user@instance": your own account's acct has no domain, so take it from the profile URL
+export const fullHandle = (account: Account) => {
+    if (account.acct.includes('@')) return `@${account.acct}`;
+    const domain = originOf(account.url)?.replace(/^https?:\/\//i, '');
+    return domain ? `@${account.acct}@${domain}` : `@${account.acct}`;
+};
+
+// Mastodon serves a placeholder image (".../missing.png") when there's no header
+const hasHeaderImage = (account: Account) => !!account.header && !account.header.includes('missing');
+
+interface ProfileHeaderProps {
+    user: Account;
+    tab: Tab;
+    onChangeTab: (tab: Tab) => void;
+    onSettingsPress?: () => void;
+}
+
+const ProfileHeader = ({ user, tab, onChangeTab, onSettingsPress }: ProfileHeaderProps) => {
+    const { colors, type, coat } = useTheme();
+    const { t, locale } = useI18n();
+    const tabs: SegmentOption<Tab>[] = TABS.map(value => ({ value, label: t(`profile.${value}`) }));
+    const styles = useThemedStyles(makeStyles);
+    const { width } = useWindowDimensions();
+    const name = user.display_name || user.username;
+
+    const handleEditProfile = async () => {
+        const { instanceUrl } = await getCredentials();
+        const base = instanceUrl ?? originOf(user.url);
+        if (base) {
+            openLink(`${base.replace(/\/$/, '')}/settings/profile`);
+        }
+    };
+
+    const handleShare = async () => {
+        if (!user.url) return;
+        try {
+            await Share.share({ message: t('profile.shareMessage', { url: user.url }) });
+        } catch (error: any) {
+            Alert.alert(t('profile.shareFailed'), error.message);
+        }
+    };
+
+    const stat = (count: number | undefined, label: string) => (
+        <Text style={[type.body, styles.stat]}>
+            <Text style={[type.name, styles.statNumber]}>{(count ?? 0).toLocaleString(locale)}</Text> {label}
+        </Text>
+    );
+
+    return (
+        <View style={styles.header}>
+            <View style={styles.banner}>
+                {hasHeaderImage(user) ? (
+                    <Image testID="profile-banner-image" source={{ uri: user.header }} style={styles.bannerImage} />
+                ) : (
+                    <View testID="profile-banner-mark" style={styles.bannerMark}>
+                        <PugMark coat={coat} size={220} />
+                    </View>
+                )}
+                {onSettingsPress && (
+                    <IconButton icon="options-outline" accessibilityLabel={t('common.settings')} onPress={onSettingsPress} style={styles.bannerButton} />
+                )}
+            </View>
+
+            <View style={styles.info}>
+                <View style={styles.avatarRow}>
+                    <View style={styles.avatarRing}>
+                        <Avatar name={name} uri={user.avatar} size={AVATAR_SIZE} />
+                    </View>
+                    <View style={styles.actions}>
+                        <PillButton label={t('profile.editProfile')} variant="secondary" onPress={handleEditProfile} />
+                        <Pressable
+                            onPress={handleShare}
+                            accessibilityRole="button"
+                            accessibilityLabel={t('profile.shareProfile')}
+                            hitSlop={hitSlopFor(SHARE_SIZE, SHARE_SIZE)}
+                            style={({ pressed }) => [styles.share, pressed && { opacity: 0.7 }]}
+                        >
+                            <Ionicons name="share-outline" size={18} color={colors.textPrimary} />
+                        </Pressable>
+                    </View>
+                </View>
+
+                <View style={styles.names}>
+                    <Text accessibilityRole="header" style={[type.title, styles.name]} numberOfLines={2}>
+                        {renderTextWithEmojis(name, user.emojis || [], [type.title, styles.name], 24)}
+                    </Text>
+                    <Text style={[type.meta, styles.handle]} numberOfLines={1}>{fullHandle(user)}</Text>
+                </View>
+
+                {!!user.note && (
+                    <StatusHtmlContent
+                        content={user.note}
+                        emojis={user.emojis}
+                        colors={colors}
+                        bodyFont={type.body}
+                        compactMode={false}
+                        width={width - 40}
+                        onPressLink={openLink}
+                    />
+                )}
+
+                <View style={styles.stats}>
+                    {stat(user.statuses_count, t('profile.statPosts'))}
+                    {stat(user.following_count, t('profile.statFollowing'))}
+                    {stat(user.followers_count, t('profile.statFollowers'))}
+                </View>
+            </View>
+
+            <View style={styles.tabs}>
+                <SegmentedPill variant="underline" options={tabs} value={tab} onChange={onChangeTab} />
+            </View>
+        </View>
+    );
+};
+
+const Profile = ({ onStatusPress, onSettingsPress }: ProfileProps) => {
+    const { user, checkLoginStatus } = useAuth();
+    const { colors, type } = useTheme();
+    const { t } = useI18n();
+    const styles = useThemedStyles(makeStyles);
+    const queryClient = useQueryClient();
+    const [tab, setTab] = useState<Tab>('posts');
+    const [isPullRefreshing, setIsPullRefreshing] = useState(false);
+
+    const showBookmarks = tab === 'bookmarks';
+    const accountStatuses = useAccountStatuses(user?.id, showBookmarks ? 'posts' : tab, !showBookmarks);
+    const bookmarks = useBookmarks(showBookmarks);
+    const { isLoading, isFetchingNextPage, hasNextPage, fetchNextPage, refetch } = showBookmarks ? bookmarks : accountStatuses;
+    const statuses = showBookmarks
+        ? bookmarks.data?.pages.flatMap(page => page.statuses) ?? []
+        : accountStatuses.data?.pages.flat() ?? [];
+
+    // A new post belongs at the top of your own lists
+    useEffect(() => {
+        if (!user) return;
+        const subscription = DeviceEventEmitter.addListener('status_published', () => {
+            queryClient.invalidateQueries({ queryKey: accountStatusesKey(user.id) });
+        });
+        return () => subscription.remove();
+    }, [queryClient, user]);
+
+    // Refreshes the counts in the header too
+    const handleRefresh = useCallback(async () => {
+        setIsPullRefreshing(true);
+        try {
+            await Promise.all([checkLoginStatus(), refetch()]);
+        } finally {
+            setIsPullRefreshing(false);
+        }
+    }, [checkLoginStatus, refetch]);
 
     if (!user) {
         return null;
     }
 
-    const handleRefresh = async () => {
-        setRefreshing(true);
-        try {
-            await checkLoginStatus();
-        } finally {
-            setRefreshing(false);
+    const handleLoadMore = () => {
+        if (!isFetchingNextPage && hasNextPage) {
+            fetchNextPage();
         }
     };
 
-    const formattedBio = stripHtml(user.note || '');
-
-    const handleOpenWeb = async () => {
-        if (user.url) {
-            await WebBrowser.openBrowserAsync(user.url);
-        }
-    }
-
-    const handleShare = async () => {
-        if (user.url) {
-            try {
-                await Share.share({
-                    message: `Check out my Mastodon profile on pugdom: ${user.url}`
-                })
-            } catch (error: any) {
-                Alert.alert('Error sharing profile', error.message);
-            }
-        }
-    };
-
-    const checkHeader = () => {
-        if (user.header && !user.header.includes('missing')) {
-            return (
-                <Image source={{ uri: user.header }} style={styles.headerBanner} />
-            )
-        }
-        return (
-            <View style={[styles.headerBanner, styles.gradientFallback]} />
-        )
-    }
+    const renderEmpty = () => (
+        <View style={styles.empty}>
+            {isLoading
+                ? <ActivityIndicator color={colors.accentColor} />
+                : <Text style={[type.body, styles.emptyText]}>{t(EMPTY_TEXT[tab])}</Text>}
+        </View>
+    );
 
     return (
-        <ScrollView 
-            style={[styles.container, { backgroundColor: colors.background }]} 
-            contentContainerStyle={styles.contentContainer} 
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-                <RefreshControl
-                    refreshing={refreshing}
-                    onRefresh={handleRefresh}
-                    tintColor={colors.accentColor}
-                    colors={[colors.accentColor]}
-                />
-            }
-        >
-            {/* header */}
-            <View style={[styles.headerBannerContainer, { backgroundColor: colors.cardBackground }]}>
-                {checkHeader()}
-            </View>
-            {/* profiel info */}
-            <View style={styles.profileInfoContainer}>
-                {/* avatar */}
-                <View style={styles.avatarWrapper}>
-                    <Avatar source={{ uri: user.avatar }} size={90} containerStyle={[styles.avatarBorder, { borderColor: colors.background }]} />
-                </View>
-                {/* names */}
-                {renderTextWithEmojis(
-                    user.display_name || user.username,
-                    user.emojis || [],
-                    [styles.displayName, { color: colors.textPrimary }],
-                    20
-                )}
-                <Text style={[styles.username, { color: colors.textSecondary }]}>@{user.username}</Text>
-                {/* stats */}
-                <View style={styles.statsGrid}>
-                    <Card style={[styles.statsCard, { backgroundColor: colors.cardBackground, borderColor: colors.borderColor }]} enableShadow={false}>
-                        <Text style={[styles.statNumber, { color: colors.textPrimary }]}>
-                            {user.statuses_count?.toLocaleString() || '0'}
-                        </Text>
-                        <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Posts</Text>
-                    </Card>
-                    <Card style={[styles.statsCard, { backgroundColor: colors.cardBackground, borderColor: colors.borderColor }]} enableShadow={false}>
-                        <Text style={[styles.statNumber, { color: colors.textPrimary }]}>{user.following_count?.toLocaleString() || '0'}</Text>
-                        <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Following</Text>
-                    </Card>
-                    <Card style={[styles.statsCard, { backgroundColor: colors.cardBackground, borderColor: colors.borderColor }]} enableShadow={false}>
-                        <Text style={[styles.statNumber, { color: colors.textPrimary }]}>{user.followers_count?.toLocaleString() || '0'}</Text>
-                        <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Followers</Text>
-                    </Card>
-                </View>
-                {formattedBio ? (
-                    <View style={[styles.bioContainer, { backgroundColor: colors.cardBackground, borderColor: colors.borderColor }]}>
-                        <Text style={[styles.bioTitle, { color: colors.accentColor }]}>
-                            About Me
-                        </Text>
-                        <Text style={[styles.bioText, { color: colors.textPrimary }]}>
-                            {formattedBio}
-                        </Text>
-                    </View>
-                ) : null}
-                <View style={styles.actionButtonsContainer}>
-                    <Button
-                        label="View on web"
-                        size={Button.sizes.medium}
-                        backgroundColor={colors.accentColor}
-                        style={styles.actionButton}
-                        onPress={handleOpenWeb}
-                        labelStyle={styles.buttonLabel}
+        <View style={styles.container}>
+            <FlashList
+                data={statuses}
+                keyExtractor={(item: Status) => item.id}
+                renderItem={({ item }) => <TootCard status={item} onPress={onStatusPress} />}
+                ListHeaderComponent={<ProfileHeader user={user} tab={tab} onChangeTab={setTab} onSettingsPress={onSettingsPress} />}
+                ListEmptyComponent={renderEmpty}
+                ListFooterComponent={isFetchingNextPage ? <ActivityIndicator style={styles.footer} color={colors.accentColor} /> : null}
+                onEndReached={handleLoadMore}
+                onEndReachedThreshold={0.5}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={isPullRefreshing}
+                        onRefresh={handleRefresh}
+                        tintColor={colors.accentColor}
+                        colors={[colors.accentColor]}
                     />
-                    <Button
-                        label="Share Profile"
-                        size={Button.sizes.medium}
-                        outline
-                        outlineColor={colors.borderColor}
-                        style={[styles.actionButton, styles.outlineButton]}
-                        onPress={handleShare}
-                        labelStyle={[styles.buttonLabel, { color: colors.textPrimary }]}
-                    />
-                </View>
-                <Button
-                    label="Log Out"
-                    link
-                    color={colors.dangerColor}
-                    style={styles.logoutButton}
-                    onPress={() => logout()}
-                    labelStyle={[styles.logoutLabel, { color: colors.dangerColor }]}
-                    iconSource={() => <Ionicons name="log-out-outline" size={18} color={colors.dangerColor} style={{ marginRight: 6 }} />}
-                />
-            </View>
-        </ScrollView>
+                }
+                contentContainerStyle={styles.listContent}
+                showsVerticalScrollIndicator={false}
+            />
+        </View>
     );
-}
+};
 
 export default Profile;

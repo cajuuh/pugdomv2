@@ -1,23 +1,41 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-    Modal,
-    TextInput,
-    ScrollView,
-    TouchableOpacity,
-    ActivityIndicator,
-    DeviceEventEmitter,
     Alert,
-    Platform,
+    Animated,
+    DeviceEventEmitter,
+    Keyboard,
     KeyboardAvoidingView,
-    Switch
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+    useWindowDimensions,
 } from 'react-native';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { View, Text, Avatar } from 'react-native-ui-lib';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '../../services/authContext';
 import { useTheme } from '../../services/themeContext';
 import { createStatus } from '../../services/mastodon/statuses';
-import { styles } from './styles';
+import { Account, Status } from '../../services/mastodon/types';
+import { renderTextWithEmojis } from '../../services/emojiHelper';
+import { replyMentionsText } from '../../services/mastodon/mentions';
+import { statusLength } from '../../services/mastodon/statusLength';
+import { useInstanceConfiguration } from '../../hooks/useInstanceConfiguration';
+import { useThemedStyles } from '../../services/theme/useThemedStyles';
+import { hitSlopFor, space } from '../../services/theme/shape';
+import { Avatar, IconButton, PillButton, Well } from '../ui';
+import { CharacterCounter } from './characterCounter';
+import { EmojiPicker } from './emojiPicker';
+import { OptionSheet, SheetOption } from './optionSheet';
+import { DEFAULT_POLL_DURATION, PollEditor } from './pollEditor';
+import { useDragToDismiss, useSheetTransition } from './sheetTransition';
+import { PILL_HEIGHT, makeStyles } from './styles';
+import { useI18n } from '../../services/i18n/i18nContext';
+import { Translator } from '../../services/i18n/translate';
 
 const stripHtml = (html: string) => {
     if (!html) return '';
@@ -28,16 +46,91 @@ const stripHtml = (html: string) => {
         .trim();
 };
 
-const LANGUAGES = [
-    { code: 'en-US', label: 'English (US)' },
-    { code: 'pt-BR', label: 'Português (Brasil)' },
-    { code: 'es-ES', label: 'Español (España)' },
-    { code: 'fr-FR', label: 'Français (France)' },
-    { code: 'de-DE', label: 'Deutsch (Deutschland)' },
+// Mastodon expects ISO 639-1 codes; region variants like en-US are ignored and the post falls
+// back to the account's default language
+export const LANGUAGES = [
+    { code: 'en', label: 'English' },
+    { code: 'pt', label: 'Português' },
+    { code: 'es', label: 'Español' },
+    { code: 'fr', label: 'Français' },
+    { code: 'de', label: 'Deutsch' },
 ];
 
-import { Status } from '../../services/mastodon/types';
-import { renderTextWithEmojis } from '../../services/emojiHelper';
+const LANGUAGE_OPTIONS: SheetOption<string>[] = LANGUAGES.map(({ code, label }) => ({ value: code, label, description: code.toUpperCase() }));
+
+type Visibility = Status['visibility'];
+
+// Mastodon calls followers-only "private" and mentioned-only "direct"
+type VisibilityOption = SheetOption<Visibility> & { icon: React.ComponentProps<typeof Ionicons>['name'] };
+export const visibilities = ({ t }: Translator): VisibilityOption[] => [
+    { value: 'public', label: t('compose.public'), description: t('compose.publicDescription'), icon: 'globe-outline' },
+    { value: 'unlisted', label: t('compose.unlisted'), description: t('compose.unlistedDescription'), icon: 'lock-open-outline' },
+    { value: 'private', label: t('compose.followers'), description: t('compose.followersDescription'), icon: 'lock-closed-outline' },
+    { value: 'direct', label: t('compose.mentioned'), description: t('compose.mentionedDescription'), icon: 'at' },
+];
+
+const deviceLanguage = () => {
+    try {
+        return Intl.DateTimeFormat().resolvedOptions().locale.split('-')[0];
+    } catch {
+        return undefined;
+    }
+};
+
+// The account's default posting language, else the device language, else English
+export const defaultLanguage = (user: Account | null) =>
+    [user?.source?.language, deviceLanguage()].find(code => code && LANGUAGES.some(l => l.code === code)) ?? 'en';
+
+// Replies keep the parent's visibility; new posts use the account's default
+export const defaultVisibility = (user: Account | null, replyToStatus: Status | null): Visibility =>
+    replyToStatus?.visibility ?? user?.source?.privacy ?? 'public';
+
+// Mastodon rejects polls with fewer than two choices or repeated choices
+const pollValidationError = (options: string[], { t }: Translator) => {
+    const filled = options.map(option => option.trim()).filter(option => option.length > 0);
+    if (filled.length < 2) {
+        return t('compose.minChoices');
+    }
+    if (new Set(filled).size !== filled.length) {
+        return t('compose.distinctChoices');
+    }
+    return null;
+};
+
+// Puts `insert` at the cursor, with spaces so it doesn't run into the surrounding words
+const insertAt = (text: string, cursor: number, insert: string) => {
+    const before = text.slice(0, cursor);
+    const after = text.slice(cursor);
+    const lead = before.length > 0 && !/\s$/.test(before) ? ' ' : '';
+    const trail = /^\s/.test(after) ? '' : ' ';
+    const piece = `${lead}${insert}${trail}`;
+    return { text: before + piece + after, cursor: cursor + piece.length };
+};
+
+// How much of the window the keyboard covers, measured up from the bottom edge
+export const keyboardInset = (windowHeight: number, keyboardTop: number) => Math.max(windowHeight - keyboardTop, 0);
+
+// iOS reports the keyboard before it moves, Android only after
+const useKeyboard = (windowHeight: number) => {
+    const [keyboard, setKeyboard] = useState({ visible: false, inset: 0 });
+    useEffect(() => {
+        const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', event =>
+            setKeyboard({ visible: true, inset: keyboardInset(windowHeight, event.endCoordinates.screenY) })
+        );
+        const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () =>
+            setKeyboard({ visible: false, inset: 0 })
+        );
+        return () => {
+            show.remove();
+            hide.remove();
+        };
+    }, [windowHeight]);
+    return keyboard;
+};
+
+// Anything typed beyond the reply mentions the sheet opened with, a poll, or a content warning
+export const hasDraft = ({ text, initialText, showPoll, spoilerText }: { text: string; initialText: string; showPoll: boolean; spoilerText: string }) =>
+    text.trim() !== initialText.trim() || showPoll || spoilerText.trim().length > 0;
 
 interface ComposeModalProps {
     isOpen: boolean;
@@ -47,89 +140,122 @@ interface ComposeModalProps {
 
 const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, closeCompose }) => {
     const { user } = useAuth();
-    const { colors } = useTheme();
+    const { colors, type } = useTheme();
+    const i18n = useI18n();
+    const { t } = i18n;
+    const styles = useThemedStyles(makeStyles);
+    const insets = useSafeAreaInsets();
+    const { height: windowHeight } = useWindowDimensions();
+    const keyboard = useKeyboard(windowHeight);
+    // The modal is always mounted, so only load the instance limits while composing
+    const instanceConfiguration = useInstanceConfiguration(isOpen && !!user);
 
     const [text, setText] = useState('');
     const [sensitive, setSensitive] = useState(false);
     const [spoilerText, setSpoilerText] = useState('');
     const [loading, setLoading] = useState(false);
-    
-    // Helper States
-    const [language, setLanguage] = useState('en-US');
-    const [langModalVisible, setLangModalVisible] = useState(false);
+    const [language, setLanguage] = useState(() => defaultLanguage(user));
+    const [visibility, setVisibility] = useState<Visibility>(() => defaultVisibility(user, replyToStatus));
+    const [picker, setPicker] = useState<'language' | 'visibility' | 'emoji' | null>(null);
 
     // Poll States
     const [showPoll, setShowPoll] = useState(false);
     const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
-    const [pollDuration, setPollDuration] = useState<number>(86400); // 1 day in seconds
+    const [pollDuration, setPollDuration] = useState<number>(DEFAULT_POLL_DURATION);
     const [pollMultiple, setPollMultiple] = useState(false);
 
     const inputRef = useRef<TextInput>(null);
+    const cursor = useRef(0);
+
+    const { mounted, progress } = useSheetTransition(isOpen);
+    // The text the sheet opened with (reply mentions), to tell whether there's a draft to lose
+    const initialText = useRef('');
+    // closeCompose clears the reply right away; keep showing it while the sheet slides out
+    const shownReply = useRef(replyToStatus);
+    if (isOpen) shownReply.current = replyToStatus;
+    const reply = shownReply.current;
+
+    // Swiping the sheet down closes it, asking first if there's a draft
+    const { drag, panHandlers } = useDragToDismiss(cancel => {
+        if (!hasDraft({ text, initialText: initialText.current, showPoll, spoilerText })) {
+            closeCompose();
+            return;
+        }
+        Alert.alert(t('compose.discardTitle'), t('compose.discardMessage'), [
+            { text: t('compose.keepEditing'), style: 'cancel', onPress: cancel },
+            { text: t('compose.discard'), style: 'destructive', onPress: closeCompose },
+        ], { cancelable: true, onDismiss: cancel });
+    });
 
     useEffect(() => {
         if (isOpen) {
-            if (replyToStatus) {
-                setText(`@${replyToStatus.account.username} `);
-            } else {
-                setText('');
-            }
+            const startText = replyToStatus ? replyMentionsText(replyToStatus, user) : '';
+            initialText.current = startText;
+            drag.setValue(0);
+            setText(startText);
+            cursor.current = startText.length;
             setSensitive(false);
             setSpoilerText('');
-            setLanguage('en-US');
-            setLanguage('en-US');
+            setLanguage(defaultLanguage(user));
+            setVisibility(defaultVisibility(user, replyToStatus));
             setLoading(false);
             setShowPoll(false);
             setPollOptions(['', '']);
-            setPollDuration(86400);
+            setPollDuration(DEFAULT_POLL_DURATION);
             setPollMultiple(false);
-            
-            // Focus on mount/open
+            setPicker(null);
+
+            // Focus once the sheet is in place
             const timer = setTimeout(() => {
                 inputRef.current?.focus();
             }, 150);
             return () => clearTimeout(timer);
         }
-    }, [isOpen, replyToStatus]);
+    }, [isOpen, replyToStatus, drag]);
 
-    if (!isOpen) return null;
+    if (!mounted) return null;
 
-    const charLimit = 500;
-    const remaining = charLimit - text.length;
+    const remaining = instanceConfiguration.maxCharacters - statusLength(text, sensitive ? spoilerText : '');
     const isOverLimit = remaining < 0;
     const isEmpty = text.trim().length === 0;
-    const isPublishDisabled = isEmpty || isOverLimit || loading;
+    const pollError = showPoll ? pollValidationError(pollOptions, i18n) : null;
+    const isPublishDisabled = isEmpty || isOverLimit || !!pollError || loading;
+    const visibilityOptions = visibilities(i18n);
+    const selectedVisibility = visibilityOptions.find(v => v.value === visibility) ?? visibilityOptions[0];
+    const selectedLanguage = LANGUAGES.find(l => l.code === language) ?? LANGUAGES[0];
 
-    // Determine character counter color
-    let counterColor = colors.textSecondary;
-    if (remaining < 50 && remaining >= 0) {
-        counterColor = '#F59E0B'; // Warn orange
-    } else if (isOverLimit) {
-        counterColor = colors.dangerColor; // Error red
-    }
+    const resetPoll = () => {
+        setShowPoll(false);
+        setPollOptions(['', '']);
+        setPollDuration(DEFAULT_POLL_DURATION);
+        setPollMultiple(false);
+    };
+
+    const insertEmoji = (shortcode: string) => {
+        const next = insertAt(text, cursor.current, `:${shortcode}:`);
+        setText(next.text);
+        cursor.current = next.cursor;
+    };
 
     const handlePublish = async () => {
         if (isPublishDisabled) return;
         setLoading(true);
-        let pollParams = undefined;
-        if (showPoll) {
-            const validOptions = pollOptions.filter(opt => opt.trim().length > 0);
-            if (validOptions.length >= 2) {
-                pollParams = {
-                    options: validOptions,
-                    expires_in: pollDuration,
-                    multiple: pollMultiple
-                };
+        const pollParams = showPoll
+            ? {
+                options: pollOptions.map(opt => opt.trim()).filter(opt => opt.length > 0),
+                expires_in: pollDuration,
+                multiple: pollMultiple
             }
-        }
+            : undefined;
 
         try {
             await createStatus({
                 status: text,
-                in_reply_to_id: replyToStatus ? replyToStatus.id : null,
+                in_reply_to_id: reply ? reply.id : null,
                 sensitive,
                 spoiler_text: sensitive ? spoilerText : undefined,
                 language: language,
-                visibility: replyToStatus ? replyToStatus.visibility : 'public',
+                visibility,
                 poll: pollParams,
             });
 
@@ -138,334 +264,206 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
         } catch (error: any) {
             console.error('Failed to post status:', error);
             Alert.alert(
-                'Publishing Failed',
-                error.response?.data?.error || error.message || 'An error occurred while publishing your status.'
+                t('compose.publishFailed'),
+                error.response?.data?.error || error.message || t('compose.publishFailedMessage')
             );
         } finally {
             setLoading(false);
         }
     };
 
-    return (
-        <Modal
-            visible={isOpen}
-            animationType="slide"
-            presentationStyle="fullScreen"
-            onRequestClose={closeCompose}
+    const tool = (icon: React.ComponentProps<typeof Ionicons>['name'], label: string, onPress: () => void, active = false) => (
+        <IconButton
+            icon={icon}
+            accessibilityLabel={label}
+            onPress={onPress}
+            selected={active}
+            color={active ? colors.accentText : colors.textSecondary}
+            style={[styles.tool, active && styles.toolActive]}
+        />
+    );
+
+    const translateY = Animated.add(progress.interpolate({ inputRange: [0, 1], outputRange: [windowHeight, 0] }), drag);
+
+    const sheet = (
+        <Animated.View
+            accessibilityViewIsModal
+            style={[styles.sheet, { marginTop: insets.top + space.sm, transform: [{ translateY }] }]}
         >
-            <SafeAreaProvider>
-                <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-                <KeyboardAvoidingView 
-                    behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
-                    style={{ flex: 1 }}
-                >
-                    {/* Header */}
-                    <View style={[styles.header, { backgroundColor: colors.cardBackground, borderBottomColor: colors.borderColor }]}>
-                        <TouchableOpacity onPress={closeCompose} style={styles.headerButton}>
-                            <Text style={[styles.headerButtonText, { color: colors.textSecondary }]}>Cancel</Text>
-                        </TouchableOpacity>
+            {/* The grabber and header are the drag handle. Not collapsable: Android drops views that draw
+                nothing, and touches would then land on the sheet behind the handle */}
+            <View collapsable={false} {...panHandlers}>
+                <View style={styles.grabberRow} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+                    <View style={styles.grabber} />
+                </View>
 
-                        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
-                            {replyToStatus ? 'Reply' : 'New Post'}
-                        </Text>
-
-                        <TouchableOpacity
-                            onPress={handlePublish}
-                            disabled={isPublishDisabled}
-                            style={[
-                                styles.publishButton,
-                                { backgroundColor: colors.accentColor },
-                                isPublishDisabled && styles.publishButtonDisabled
-                            ]}
-                        >
-                            {loading ? (
-                                <ActivityIndicator size="small" color="#FFFFFF" />
-                            ) : (
-                                <Text style={[styles.publishButtonText, { color: '#FFFFFF' }]}>Post</Text>
-                            )}
-                        </TouchableOpacity>
+                <View style={styles.header}>
+                    <View style={styles.headerSide}>
+                        <PillButton label={t('common.cancel')} variant="ghost" onPress={closeCompose} style={styles.cancel} />
                     </View>
-
-                    {/* Helper Input Bar (Language selection only) */}
-                    <View style={[styles.helperBar, { backgroundColor: colors.cardBackground, borderBottomColor: colors.borderColor }]}>
-                        {(() => {
-                            const selectedLang = LANGUAGES.find(l => l.code === language) || LANGUAGES[0];
-                            return (
-                                <TouchableOpacity
-                                    style={[styles.langPill, { backgroundColor: colors.background, borderColor: colors.borderColor }]}
-                                    onPress={() => setLangModalVisible(true)}
-                                    activeOpacity={0.7}
-                                >
-                                    <Ionicons name="globe-outline" size={13} color={colors.accentColor} />
-                                    <Text style={[styles.langPillText, { color: colors.textPrimary }]}>
-                                        {selectedLang.code}
-                                    </Text>
-                                    <Ionicons name="chevron-down" size={10} color={colors.textSecondary} />
-                                </TouchableOpacity>
-                            );
-                        })()}
+                    <Text accessibilityRole="header" style={[type.sheetTitle, styles.headerTitle]}>
+                        {reply ? t('compose.reply') : t('compose.newPost')}
+                    </Text>
+                    <View style={[styles.headerSide, styles.headerSideEnd]}>
+                        <PillButton label={t('compose.post')} onPress={handlePublish} disabled={isPublishDisabled && !loading} loading={loading} />
                     </View>
+                </View>
+            </View>
 
-                    {/* Editor Space */}
-                    <ScrollView
-                        style={[styles.scrollContainer, { backgroundColor: colors.background }]}
-                        contentContainerStyle={styles.scrollContent}
-                        keyboardShouldPersistTaps="handled"
-                    >
-                        {/* Parent Status Preview if Reply */}
-                        {replyToStatus && (
-                            <View style={[styles.replyPreview, { backgroundColor: colors.cardBackground, borderColor: colors.borderColor }]}>
-                                <View style={styles.replyHeader}>
-                                    <Avatar source={{ uri: replyToStatus.account.avatar }} size={24} />
-                                    <View>
-                                        <Text style={[styles.replyDisplayName, { color: colors.textPrimary }]} numberOfLines={1}>
-                                            {renderTextWithEmojis(
-                                                replyToStatus.account.display_name || replyToStatus.account.username,
-                                                replyToStatus.account.emojis,
-                                                styles.replyDisplayName
-                                            )}
-                                        </Text>
-                                        <Text style={[styles.replyUsername, { color: colors.textSecondary }]} numberOfLines={1}>
-                                            @{replyToStatus.account.username}
-                                        </Text>
-                                    </View>
-                                </View>
-                                <Text style={[styles.replyContent, { color: colors.textSecondary }]} numberOfLines={3}>
-                                    {stripHtml(replyToStatus.content)}
+            <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+                {reply && (
+                    <Well style={styles.replyWell}>
+                        <View style={styles.replyHeader}>
+                            <Avatar name={reply.account.display_name || reply.account.username} uri={reply.account.avatar} size={24} />
+                            <View style={styles.replyNames}>
+                                <Text style={[type.name, styles.replyName]} numberOfLines={1}>
+                                    {renderTextWithEmojis(
+                                        reply.account.display_name || reply.account.username,
+                                        reply.account.emojis,
+                                        [type.name, styles.replyName],
+                                        14
+                                    )}
                                 </Text>
+                                <Text style={[type.meta, styles.replyHandle]} numberOfLines={1}>@{reply.account.acct}</Text>
                             </View>
-                        )}
-
-                        {/* Author Info */}
-                        {user && (
-                            <View style={styles.authorSection}>
-                                <Avatar source={{ uri: user.avatar }} size={36} />
-                                <View>
-                                    <Text style={[styles.authorName, { color: colors.textPrimary }]}>
-                                        {renderTextWithEmojis(
-                                            user.display_name || user.username,
-                                            user.emojis,
-                                            styles.authorName
-                                        )}
-                                    </Text>
-                                </View>
-                            </View>
-                        )}
-
-                        {/* Sensitive CW field */}
-                        {sensitive && (
-                            <View style={styles.spoilerInputContainer}>
-                                <TextInput
-                                    style={[
-                                        styles.spoilerInput,
-                                        {
-                                            backgroundColor: colors.cardBackground,
-                                            borderColor: colors.borderColor,
-                                            color: colors.textPrimary
-                                        }
-                                    ]}
-                                    placeholder="Write your content warning here..."
-                                    placeholderTextColor={colors.textMuted}
-                                    value={spoilerText}
-                                    onChangeText={setSpoilerText}
-                                    maxLength={100}
-                                />
-                            </View>
-                        )}
-
-                        {/* Compose Text Field */}
-                        <TextInput
-                            ref={inputRef}
-                            style={[styles.textArea, { color: colors.textPrimary }]}
-                            placeholder={replyToStatus ? "Write your reply..." : "What's on your mind?"}
-                            placeholderTextColor={colors.textMuted}
-                            multiline={true}
-                            value={text}
-                            onChangeText={setText}
-                            maxLength={600}
-                        />
-
-                        {/* Poll Creation UI */}
-                        {showPoll && (
-                            <View style={[styles.pollContainer, { backgroundColor: colors.cardBackground, borderColor: colors.borderColor }]}>
-                                {pollOptions.map((option, index) => (
-                                    <View key={index} style={styles.pollOptionRow}>
-                                        <TextInput
-                                            style={[styles.pollInput, { color: colors.textPrimary, borderColor: colors.borderColor }]}
-                                            placeholder={`Choice ${index + 1}`}
-                                            placeholderTextColor={colors.textMuted}
-                                            value={option}
-                                            onChangeText={(text) => {
-                                                const newOptions = [...pollOptions];
-                                                newOptions[index] = text;
-                                                setPollOptions(newOptions);
-                                            }}
-                                            maxLength={50}
-                                        />
-                                        {pollOptions.length > 2 && (
-                                            <TouchableOpacity
-                                                style={styles.pollRemoveButton}
-                                                onPress={() => {
-                                                    const newOptions = [...pollOptions];
-                                                    newOptions.splice(index, 1);
-                                                    setPollOptions(newOptions);
-                                                }}
-                                            >
-                                                <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
-                                            </TouchableOpacity>
-                                        )}
-                                    </View>
-                                ))}
-                                {pollOptions.length < 4 && (
-                                    <TouchableOpacity
-                                        style={styles.pollAddChoiceButton}
-                                        onPress={() => {
-                                            setPollOptions([...pollOptions, '']);
-                                        }}
-                                    >
-                                        <Ionicons name="add" size={16} color={colors.accentColor} />
-                                        <Text style={[styles.pollAddChoiceText, { color: colors.accentColor }]}>Add Choice</Text>
-                                    </TouchableOpacity>
-                                )}
-
-                                <View style={styles.pollSettingsRow}>
-                                    <Text style={[styles.pollSettingsLabel, { color: colors.textPrimary }]}>Poll Duration:</Text>
-                                    <View style={styles.pollDurationSelector}>
-                                        {[
-                                            { label: '1h', value: 3600 },
-                                            { label: '1d', value: 86400 },
-                                            { label: '1w', value: 604800 },
-                                        ].map(dur => (
-                                            <TouchableOpacity
-                                                key={dur.value}
-                                                style={[
-                                                    styles.pollDurationPill,
-                                                    pollDuration === dur.value && { backgroundColor: colors.accentColor }
-                                                ]}
-                                                onPress={() => setPollDuration(dur.value)}
-                                            >
-                                                <Text style={[
-                                                    styles.pollDurationText,
-                                                    { color: pollDuration === dur.value ? '#FFF' : colors.textSecondary }
-                                                ]}>{dur.label}</Text>
-                                            </TouchableOpacity>
-                                        ))}
-                                    </View>
-                                </View>
-
-                                <View style={styles.pollSettingsRow}>
-                                    <Text style={[styles.pollSettingsLabel, { color: colors.textPrimary }]}>Multiple choice</Text>
-                                    <Switch
-                                        value={pollMultiple}
-                                        onValueChange={setPollMultiple}
-                                        trackColor={{ false: colors.borderColor, true: colors.accentColor }}
-                                        thumbColor={Platform.OS === 'ios' ? '#FFFFFF' : (pollMultiple ? '#FFFFFF' : '#f4f3f4')}
-                                    />
-                                </View>
-                            </View>
-                        )}
-                    </ScrollView>
-
-                    {/* Bottom Accessory Bar */}
-                    <View style={[styles.footer, { backgroundColor: colors.cardBackground, borderTopColor: colors.borderColor }]}>
-                        <View style={styles.leftAccessoryRow}>
-                            {/* Media selector button */}
-                            <TouchableOpacity
-                                style={styles.accessoryButton}
-                                onPress={() => Alert.alert('Add Media', 'Media attachments feature coming soon!')}
-                                activeOpacity={0.7}
-                            >
-                                <Ionicons name="image-outline" size={20} color={colors.textSecondary} />
-                            </TouchableOpacity>
-
-                            {/* Sensitive / CW eye toggle button */}
-                            <TouchableOpacity
-                                style={styles.accessoryButton}
-                                onPress={() => setSensitive(!sensitive)}
-                                activeOpacity={0.7}
-                            >
-                                <Ionicons
-                                    name={sensitive ? "eye-off-outline" : "eye-outline"}
-                                    size={20}
-                                    color={sensitive ? colors.accentColor : colors.textSecondary}
-                                />
-                            </TouchableOpacity>
-
-                            {/* Poll button */}
-                            <TouchableOpacity
-                                style={styles.accessoryButton}
-                                onPress={() => {
-                                    setShowPoll(!showPoll);
-                                    if (showPoll) {
-                                        // Reset when closing
-                                        setPollOptions(['', '']);
-                                        setPollDuration(86400);
-                                        setPollMultiple(false);
-                                    }
-                                }}
-                                activeOpacity={0.7}
-                            >
-                                <Ionicons 
-                                    name={showPoll ? "stats-chart" : "stats-chart-outline"} 
-                                    size={20} 
-                                    color={showPoll ? colors.accentColor : colors.textSecondary} 
-                                />
-                            </TouchableOpacity>
                         </View>
-
-                        {/* Character count */}
-                        <Text style={[styles.charCounter, { color: counterColor }]}>
-                            {remaining}
+                        <Text style={[type.body, styles.replyContent]} numberOfLines={3}>
+                            {stripHtml(reply.content)}
                         </Text>
-                    </View>
-                </KeyboardAvoidingView>
-            </SafeAreaView>
-        </SafeAreaProvider>
+                    </Well>
+                )}
 
-            {/* Language Selection Modal Sheet */}
-            <Modal
-                visible={langModalVisible}
-                transparent={true}
-                animationType="slide"
-                onRequestClose={() => setLangModalVisible(false)}
-            >
-                <TouchableOpacity
-                    style={styles.langModalContainer}
-                    activeOpacity={1}
-                    onPress={() => setLangModalVisible(false)}
-                >
-                    <View style={[styles.langSheet, { backgroundColor: colors.cardBackground }]}>
-                        <View style={styles.langSheetHeader}>
-                            <Text style={[styles.langSheetTitle, { color: colors.textPrimary }]}>
-                                Select Post Language
+                {user && (
+                    <View style={styles.author}>
+                        <Avatar name={user.display_name || user.username} uri={user.avatar} size={42} />
+                        <View style={styles.authorDetails}>
+                            <Text style={[type.name, styles.authorName]} numberOfLines={1}>
+                                {renderTextWithEmojis(user.display_name || user.username, user.emojis, [type.name, styles.authorName])}
                             </Text>
-                            <TouchableOpacity onPress={() => setLangModalVisible(false)}>
-                                <Ionicons name="close" size={22} color={colors.textPrimary} />
-                            </TouchableOpacity>
+                            <View style={styles.pills}>
+                                <Pressable
+                                    onPress={() => setPicker('visibility')}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={t('compose.visibilityLabel', { value: selectedVisibility.label })}
+                                    hitSlop={hitSlopFor(0, PILL_HEIGHT)}
+                                    style={({ pressed }) => [styles.pill, pressed && { opacity: 0.7 }]}
+                                >
+                                    <Ionicons name={selectedVisibility.icon} size={14} color={colors.accentText} />
+                                    <Text style={[type.name, styles.pillText]}>{selectedVisibility.label}</Text>
+                                    <Ionicons name="chevron-down" size={12} color={colors.textSecondary} />
+                                </Pressable>
+                                <Pressable
+                                    onPress={() => setPicker('language')}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={t('compose.languageLabel', { value: selectedLanguage.label })}
+                                    hitSlop={hitSlopFor(0, PILL_HEIGHT)}
+                                    style={({ pressed }) => [styles.pill, pressed && { opacity: 0.7 }]}
+                                >
+                                    <Text style={[type.name, styles.pillText]}>
+                                        {selectedLanguage.code.toUpperCase()} · {selectedLanguage.label}
+                                    </Text>
+                                    <Ionicons name="chevron-down" size={12} color={colors.textSecondary} />
+                                </Pressable>
+                            </View>
                         </View>
-                        {LANGUAGES.map((item) => (
-                            <TouchableOpacity
-                                key={item.code}
-                                style={[
-                                    styles.langOption,
-                                    { backgroundColor: language === item.code ? colors.background : 'transparent' }
-                                ]}
-                                onPress={() => {
-                                    setLanguage(item.code);
-                                    setLangModalVisible(false);
-                                }}
-                            >
-                                <Text style={[styles.langOptionText, { color: colors.textPrimary }]}>
-                                    {item.label} ({item.code})
-                                </Text>
-                                {language === item.code && (
-                                    <Ionicons name="checkmark-sharp" size={16} color={colors.accentColor} />
-                                )}
-                            </TouchableOpacity>
-                        ))}
                     </View>
-                </TouchableOpacity>
-            </Modal>
+                )}
+
+                {sensitive && (
+                    <View style={styles.contentWarning}>
+                        <Ionicons name="warning-outline" size={18} color={colors.accentText} />
+                        <TextInput
+                            style={[type.body, styles.contentWarningInput]}
+                            placeholder={t('compose.cwPlaceholder')}
+                            accessibilityLabel={t('compose.cwLabel')}
+                            accessibilityHint={t('compose.cwHint')}
+                            // Only mounted once the tool is turned on, so this focuses it right away
+                            autoFocus
+                            placeholderTextColor={colors.textMuted}
+                            value={spoilerText}
+                            onChangeText={setSpoilerText}
+                            maxLength={100}
+                        />
+                    </View>
+                )}
+
+                <TextInput
+                    ref={inputRef}
+                    style={[type.body, styles.textArea]}
+                    placeholder={reply ? t('compose.replyPlaceholder') : t('compose.placeholder')}
+                    accessibilityLabel={t('compose.textLabel')}
+                    placeholderTextColor={colors.textMuted}
+                    multiline
+                    value={text}
+                    onChangeText={setText}
+                    onSelectionChange={event => {
+                        cursor.current = event.nativeEvent.selection.end;
+                    }}
+                />
+
+                {showPoll && (
+                    <PollEditor
+                        options={pollOptions}
+                        onChangeOptions={setPollOptions}
+                        duration={pollDuration}
+                        onChangeDuration={setPollDuration}
+                        multiple={pollMultiple}
+                        onChangeMultiple={setPollMultiple}
+                        maxOptions={instanceConfiguration.maxPollOptions}
+                        maxCharactersPerOption={instanceConfiguration.maxCharactersPerPollOption}
+                        error={pollError}
+                        onRemove={resetPoll}
+                    />
+                )}
+            </ScrollView>
+
+            <View
+                accessibilityRole="toolbar"
+                style={[styles.toolbar, { paddingBottom: keyboard.visible ? 10 : Math.max(insets.bottom, 10) }]}
+            >
+                {tool('image-outline', t('compose.addMedia'), () => Alert.alert(t('compose.mediaSoonTitle'), t('compose.mediaSoon')))}
+                {tool(showPoll ? 'stats-chart' : 'stats-chart-outline', t('compose.poll'), () => (showPoll ? resetPoll() : setShowPoll(true)), showPoll)}
+                {tool('warning-outline', t('compose.contentWarning'), () => setSensitive(!sensitive), sensitive)}
+                {tool('happy-outline', t('compose.customEmoji'), () => setPicker('emoji'))}
+                <View style={styles.toolbarSpacer} />
+                <CharacterCounter remaining={remaining} max={instanceConfiguration.maxCharacters} />
+            </View>
+        </Animated.View>
+    );
+
+    return (
+        <Modal visible transparent animationType="none" statusBarTranslucent navigationBarTranslucent onRequestClose={closeCompose}>
+            <View style={styles.root}>
+                <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: colors.scrim, opacity: progress }]} />
+                {/* The app draws edge to edge, so the window doesn't resize for the keyboard. On Android,
+                    KeyboardAvoidingView measures against the app window, which ends above the navigation bar,
+                    and left a gap that tall under the sheet once the keyboard closed; pad by the keyboard instead. */}
+                {Platform.OS === 'ios' ? (
+                    <KeyboardAvoidingView behavior="padding" style={styles.keyboardAvoider}>
+                        {sheet}
+                    </KeyboardAvoidingView>
+                ) : (
+                    <View style={[styles.keyboardAvoider, { paddingBottom: keyboard.inset }]}>{sheet}</View>
+                )}
+            </View>
+
+            <OptionSheet
+                visible={picker === 'visibility'}
+                title={t('compose.whoCanSee')}
+                options={visibilityOptions}
+                value={visibility}
+                onSelect={setVisibility}
+                onClose={() => setPicker(null)}
+            />
+            <OptionSheet
+                visible={picker === 'language'}
+                title={t('compose.postLanguage')}
+                options={LANGUAGE_OPTIONS}
+                value={language}
+                onSelect={setLanguage}
+                onClose={() => setPicker(null)}
+            />
+            <EmojiPicker visible={picker === 'emoji'} onPick={insertEmoji} onClose={() => setPicker(null)} />
         </Modal>
     );
 };

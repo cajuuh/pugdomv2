@@ -1,10 +1,7 @@
-import { useState } from 'react'
-
-// style
-import { Alert } from 'react-native'
-import { View, Text, TextField, LoaderScreen, Button } from 'react-native-ui-lib'
-
-// web
+import React,{useState } from 'react'
+import { Alert,StyleSheet,Text,TextInput,View } from 'react-native'
+import { PillButton, PugMark} from '../../components/ui'
+import { radii,space} from '../../services/theme/shape'
 import * as WebBrowser from 'expo-web-browser'
 import * as Linking from 'expo-linking'
 
@@ -15,6 +12,7 @@ import { saveCredentials } from '../../services/storage'
 import { getCurrentAccount } from '../../services/mastodon/accounts'
 import { useAuth } from '../../services/authContext'
 import { useTheme } from '../../services/themeContext'
+import { useI18n } from '../../services/i18n/i18nContext';
 
 // web browser helper to complete authorizations on Android/Web
 WebBrowser.maybeCompleteAuthSession();
@@ -26,12 +24,14 @@ interface LoginProps {
 const Login: React.FC<LoginProps> = ({ onCancel }) => {
     const [instance, setInstance] = useState<string>('');
     const [loading, setLoading] = useState<boolean>(false);
+    const [focused,setFocused] = useState<boolean>(false);
     const { login } = useAuth();
-    const { colors } = useTheme();
+    const { colors,type,coat } = useTheme();
+    const { t } = useI18n();
 
     const handleLogin = async () => {
         if (!instance.trim()) {
-            Alert.alert('Error', 'Please enter a Mastodon Instance URL');
+            Alert.alert(t('common.error'), t('login.enterInstance'));
             return;
         }
         setLoading(true);
@@ -72,54 +72,126 @@ const Login: React.FC<LoginProps> = ({ onCancel }) => {
             }
         } catch (error: any) {
             console.error(error);
-            Alert.alert('Authentication Failed', error.message || 'An unexpected error ocurred.')
+            Alert.alert(t('login.failed'), error.message || t('login.unexpected'))
         } finally {
             setLoading(false);
         }
     };
 
-    return (
-        <View flex center padding-20 style={{ backgroundColor: colors.background }}>
-            <Text blue50 text20 marginB-s5 style={{ color: colors.textPrimary }}>
-                Welcome to Pugdom
-            </Text>
-            <View width="100%" marginT-s5>
-                <TextField
-                    preset="outline"
-                    placeholder="e.g. mastodon.social"
-                    onChangeText={setInstance}
-                    value={instance}
-                    disabled={loading}
-                    autoCapitalize="none"
-                    fieldStyle={{ borderColor: colors.borderColor, backgroundColor: colors.inputBackground }}
-                    style={{ color: colors.textPrimary }}
-                    placeholderTextColor={colors.textMuted}
-                />
-            </View>
-            {loading ? (
-                <LoaderScreen message="Connecting to instance..." marginT-s5 messageStyle={{ color: colors.textSecondary }} />
-            ) : (
-                <View width="100%">
-                    <Button
-                        label="Login with Mastodon"
-                        marginT-s5
-                        onPress={handleLogin}
-                        backgroundColor={colors.accentColor}
-                        borderRadius={24}
+   return (
+        <View
+            style={[
+                styles.container,
+                { backgroundColor: colors.background },
+            ]}
+        >
+            <View style={styles.content}>
+                <PugMark coat={coat} size={96} />
+
+                <Text
+                    style={[
+                        type.title,
+                        styles.title,
+                        { color: colors.textPrimary },
+                    ]}
+                >
+                    pugdom
+                </Text>
+
+                <Text
+                    style={[
+                        type.body,
+                        styles.description,
+                        { color: colors.textSecondary },
+                    ]}
+                >
+                    {t('login.tagline')}
+                </Text>
+
+                <View style={styles.form}>
+                    <TextInput
+                        value={instance}
+                        onChangeText={setInstance}
+                        placeholder={t('login.instancePlaceholder')}
+                        placeholderTextColor={colors.textMuted}
+                        editable={!loading}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        keyboardType="url"
+                        onFocus={() => setFocused(true)}
+                        onBlur={() => setFocused(false)}
+                        style={[
+                            styles.input,
+                            {
+                                color: colors.textPrimary,
+                                backgroundColor: colors.inputBackground,
+                                borderColor: focused
+                                    ? colors.accentColor
+                                    : colors.borderColor,
+                            },
+                        ]}
                     />
+
+                    <PillButton
+                        label={t('common.continue')}
+                        onPress={handleLogin}
+                        loading={loading}
+                        disabled={loading}
+                        style={styles.continueButton}
+                    />
+
                     {onCancel && (
-                        <Button
-                            label="Cancel"
-                            marginT-s3
+                        <PillButton
+                            label={t('common.cancel')}
                             onPress={onCancel}
-                            link
-                            color={colors.textMuted}
+                            variant="ghost"
+                            disabled={loading}
+                            style={styles.cancelButton}
                         />
                     )}
                 </View>
-            )}
+            </View>
         </View>
     )
 }
-
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        justifyContent: 'center',
+        paddingHorizontal: space.xl,
+    },
+    content: {
+        width: '100%',
+        maxWidth: 420,
+        alignSelf: 'center',
+        alignItems: 'center',
+    },
+    title: {
+        marginTop: space.md,
+    },
+    description: {
+        marginTop: space.sm,
+        textAlign: 'center',
+        maxWidth: 320,
+    },
+    form: {
+        width: '100%',
+        marginTop: space.xl,
+    },
+    input: {
+        minHeight: 48,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderRadius: radii.input,
+        paddingHorizontal: space.lg,
+        fontSize: 15.5,
+    },
+    continueButton: {
+        marginTop: space.md,
+        width: '100%',
+    },
+    cancelButton: {
+        marginTop: space.sm,
+        alignSelf: 'center',
+    },
+})
 export default Login;

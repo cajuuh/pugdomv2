@@ -1,110 +1,44 @@
-import React, { useState } from 'react';
-import { Alert, Image as RNImage, StyleSheet, Modal } from 'react-native';
-import { Avatar, View, Text, Button, Image, TouchableOpacity } from 'react-native-ui-lib';
+import React, { useRef } from 'react';
+import { Alert, Image, Platform, Pressable, Share, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useVideoPlayer, VideoView } from 'expo-video';
-import * as WebBrowser from 'expo-web-browser';
-import RenderHtml, { HTMLElementModel, HTMLContentModel } from 'react-native-render-html';
-import { useWindowDimensions } from 'react-native';
-import ImageViewing from 'react-native-image-viewing';
 import { BlurView } from 'expo-blur';
-import { Status, CustomEmoji, Attachment } from '../../services/mastodon/types';
+import { useRecyclingState } from '@shopify/flash-list';
+import { Status, Attachment, PreviewCard } from '../../services/mastodon/types';
+import { StatusHtmlContent, openLink } from './htmlContent';
 import { useSettings } from '../../services/settingsContext';
 import { useTheme } from '../../services/themeContext';
 import { useCompose } from '../../services/composeContext';
-import { styles } from './styles';
-import { favouriteStatus, unfavouriteStatus, reblogStatus, unreblogStatus } from '../../services/mastodon/statuses';
+import {
+    CARD_MARGIN,
+    CARD_PADDING,
+    COMPACT_ACTION_HEIGHT,
+    COMPACT_ACTION_ICON,
+    COMPACT_AVATAR,
+    COMPACT_PADDING,
+    THREAD_AVATAR_GAP,
+    makeStyles,
+} from './styles';
+import { useThemedStyles } from '../../services/theme/useThemedStyles';
+import {
+    bookmarkStatus,
+    favouriteStatus,
+    reblogStatus,
+    unbookmarkStatus,
+    unfavouriteStatus,
+    unreblogStatus,
+} from '../../services/mastodon/statuses';
+import { useQueryClient } from '@tanstack/react-query';
+import { BOOKMARKS_KEY } from '../../hooks/useBookmarks';
 import { Poll } from '../Poll/poll';
+import { Avatar, Card, PillButton } from '../ui';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
+import { useUpdateCachedStatus } from '../../hooks/useUpdateCachedStatus';
+import { useMediaViewer } from '../MediaViewer/mediaViewer';
+import { hitSlopFor } from '../../services/theme/shape';
+import { useI18n } from '../../services/i18n/i18nContext';
+import { defaultTranslator, Translator } from '../../services/i18n/translate';
 
-const customHTMLElementModels = {
-    emoji: HTMLElementModel.fromCustomModel({
-        tagName: 'emoji',
-        mixedUAStyles: {
-            width: 16,
-            height: 16,
-        },
-        contentModel: HTMLContentModel.textual
-    })
-};
-
-const renderers = {
-    emoji: ({ tnode }: any) => {
-        return (
-            <RNImage
-                source={{ uri: tnode.attributes.src }}
-                style={{ width: 16, height: 16, resizeMode: 'contain', marginHorizontal: 2 }}
-            />
-        );
-    }
-};
-
-const StatusHtmlContent = React.memo(({ content, emojis, colors, compactMode, width, onPressMention, onPressHashtag, onPressLink }: any) => {
-    const renderersProps = React.useMemo(() => ({
-        a: {
-            onPress: (event: any, href: string, htmlAttribs: any) => {
-                const className = htmlAttribs.class || '';
-                if (className.includes('mention')) {
-                    const acct = href.split('/').pop()?.replace(/^@/, '');
-                    if (onPressMention && acct) onPressMention(acct);
-                    else onPressLink(href);
-                } else if (className.includes('hashtag')) {
-                    const tag = href.split('/').pop()?.replace(/^#/, '');
-                    if (onPressHashtag && tag) onPressHashtag(tag);
-                    else onPressLink(href);
-                } else {
-                    onPressLink(href);
-                }
-            }
-        }
-    }), [onPressMention, onPressHashtag, onPressLink]);
-
-    const tagsStyles = React.useMemo(() => ({
-        body: {
-            color: colors.textPrimary,
-            fontSize: compactMode ? 13 : 15,
-            lineHeight: compactMode ? 18 : 22,
-        },
-        a: {
-            color: colors.accentColor,
-            textDecorationLine: 'none' as const,
-        },
-        p: {
-            marginTop: 0,
-            marginBottom: 10,
-        }
-    }), [colors, compactMode]);
-
-    const processedHtml = React.useMemo(() => {
-        let html = content || '';
-        html = html.replace(/<span class="invisible">https?:\/\/<\/span>/gi, '');
-        html = html.replace(/<span class="invisible">.*?<\/span>/gi, (match: string) => {
-            const inner = match.replace(/<[^>]*>/g, '');
-            if (inner === '' || inner === '/') return inner;
-            return '...';
-        });
-        if (emojis && emojis.length > 0) {
-            emojis.forEach((emoji: CustomEmoji) => {
-                const regex = new RegExp(`:${emoji.shortcode}:`, 'g');
-                html = html.replace(regex, `<emoji src="${emoji.url}" />`);
-            });
-        }
-        return html;
-    }, [content, emojis]);
-
-    return (
-        <RenderHtml
-            contentWidth={width}
-            source={{ html: processedHtml }}
-            tagsStyles={tagsStyles}
-            renderersProps={renderersProps}
-            customHTMLElementModels={customHTMLElementModels}
-            renderers={renderers}
-        />
-    );
-});
-
-const getRelativeTime = (dateString: string) => {
+const getRelativeTime = (dateString: string, { t }: Translator) => {
     const now = new Date();
     const created = new Date(dateString);
     const diffMs = now.getTime() - created.getTime();
@@ -114,34 +48,60 @@ const getRelativeTime = (dateString: string) => {
     const diffDays = Math.floor(diffHr / 24);
 
     if (diffSec < 60) {
-        return 'now';
+        return t('common.now');
     } else if (diffMin < 60) {
-        return `${diffMin}m`;
+        return t('common.minutesShort', { count: diffMin });
     } else if (diffHr < 24) {
-        return `${diffHr}h`;
+        return t('common.hoursShort', { count: diffHr });
     } else {
-        return `${diffDays}d`;
+        return t('common.daysShort', { count: diffDays });
     }
 };
 
-const getDomainName = (urlStr: string) => {
+// Alt text when the author wrote one, otherwise the media's position in the post
+const MEDIA_KIND = { image: 'post.image', video: 'post.video', gifv: 'post.gif', unknown: 'post.attachment' } as const;
+const mediaLabel = (attachment: Attachment, index: number, count: number, { t }: Translator) =>
+    attachment.description ||
+    t('post.mediaPosition', { kind: t(MEDIA_KIND[attachment.type] ?? 'post.attachment'), index: index + 1, count });
+
+// "1 photo", "3 videos", "2 attachments" (mixed kinds)
+export const countMedia = (attachments: Attachment[], { tn }: Translator = defaultTranslator()) => {
+    const nouns = new Set(attachments.map(a => (a.type === 'image' ? 'photos' : a.type === 'video' || a.type === 'gifv' ? 'videos' : 'attachments')));
+    const noun = nouns.size === 1 ? [...nouns][0] : 'attachments';
+    return tn(`post.${noun}` as 'post.photos' | 'post.videos' | 'post.attachments', attachments.length);
+};
+
+const hasText = (html: string) => html.replace(/<[^>]*>/g, '').trim().length > 0;
+
+// What a collapsed content warning hides, e.g. "Text and 2 photos hidden"
+export const describeHidden = (status: Status, i18n: Translator = defaultTranslator()) => {
+    const { t } = i18n;
+    const parts: string[] = [];
+    if (hasText(status.content)) parts.push(t('post.hiddenText'));
+    if (status.poll) parts.push(t('post.hiddenPoll'));
+    if (status.media_attachments?.length) parts.push(countMedia(status.media_attachments, i18n));
+    if (status.card) parts.push(t('post.hiddenLink'));
+    if (parts.length === 0) return null;
+    const list = parts.length === 1 ? parts[0] : t('common.listAnd', { list: parts.slice(0, -1).join(', '), last: parts[parts.length - 1] });
+    const sentence = t('post.hidden', { list });
+    return `${sentence.charAt(0).toUpperCase()}${sentence.slice(1)}`;
+};
+
+const getDomainName = (urlStr: string, fallback: string) => {
     try {
         const matches = urlStr.match(/^https?:\/\/([^/?#]+)(?:[/?#]|$)/i);
-        return matches && matches[1] ? matches[1].replace('www.', '') : 'Link';
+        return matches && matches[1] ? matches[1].replace('www.', '') : fallback;
     } catch {
-        return 'Link';
+        return fallback;
     }
 };
-
-
-
-
 
 interface TootCardProps {
     status: Status;
     onPressMention?: (acct: string) => void;
     onPressHashtag?: (hashtag: string) => void;
-    onPress?: () => void;
+    // Receives the id of the status to open; for boosts that's the original, since a boost has no thread of its own
+    onPress?: (statusId: string) => void;
     threadMode?: boolean;
     hasThreadLineTop?: boolean;
     hasThreadLineBottom?: boolean;
@@ -149,29 +109,34 @@ interface TootCardProps {
 
 export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPressHashtag, onPress, threadMode, hasThreadLineTop, hasThreadLineBottom }) => {
     const { compactMode } = useSettings();
-    const { colors } = useTheme();
+    const { colors, type } = useTheme();
+    const styles = useThemedStyles(makeStyles);
     const { openCompose } = useCompose();
-    const { width, height } = useWindowDimensions();
+    const { width } = useWindowDimensions();
+    const { openMedia } = useMediaViewer();
     const isReblog = !!status.reblog;
     const targetStatus = isReblog ? status.reblog! : status;
 
-    const [isSpoilerCollapsed, setIsSpoilerCollapsed] = useState(targetStatus.sensitive);
-    const [isFavorited, setIsFavorited] = useState(targetStatus.favourited);
-    const [isReblogged, setIsreblogged] = useState(targetStatus.reblogged);
-    const [favCount, setFavCount] = useState(targetStatus.favourites_count);
-    const [boostCount, setBoostCount] = useState(targetStatus.reblogs_count);
-    const [isImageViewerVisible, setIsImageViewerVisible] = useState(false);
-    const [imageViewerIndex, setImageViewerIndex] = useState(0);
-    const [isMediaRevealed, setIsMediaRevealed] = useState(false);
-    const [isVideoVisible, setIsVideoVisible] = useState(false);
-    const [videoUrl, setVideoUrl] = useState<string | null>(null);
+    const updateCachedStatus = useUpdateCachedStatus();
+    const queryClient = useQueryClient();
+    const i18n = useI18n();
+    const { t, tn } = i18n;
 
-    const player = useVideoPlayer(videoUrl, player => {
-        if (targetStatus.media_attachments?.find(a => a.url === videoUrl)?.type === 'gifv') {
-            player.loop = true;
-        }
-        player.play();
-    });
+    // FlashList reuses this component for other statuses, so all per-status state resets when the status changes
+    const recyclingDeps = [targetStatus.id];
+    // Only a content warning hides the text; `sensitive` alone just veils the media
+    const hasContentWarning = !!targetStatus.spoiler_text;
+    const [isSpoilerCollapsed, setIsSpoilerCollapsed] = useRecyclingState(hasContentWarning, recyclingDeps);
+    const [isFavorited, setIsFavorited] = useRecyclingState(targetStatus.favourited, recyclingDeps);
+    const [isReblogged, setIsreblogged] = useRecyclingState(targetStatus.reblogged, recyclingDeps);
+    const [favCount, setFavCount] = useRecyclingState(targetStatus.favourites_count, recyclingDeps);
+    const [boostCount, setBoostCount] = useRecyclingState(targetStatus.reblogs_count, recyclingDeps);
+    const [isBookmarked, setIsBookmarked] = useRecyclingState(!!targetStatus.bookmarked, recyclingDeps);
+    const [isMediaRevealed, setIsMediaRevealed] = useRecyclingState(false, recyclingDeps);
+
+    // Lets async handlers skip state updates if the card was recycled while a request was in flight
+    const renderedStatusId = useRef(targetStatus.id);
+    renderedStatusId.current = targetStatus.id;
 
     const toggleFavorite = async () => {
         const previousIsFavorited = isFavorited;
@@ -181,15 +146,37 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         setFavCount((prev) => (previousIsFavorited ? prev - 1 : prev + 1));
 
         try {
-            if (previousIsFavorited) {
-                await unfavouriteStatus(targetStatus.id);
-            } else {
-                await favouriteStatus(targetStatus.id);
-            }
+            const updated = previousIsFavorited
+                ? await unfavouriteStatus(targetStatus.id)
+                : await favouriteStatus(targetStatus.id);
+            updateCachedStatus(updated);
         } catch (error) {
+            if (renderedStatusId.current !== targetStatus.id) {
+                return;
+            }
             setIsFavorited(previousIsFavorited);
             setFavCount(previousFavCount);
-            Alert.alert('Error', 'Failed to update favorite status. Please try again.');
+            Alert.alert(t('common.error'), t('post.favouriteFailed'));
+        }
+    };
+
+    const toggleBookmark = async () => {
+        const previousIsBookmarked = isBookmarked;
+        setIsBookmarked(!previousIsBookmarked);
+
+        try {
+            const updated = previousIsBookmarked
+                ? await unbookmarkStatus(targetStatus.id)
+                : await bookmarkStatus(targetStatus.id);
+            updateCachedStatus(updated);
+            // The Bookmarks list gains or loses this post
+            queryClient.invalidateQueries({ queryKey: BOOKMARKS_KEY });
+        } catch (error) {
+            if (renderedStatusId.current !== targetStatus.id) {
+                return;
+            }
+            setIsBookmarked(previousIsBookmarked);
+            Alert.alert(t('common.error'), t('post.bookmarkFailed'));
         }
     };
 
@@ -201,25 +188,42 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         setBoostCount((prev) => (previousIsReblogged ? prev - 1 : prev + 1));
 
         try {
-            if (previousIsReblogged) {
-                await unreblogStatus(targetStatus.id);
-            } else {
-                await reblogStatus(targetStatus.id);
-            }
+            const response = previousIsReblogged
+                ? await unreblogStatus(targetStatus.id)
+                : await reblogStatus(targetStatus.id);
+            // Reblogging returns the new boost wrapping the original; unreblogging returns the original
+            updateCachedStatus(response.reblog ?? response);
         } catch (error) {
+            if (renderedStatusId.current !== targetStatus.id) {
+                return;
+            }
             setIsreblogged(previousIsReblogged);
             setBoostCount(previousBoostCount);
-            Alert.alert('Error', 'Failed to update boost status. Please try again.');
+            Alert.alert(t('common.error'), t('post.boostFailed'));
         }
     };
 
-    const handlePressCard = async (url: string) => {
+    const handleShare = async () => {
+        // Remote statuses may have no `url`; `uri` always points to the original post
+        const link = targetStatus.url || targetStatus.uri;
         try {
-            await WebBrowser.openBrowserAsync(url);
+            // iOS builds a link preview from `url`; Android only shares `message`
+            await Share.share(Platform.OS === 'ios' ? { url: link } : { message: link });
         } catch (error) {
-            console.error('Failed to open link:', error);
+            console.error('Failed to share status:', error);
         }
     };
+
+    const avatarSize = compactMode ? COMPACT_AVATAR : 42;
+    const cardPadding = compactMode ? COMPACT_PADDING : CARD_PADDING;
+    // Threads and Compact Mode put the avatar in its own column, beside the post
+    const avatarColumn = threadMode || compactMode;
+    // Width the post body gets: the card's inner width, minus the avatar column. Compact and thread cards are full width
+    const bodyWidth = avatarColumn
+        ? width - cardPadding * 2 - avatarSize - THREAD_AVATAR_GAP
+        : width - CARD_MARGIN * 2 - cardPadding * 2;
+    // The opened CW frame adds its own padding and border
+    const contentWidth = hasContentWarning ? bodyWidth - 28 : bodyWidth;
 
     const renderMedia = (attachments: Attachment[]) => {
         if (!attachments || attachments.length === 0) {
@@ -227,303 +231,286 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         }
 
         const count = attachments.length;
-        let mediaContent;
+        const veiled = targetStatus.sensitive && !isMediaRevealed;
+        const tiles = count === 1 ? (
+            <Pressable
+                style={[styles.singleMedia, compactMode && styles.singleMediaCompact]}
+                onPress={() => openMedia(attachments, 0)}
+                accessibilityRole="imagebutton"
+                accessibilityLabel={mediaLabel(attachments[0], 0, count, i18n)}
+            >
+                <Image source={{ uri: attachments[0].preview_url || attachments[0].url }} style={styles.mediaImage} resizeMode="cover" />
+            </Pressable>
+        ) : (
+            <View style={styles.mediaGrid}>
+                {attachments.map((item, idx) => (
+                    <Pressable
+                        key={item.id || idx}
+                        style={[styles.gridMedia, compactMode && styles.gridMediaCompact, { width: count === 2 ? '48%' : '31%' }]}
+                        onPress={() => openMedia(attachments, idx)}
+                        accessibilityRole="imagebutton"
+                        accessibilityLabel={mediaLabel(item, idx, count, i18n)}
+                    >
+                        <Image source={{ uri: item.preview_url || item.url }} style={styles.mediaImage} resizeMode="cover" />
+                    </Pressable>
+                ))}
+            </View>
+        );
 
-        if (count === 1) {
-            mediaContent = (
-                <TouchableOpacity 
-                    style={[styles.mediaContainer, targetStatus.sensitive && !isMediaRevealed && { marginBottom: 0 }]}
-                    onPress={() => {
-                        if (attachments[0].type === 'video' || attachments[0].type === 'gifv') {
-                            setVideoUrl(attachments[0].url);
-                            setIsVideoVisible(true);
-                        } else {
-                            setImageViewerIndex(0);
-                            setIsImageViewerVisible(true);
-                        }
-                    }}
-                >
-                    <Image
-                        source={{ uri: attachments[0].preview_url || attachments[0].url }}
-                        style={styles.singleMedia}
-                    />
-                </TouchableOpacity>
-            );
-        } else {
-            mediaContent = (
-                <View style={[styles.mediaGrid, targetStatus.sensitive && !isMediaRevealed && { marginBottom: 0 }]}>
-                    {attachments.map((item, idx) => (
-                        <TouchableOpacity
-                            key={item.id || idx}
-                            style={[
-                                styles.gridMedia,
-                                { width: count === 2 ? '48%' : '31%' }
-                            ]}
-                            onPress={() => {
-                                if (item.type === 'video' || item.type === 'gifv') {
-                                    setVideoUrl(item.url);
-                                    setIsVideoVisible(true);
-                                } else {
-                                    setImageViewerIndex(idx);
-                                    setIsImageViewerVisible(true);
-                                }
-                            }}
-                        >
-                            <Image
-                                source={{ uri: item.preview_url || item.url }}
-                                style={{ width: '100%', height: '100%', borderRadius: 8 }}
-                            />
-                        </TouchableOpacity>
-                    ))}
-                </View>
-            );
+        if (!targetStatus.sensitive) {
+            return tiles;
         }
 
-        if (targetStatus.sensitive && !isMediaRevealed) {
-            return (
-                <View style={styles.blurContainer}>
-                    {mediaContent}
-                    <BlurView intensity={80} style={StyleSheet.absoluteFill}>
-                        <TouchableOpacity onPress={() => setIsMediaRevealed(true)} style={styles.revealButton}>
-                            <Ionicons name="eye-off" size={24} color="#FFF" />
-                            <Text style={styles.revealText}>Sensitive Content (Tap to show)</Text>
-                        </TouchableOpacity>
-                    </BlurView>
-                </View>
-            );
-        }
-
-        return mediaContent;
-    };
-
-    const imageViewerImages = targetStatus.media_attachments?.map(attachment => ({
-        uri: attachment.url
-    })) || [];
-
-    const ImageViewerFooter = ({ imageIndex }: { imageIndex: number }) => {
-        if (imageViewerImages.length <= 1) return null;
         return (
-            <View style={{ height, width: '100%', position: 'absolute', bottom: 0 }} pointerEvents="box-none">
-                {imageIndex > 0 && (
-                    <View style={[styles.imageViewerNavButton, styles.imageViewerNavLeft]}>
-                        <Ionicons name="chevron-back" size={24} color="#FFF" />
+            <View style={styles.mediaFrame}>
+                {/* Hidden media stays out of the accessibility tree until it's shown */}
+                <View importantForAccessibility={veiled ? 'no-hide-descendants' : 'auto'} accessibilityElementsHidden={veiled}>
+                    {tiles}
+                </View>
+                {veiled ? (
+                    <View style={StyleSheet.absoluteFill}>
+                        <BlurView intensity={80} tint="default" style={StyleSheet.absoluteFill} />
+                        <View style={styles.veil}>
+                            <View style={styles.veilLabel}>
+                                <Ionicons name="eye-off-outline" size={16} color={colors.textPrimary} />
+                                <Text style={[type.name, styles.veilText]}>{t('post.sensitive', { media: countMedia(attachments, i18n) })}</Text>
+                            </View>
+                            <PillButton label={t('common.show')} size="small" variant="secondary" onPress={() => setIsMediaRevealed(true)} />
+                        </View>
                     </View>
-                )}
-                {imageIndex < imageViewerImages.length - 1 && (
-                    <View style={[styles.imageViewerNavButton, styles.imageViewerNavRight]}>
-                        <Ionicons name="chevron-forward" size={24} color="#FFF" />
-                    </View>
+                ) : (
+                    <Pressable
+                        style={styles.hideMediaChip}
+                        onPress={() => setIsMediaRevealed(false)}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('post.hideMedia')}
+                        hitSlop={6}
+                    >
+                        <Ionicons name="eye-off-outline" size={16} color={colors.textPrimary} />
+                    </Pressable>
                 )}
             </View>
         );
     };
 
-    const avatarSize = compactMode ? 32 : 44;
-    const cardPadding = compactMode ? 10 : 16;
-    // contentWidth is screen width - card padding on both sides - avatar size - gap (10)
-    const contentWidth = width - (cardPadding * 2) - avatarSize - 10;
+    const renderLinkPreview = (card: PreviewCard) => {
+        const domain = getDomainName(card.url, t('common.link'));
+        // Compact Mode skips the thumbnail: a title + domain row
+        if (!card.image || compactMode) {
+            return (
+                <Pressable style={[styles.linkPlain, compactMode && styles.linkPlainCompact]} onPress={() => openLink(card.url)} accessibilityRole="link" accessibilityLabel={card.title || domain}>
+                    <View style={styles.linkIconBox}>
+                        <Ionicons name="link" size={18} color={colors.accentText} />
+                    </View>
+                    <View style={styles.linkBody}>
+                        <Text style={[type.name, styles.linkTitle]} numberOfLines={1}>{card.title || domain}</Text>
+                        <Text style={[type.meta, styles.linkMeta]} numberOfLines={1}>{compactMode ? domain : card.description || domain}</Text>
+                    </View>
+                </Pressable>
+            );
+        }
+        return (
+            <Pressable style={styles.linkPreview} onPress={() => openLink(card.url)} accessibilityRole="link" accessibilityLabel={card.title || domain}>
+                <View style={styles.linkThumb}>
+                    <Image source={{ uri: card.image }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                </View>
+                <View style={styles.linkBody}>
+                    <Text style={[type.label, styles.linkProvider]} numberOfLines={1}>{card.provider_name || domain}</Text>
+                    <Text style={[type.name, styles.linkTitle]} numberOfLines={2}>{card.title}</Text>
+                    {card.description ? (
+                        <Text style={[type.meta, styles.linkMeta]} numberOfLines={1}>{card.description}</Text>
+                    ) : null}
+                </View>
+            </Pressable>
+        );
+    };
 
-    const CardContainer = onPress ? TouchableOpacity : View;
+    const body = (
+        <>
+            {hasText(targetStatus.content) && (
+                <StatusHtmlContent
+                    content={targetStatus.content}
+                    emojis={targetStatus.emojis}
+                    colors={colors}
+                    bodyFont={type.body}
+                    compactMode={compactMode}
+                    width={contentWidth}
+                    onPressMention={onPressMention}
+                    onPressHashtag={onPressHashtag}
+                    onPressLink={openLink}
+                />
+            )}
+            {targetStatus.poll && (
+                <Poll
+                    initialPoll={targetStatus.poll}
+                    onPollUpdated={(poll) => updateCachedStatus({ ...targetStatus, poll })}
+                />
+            )}
+            {renderMedia(targetStatus.media_attachments)}
+            {targetStatus.card && renderLinkPreview(targetStatus.card)}
+        </>
+    );
 
-    return (
-        <CardContainer 
-            onPress={onPress}
-            style={[
-            styles.cardContainer,
-            { backgroundColor: colors.cardBackground, borderColor: colors.borderColor },
-            compactMode && { padding: 10, marginVertical: 4, marginHorizontal: 12, borderRadius: 10 },
-            threadMode && {
-                backgroundColor: 'transparent',
-                borderWidth: 0,
-                marginHorizontal: 0,
-                marginVertical: 0,
-                shadowOpacity: 0,
-                elevation: 0,
-            }
-        ]}>
-            {/* boost header */}
+    const renderContent = () => {
+        if (!hasContentWarning) {
+            return <View style={[styles.content, compactMode && styles.contentCompact]}>{body}</View>;
+        }
+        if (isSpoilerCollapsed) {
+            const hidden = describeHidden(targetStatus, i18n);
+            return (
+                <View style={styles.cwRibbon}>
+                    <Ionicons name="warning-outline" size={22} color={colors.accentText} />
+                    <View style={styles.cwText}>
+                        <Text style={[type.label, styles.cwLabel]}>{t('post.contentWarning')}</Text>
+                        <Text style={[type.name, styles.cwSpoiler]}>{targetStatus.spoiler_text}</Text>
+                        {hidden && <Text style={[type.meta, styles.cwHidden]}>{hidden}</Text>}
+                    </View>
+                    <PillButton label={t('common.show')} variant="secondary" onPress={() => setIsSpoilerCollapsed(false)} />
+                </View>
+            );
+        }
+        return (
+            <View style={styles.cwFrame}>
+                <View style={styles.cwFrameHeader}>
+                    <Text style={[type.name, styles.cwFrameTitle]} numberOfLines={2}>{t('post.cwTitle', { text: targetStatus.spoiler_text })}</Text>
+                    <PillButton label={t('common.hide')} size="small" variant="subtle" onPress={() => setIsSpoilerCollapsed(true)} />
+                </View>
+                <View style={styles.cwFrameContent}>{body}</View>
+            </View>
+        );
+    };
+
+    const displayName = renderTextWithEmojis(
+        targetStatus.account.display_name || targetStatus.account.username,
+        targetStatus.account.emojis,
+        [type.name, styles.displayName, compactMode && { fontSize: 13 }],
+        compactMode ? 13 : 15
+    );
+    const names = (
+        <View style={[styles.names, compactMode && styles.namesInline]}>
+            {displayName}
+            <Text style={[type.meta, styles.handle, compactMode && styles.handleInline]} numberOfLines={1}>@{targetStatus.account.acct}</Text>
+        </View>
+    );
+    const time = <Text style={[type.meta, styles.time]}>{getRelativeTime(targetStatus.created_at, i18n)}</Text>;
+    const avatar = (
+        <Avatar
+            name={targetStatus.account.display_name || targetStatus.account.username}
+            uri={targetStatus.account.avatar}
+            size={avatarSize}
+        />
+    );
+
+    // Compact buttons are shorter but keep a MIN_TOUCH hit area
+    const actionIcon = compactMode ? COMPACT_ACTION_ICON : 20;
+    const actionButtonStyle = [styles.actionButton, compactMode && styles.actionButtonCompact];
+    const actionHitSlop = compactMode ? hitSlopFor(44, COMPACT_ACTION_HEIGHT) : undefined;
+    const actions = (
+        <View style={[styles.actionRow, compactMode && styles.actionRowCompact]}>
+            <Pressable
+                style={actionButtonStyle}
+                hitSlop={actionHitSlop}
+                onPress={() => openCompose({ replyToStatus: targetStatus })}
+                accessibilityRole="button"
+                accessibilityLabel={tn('post.replies', targetStatus.replies_count || 0)}
+            >
+                <Ionicons name="arrow-undo-outline" size={actionIcon} color={colors.textMuted} />
+                <Text style={[type.meta, styles.actionCount]}>{targetStatus.replies_count || 0}</Text>
+            </Pressable>
+            <Pressable
+                style={actionButtonStyle}
+                hitSlop={actionHitSlop}
+                onPress={toggleReblog}
+                accessibilityRole="button"
+                accessibilityLabel={tn(isReblogged ? 'post.boostedCount' : 'post.boost', boostCount || 0)}
+                accessibilityState={{ selected: isReblogged }}
+            >
+                <Ionicons name="repeat" size={actionIcon} color={isReblogged ? colors.accentText : colors.textMuted} />
+                <Text style={[type.meta, styles.actionCount, isReblogged && styles.actionCountActive]}>{boostCount || 0}</Text>
+            </Pressable>
+            <Pressable
+                style={actionButtonStyle}
+                hitSlop={actionHitSlop}
+                onPress={toggleFavorite}
+                accessibilityRole="button"
+                accessibilityLabel={tn(isFavorited ? 'post.favouritedCount' : 'post.favourite', favCount || 0)}
+                accessibilityState={{ selected: isFavorited }}
+            >
+                <Ionicons name={isFavorited ? 'star' : 'star-outline'} size={actionIcon} color={isFavorited ? colors.accentText : colors.textMuted} />
+                <Text style={[type.meta, styles.actionCount, isFavorited && styles.actionCountActive]}>{favCount || 0}</Text>
+            </Pressable>
+            <Pressable
+                style={actionButtonStyle}
+                hitSlop={actionHitSlop}
+                onPress={toggleBookmark}
+                accessibilityRole="button"
+                accessibilityLabel={isBookmarked ? t('post.bookmarked') : t('post.bookmark')}
+                accessibilityState={{ selected: isBookmarked }}
+            >
+                <Ionicons name={isBookmarked ? 'bookmark' : 'bookmark-outline'} size={actionIcon} color={isBookmarked ? colors.accentText : colors.textMuted} />
+            </Pressable>
+            <Pressable style={actionButtonStyle} hitSlop={actionHitSlop} onPress={handleShare} accessibilityRole="button" accessibilityLabel={t('post.share')}>
+                <Ionicons name="share-outline" size={actionIcon} color={colors.textMuted} />
+            </Pressable>
+        </View>
+    );
+
+    const card = (
+        <Card style={[styles.card, compactMode && styles.cardCompact, threadMode && styles.cardThread]}>
             {isReblog && (
-                <View style={styles.boostedHeader}>
+                <View style={[styles.boostRow, compactMode && styles.boostRowCompact]}>
                     <Ionicons name="repeat" size={14} color={colors.textMuted} />
-                    <Avatar source={{ uri: status.account.avatar }} size={18} containerStyle={styles.boostedAvatar} />
+                    <Avatar name={status.account.display_name || status.account.username} uri={status.account.avatar} size={18} />
                     {renderTextWithEmojis(
-                        (status.account.display_name || status.account.username) + ' boosted',
+                        t('post.boosted', { name: status.account.display_name || status.account.username }),
                         status.account.emojis || [],
-                        [styles.boostedText, { color: colors.textMuted }],
-                        14
+                        [type.meta, styles.boostText],
+                        12.5
                     )}
                 </View>
             )}
 
-            <View style={styles.mainRow}>
-                <View style={[styles.leftColumn, { width: avatarSize }]}>
-                    {threadMode && hasThreadLineTop && (
-                        <View style={{
-                            position: 'absolute',
-                            width: 2,
-                            backgroundColor: colors.borderColor,
-                            top: -cardPadding,
-                            height: cardPadding + avatarSize / 2,
-                            zIndex: -1
-                        }} />
-                    )}
-                    {threadMode && hasThreadLineBottom && (
-                        <View style={{
-                            position: 'absolute',
-                            width: 2,
-                            backgroundColor: colors.borderColor,
-                            top: avatarSize / 2,
-                            bottom: -cardPadding,
-                            zIndex: -1
-                        }} />
-                    )}
-                    <Avatar source={{ uri: targetStatus.account.avatar }} size={avatarSize} />
-                </View>
-
-                <View style={styles.rightColumn}>
-                    {/* author */}
-                    <View style={styles.headerRow}>
-                        <View style={styles.namesContainer}>
-                            <View style={styles.nameRow}>
-                                {renderTextWithEmojis(
-                                    targetStatus.account.display_name || targetStatus.account.username,
-                                    targetStatus.account.emojis,
-                                    [styles.displayName, { color: colors.textPrimary }, compactMode && { fontSize: 13 }]
-                                )}
-                            </View>
-                            <Text style={[styles.username, { color: colors.textSecondary }]} numberOfLines={1}>
-                                @{targetStatus.account.username}
-                            </Text>
-                        </View>
-                        <Text style={[styles.timeText, { color: colors.textMuted }]}>{getRelativeTime(targetStatus.created_at)}</Text>
+            {avatarColumn ? (
+                // The avatar keeps its own column: in a thread the connecting lines run through it
+                <View style={styles.threadRow}>
+                    <View style={[styles.threadAvatarColumn, { width: avatarSize }]}>
+                        {hasThreadLineTop && (
+                            <View style={[styles.threadLine, { top: -cardPadding, height: cardPadding + avatarSize / 2 }]} />
+                        )}
+                        {hasThreadLineBottom && (
+                            <View style={[styles.threadLine, { top: avatarSize / 2, bottom: -cardPadding }]} />
+                        )}
+                        {avatar}
                     </View>
-                    
-                    {targetStatus.sensitive && targetStatus.spoiler_text && (
-                        <View style={[styles.spoilerContainer, { backgroundColor: colors.background, borderColor: colors.borderColor }]}>
-                            <Text style={[styles.spoilerText, { color: colors.textPrimary }]} numberOfLines={1}>
-                                CW: {targetStatus.spoiler_text}
-                            </Text>
-                            <Button
-                                label={isSpoilerCollapsed ? 'Show' : 'Hide'}
-                                size={Button.sizes.xSmall}
-                                backgroundColor={isSpoilerCollapsed ? colors.accentColor : colors.textMuted}
-                                onPress={() => setIsSpoilerCollapsed(!isSpoilerCollapsed)}
-                                labelStyle={styles.spoilerButtonLabel}
-                            />
+                    <View style={styles.threadBody}>
+                        <View style={styles.authorRow}>
+                            {names}
+                            {time}
                         </View>
-                    )}
-
-                    {/* content text */}
-                    {(!targetStatus.sensitive || !isSpoilerCollapsed) && (
-                        <View style={styles.contentContainer}>
-                            <StatusHtmlContent
-                                content={targetStatus.content}
-                                emojis={targetStatus.emojis}
-                                colors={colors}
-                                compactMode={compactMode}
-                                width={contentWidth + (compactMode ? 44 : 64)} // pass equivalent width to keep old behavior inside StatusHtmlContent or just modify StatusHtmlContent
-                                onPressMention={onPressMention}
-                                onPressHashtag={onPressHashtag}
-                                onPressLink={handlePressCard}
-                            />
-                        </View>
-                    )}
-
-                    {/* poll */}
-                    {(!targetStatus.sensitive || !isSpoilerCollapsed) && targetStatus.poll && (
-                        <Poll initialPoll={targetStatus.poll} />
-                    )}
-
-                    {/* media */}
-                    {(!targetStatus.sensitive || !isSpoilerCollapsed) && (
-                        renderMedia(targetStatus.media_attachments)
-                    )}
-
-                    {/* link preview */}
-                    {(!targetStatus.sensitive || !isSpoilerCollapsed) && targetStatus.card && (
-                        <TouchableOpacity
-                            style={[styles.linkPreviewContainer, { backgroundColor: colors.background, borderColor: colors.borderColor }]}
-                            onPress={() => handlePressCard(targetStatus.card!.url)}
-                        >
-                            {targetStatus.card.image && (
-                                <Image
-                                    source={{ uri: targetStatus.card.image }}
-                                    style={styles.linkPreviewImage}
-                                />
-                            )}
-                            <View style={styles.linkPreviewContent}>
-                                <Text style={[styles.linkPreviewProvider, { color: colors.accentColor }]}>
-                                    {targetStatus.card.provider_name || getDomainName(targetStatus.card.url)}
-                                </Text>
-                                <Text style={[styles.linkPreviewTitle, { color: colors.textPrimary }]} numberOfLines={2}>
-                                    {targetStatus.card.title}
-                                </Text>
-                                {targetStatus.card.description ? (
-                                    <Text style={[styles.linkPreviewDescription, { color: colors.textSecondary }]} numberOfLines={2}>
-                                        {targetStatus.card.description}
-                                    </Text>
-                                ) : null}
-                            </View>
-                        </TouchableOpacity>
-                    )}
-
-                    {/* action buttons */}
-                    <View style={[styles.actionRow, { borderTopColor: colors.borderColor }]}>
-                        {/* reply action */}
-                        <TouchableOpacity 
-                            style={styles.actionButton} 
-                            onPress={() => openCompose({ replyToStatus: targetStatus })}
-                        >
-                            <Ionicons name="chatbubble-outline" size={18} color={colors.textMuted} />
-                            <Text style={[styles.actionCount, { color: colors.textMuted }]}>{targetStatus.replies_count || 0}</Text>
-                        </TouchableOpacity>
-                        {/* reblog */}
-                        <TouchableOpacity style={styles.actionButton} onPress={toggleReblog}>
-                            <Ionicons name="repeat" size={18} color={isReblogged ? colors.accentColor : colors.textMuted} />
-                            <Text style={[styles.actionCount, { color: isReblogged ? colors.accentColor : colors.textMuted }]}>
-                                {boostCount || 0}
-                            </Text>
-                        </TouchableOpacity>
-                        {/* favourite */}
-                        <TouchableOpacity style={styles.actionButton} onPress={toggleFavorite}>
-                            <Ionicons name={isFavorited ? "star" : "star-outline"} size={18} color={isFavorited ? colors.dangerColor : colors.textMuted} />
-                            <Text style={[styles.actionCount, { color: isFavorited ? colors.dangerColor : colors.textMuted }]}>{favCount || 0}</Text>
-                        </TouchableOpacity>
-                        {/* share */}
-                        <TouchableOpacity style={styles.actionButton}>
-                            <Ionicons name="share-social-outline" size={18} color={colors.textMuted} />
-                        </TouchableOpacity>
+                        {renderContent()}
+                        {actions}
                     </View>
                 </View>
-            </View>
+            ) : (
+                <>
+                    <View style={styles.authorRow}>
+                        {avatar}
+                        {names}
+                        {time}
+                    </View>
+                    {renderContent()}
+                    {actions}
+                </>
+            )}
+        </Card>
+    );
 
-            <ImageViewing
-                images={imageViewerImages}
-                imageIndex={imageViewerIndex}
-                visible={isImageViewerVisible}
-                onRequestClose={() => setIsImageViewerVisible(false)}
-                swipeToCloseEnabled={true}
-                doubleTapToZoomEnabled={true}
-                backgroundColor="rgba(0, 0, 0, 0.85)"
-                FooterComponent={ImageViewerFooter}
-            />
-
-            <Modal visible={isVideoVisible} onRequestClose={() => { player.pause(); setIsVideoVisible(false); }} animationType="fade">
-                <View style={{ flex: 1, backgroundColor: '#000', justifyContent: 'center' }}>
-                    {videoUrl && (
-                        <VideoView
-                            player={player}
-                            style={{ width: '100%', height: '80%' }}
-                            allowsFullscreen
-                            allowsPictureInPicture
-                            contentFit="contain"
-                        />
-                    )}
-                    <TouchableOpacity onPress={() => { player.pause(); setIsVideoVisible(false); }} style={styles.closeButton}>
-                        <Ionicons name="close" size={30} color="#FFF" />
-                    </TouchableOpacity>
-                </View>
-            </Modal>
-        </CardContainer>
+    if (!onPress) {
+        return card;
+    }
+    return (
+        <Pressable onPress={() => onPress(targetStatus.id)} accessibilityHint={t('post.opensThread')}>
+            {card}
+        </Pressable>
     );
 };

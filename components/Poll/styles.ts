@@ -1,74 +1,101 @@
 import { StyleSheet } from 'react-native';
+import { ThemeColors } from '../../services/themeContext';
+import { space } from '../../services/theme/shape';
 
-export const styles = StyleSheet.create({
+const ROW_RADIUS = space.md;
+
+export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     container: {
-        marginTop: 12,
-        marginBottom: 8,
+        padding: 10,
+        gap: space.sm,
     },
-    optionContainer: {
-        marginBottom: 10,
-    },
-    optionTouchable: {
+    option: {
+        minHeight: 44,
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 6,
+        gap: 10,
+        paddingHorizontal: space.md,
+        paddingVertical: space.sm,
+        borderRadius: ROW_RADIUS,
+        borderWidth: 1.5,
+        borderColor: colors.borderColor,
+        backgroundColor: colors.cardBackground,
     },
-    checkbox: {
-        width: 20,
-        height: 20,
-        borderRadius: 10,
+    optionSelected: {
         borderWidth: 2,
-        marginRight: 10,
+        borderColor: colors.accentColor,
+        backgroundColor: colors.accentSoft,
+    },
+    indicator: {
+        width: 18,
+        height: 18,
+        borderRadius: 9,
+        borderWidth: 2,
+        borderColor: colors.textMuted,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    checkboxSelected: {
+    indicatorMultiple: {
+        borderRadius: 5,
+    },
+    indicatorSelected: {
         borderWidth: 0,
-    },
-    checkboxMultiple: {
-        borderRadius: 4,
-    },
-    optionTextContainer: {
-        flex: 1,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
+        backgroundColor: colors.accentColor,
     },
     optionTitle: {
-        fontSize: 15,
         flex: 1,
+        fontSize: 14.5,
+        color: colors.textPrimary,
     },
-    optionPercent: {
-        fontSize: 13,
-        marginLeft: 10,
-    },
-    progressBarBackground: {
-        height: 6,
-        borderRadius: 3,
-        marginTop: 6,
+    result: {
+        minHeight: 40,
+        justifyContent: 'center',
+        borderRadius: ROW_RADIUS,
         overflow: 'hidden',
+        backgroundColor: colors.cardBackground,
     },
-    progressBarFill: {
-        height: '100%',
-        borderRadius: 3,
+    resultBar: {
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        bottom: 0,
+        backgroundColor: colors.accentSoft,
+    },
+    resultBarWinner: {
+        backgroundColor: colors.accentColor,
+    },
+    resultLabels: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.sm,
+        paddingHorizontal: space.md,
+        paddingVertical: 10,
+    },
+    resultTitle: {
+        flexShrink: 1,
+        fontSize: 14,
+        color: colors.textPrimary,
+    },
+    resultTitleOnAccent: {
+        color: colors.buttonTextColor,
+    },
+    resultPercent: {
+        marginLeft: 'auto',
+        fontSize: 14,
+        color: colors.textSecondary,
+    },
+    resultPercentWinner: {
+        color: colors.textPrimary,
     },
     footer: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 4,
+        justifyContent: 'space-between',
+        gap: space.sm,
+        paddingTop: 2,
+        paddingHorizontal: space.xs,
     },
     footerText: {
-        fontSize: 13,
-    },
-    voteButton: {
-        marginTop: 8,
-        alignSelf: 'flex-start',
-        paddingVertical: 6,
-        paddingHorizontal: 16,
-        borderRadius: 16,
-    },
-    voteButtonText: {
-        fontSize: 14,
-        fontWeight: 'bold',
+        color: colors.textMuted,
     },
 });

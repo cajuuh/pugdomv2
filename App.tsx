@@ -1,17 +1,20 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, ActivityIndicator, DeviceEventEmitter, TouchableOpacity, Platform, LogBox } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
+import { StyleSheet, ActivityIndicator, DeviceEventEmitter, TouchableOpacity, Platform, LogBox, View } from 'react-native';
 
+// react-native-image-viewing's default header (the media viewer's close button) still uses React Native's
+// deprecated SafeAreaView; the app itself uses react-native-safe-area-context. Remove once that header is replaced.
 LogBox.ignoreLogs([
     "SafeAreaView has been deprecated and will be removed in a future release",
 ]);
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { View } from 'react-native-ui-lib';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './services/authContext';
 import { SettingsProvider } from './services/settingsContext';
 import { ThemeProvider, useTheme } from './services/themeContext';
 import { ComposeProvider, useCompose } from './services/composeContext';
+import { MediaViewerProvider } from './components/MediaViewer/mediaViewer';
 import Login from './screens/Login/login';
 import Profile from './screens/Profile/profile';
 import Timeline from './screens/Timeline/timeline';
@@ -21,20 +24,33 @@ import { TopBar } from './components/TopBar/topBar';
 import { TabBar } from './components/TabBar/tabBar';
 import Settings from './screens/Settings/settings';
 import Thread from './screens/Thread/thread';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import Setup from './screens/Setup/setup';
+import { useEmojiCachePrimer } from './hooks/useCustomEmojis';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './services/queryClient';
+import { I18nProvider, useI18n } from './services/i18n/i18nContext';
 
-const queryClient = new QueryClient();
+// Keep the pug splash up until the fonts and the saved account are loaded
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function NavigationRoot() {
-  const { user, loading, logout, isAddingAccount, setAddingAccount } = useAuth();
+  const { user, loading, logout, isAddingAccount, setAddingAccount, needsSetup, finishSetup } = useAuth();
   const { openCompose } = useCompose();
-  const { colors, isDark } = useTheme();
+  const { colors, isDark, fontsReady } = useTheme();
+  const { languageReady } = useI18n();
   const [activeTab, setActiveTab] = useState<'home' | 'search' | 'notifications' | 'profile'>('home');
   const [currentScreen, setCurrentScreen] = useState<'main' | 'settings' | 'thread'>('main');
   const [threadStatusId, setThreadStatusId] = useState<string | null>(null);
+  // The server's stored custom emoji, ready before anyone opens the picker
+  useEmojiCachePrimer(user?.id);
 
   const handleTabPress = (tab: 'home' | 'search' | 'notifications' | 'profile') => {
-      if (tab === 'home' && activeTab === 'home') {
+      // The dock floats over Settings and Thread: a tab press closes them and shows that tab
+      if (currentScreen !== 'main') {
+          setCurrentScreen('main');
+          setThreadStatusId(null);
+          setActiveTab(tab);
+      } else if (tab === 'home' && activeTab === 'home') {
           DeviceEventEmitter.emit('scroll_to_top_home');
       } else {
           setActiveTab(tab);
@@ -52,10 +68,18 @@ function NavigationRoot() {
   };
 
   const statusBarStyle = isDark ? 'light' : 'dark';
+  const ready = !loading && fontsReady && languageReady;
 
-  if (loading) {
+  useEffect(() => {
+    if (ready) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [ready]);
+
+  // Hidden behind the splash; only shows if the splash is dismissed early
+  if (!ready) {
     return (
-      <View flex center style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size='large' color={colors.accentColor} />
       </View>
     )
@@ -63,37 +87,43 @@ function NavigationRoot() {
 
   if (!user || isAddingAccount) {
     return (
-      <View flex style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <StatusBar style={statusBarStyle} />
         <Login onCancel={isAddingAccount && user ? () => setAddingAccount(false) : undefined} />
       </View>
     );
   };
 
+  if (needsSetup) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <StatusBar style={statusBarStyle} />
+        <Setup onDone={finishSetup} />
+      </View>
+    );
+  }
+
   return (
-    <View flex style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar style={statusBarStyle} />
 
       {/* Render main navigation stack always */}
-      <View flex>
+      <View style={styles.container}>
         {/* Top Bar */}
         <TopBar
           user={user}
-          onAvatarPress={() => setActiveTab('profile')}
+          onProfilePress={() => setActiveTab('profile')}
           onSettingsPress={() => setCurrentScreen('settings')}
           onLogoutPress={logout}
         />
 
         {/* Screen content area */}
-        <View flex>
+        <View style={styles.container}>
           {activeTab === 'home' && <Timeline onStatusPress={openThread} />}
           {activeTab === 'search' && <Search />}
           {activeTab === 'notifications' && <Notifications onStatusPress={openThread} />}
-          {activeTab === 'profile' && <Profile />}
+          {activeTab === 'profile' && <Profile onStatusPress={openThread} onSettingsPress={() => setCurrentScreen('settings')} />}
         </View>
-
-        {/* Custom Tab Bar */}
-        <TabBar activeTab={activeTab} onTabPress={handleTabPress} onComposePress={openCompose} />
       </View>
 
       {/* Render Thread as absolute overlay on top if active */}
@@ -109,6 +139,9 @@ function NavigationRoot() {
               <Settings onBack={() => setCurrentScreen('main')} />
           </View>
       )}
+
+      {/* Custom Tab Bar, last so it stays on top of the overlays on both platforms */}
+      <TabBar activeTab={activeTab} onTabPress={handleTabPress} onComposePress={openCompose} />
     </View>
   );
 }
@@ -116,17 +149,22 @@ function NavigationRoot() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <ThemeProvider>
-        <SettingsProvider>
-          <AuthProvider>
-            <ComposeProvider>
-              <QueryClientProvider client={queryClient}>
-                <NavigationRoot />
-              </QueryClientProvider>
-            </ComposeProvider>
-          </AuthProvider>
-        </SettingsProvider>
-      </ThemeProvider>
+      {/* Above AuthProvider so it can reset cached server state when the account changes */}
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <I18nProvider>
+          <SettingsProvider>
+            <AuthProvider>
+              <ComposeProvider>
+                <MediaViewerProvider>
+                  <NavigationRoot />
+                </MediaViewerProvider>
+              </ComposeProvider>
+            </AuthProvider>
+          </SettingsProvider>
+          </I18nProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
     </SafeAreaProvider>
   );
 }

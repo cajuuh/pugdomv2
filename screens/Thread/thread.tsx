@@ -1,12 +1,24 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { ActivityIndicator, RefreshControl, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+
+import {
+    ActivityIndicator,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    View,
+} from 'react-native';
+
 import { FlashList } from '@shopify/flash-list';
-import { View, Text } from 'react-native-ui-lib';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { IconButton } from '../../components/ui';
+import { space } from '../../services/theme/shape';
+import { TAB_BAR_CLEARANCE } from '../../components/TabBar/styles';
 import { getStatus, getStatusContext } from '../../services/mastodon/statuses';
 import { Status } from '../../services/mastodon/types';
 import { TootCard } from '../../components/TootCard/tootCard';
 import { useTheme } from '../../services/themeContext';
+import { useI18n } from '../../services/i18n/i18nContext';
 
 interface ThreadProps {
     statusId: string;
@@ -14,9 +26,20 @@ interface ThreadProps {
     onStatusPress: (id: string) => void;
 }
 
-export default function Thread({ statusId, onBack, onStatusPress }: ThreadProps) {
-    const { colors } = useTheme();
-    const [statuses, setStatuses] = useState<Status[]>([]);
+type ThreadStatus = Status & {
+    isMain?: boolean;
+};
+
+export default function Thread({
+    statusId,
+    onBack,
+    onStatusPress,
+}: ThreadProps) {
+    const { colors, type } = useTheme();
+    const insets = useSafeAreaInsets();
+    const { t } = useI18n();
+
+    const [statuses, setStatuses] = useState<ThreadStatus[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
@@ -24,13 +47,20 @@ export default function Thread({ statusId, onBack, onStatusPress }: ThreadProps)
         try {
             const [status, context] = await Promise.all([
                 getStatus(statusId),
-                getStatusContext(statusId)
+                getStatusContext(statusId),
             ]);
-            
-            // We attach a temporary field so we can highlight it
-            const mainStatus = { ...status, isMain: true }; 
-            
-            setStatuses([...context.ancestors, mainStatus as Status, ...context.descendants]);
+
+            // Mark the focused post so it can receive the accent treatment.
+            const mainStatus: ThreadStatus = {
+                ...status,
+                isMain: true,
+            };
+
+            setStatuses([
+                ...context.ancestors,
+                mainStatus,
+                ...context.descendants,
+            ]);
         } catch (error) {
             console.error('Failed to load thread:', error);
         } finally {
@@ -50,43 +80,96 @@ export default function Thread({ statusId, onBack, onStatusPress }: ThreadProps)
     }, [statusId]);
 
     return (
-        <View flex style={{ backgroundColor: colors.background }}>
-            <View style={[styles.header, { borderBottomColor: colors.borderColor, backgroundColor: colors.cardBackground }]}>
-                <TouchableOpacity onPress={onBack} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-                </TouchableOpacity>
-                <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Thread</Text>
-                <View style={{ width: 40 }} />
+        <View
+            style={[
+                styles.container,
+                {
+                    backgroundColor: colors.background,
+                },
+            ]}
+        >
+            <View
+                testID="thread-header"
+                style={[
+                    styles.header,
+                    {
+                        paddingTop: insets.top +10,
+                        borderBottomColor: colors.borderColor,
+                        backgroundColor: colors.cardBackground,
+                    },
+                ]}
+            >
+                <IconButton
+                    icon="arrow-back"
+                    accessibilityLabel={t('common.goBack')}
+                    onPress={onBack}
+                />
+
+                <Text
+                    style={[
+                        type.name,
+                        {
+                            color: colors.textPrimary,
+                        },
+                    ]}
+                >
+                    Thread
+                </Text>
+
+                <View style={styles.headerSpacer} />
             </View>
-            
+
             {loading ? (
-                <View flex center>
-                    <ActivityIndicator size="large" color={colors.accentColor} />
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator
+                        size="large"
+                        color={colors.accentColor}
+                    />
                 </View>
             ) : (
                 <FlashList
                     data={statuses}
-                    keyExtractor={(item, index) => item.id + index}
-                    contentContainerStyle={{ paddingBottom: 100 }}
+                   keyExtractor={(item) => item.id}
+                    contentContainerStyle={styles.listContent}
                     renderItem={({ item, index }) => {
-                        const isMain = (item as any).isMain;
+                        const isMain = item.isMain;
+
                         return (
-                            <View style={[
-                                { borderBottomWidth: 1, borderBottomColor: colors.borderColor },
-                                isMain && { backgroundColor: colors.cardBackground }
-                            ]}>
-                                 <TootCard 
-                                    status={item} 
-                                    onPress={() => onStatusPress(item.id)} 
-                                    threadMode={true} 
-                                    hasThreadLineTop={index > 0} 
-                                    hasThreadLineBottom={index < statuses.length - 1}
+                            <View
+                                style={[
+                                    styles.postContainer,
+                                    {
+                                        borderBottomColor:
+                                            colors.borderColor,
+                                    },
+                                    isMain && {
+                                        backgroundColor:
+                                            colors.cardBackground,
+                                        borderLeftColor:
+                                            colors.accentSoft,
+                                        borderLeftWidth:
+                                            StyleSheet.hairlineWidth,
+                                    },
+                                ]}
+                            >
+                                <TootCard
+                                    status={item}
+                                    onPress={onStatusPress}
+                                    threadMode={true}
+                                    hasThreadLineTop={index > 0}
+                                    hasThreadLineBottom={
+                                        index < statuses.length - 1
+                                    }
                                 />
                             </View>
                         );
                     }}
                     refreshControl={
-                        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accentColor} />
+                        <RefreshControl
+                            refreshing={refreshing}
+                            onRefresh={handleRefresh}
+                            tintColor={colors.accentColor}
+                        />
                     }
                 />
             )}
@@ -95,21 +178,34 @@ export default function Thread({ statusId, onBack, onStatusPress }: ThreadProps)
 }
 
 const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+    },
+
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingTop: 50,
-        paddingBottom: 10,
-        paddingHorizontal: 16,
-        borderBottomWidth: 1,
+        paddingBottom: space.sm,
+        paddingHorizontal: space.lg,
+        borderBottomWidth: StyleSheet.hairlineWidth,
     },
-    backButton: {
-        padding: 8,
-        marginLeft: -8,
+
+    headerSpacer: {
+        width: 44,
     },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-    }
+
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+
+    listContent: {
+        paddingBottom: TAB_BAR_CLEARANCE,
+    },
+
+    postContainer: {
+        borderBottomWidth: StyleSheet.hairlineWidth,
+    },
 });

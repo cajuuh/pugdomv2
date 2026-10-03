@@ -1,13 +1,24 @@
-name: Production Environment (Delivery)
+name: Production Release
 
+# A push to main is a release. The version comes from app.json's expo.version, bumped by hand in a release PR on
+# develop (it is also the runtime version, so OTA updates never cross it). Build numbers are kept by EAS.
 on:
   push:
     branches:
       - main
 
+# Never cancel a release that is already tagging or queueing builds
+concurrency:
+  group: production-release
+  cancel-in-progress: false
+
 jobs:
-  publish-build:
-    name: Test, Tag, and Build Development
+  checks:
+    uses: ./.github/workflows/checks.yml
+
+  release:
+    name: Tag and build for the stores
+    needs: checks
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -17,34 +28,51 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Read the app version
+        id: version
+        run: echo "tag=v$(node -p "require('./app.json').expo.version")" >> "$GITHUB_OUTPUT"
+
+      # One release per version: a merge to main without a version bump doesn't rebuild the same version
+      - name: Tag the release
+        id: tag
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git rev-parse -q --verify "refs/tags/$TAG" > /dev/null; then
+            echo "::notice::$TAG already exists, so no new builds. Bump expo.version in app.json for a new release."
+            echo "created=false" >> "$GITHUB_OUTPUT"
+          else
+            git tag "$TAG"
+            git push origin "$TAG"
+            gh release create "$TAG" --title "$TAG" --generate-notes
+            echo "created=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Setup Node
+        if: steps.tag.outputs.created == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
           cache: yarn
 
       - name: Install dependencies
-        run: yarn install --ignore-engines
-
-      - name: Run Unit Tests
-        run: yarn test
-
-      - name: Setup Git User
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-
-      - name: Bump Version & Tag
-        run: npm version patch -m "v%s"
-
-      - name: Push Tag and Commit
-        run: git push origin main --follow-tags
+        if: steps.tag.outputs.created == 'true'
+        run: yarn install --frozen-lockfile
 
       - name: Setup Expo and EAS
+        if: steps.tag.outputs.created == 'true'
         uses: expo/expo-github-action@v8
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Publish EAS Development Build
-        run: eas build --profile development --platform android --non-interactive
+      # Queued on EAS without waiting; the iOS build goes to App Store Connect when it finishes, and you release it
+      # from there. Android has no Play Store setup yet, so its build stays on EAS.
+      - name: Build iOS and submit to App Store Connect
+        if: steps.tag.outputs.created == 'true'
+        run: eas build --profile production --platform ios --non-interactive --no-wait --auto-submit
+
+      - name: Build Android
+        if: steps.tag.outputs.created == 'true'
+        run: eas build --profile production --platform android --non-interactive --no-wait

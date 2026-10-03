@@ -120,6 +120,12 @@ yarn web
 
 ---
 
+## 🤝 Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, tests and the branch/commit workflow, and the [project board](https://github.com/users/cajuuh/projects/4) for open work (look for **`good first issue`**).
+
+---
+
 ## 📜 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

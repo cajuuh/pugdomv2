@@ -1,5 +1,7 @@
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Account } from './mastodon/types';
 
 const TOKEN_KEY = 'pugdom_access_token';
 const INSTANCE_KEY = 'pugdom_instance_url';
@@ -22,105 +24,24 @@ export interface SavedAccount {
     };
 }
 
-const SAVED_ACCOUNTS_KEY = 'pugdom_saved_accounts';
+// Saved accounts are stored one per key (plus an index of ids), because SecureStore
+// can reject large values and a single JSON array of every account grows without bound
+const LEGACY_SAVED_ACCOUNTS_KEY = 'pugdom_saved_accounts';
+const ACCOUNT_INDEX_KEY = 'pugdom_account_index';
+const ACCOUNT_KEY_PREFIX = 'pugdom_account_';
 
-export async function saveCredentials(accessToken: string, instanceUrl: string) {
+// SecureStore keys only allow [A-Za-z0-9._-], and account ids contain '@', ':' and '/'
+export const accountStorageKey = (id: string) =>
+    ACCOUNT_KEY_PREFIX + Array.from(new TextEncoder().encode(id), byte => byte.toString(16).padStart(2, '0')).join('');
+
+async function getItem(key: string): Promise<string | null> {
     if (Platform.OS === 'web') {
-        localStorage.setItem(TOKEN_KEY, accessToken);
-        localStorage.setItem(INSTANCE_KEY, instanceUrl);
-        return;
+        return localStorage.getItem(key);
     }
-    await SecureStore.setItemAsync(TOKEN_KEY, accessToken);
-    await SecureStore.setItemAsync(INSTANCE_KEY, instanceUrl);
+    return SecureStore.getItemAsync(key);
 }
 
-export async function getCredentials(): Promise<Credentials> {
-    if (Platform.OS === 'web') {
-        const accessToken = localStorage.getItem(TOKEN_KEY);
-        const instanceUrl = localStorage.getItem(INSTANCE_KEY);
-        return { accessToken, instanceUrl };
-    }
-    const accessToken = await SecureStore.getItemAsync(TOKEN_KEY);
-    const instanceUrl = await SecureStore.getItemAsync(INSTANCE_KEY);
-    return { accessToken, instanceUrl };
-}
-
-export async function clearCredentials() {
-    if (Platform.OS === 'web') {
-        localStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem(INSTANCE_KEY);
-        return;
-    }
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
-    await SecureStore.deleteItemAsync(INSTANCE_KEY);
-}
-
-export async function getSavedAccounts(): Promise<SavedAccount[]> {
-    const data = Platform.OS === 'web'
-        ? localStorage.getItem(SAVED_ACCOUNTS_KEY)
-        : await SecureStore.getItemAsync(SAVED_ACCOUNTS_KEY);
-    return data ? JSON.parse(data) : [];
-}
-
-export async function addSavedAccount(accessToken: string, instanceUrl: string, userInfo: any) {
-    const accounts = await getSavedAccounts();
-    const id = `${userInfo.acct}@${instanceUrl}`;
-    const newAccount: SavedAccount = { 
-        id, 
-        accessToken, 
-        instanceUrl, 
-        userInfo: {
-            id: userInfo.id,
-            username: userInfo.username,
-            display_name: userInfo.display_name,
-            avatar: userInfo.avatar,
-            acct: userInfo.acct
-        } 
-    };
-    
-    const filtered = accounts.filter(a => a.id !== id);
-    filtered.push(newAccount);
-    
-    const data = JSON.stringify(filtered);
-    if (Platform.OS === 'web') {
-        localStorage.setItem(SAVED_ACCOUNTS_KEY, data);
-    } else {
-        await SecureStore.setItemAsync(SAVED_ACCOUNTS_KEY, data);
-    }
-}
-
-export async function removeSavedAccount(id: string) {
-    const accounts = await getSavedAccounts();
-    const filtered = accounts.filter(a => a.id !== id);
-    const data = JSON.stringify(filtered);
-    
-    if (Platform.OS === 'web') {
-        localStorage.setItem(SAVED_ACCOUNTS_KEY, data);
-    } else {
-        await SecureStore.setItemAsync(SAVED_ACCOUNTS_KEY, data);
-    }
-}
-
-export async function saveSetting(key: string, value: boolean) {
-    const strVal = value ? 'true' : 'false';
-    if (Platform.OS === 'web') {
-        localStorage.setItem(key, strVal);
-        return;
-    }
-    await SecureStore.setItemAsync(key, strVal);
-}
-
-export async function getSetting(key: string, defaultValue: boolean): Promise<boolean> {
-    let val: string | null = null;
-    if (Platform.OS === 'web') {
-        val = localStorage.getItem(key);
-    } else {
-        val = await SecureStore.getItemAsync(key);
-    }
-    return val !== null ? val === 'true' : defaultValue;
-}
-
-export async function saveStringSetting(key: string, value: string) {
+async function setItem(key: string, value: string) {
     if (Platform.OS === 'web') {
         localStorage.setItem(key, value);
         return;
@@ -128,12 +49,132 @@ export async function saveStringSetting(key: string, value: string) {
     await SecureStore.setItemAsync(key, value);
 }
 
-export async function getStringSetting(key: string, defaultValue: string): Promise<string> {
-    let val: string | null = null;
+async function deleteItem(key: string) {
     if (Platform.OS === 'web') {
-        val = localStorage.getItem(key);
-    } else {
-        val = await SecureStore.getItemAsync(key);
+        localStorage.removeItem(key);
+        return;
     }
+    await SecureStore.deleteItemAsync(key);
+}
+
+export async function saveCredentials(accessToken: string, instanceUrl: string) {
+    await setItem(TOKEN_KEY, accessToken);
+    await setItem(INSTANCE_KEY, instanceUrl);
+}
+
+export async function getCredentials(): Promise<Credentials> {
+    const accessToken = await getItem(TOKEN_KEY);
+    const instanceUrl = await getItem(INSTANCE_KEY);
+    return { accessToken, instanceUrl };
+}
+
+export async function clearCredentials() {
+    await deleteItem(TOKEN_KEY);
+    await deleteItem(INSTANCE_KEY);
+}
+
+async function readAccountIndex(): Promise<string[]> {
+    const data = await getItem(ACCOUNT_INDEX_KEY);
+    return data ? JSON.parse(data) : [];
+}
+
+async function writeAccountIndex(ids: string[]) {
+    await setItem(ACCOUNT_INDEX_KEY, JSON.stringify(ids));
+}
+
+// One-time move from the single-array format. The legacy key is only removed once every
+// account has been written, so an interrupted migration is retried on the next call.
+let legacyMigration: Promise<void> | null = null;
+
+function migrateLegacyAccounts(): Promise<void> {
+    if (!legacyMigration) {
+        legacyMigration = (async () => {
+            const legacy = await getItem(LEGACY_SAVED_ACCOUNTS_KEY);
+            if (!legacy) {
+                return;
+            }
+            const accounts: SavedAccount[] = JSON.parse(legacy);
+            for (const account of accounts) {
+                await setItem(accountStorageKey(account.id), JSON.stringify(account));
+            }
+            const index = await readAccountIndex();
+            await writeAccountIndex([...index, ...accounts.map(a => a.id).filter(id => !index.includes(id))]);
+            await deleteItem(LEGACY_SAVED_ACCOUNTS_KEY);
+        })().catch(error => {
+            legacyMigration = null;
+            throw error;
+        });
+    }
+    return legacyMigration;
+}
+
+export async function getSavedAccounts(): Promise<SavedAccount[]> {
+    await migrateLegacyAccounts();
+    const ids = await readAccountIndex();
+    const records = await Promise.all(ids.map(id => getItem(accountStorageKey(id))));
+    // Skip ids whose record is missing (e.g. a write interrupted between record and index)
+    return records.filter((data): data is string => !!data).map(data => JSON.parse(data));
+}
+
+export async function addSavedAccount(accessToken: string, instanceUrl: string, userInfo: Account) {
+    await migrateLegacyAccounts();
+    const id = `${userInfo.acct}@${instanceUrl}`;
+    const newAccount: SavedAccount = {
+        id,
+        accessToken,
+        instanceUrl,
+        userInfo: {
+            id: userInfo.id,
+            username: userInfo.username,
+            display_name: userInfo.display_name,
+            avatar: userInfo.avatar,
+            acct: userInfo.acct
+        }
+    };
+
+    // Write the record before the index, so the index never points at a missing account
+    await setItem(accountStorageKey(id), JSON.stringify(newAccount));
+    const index = await readAccountIndex();
+    await writeAccountIndex([...index.filter(existing => existing !== id), id]);
+}
+
+export async function removeSavedAccount(id: string) {
+    await migrateLegacyAccounts();
+    const index = await readAccountIndex();
+    await writeAccountIndex(index.filter(existing => existing !== id));
+    await deleteItem(accountStorageKey(id));
+}
+
+// Preferences aren't secret, so they live in AsyncStorage and SecureStore (the keychain) is kept for tokens and
+// accounts. Builds before 1.1.0 kept preferences in SecureStore: one that isn't in AsyncStorage yet is moved over
+// the first time it's read. On web both were already localStorage, which AsyncStorage uses too.
+async function getPreference(key: string): Promise<string | null> {
+    const value = await AsyncStorage.getItem(key);
+    if (value !== null || Platform.OS === 'web') {
+        return value;
+    }
+    const legacy = await SecureStore.getItemAsync(key);
+    if (legacy !== null) {
+        await AsyncStorage.setItem(key, legacy);
+        await SecureStore.deleteItemAsync(key);
+    }
+    return legacy;
+}
+
+export async function saveSetting(key: string, value: boolean) {
+    await AsyncStorage.setItem(key, value ? 'true' : 'false');
+}
+
+export async function getSetting(key: string, defaultValue: boolean): Promise<boolean> {
+    const val = await getPreference(key);
+    return val !== null ? val === 'true' : defaultValue;
+}
+
+export async function saveStringSetting(key: string, value: string) {
+    await AsyncStorage.setItem(key, value);
+}
+
+export async function getStringSetting(key: string, defaultValue: string): Promise<string> {
+    const val = await getPreference(key);
     return val !== null ? val : defaultValue;
 }

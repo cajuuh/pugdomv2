@@ -3,6 +3,8 @@ export interface CustomEmoji {
     url: string;
     static_url: string;
     visible_in_picker: boolean;
+    // Set by the server's admins; many servers sort large emoji sets this way
+    category?: string | null;
 }
 
 export interface Attachment {
@@ -26,6 +28,19 @@ export interface Account {
     statuses_count?: number;
     url?: string;
     emojis: CustomEmoji[];
+    // Only present on the logged-in user's own account (verify_credentials)
+    source?: {
+        language?: string | null;
+        // Default visibility for new posts
+        privacy?: Status['visibility'];
+    };
+}
+
+export interface Mention {
+    id: string;
+    username: string;
+    acct: string;
+    url: string;
 }
 
 export interface PreviewCard {
@@ -48,7 +63,7 @@ export interface Status {
     visibility: 'public' | 'unlisted' | 'private' | 'direct';
     language: string | null;
     uri: string;
-    url: string;
+    url: string | null; // null for some remote statuses; `uri` is always set
     replies_count: number;
     reblogs_count: number;
     favourites_count: number;
@@ -56,9 +71,11 @@ export interface Status {
     reblog: Status | null
     account: Account;
     media_attachments: Attachment[];
+    mentions?: Mention[];
     emojis: CustomEmoji[];
     favourited?: boolean;
     reblogged?: boolean;
+    bookmarked?: boolean;
     card?: PreviewCard | null;
     poll?: Poll | null;
 }
@@ -81,6 +98,13 @@ export interface Poll {
     emojis: CustomEmoji[];
 }
 
+export interface Relationship {
+    id: string;
+    following: boolean;
+    requested: boolean;
+    followed_by: boolean;
+}
+
 export interface Notification {
     id: string;
     type: 'mention' | 'status' | 'reblog' | 'follow' | 'follow_request' | 'favourite' | 'poll' | 'update' | 'admin.sign_up' | 'admin.report' | 'severed_relationships' | 'moderation_warning';
@@ -88,3 +112,39 @@ export interface Notification {
     account: Account;
     status?: Status;
 }
+
+// One row on the notifications screen: a single notification, or several favourites / boosts of the same post
+export interface NotificationGroup {
+    key: string;
+    type: Notification['type'];
+    // Most recent first; a sample when the group is large
+    accounts: Account[];
+    // How many notifications the group stands for
+    count: number;
+    status?: Status;
+    created_at: string;
+    // Newest notification id in the group, for read markers
+    newestId: string;
+    // Built on the client from v1 pages, so the same post on a later page adds to it
+    partial?: boolean;
+}
+
+// GET /api/v2/notifications (Mastodon 4.3+)
+export interface NotificationGroupV2 {
+    group_key: string;
+    notifications_count: number;
+    type: Notification['type'];
+    most_recent_notification_id: string;
+    page_min_id?: string;
+    page_max_id?: string;
+    latest_page_notification_at?: string;
+    sample_account_ids: string[];
+    status_id?: string | null;
+}
+
+export interface GroupedNotificationsResponse {
+    accounts: Account[];
+    statuses: Status[];
+    notification_groups: NotificationGroupV2[];
+}
+

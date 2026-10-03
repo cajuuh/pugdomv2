@@ -1,5 +1,6 @@
 @AGENTS.md
-content = """# Gemini AI Context - Expo Mastodon Client
+
+# Gemini AI Context - Expo Mastodon Client
 
 This file serves as a contextual guide and prompt anchor for Gemini AI when assisting with the development of the Expo-based Mastodon application. It ensures the AI understands the project's tech stack, design architecture, and integration points.
 
@@ -10,10 +11,12 @@ This file serves as a contextual guide and prompt anchor for Gemini AI when assi
 This project is a cross-platform mobile application built using **Expo** and **React Native**. The core functionality of the app is to interface with the **Mastodon** decentralized social network, allowing users to log in via OAuth, view their timelines, post statuses, and interact with the Fediverse natively.
 
 ### Core Stack
-- **Framework:** Expo (React Native)
-- **Language:** TypeScript
-- **State Management:** React Context / TanStack Query (for server state)
-- **Styling:** Tailwind CSS (via NativeWind)
+- **Framework:** Expo SDK 56 (React Native 0.85), see AGENTS.md
+- **Language:** TypeScript (`yarn typecheck`)
+- **State Management:** React Context for app state, TanStack Query hooks in `hooks/` for server state
+- **Styling:** `react-native-ui-lib` components + `StyleSheet` files next to each screen/component, colors from `services/themeContext.tsx`
+- **Lists:** `@shopify/flash-list` v2 (use `useRecyclingState` for per-row state)
+- **Tests:** jest + `@testing-library/react-native` (`yarn test`)
 
 ---
 
@@ -144,4 +147,3 @@ To maximize scan-ability, cards map to explicit glassmorphic tints depending on 
 * **Reblogs/Boosts (`reblog`):** *Warm Ochre/Amber Gold Tint.* Highlights the original content title and features a secondary structural mini-badge tracking the boosting account.
 * **Favorites (`favourite`):** *Sky Cyan/Vibrant Blue Tint.* Minimalist card focusing on the post summary alongside a clear micro-icon indicating engagement success.
 * **New Followers (`follow`):** *Lime/Emerald Green Tint.* Highly visual, highlighting the new follower's bio snippet or a prominent follow-back interactive state.
-"""

@@ -1,48 +1,55 @@
 import { StyleSheet, Platform } from 'react-native';
+import { ThemeColors } from '../../services/themeContext';
 
-export const styles = StyleSheet.create({
+export const DOCK_HEIGHT = 68;
+export const DOCK_BOTTOM_OFFSET = Platform.OS === 'ios' ? 28 : 20;
+
+// Bottom padding for scrollable tab screens so their last item can scroll above the floating dock
+export const TAB_BAR_CLEARANCE = DOCK_HEIGHT + DOCK_BOTTOM_OFFSET + 16;
+
+export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     dockWrapper: {
         position: 'absolute',
-        bottom: Platform.OS === 'ios' ? 30 : 20,
-        left: 20,
-        right: 20,
-        alignItems: 'center',
+        bottom: DOCK_BOTTOM_OFFSET,
+        left: 16,
+        right: 16,
+        height: DOCK_HEIGHT,
+        borderRadius: DOCK_HEIGHT / 2,
         zIndex: 100, // Make sure it sits above the feed
+        // The shadow lives on the wrapper: the blur below clips its own overflow
+        shadowColor: colors.shadowColor,
+        shadowOffset: { width: 0, height: 12 },
+        shadowRadius: 16,
+        elevation: 8,
     },
-    tabBarContainer: {
+    dock: {
+        flex: 1,
         flexDirection: 'row',
-        height: 64,
-        borderRadius: 32,
-        borderWidth: 1,
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 15,
-        width: '100%',
+        paddingHorizontal: 10,
+        borderRadius: DOCK_HEIGHT / 2,
+        borderWidth: 1,
+        borderColor: colors.borderColor,
+        backgroundColor: colors.tabBarBackground,
         overflow: 'hidden',
     },
-    tabItem: {
-        flex: 1,
+    tab: {
+        width: 56,
+        height: 44,
+        borderRadius: 999,
         alignItems: 'center',
         justifyContent: 'center',
-        height: '100%',
     },
-    centerActionWrapper: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100%',
+    tabActive: {
+        backgroundColor: colors.accentSoft,
     },
-    centerActionButton: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
+    compose: {
+        width: 52,
+        height: 52,
+        borderRadius: 26,
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-        elevation: 5,
-        marginBottom: 8, // Make it protrude slightly upwards
+        backgroundColor: colors.accentColor,
     },
 });

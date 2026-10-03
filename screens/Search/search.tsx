@@ -1,19 +1,33 @@
-import React from 'react';
-import { StyleSheet } from 'react-native';
-import { View, Text } from 'react-native-ui-lib';
+import { StyleSheet, Text, View } from 'react-native';
+import { PugMark } from '../../components/ui';
+import { space } from '../../services/theme/shape';
 import { useTheme } from '../../services/themeContext';
+import { useI18n } from '../../services/i18n/i18nContext';
 
 export default function Search() {
-    const { colors } = useTheme();
+    const { colors ,type,coat} = useTheme();
+    const { t } = useI18n();
 
     return (
-        <View flex style={[styles.container, { backgroundColor: colors.background }]}>
-            <View style={styles.header}>
-                <Text style={[styles.title, { color: colors.textPrimary }]}>Discover</Text>
-                <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Search feature coming soon...</Text>
-            </View>
-        </View>
-    );
+    <View
+        style={[
+            styles.container,
+            { backgroundColor: colors.background },
+        ]}
+    >
+        <PugMark coat={coat} size={80} />
+
+        <Text
+            style={[
+                type.title,
+                styles.title,
+                { color: colors.textPrimary },
+            ]}
+        >
+            {t('search.comingSoon')}
+        </Text>
+    </View>
+);
 }
 
 const styles = StyleSheet.create({
@@ -21,17 +35,11 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        paddingHorizontal: space.xl,
     },
-    header: {
-        alignItems: 'center',
-        padding: 20,
-    },
+
     title: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        marginBottom: 8,
+        marginTop: space.lg,
+        textAlign: 'center',
     },
-    subtitle: {
-        fontSize: 16,
-    }
 });
