@@ -2,7 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
-import { EmojiPicker, groupByCategory } from '../components/ComposeModal/emojiPicker';
+import { EmojiPicker, groupByCategory, UNCATEGORIZED } from '../components/ComposeModal/emojiPicker';
 import { fetchCustomEmojis } from '../services/mastodon/customEmojis';
 import { CustomEmoji } from '../services/mastodon/types';
 
@@ -32,7 +32,7 @@ describe('groupByCategory', () => {
     it('sorts categories A–Z and puts uncategorized emoji last under Other', () => {
         const groups = groupByCategory([emoji('blobcat', 'Blobs'), emoji('pug'), emoji('ablobwave', 'Blobs'), emoji('flag_br', 'Flags'), emoji('x', '  ')]);
 
-        expect(groups.map(group => group.category)).toEqual(['Blobs', 'Flags', 'Other']);
+        expect(groups.map(group => group.category)).toEqual(['Blobs', 'Flags', UNCATEGORIZED]);
         expect(groups[0].emojis.map(e => e.shortcode)).toEqual(['blobcat', 'ablobwave']);
         expect(groups[2].emojis.map(e => e.shortcode)).toEqual(['pug', 'x']);
     });
@@ -51,6 +51,15 @@ describe('EmojiPicker', () => {
         expect(screen.getByRole('header', { name: 'Other' })).toBeTruthy();
         expect(screen.getByRole('button', { name: 'All' })).toBeSelected();
         expect(screen.queryByRole('button', { name: ':hidden:' })).toBeNull();
+    });
+
+    it('keeps a server category literally named "Other" apart from the uncategorized group', async () => {
+        mockedFetch.mockResolvedValue([emoji('blobcat', 'Other'), emoji('pug')]);
+        await renderPicker();
+        await screen.findByRole('button', { name: ':blobcat:' });
+
+        expect(screen.getAllByRole('header', { name: 'Other' })).toHaveLength(2);
+        expect(screen.getAllByRole('button', { name: 'Other' })).toHaveLength(2);
     });
 
     it('shows only one category when its chip is picked', async () => {

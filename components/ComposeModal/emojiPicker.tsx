@@ -7,17 +7,19 @@ import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { SegmentedPill, SegmentOption } from '../ui';
 import { BottomSheet } from './optionSheet';
 import { makeStyles } from './styles';
+import { useI18n } from '../../services/i18n/i18nContext';
 
 const COLUMNS = 7;
-export const ALL_CATEGORIES = 'All';
-export const UNCATEGORIZED = 'Other';
+// Internal ids, shown as "All" / "Other" in the user's language; not valid category names on a server
+export const ALL_CATEGORIES = '\u0000all';
+export const UNCATEGORIZED = '\u0000other';
 
 export interface EmojiGroup {
     category: string;
     emojis: CustomEmoji[];
 }
 
-// The server's categories A–Z, with uncategorized emoji last under "Other"
+// The server's categories A–Z, with uncategorized emoji last (shown as "Other")
 export const groupByCategory = (emojis: CustomEmoji[]): EmojiGroup[] => {
     const groups = new Map<string, CustomEmoji[]>();
     for (const emoji of emojis) {
@@ -51,6 +53,9 @@ interface EmojiPickerProps {
 // The instance's custom emoji; picking one inserts its :shortcode:
 export const EmojiPicker: React.FC<EmojiPickerProps> = ({ visible, onPick, onClose }) => {
     const { colors, type } = useTheme();
+    const { t } = useI18n();
+    const categoryLabel = (value: string) =>
+        value === ALL_CATEGORIES ? t('emoji.all') : value === UNCATEGORIZED ? t('emoji.other') : value;
     const styles = useThemedStyles(makeStyles);
     const [category, setCategory] = useState(ALL_CATEGORIES);
     const { data, isLoading, isError } = useCustomEmojis(visible);
@@ -62,8 +67,8 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ visible, onPick, onClo
     const activeCategory = groups.some(group => group.category === category) ? category : ALL_CATEGORIES;
 
     const chips: SegmentOption<string>[] = useMemo(
-        () => [ALL_CATEGORIES, ...groups.map(group => group.category)].map(value => ({ value, label: value })),
-        [groups]
+        () => [ALL_CATEGORIES, ...groups.map(group => group.category)].map(value => ({ value, label: categoryLabel(value) })),
+        [groups, t]
     );
     const sections = useMemo(() => {
         const shown = activeCategory === ALL_CATEGORIES ? groups : groups.filter(group => group.category === activeCategory);
@@ -73,9 +78,9 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ visible, onPick, onClo
     const status = isLoading
         ? <ActivityIndicator color={colors.accentColor} />
         : isError
-            ? <Text style={[type.meta, styles.emojiStatusText]}>Couldn't load this server's emoji</Text>
+            ? <Text style={[type.meta, styles.emojiStatusText]}>{t('emoji.loadFailed')}</Text>
             : groups.length === 0
-                ? <Text style={[type.meta, styles.emojiStatusText]}>This server has no custom emoji</Text>
+                ? <Text style={[type.meta, styles.emojiStatusText]}>{t('emoji.none')}</Text>
                 : null;
 
     const renderEmoji = (emoji: CustomEmoji) => (
@@ -94,7 +99,7 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ visible, onPick, onClo
     );
 
     return (
-        <BottomSheet visible={visible} title="Custom emoji" onClose={onClose}>
+        <BottomSheet visible={visible} title={t('emoji.title')} onClose={onClose}>
             {status ? (
                 <View style={styles.emojiStatus}>{status}</View>
             ) : (
@@ -111,7 +116,7 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ visible, onPick, onClo
                         stickySectionHeadersEnabled
                         renderSectionHeader={({ section }) =>
                             categorized && activeCategory === ALL_CATEGORIES ? (
-                                <Text accessibilityRole="header" style={[type.label, styles.emojiSectionTitle]}>{section.title}</Text>
+                                <Text accessibilityRole="header" style={[type.label, styles.emojiSectionTitle]}>{categoryLabel(section.title)}</Text>
                             ) : null
                         }
                         renderItem={({ item: row }) => (

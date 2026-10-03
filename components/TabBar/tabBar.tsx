@@ -5,6 +5,7 @@ import { BlurView } from 'expo-blur';
 import { useTheme } from '../../services/themeContext';
 import { makeStyles } from './styles';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
+import { useI18n } from '../../services/i18n/i18nContext';
 
 type Tab = 'home' | 'search' | 'notifications' | 'profile';
 
@@ -17,19 +18,21 @@ interface TabBarProps {
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
 // Outline icon when idle, filled when active
-const TABS: Record<Tab, { label: string; icon: IconName; activeIcon: IconName }> = {
-    home: { label: 'Home', icon: 'home-outline', activeIcon: 'home' },
-    search: { label: 'Search', icon: 'search-outline', activeIcon: 'search' },
-    notifications: { label: 'Notifications', icon: 'notifications-outline', activeIcon: 'notifications' },
-    profile: { label: 'Profile', icon: 'person-outline', activeIcon: 'person' },
+const TABS: Record<Tab, { icon: IconName; activeIcon: IconName }> = {
+    home: { icon: 'home-outline', activeIcon: 'home' },
+    search: { icon: 'search-outline', activeIcon: 'search' },
+    notifications: { icon: 'notifications-outline', activeIcon: 'notifications' },
+    profile: { icon: 'person-outline', activeIcon: 'person' },
 };
 
 export const TabBar: React.FC<TabBarProps> = ({ activeTab, onTabPress, onComposePress }) => {
     const { colors, isDark } = useTheme();
     const styles = useThemedStyles(makeStyles);
+    const { t } = useI18n();
 
     const tab = (key: Tab) => {
-        const { label, icon, activeIcon } = TABS[key];
+        const { icon, activeIcon } = TABS[key];
+        const label = t(`tabs.${key}`);
         const active = key === activeTab;
         return (
             <Pressable
@@ -53,7 +56,7 @@ export const TabBar: React.FC<TabBarProps> = ({ activeTab, onTabPress, onCompose
                 <Pressable
                     onPress={onComposePress}
                     accessibilityRole="button"
-                    accessibilityLabel="New post"
+                    accessibilityLabel={t('tabs.newPost')}
                     style={({ pressed }) => [styles.compose, pressed && { opacity: 0.85 }]}
                 >
                     <Ionicons name="add" size={28} color={colors.buttonTextColor} />

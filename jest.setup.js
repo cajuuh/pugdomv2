@@ -14,3 +14,9 @@ jest.mock('@react-native-async-storage/async-storage', () => require('@react-nat
 
 // The real SafeAreaProvider renders nothing until native code reports insets
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
+
+// The app defaults to Portuguese; tests run in English unless they pick a language
+jest.mock('./services/i18n/defaults', () => ({
+    ...jest.requireActual('./services/i18n/defaults'),
+    DEFAULT_LANGUAGE: 'en',
+}));

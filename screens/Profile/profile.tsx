@@ -16,6 +16,7 @@ import { Avatar, IconButton, PillButton, PugMark, SegmentOption, SegmentedPill }
 import { hitSlopFor } from '../../services/theme/shape';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { AVATAR_SIZE, SHARE_SIZE, makeStyles } from './styles';
+import { useI18n } from '../../services/i18n/i18nContext';
 
 interface ProfileProps {
     onStatusPress?: (id: string) => void;
@@ -25,19 +26,14 @@ interface ProfileProps {
 // Bookmarks are private to you, and this is always your own profile
 type Tab = ProfileTab | 'bookmarks';
 
-const TABS: SegmentOption<Tab>[] = [
-    { value: 'posts', label: 'Posts' },
-    { value: 'replies', label: 'Replies' },
-    { value: 'media', label: 'Media' },
-    { value: 'bookmarks', label: 'Bookmarks' },
-];
+const TABS: Tab[] = ['posts', 'replies', 'media', 'bookmarks'];
 
-const EMPTY_TEXT: Record<Tab, string> = {
-    posts: 'No posts yet',
-    replies: 'No posts or replies yet',
-    media: 'No media yet',
-    bookmarks: 'No bookmarks yet',
-};
+const EMPTY_TEXT = {
+    posts: 'profile.emptyPosts',
+    replies: 'profile.emptyReplies',
+    media: 'profile.emptyMedia',
+    bookmarks: 'profile.emptyBookmarks',
+} as const;
 
 const originOf = (url?: string) => url?.match(/^https?:\/\/[^/?#]+/i)?.[0];
 
@@ -60,6 +56,8 @@ interface ProfileHeaderProps {
 
 const ProfileHeader = ({ user, tab, onChangeTab, onSettingsPress }: ProfileHeaderProps) => {
     const { colors, type, coat } = useTheme();
+    const { t, locale } = useI18n();
+    const tabs: SegmentOption<Tab>[] = TABS.map(value => ({ value, label: t(`profile.${value}`) }));
     const styles = useThemedStyles(makeStyles);
     const { width } = useWindowDimensions();
     const name = user.display_name || user.username;
@@ -75,15 +73,15 @@ const ProfileHeader = ({ user, tab, onChangeTab, onSettingsPress }: ProfileHeade
     const handleShare = async () => {
         if (!user.url) return;
         try {
-            await Share.share({ message: `Check out my Mastodon profile on pugdom: ${user.url}` });
+            await Share.share({ message: t('profile.shareMessage', { url: user.url }) });
         } catch (error: any) {
-            Alert.alert('Error sharing profile', error.message);
+            Alert.alert(t('profile.shareFailed'), error.message);
         }
     };
 
     const stat = (count: number | undefined, label: string) => (
         <Text style={[type.body, styles.stat]}>
-            <Text style={[type.name, styles.statNumber]}>{(count ?? 0).toLocaleString()}</Text> {label}
+            <Text style={[type.name, styles.statNumber]}>{(count ?? 0).toLocaleString(locale)}</Text> {label}
         </Text>
     );
 
@@ -98,7 +96,7 @@ const ProfileHeader = ({ user, tab, onChangeTab, onSettingsPress }: ProfileHeade
                     </View>
                 )}
                 {onSettingsPress && (
-                    <IconButton icon="options-outline" accessibilityLabel="Settings" onPress={onSettingsPress} style={styles.bannerButton} />
+                    <IconButton icon="options-outline" accessibilityLabel={t('common.settings')} onPress={onSettingsPress} style={styles.bannerButton} />
                 )}
             </View>
 
@@ -108,11 +106,11 @@ const ProfileHeader = ({ user, tab, onChangeTab, onSettingsPress }: ProfileHeade
                         <Avatar name={name} uri={user.avatar} size={AVATAR_SIZE} />
                     </View>
                     <View style={styles.actions}>
-                        <PillButton label="Edit profile" variant="secondary" onPress={handleEditProfile} />
+                        <PillButton label={t('profile.editProfile')} variant="secondary" onPress={handleEditProfile} />
                         <Pressable
                             onPress={handleShare}
                             accessibilityRole="button"
-                            accessibilityLabel="Share profile"
+                            accessibilityLabel={t('profile.shareProfile')}
                             hitSlop={hitSlopFor(SHARE_SIZE, SHARE_SIZE)}
                             style={({ pressed }) => [styles.share, pressed && { opacity: 0.7 }]}
                         >
@@ -141,14 +139,14 @@ const ProfileHeader = ({ user, tab, onChangeTab, onSettingsPress }: ProfileHeade
                 )}
 
                 <View style={styles.stats}>
-                    {stat(user.statuses_count, 'posts')}
-                    {stat(user.following_count, 'following')}
-                    {stat(user.followers_count, 'followers')}
+                    {stat(user.statuses_count, t('profile.statPosts'))}
+                    {stat(user.following_count, t('profile.statFollowing'))}
+                    {stat(user.followers_count, t('profile.statFollowers'))}
                 </View>
             </View>
 
             <View style={styles.tabs}>
-                <SegmentedPill variant="underline" options={TABS} value={tab} onChange={onChangeTab} />
+                <SegmentedPill variant="underline" options={tabs} value={tab} onChange={onChangeTab} />
             </View>
         </View>
     );
@@ -157,6 +155,7 @@ const ProfileHeader = ({ user, tab, onChangeTab, onSettingsPress }: ProfileHeade
 const Profile = ({ onStatusPress, onSettingsPress }: ProfileProps) => {
     const { user, checkLoginStatus } = useAuth();
     const { colors, type } = useTheme();
+    const { t } = useI18n();
     const styles = useThemedStyles(makeStyles);
     const queryClient = useQueryClient();
     const [tab, setTab] = useState<Tab>('posts');
@@ -203,7 +202,7 @@ const Profile = ({ onStatusPress, onSettingsPress }: ProfileProps) => {
         <View style={styles.empty}>
             {isLoading
                 ? <ActivityIndicator color={colors.accentColor} />
-                : <Text style={[type.body, styles.emptyText]}>{EMPTY_TEXT[tab]}</Text>}
+                : <Text style={[type.body, styles.emptyText]}>{t(EMPTY_TEXT[tab])}</Text>}
         </View>
     );
 

@@ -7,6 +7,7 @@ import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { space } from '../../services/theme/shape';
 import { makeStyles } from './styles';
 import { useDragToDismiss, useSheetTransition } from './sheetTransition';
+import { useI18n } from '../../services/i18n/i18nContext';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -20,6 +21,7 @@ interface BottomSheetProps {
 // A small sheet over the compose sheet, for pickers
 export const BottomSheet: React.FC<BottomSheetProps> = ({ visible, title, onClose, children }) => {
     const { type } = useTheme();
+    const { t } = useI18n();
     const styles = useThemedStyles(makeStyles);
     const insets = useSafeAreaInsets();
     const { height } = useWindowDimensions();
@@ -41,7 +43,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({ visible, title, onClos
                     style={[styles.sheetBackdrop, { opacity: progress }]}
                     onPress={onClose}
                     accessibilityRole="button"
-                    accessibilityLabel="Close"
+                    accessibilityLabel={t('common.close')}
                 />
                 <Animated.View style={[styles.pickerSheet, { paddingBottom: insets.bottom + space.lg, transform: [{ translateY }] }]}>
                     <View collapsable={false} {...panHandlers}>

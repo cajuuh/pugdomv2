@@ -4,6 +4,7 @@ import Svg, { Circle } from 'react-native-svg';
 import { useTheme } from '../../services/themeContext';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { makeStyles } from './styles';
+import { useI18n } from '../../services/i18n/i18nContext';
 
 // Under this many characters left, the counter warns
 export const NEAR_LIMIT = 20;
@@ -24,6 +25,7 @@ interface CharacterCounterProps {
 // A ring that fills as you type: accent, then accent ink near the limit, then danger with "N over"
 export const CharacterCounter: React.FC<CharacterCounterProps> = ({ remaining, max }) => {
     const { colors, type } = useTheme();
+    const { t } = useI18n();
     const styles = useThemedStyles(makeStyles);
     const state = counterState(remaining);
     const color = { plenty: colors.accentColor, near: colors.accentText, over: colors.dangerColor }[state];
@@ -33,11 +35,11 @@ export const CharacterCounter: React.FC<CharacterCounterProps> = ({ remaining, m
     return (
         <View
             accessible
-            accessibilityLabel={state === 'over' ? `${-remaining} characters over the limit` : `${remaining} characters left`}
+            accessibilityLabel={state === 'over' ? t('compose.charactersOver', { count: -remaining }) : t('compose.charactersLeft', { count: remaining })}
             style={styles.counter}
         >
             <Text style={[type.name, styles.counterText, { color: textColor }]}>
-                {state === 'over' ? `${-remaining} over` : remaining}
+                {state === 'over' ? t('compose.overShort', { count: -remaining }) : remaining}
             </Text>
             <Svg testID="character-ring" width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
                 <Circle cx={SIZE / 2} cy={SIZE / 2} r={RADIUS} fill="none" stroke={state === 'over' ? color : colors.borderColor} strokeWidth={STROKE} />

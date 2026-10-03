@@ -34,6 +34,8 @@ import { OptionSheet, SheetOption } from './optionSheet';
 import { DEFAULT_POLL_DURATION, PollEditor } from './pollEditor';
 import { useDragToDismiss, useSheetTransition } from './sheetTransition';
 import { PILL_HEIGHT, makeStyles } from './styles';
+import { useI18n } from '../../services/i18n/i18nContext';
+import { Translator } from '../../services/i18n/translate';
 
 const stripHtml = (html: string) => {
     if (!html) return '';
@@ -59,11 +61,12 @@ const LANGUAGE_OPTIONS: SheetOption<string>[] = LANGUAGES.map(({ code, label }) 
 type Visibility = Status['visibility'];
 
 // Mastodon calls followers-only "private" and mentioned-only "direct"
-export const VISIBILITIES: (SheetOption<Visibility> & { icon: React.ComponentProps<typeof Ionicons>['name'] })[] = [
-    { value: 'public', label: 'Public', description: 'Anyone, on or off Mastodon', icon: 'globe-outline' },
-    { value: 'unlisted', label: 'Unlisted', description: 'Public, but not in public timelines or trends', icon: 'lock-open-outline' },
-    { value: 'private', label: 'Followers', description: 'Only your followers', icon: 'lock-closed-outline' },
-    { value: 'direct', label: 'Mentioned', description: 'Only the people you mention', icon: 'at' },
+type VisibilityOption = SheetOption<Visibility> & { icon: React.ComponentProps<typeof Ionicons>['name'] };
+export const visibilities = ({ t }: Translator): VisibilityOption[] => [
+    { value: 'public', label: t('compose.public'), description: t('compose.publicDescription'), icon: 'globe-outline' },
+    { value: 'unlisted', label: t('compose.unlisted'), description: t('compose.unlistedDescription'), icon: 'lock-open-outline' },
+    { value: 'private', label: t('compose.followers'), description: t('compose.followersDescription'), icon: 'lock-closed-outline' },
+    { value: 'direct', label: t('compose.mentioned'), description: t('compose.mentionedDescription'), icon: 'at' },
 ];
 
 const deviceLanguage = () => {
@@ -83,13 +86,13 @@ export const defaultVisibility = (user: Account | null, replyToStatus: Status | 
     replyToStatus?.visibility ?? user?.source?.privacy ?? 'public';
 
 // Mastodon rejects polls with fewer than two choices or repeated choices
-const pollValidationError = (options: string[]) => {
+const pollValidationError = (options: string[], { t }: Translator) => {
     const filled = options.map(option => option.trim()).filter(option => option.length > 0);
     if (filled.length < 2) {
-        return 'Add at least 2 choices';
+        return t('compose.minChoices');
     }
     if (new Set(filled).size !== filled.length) {
-        return 'Choices must be different';
+        return t('compose.distinctChoices');
     }
     return null;
 };
@@ -138,6 +141,8 @@ interface ComposeModalProps {
 const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, closeCompose }) => {
     const { user } = useAuth();
     const { colors, type } = useTheme();
+    const i18n = useI18n();
+    const { t } = i18n;
     const styles = useThemedStyles(makeStyles);
     const insets = useSafeAreaInsets();
     const { height: windowHeight } = useWindowDimensions();
@@ -176,9 +181,9 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
             closeCompose();
             return;
         }
-        Alert.alert('Discard this post?', 'Your draft will be lost.', [
-            { text: 'Keep editing', style: 'cancel', onPress: cancel },
-            { text: 'Discard', style: 'destructive', onPress: closeCompose },
+        Alert.alert(t('compose.discardTitle'), t('compose.discardMessage'), [
+            { text: t('compose.keepEditing'), style: 'cancel', onPress: cancel },
+            { text: t('compose.discard'), style: 'destructive', onPress: closeCompose },
         ], { cancelable: true, onDismiss: cancel });
     });
 
@@ -213,9 +218,10 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
     const remaining = instanceConfiguration.maxCharacters - statusLength(text, sensitive ? spoilerText : '');
     const isOverLimit = remaining < 0;
     const isEmpty = text.trim().length === 0;
-    const pollError = showPoll ? pollValidationError(pollOptions) : null;
+    const pollError = showPoll ? pollValidationError(pollOptions, i18n) : null;
     const isPublishDisabled = isEmpty || isOverLimit || !!pollError || loading;
-    const selectedVisibility = VISIBILITIES.find(v => v.value === visibility) ?? VISIBILITIES[0];
+    const visibilityOptions = visibilities(i18n);
+    const selectedVisibility = visibilityOptions.find(v => v.value === visibility) ?? visibilityOptions[0];
     const selectedLanguage = LANGUAGES.find(l => l.code === language) ?? LANGUAGES[0];
 
     const resetPoll = () => {
@@ -258,8 +264,8 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
         } catch (error: any) {
             console.error('Failed to post status:', error);
             Alert.alert(
-                'Publishing Failed',
-                error.response?.data?.error || error.message || 'An error occurred while publishing your status.'
+                t('compose.publishFailed'),
+                error.response?.data?.error || error.message || t('compose.publishFailedMessage')
             );
         } finally {
             setLoading(false);
@@ -293,13 +299,13 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
 
                 <View style={styles.header}>
                     <View style={styles.headerSide}>
-                        <PillButton label="Cancel" variant="ghost" onPress={closeCompose} style={styles.cancel} />
+                        <PillButton label={t('common.cancel')} variant="ghost" onPress={closeCompose} style={styles.cancel} />
                     </View>
                     <Text accessibilityRole="header" style={[type.sheetTitle, styles.headerTitle]}>
-                        {reply ? 'Reply' : 'New post'}
+                        {reply ? t('compose.reply') : t('compose.newPost')}
                     </Text>
                     <View style={[styles.headerSide, styles.headerSideEnd]}>
-                        <PillButton label="Post" onPress={handlePublish} disabled={isPublishDisabled && !loading} loading={loading} />
+                        <PillButton label={t('compose.post')} onPress={handlePublish} disabled={isPublishDisabled && !loading} loading={loading} />
                     </View>
                 </View>
             </View>
@@ -338,7 +344,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                                 <Pressable
                                     onPress={() => setPicker('visibility')}
                                     accessibilityRole="button"
-                                    accessibilityLabel={`Visibility: ${selectedVisibility.label}`}
+                                    accessibilityLabel={t('compose.visibilityLabel', { value: selectedVisibility.label })}
                                     hitSlop={hitSlopFor(0, PILL_HEIGHT)}
                                     style={({ pressed }) => [styles.pill, pressed && { opacity: 0.7 }]}
                                 >
@@ -349,7 +355,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                                 <Pressable
                                     onPress={() => setPicker('language')}
                                     accessibilityRole="button"
-                                    accessibilityLabel={`Language: ${selectedLanguage.label}`}
+                                    accessibilityLabel={t('compose.languageLabel', { value: selectedLanguage.label })}
                                     hitSlop={hitSlopFor(0, PILL_HEIGHT)}
                                     style={({ pressed }) => [styles.pill, pressed && { opacity: 0.7 }]}
                                 >
@@ -368,9 +374,9 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                         <Ionicons name="warning-outline" size={18} color={colors.accentText} />
                         <TextInput
                             style={[type.body, styles.contentWarningInput]}
-                            placeholder="Write your warning"
-                            accessibilityLabel="Content warning text"
-                            accessibilityHint="Readers see this before they open your post"
+                            placeholder={t('compose.cwPlaceholder')}
+                            accessibilityLabel={t('compose.cwLabel')}
+                            accessibilityHint={t('compose.cwHint')}
                             // Only mounted once the tool is turned on, so this focuses it right away
                             autoFocus
                             placeholderTextColor={colors.textMuted}
@@ -384,8 +390,8 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                 <TextInput
                     ref={inputRef}
                     style={[type.body, styles.textArea]}
-                    placeholder={reply ? 'Write your reply...' : "What's on your mind?"}
-                    accessibilityLabel="Post text"
+                    placeholder={reply ? t('compose.replyPlaceholder') : t('compose.placeholder')}
+                    accessibilityLabel={t('compose.textLabel')}
                     placeholderTextColor={colors.textMuted}
                     multiline
                     value={text}
@@ -415,10 +421,10 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                 accessibilityRole="toolbar"
                 style={[styles.toolbar, { paddingBottom: keyboard.visible ? 10 : Math.max(insets.bottom, 10) }]}
             >
-                {tool('image-outline', 'Add media', () => Alert.alert('Add Media', 'Media attachments feature coming soon!'))}
-                {tool(showPoll ? 'stats-chart' : 'stats-chart-outline', 'Poll', () => (showPoll ? resetPoll() : setShowPoll(true)), showPoll)}
-                {tool('warning-outline', 'Content warning', () => setSensitive(!sensitive), sensitive)}
-                {tool('happy-outline', 'Custom emoji', () => setPicker('emoji'))}
+                {tool('image-outline', t('compose.addMedia'), () => Alert.alert(t('compose.mediaSoonTitle'), t('compose.mediaSoon')))}
+                {tool(showPoll ? 'stats-chart' : 'stats-chart-outline', t('compose.poll'), () => (showPoll ? resetPoll() : setShowPoll(true)), showPoll)}
+                {tool('warning-outline', t('compose.contentWarning'), () => setSensitive(!sensitive), sensitive)}
+                {tool('happy-outline', t('compose.customEmoji'), () => setPicker('emoji'))}
                 <View style={styles.toolbarSpacer} />
                 <CharacterCounter remaining={remaining} max={instanceConfiguration.maxCharacters} />
             </View>
@@ -443,15 +449,15 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
 
             <OptionSheet
                 visible={picker === 'visibility'}
-                title="Who can see this"
-                options={VISIBILITIES}
+                title={t('compose.whoCanSee')}
+                options={visibilityOptions}
                 value={visibility}
                 onSelect={setVisibility}
                 onClose={() => setPicker(null)}
             />
             <OptionSheet
                 visible={picker === 'language'}
-                title="Post language"
+                title={t('compose.postLanguage')}
                 options={LANGUAGE_OPTIONS}
                 value={language}
                 onSelect={setLanguage}

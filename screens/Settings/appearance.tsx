@@ -7,12 +7,9 @@ import { COATS, getCoat } from '../../services/theme/coats';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { SettingsHeader } from './header';
 import { makeAppearanceStyles } from './styles';
+import { useI18n } from '../../services/i18n/i18nContext';
 
-const MODES: SegmentOption<ThemeType>[] = [
-    { value: 'light', label: 'Light' },
-    { value: 'dark', label: 'Dark' },
-    { value: 'system', label: 'System' },
-];
+const MODES: ThemeType[] = ['light', 'dark', 'system'];
 
 interface AppearanceProps {
     onBack: () => void;
@@ -21,30 +18,32 @@ interface AppearanceProps {
 const Appearance: React.FC<AppearanceProps> = ({ onBack }) => {
     const { colors, type, theme, setTheme, coat, setCoat, tint, setTint } = useTheme();
     const styles = useThemedStyles(makeAppearanceStyles);
-    const coatName = getCoat(coat).name;
+    const { t } = useI18n();
+    const coatName = t(`coats.${getCoat(coat).key}`);
+    const modes: SegmentOption<ThemeType>[] = MODES.map(value => ({ value, label: t(`appearance.${value}`) }));
 
     return (
         <>
-            <SettingsHeader title="Appearance" onBack={onBack} backLabel="Back to settings" />
+            <SettingsHeader title={t('appearance.title')} onBack={onBack} backLabel={t('appearance.back')} />
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-                <SectionLabel style={styles.sectionLabel}>Preview</SectionLabel>
+                <SectionLabel style={styles.sectionLabel}>{t('appearance.preview')}</SectionLabel>
                 {/* A sample post drawn with the live tokens; read as one element and not interactive */}
-                <Card style={styles.preview} accessible accessibilityLabel={`Preview of the ${coatName} coat`} pointerEvents="none">
+                <Card style={styles.preview} accessible accessibilityLabel={t('appearance.previewLabel', { coat: coatName })} pointerEvents="none">
                     <View style={styles.previewAuthor}>
                         <Avatar name="Joon Reyes" size={38} />
                         <View style={styles.previewNames}>
                             <Text style={[type.name, styles.previewName]}>Joon Reyes</Text>
                             <Text style={[type.meta, styles.previewHandle]}>@joon@pug.town</Text>
                         </View>
-                        <PillButton label="Follow" size="small" onPress={() => {}} />
+                        <PillButton label={t('common.follow')} size="small" onPress={() => {}} />
                     </View>
                     <Text style={[type.body, styles.previewBody]}>
-                        Trying Pugdom in {coatName}. <Text style={[type.name, styles.previewTag]}>#pugsofmastodon</Text>
+                        {t('appearance.previewText', { coat: coatName })} <Text style={[type.name, styles.previewTag]}>#pugsofmastodon</Text>
                     </Text>
                     <View style={styles.pollBar}>
                         <View style={styles.pollFill} />
                         <View style={styles.pollLabels}>
-                            <Text style={[type.name, styles.pollOption]}>In a sunbeam</Text>
+                            <Text style={[type.name, styles.pollOption]}>{t('appearance.previewPost')}</Text>
                             <Text style={[type.name, styles.pollPercent]}>64%</Text>
                         </View>
                     </View>
@@ -64,12 +63,12 @@ const Appearance: React.FC<AppearanceProps> = ({ onBack }) => {
                     </View>
                 </Card>
 
-                <SectionLabel style={styles.sectionLabel}>Mode</SectionLabel>
-                <SegmentedPill options={MODES} value={theme} onChange={setTheme} />
+                <SectionLabel style={styles.sectionLabel}>{t('appearance.mode')}</SectionLabel>
+                <SegmentedPill options={modes} value={theme} onChange={setTheme} />
 
                 <View style={styles.coatHeader}>
-                    <SectionLabel>Coat</SectionLabel>
-                    <Text style={[type.meta, styles.coatHint]}>Pug coats and a few friends</Text>
+                    <SectionLabel>{t('appearance.coat')}</SectionLabel>
+                    <Text style={[type.meta, styles.coatHint]}>{t('appearance.coatHint')}</Text>
                 </View>
                 <View accessibilityRole="radiogroup" style={styles.coatGrid}>
                     {COATS.map(option => {
@@ -79,12 +78,12 @@ const Appearance: React.FC<AppearanceProps> = ({ onBack }) => {
                                 key={option.key}
                                 onPress={() => setCoat(option.key)}
                                 accessibilityRole="radio"
-                                accessibilityLabel={option.name}
+                                accessibilityLabel={t(`coats.${option.key}`)}
                                 accessibilityState={{ checked: selected }}
                                 style={[styles.coat, selected && styles.coatSelected]}
                             >
                                 <PugMark coat={option.key} />
-                                <Text style={[type.name, styles.coatName]}>{option.name}</Text>
+                                <Text style={[type.name, styles.coatName]}>{t(`coats.${option.key}`)}</Text>
                             </Pressable>
                         );
                     })}
@@ -92,10 +91,10 @@ const Appearance: React.FC<AppearanceProps> = ({ onBack }) => {
 
                 <Card style={styles.tintRow}>
                     <View style={styles.tintText}>
-                        <Text style={[type.name, styles.tintLabel]}>Tint surfaces with coat</Text>
-                        <Text style={[type.meta, styles.tintDetail]}>Warms the background and cards, not only buttons</Text>
+                        <Text style={[type.name, styles.tintLabel]}>{t('appearance.tint')}</Text>
+                        <Text style={[type.meta, styles.tintDetail]}>{t('appearance.tintHint')}</Text>
                     </View>
-                    <ThemedSwitch value={tint} onValueChange={setTint} accessibilityLabel="Tint surfaces with coat" />
+                    <ThemedSwitch value={tint} onValueChange={setTint} accessibilityLabel={t('appearance.tint')} />
                 </Card>
             </ScrollView>
         </>

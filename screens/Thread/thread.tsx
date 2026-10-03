@@ -18,6 +18,7 @@ import { getStatus, getStatusContext } from '../../services/mastodon/statuses';
 import { Status } from '../../services/mastodon/types';
 import { TootCard } from '../../components/TootCard/tootCard';
 import { useTheme } from '../../services/themeContext';
+import { useI18n } from '../../services/i18n/i18nContext';
 
 interface ThreadProps {
     statusId: string;
@@ -36,6 +37,7 @@ export default function Thread({
 }: ThreadProps) {
     const { colors, type } = useTheme();
     const insets = useSafeAreaInsets();
+    const { t } = useI18n();
 
     const [statuses, setStatuses] = useState<ThreadStatus[]>([]);
     const [loading, setLoading] = useState(true);
@@ -99,7 +101,7 @@ export default function Thread({
             >
                 <IconButton
                     icon="arrow-back"
-                    accessibilityLabel="Go back"
+                    accessibilityLabel={t('common.goBack')}
                     onPress={onBack}
                 />
 

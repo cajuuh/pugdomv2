@@ -12,6 +12,9 @@ import { appVersionLabel } from '../../services/appVersion';
 import Appearance from './appearance';
 import { SettingsHeader } from './header';
 import { makeStyles } from './styles';
+import { useI18n } from '../../services/i18n/i18nContext';
+import { Language, LANGUAGES } from '../../services/i18n/defaults';
+import { OptionSheet } from '../../components/ComposeModal/optionSheet';
 
 interface SettingsProps {
     onBack: () => void;
@@ -31,6 +34,10 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
     } = useSettings();
     // Appearance is a second level inside Settings
     const [page, setPage] = useState<'main' | 'appearance'>('main');
+    const { t, language, setLanguage, dict } = useI18n();
+    const [languageSheetVisible, setLanguageSheetVisible] = useState(false);
+    const coatName = t(`coats.${getCoat(coat).key}`);
+    const languageName = dict.languageNames[language];
 
     if (page === 'appearance') {
         return (
@@ -52,10 +59,10 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
 
     return (
         <SafeAreaView style={styles.safeArea}>
-            <SettingsHeader title="Settings" onBack={onBack} backLabel="Close settings" />
+            <SettingsHeader title={t('settings.title')} onBack={onBack} backLabel={t('settings.close')} />
 
             <ScrollView contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
-                <SectionLabel style={styles.sectionLabel}>Accounts</SectionLabel>
+                <SectionLabel style={styles.sectionLabel}>{t('settings.accounts')}</SectionLabel>
                 <Card style={styles.group}>
                     {savedAccounts.map(account => {
                         const isActive = user?.id === account.userInfo.id;
@@ -66,7 +73,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                                     style={styles.row}
                                     onPress={() => !isActive && switchAccount(account.id)}
                                     accessibilityRole="button"
-                                    accessibilityLabel={isActive ? `${name}, current account` : `Switch to ${name}`}
+                                    accessibilityLabel={isActive ? t('settings.currentAccount', { name }) : t('settings.switchTo', { name })}
                                 >
                                     <Avatar name={name} uri={account.userInfo.avatar} size={40} />
                                     <View style={styles.rowText}>
@@ -82,7 +89,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                                             icon="log-out-outline"
                                             size={20}
                                             color={colors.dangerColor}
-                                            accessibilityLabel={`Log out of ${name}`}
+                                            accessibilityLabel={t('settings.logOutOf', { name })}
                                             onPress={() => logout(account.id)}
                                         />
                                     )}
@@ -93,54 +100,77 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                     })}
                     <Pressable style={[styles.row, styles.rowCentered]} onPress={() => setAddingAccount(true)} accessibilityRole="button">
                         <Ionicons name="add-circle-outline" size={20} color={colors.accentText} />
-                        <Text style={[type.name, styles.rowLabel, { color: colors.accentText }]}>Add Account</Text>
+                        <Text style={[type.name, styles.rowLabel, { color: colors.accentText }]}>{t('settings.addAccount')}</Text>
                     </Pressable>
                 </Card>
 
-                <SectionLabel style={styles.sectionLabel}>Preferences</SectionLabel>
+                <SectionLabel style={styles.sectionLabel}>{t('settings.preferences')}</SectionLabel>
                 <Card style={styles.group}>
                     <Pressable
                         style={styles.row}
                         onPress={() => setPage('appearance')}
                         accessibilityRole="button"
-                        accessibilityLabel={`Appearance, ${getCoat(coat).name}`}
+                        accessibilityLabel={t('settings.appearanceLabel', { coat: coatName })}
                     >
                         <Ionicons name="color-palette-outline" size={20} color={colors.accentText} />
-                        <Text style={[labelStyle, styles.rowText]}>Appearance</Text>
+                        <Text style={[labelStyle, styles.rowText]}>{t('settings.appearance')}</Text>
                         <View style={styles.rowTrailing}>
                             <PugMark coat={coat} size={22} />
-                            <Text style={[type.meta, styles.rowValue]}>{getCoat(coat).name}</Text>
+                            <Text style={[type.meta, styles.rowValue]}>{coatName}</Text>
                             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
                         </View>
                     </Pressable>
                     <View style={styles.divider} />
-                    {switchRow('notifications-outline', 'Push Notifications', notifications, setNotifications)}
+                    <Pressable
+                        style={styles.row}
+                        onPress={() => setLanguageSheetVisible(true)}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('settings.languageLabel', { value: languageName })}
+                    >
+                        <Ionicons name="language-outline" size={20} color={colors.accentText} />
+                        <Text style={[labelStyle, styles.rowText]}>{t('settings.language')}</Text>
+                        <View style={styles.rowTrailing}>
+                            <Text style={[type.meta, styles.rowValue]}>{languageName}</Text>
+                            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                        </View>
+                    </Pressable>
                     <View style={styles.divider} />
-                    {switchRow('play-circle-outline', 'Autoplay Media', mediaAutoplay, setMediaAutoplay)}
+                    {switchRow('notifications-outline', t('settings.pushNotifications'), notifications, setNotifications)}
                     <View style={styles.divider} />
-                    {switchRow('list-outline', 'Compact Mode', compactMode, setCompactMode)}
+                    {switchRow('play-circle-outline', t('settings.autoplay'), mediaAutoplay, setMediaAutoplay)}
+                    <View style={styles.divider} />
+                    {switchRow('list-outline', t('settings.compactMode'), compactMode, setCompactMode)}
                 </Card>
 
-                <SectionLabel style={styles.sectionLabel}>About</SectionLabel>
+                <SectionLabel style={styles.sectionLabel}>{t('settings.about')}</SectionLabel>
                 <Card style={styles.group}>
                     <View style={styles.row}>
                         <Ionicons name="information-circle-outline" size={20} color={colors.accentText} />
-                        <Text style={[labelStyle, styles.rowText]}>App Version</Text>
+                        <Text style={[labelStyle, styles.rowText]}>{t('settings.version')}</Text>
                         <Text style={[type.meta, styles.rowValue]}>{appVersionLabel()}</Text>
                     </View>
                     <View style={styles.divider} />
                     <Pressable style={styles.row} accessibilityRole="button">
                         <Ionicons name="shield-checkmark-outline" size={20} color={colors.accentText} />
-                        <Text style={[labelStyle, styles.rowText]}>Privacy Policy</Text>
+                        <Text style={[labelStyle, styles.rowText]}>{t('settings.privacy')}</Text>
                         <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
                     </Pressable>
                 </Card>
 
                 <Pressable style={styles.logoutButton} onPress={() => logout()} accessibilityRole="button">
                     <Ionicons name="log-out-outline" size={18} color={colors.dangerColor} />
-                    <Text style={[type.name, styles.logoutLabel]}>Log Out</Text>
+                    <Text style={[type.name, styles.logoutLabel]}>{t('common.logOut')}</Text>
                 </Pressable>
             </ScrollView>
+
+            <OptionSheet<Language>
+                visible={languageSheetVisible}
+                title={t('settings.language')}
+                options={LANGUAGES.map(value => ({ value, label: dict.languageNames[value] }))}
+                value={language}
+                onSelect={setLanguage}
+                onClose={() => setLanguageSheetVisible(false)}
+            />
         </SafeAreaView>
     );
 };

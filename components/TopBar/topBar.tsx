@@ -7,6 +7,7 @@ import { useTheme } from '../../services/themeContext';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { Avatar, IconButton, PugMark } from '../ui';
 import { HEADER_HEIGHT, makeStyles } from './styles';
+import { useI18n } from '../../services/i18n/i18nContext';
 
 interface TopBarProps {
     user: Account | null;
@@ -20,6 +21,7 @@ export const TopBar: React.FC<TopBarProps> = ({ user, onProfilePress, onSettings
     const { colors, type, coat } = useTheme();
     const styles = useThemedStyles(makeStyles);
     const insets = useSafeAreaInsets();
+    const { t } = useI18n();
 
     const menuAction = (action: () => void) => () => {
         setMenuVisible(false);
@@ -33,7 +35,7 @@ export const TopBar: React.FC<TopBarProps> = ({ user, onProfilePress, onSettings
                     onPress={() => setMenuVisible(true)}
                     style={styles.avatarButton}
                     accessibilityRole="button"
-                    accessibilityLabel="Account menu"
+                    accessibilityLabel={t('topBar.accountMenu')}
                 >
                     <Avatar name={user?.display_name || user?.username || ''} uri={user?.avatar} size={36} ring />
                 </Pressable>
@@ -43,22 +45,22 @@ export const TopBar: React.FC<TopBarProps> = ({ user, onProfilePress, onSettings
                     <Text style={[type.title, styles.wordmarkText]}>pugdom</Text>
                 </View>
 
-                <IconButton icon="options-outline" accessibilityLabel="Settings" onPress={onSettingsPress} color={colors.textSecondary} size={24} style={styles.settingsButton} />
+                <IconButton icon="options-outline" accessibilityLabel={t('common.settings')} onPress={onSettingsPress} color={colors.textSecondary} size={24} style={styles.settingsButton} />
             </View>
 
             <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
                 <View style={styles.modalRoot}>
                     {/* A sibling of the menu, not its parent: an accessible parent would hide the items from screen readers */}
-                    <Pressable style={styles.modalOverlay} onPress={() => setMenuVisible(false)} accessibilityRole="button" accessibilityLabel="Close menu" />
+                    <Pressable style={styles.modalOverlay} onPress={() => setMenuVisible(false)} accessibilityRole="button" accessibilityLabel={t('topBar.closeMenu')} />
                     <View style={[styles.menu, { top: insets.top + HEADER_HEIGHT }]}>
-                        <Pressable style={styles.menuItem} onPress={menuAction(onProfilePress)} accessibilityRole="button" accessibilityLabel="Profile">
+                        <Pressable style={styles.menuItem} onPress={menuAction(onProfilePress)} accessibilityRole="button" accessibilityLabel={t('common.profile')}>
                             <Ionicons name="person-outline" size={18} color={colors.textPrimary} />
-                            <Text style={[type.name, styles.menuText]}>Profile</Text>
+                            <Text style={[type.name, styles.menuText]}>{t('common.profile')}</Text>
                         </Pressable>
                         <View style={styles.divider} />
-                        <Pressable style={styles.menuItem} onPress={menuAction(onLogoutPress)} accessibilityRole="button" accessibilityLabel="Log Out">
+                        <Pressable style={styles.menuItem} onPress={menuAction(onLogoutPress)} accessibilityRole="button" accessibilityLabel={t('common.logOut')}>
                             <Ionicons name="log-out-outline" size={18} color={colors.dangerColor} />
-                            <Text style={[type.name, styles.menuText, styles.menuTextDanger]}>Log Out</Text>
+                            <Text style={[type.name, styles.menuText, styles.menuTextDanger]}>{t('common.logOut')}</Text>
                         </Pressable>
                     </View>
                 </View>

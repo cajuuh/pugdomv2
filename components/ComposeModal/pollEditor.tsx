@@ -7,19 +7,20 @@ import { hitSlopFor } from '../../services/theme/shape';
 import { IconButton, SectionLabel, ThemedSwitch, Well } from '../ui';
 import { OptionSheet, SheetOption } from './optionSheet';
 import { makeStyles } from './styles';
+import { useI18n } from '../../services/i18n/i18nContext';
 
 export const DEFAULT_POLL_DURATION = 86400;
 
 // Mastodon's own choices, in seconds
-export const POLL_DURATIONS: SheetOption<number>[] = [
-    { value: 300, label: '5 minutes' },
-    { value: 1800, label: '30 minutes' },
-    { value: 3600, label: '1 hour' },
-    { value: 21600, label: '6 hours' },
-    { value: 86400, label: '1 day' },
-    { value: 259200, label: '3 days' },
-    { value: 604800, label: '7 days' },
-];
+export const POLL_DURATIONS = [
+    { value: 300, key: 'pollEditor.minutes5' },
+    { value: 1800, key: 'pollEditor.minutes30' },
+    { value: 3600, key: 'pollEditor.hour1' },
+    { value: 21600, key: 'pollEditor.hours6' },
+    { value: 86400, key: 'pollEditor.day1' },
+    { value: 259200, key: 'pollEditor.days3' },
+    { value: 604800, key: 'pollEditor.days7' },
+] as const;
 
 interface PollEditorProps {
     options: string[];
@@ -48,9 +49,11 @@ export const PollEditor: React.FC<PollEditorProps> = ({
 }) => {
     const { colors, type } = useTheme();
     const styles = useThemedStyles(makeStyles);
+    const { t } = useI18n();
+    const durations: SheetOption<number>[] = POLL_DURATIONS.map(({ value, key }) => ({ value, label: t(key) }));
     const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
     const [durationSheetVisible, setDurationSheetVisible] = useState(false);
-    const durationLabel = POLL_DURATIONS.find(option => option.value === duration)?.label ?? '1 day';
+    const durationLabel = durations.find(option => option.value === duration)?.label ?? t('pollEditor.day1');
 
     const setOption = (index: number, value: string) =>
         onChangeOptions(options.map((option, i) => (i === index ? value : option)));
@@ -58,16 +61,16 @@ export const PollEditor: React.FC<PollEditorProps> = ({
     return (
         <Well style={styles.poll}>
             <View style={styles.pollHeader}>
-                <SectionLabel>Poll</SectionLabel>
-                <IconButton icon="close" size={18} accessibilityLabel="Remove poll" onPress={onRemove} color={colors.textMuted} style={styles.pollRemove} />
+                <SectionLabel>{t('pollEditor.title')}</SectionLabel>
+                <IconButton icon="close" size={18} accessibilityLabel={t('pollEditor.remove')} onPress={onRemove} color={colors.textMuted} style={styles.pollRemove} />
             </View>
 
             {options.map((option, index) => (
                 <View key={index} style={styles.choiceRow}>
                     <TextInput
                         style={[type.name, styles.choice, focusedIndex === index && styles.choiceFocused]}
-                        placeholder={`Choice ${index + 1}`}
-                        accessibilityLabel={`Choice ${index + 1}`}
+                        placeholder={t('pollEditor.choice', { index: index + 1 })}
+                        accessibilityLabel={t('pollEditor.choice', { index: index + 1 })}
                         placeholderTextColor={colors.textMuted}
                         value={option}
                         onChangeText={value => setOption(index, value)}
@@ -79,7 +82,7 @@ export const PollEditor: React.FC<PollEditorProps> = ({
                         <IconButton
                             icon="close-circle"
                             size={20}
-                            accessibilityLabel={`Remove choice ${index + 1}`}
+                            accessibilityLabel={t('pollEditor.removeChoice', { index: index + 1 })}
                             onPress={() => onChangeOptions(options.filter((_, i) => i !== index))}
                             color={colors.textMuted}
                         />
@@ -91,11 +94,11 @@ export const PollEditor: React.FC<PollEditorProps> = ({
                 <Pressable
                     onPress={() => onChangeOptions([...options, ''])}
                     accessibilityRole="button"
-                    accessibilityLabel="Add choice"
+                    accessibilityLabel={t('pollEditor.addChoice')}
                     style={({ pressed }) => [styles.addChoice, pressed && { opacity: 0.6 }]}
                 >
                     <Ionicons name="add" size={16} color={colors.accentText} />
-                    <Text style={[type.name, styles.addChoiceText]}>Add choice</Text>
+                    <Text style={[type.name, styles.addChoiceText]}>{t('pollEditor.addChoice')}</Text>
                 </Pressable>
             )}
 
@@ -105,26 +108,26 @@ export const PollEditor: React.FC<PollEditorProps> = ({
                 <Pressable
                     onPress={() => setDurationSheetVisible(true)}
                     accessibilityRole="button"
-                    accessibilityLabel={`Poll length: ${durationLabel}`}
+                    accessibilityLabel={t('pollEditor.lengthLabel', { value: durationLabel })}
                     hitSlop={hitSlopFor(0, 34)}
                     style={({ pressed }) => [styles.duration, pressed && { opacity: 0.7 }]}
                 >
                     <Ionicons name="time-outline" size={15} color={colors.textPrimary} />
-                    <Text style={[type.name, styles.durationText]}>Ends in {durationLabel}</Text>
+                    <Text style={[type.name, styles.durationText]}>{t('pollEditor.endsIn', { value: durationLabel })}</Text>
                     <Ionicons name="chevron-down" size={12} color={colors.textSecondary} />
                 </Pressable>
                 <View style={styles.multiple}>
                     <Text style={[type.name, styles.multipleText]} importantForAccessibility="no" accessibilityElementsHidden>
-                        Multiple choice
+                        {t('pollEditor.multiple')}
                     </Text>
-                    <ThemedSwitch value={multiple} onValueChange={onChangeMultiple} accessibilityLabel="Multiple choice" />
+                    <ThemedSwitch value={multiple} onValueChange={onChangeMultiple} accessibilityLabel={t('pollEditor.multiple')} />
                 </View>
             </View>
 
             <OptionSheet
                 visible={durationSheetVisible}
-                title="Poll length"
-                options={POLL_DURATIONS}
+                title={t('pollEditor.length')}
+                options={durations}
                 value={duration}
                 onSelect={onChangeDuration}
                 onClose={() => setDurationSheetVisible(false)}
