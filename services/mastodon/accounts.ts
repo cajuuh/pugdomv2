@@ -17,8 +17,19 @@ export async function getAccountStatuses(accountId: string, maxId?: string, filt
     return response.data;
 }
 
+export async function getAccount(accountId: string): Promise<Account> {
+    const response = await apiClient.get<Account>(`/accounts/${accountId}`);
+    return response.data;
+}
+
 export async function followAccount(accountId: string): Promise<Relationship> {
     const response = await apiClient.post<Relationship>(`/accounts/${accountId}/follow`);
+    return response.data;
+}
+
+// Also cancels a pending follow request
+export async function unfollowAccount(accountId: string): Promise<Relationship> {
+    const response = await apiClient.post<Relationship>(`/accounts/${accountId}/unfollow`);
     return response.data;
 }
 

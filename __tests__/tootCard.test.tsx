@@ -4,6 +4,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
 import { MediaViewerProvider } from '../components/MediaViewer/mediaViewer';
+import { NavigationProvider, useNavigator } from '../services/navigationContext';
 import { TootCard, describeHidden } from '../components/TootCard/tootCard';
 import { COMPACT_ACTION_HEIGHT } from '../components/TootCard/styles';
 import { MIN_TOUCH } from '../services/theme/shape';
@@ -395,6 +396,47 @@ describe('TootCard in Compact Mode', () => {
         expect(StyleSheet.flatten(reply.props.style).minHeight).toBe(COMPACT_ACTION_HEIGHT);
         const slop = reply.props.hitSlop;
         expect(COMPACT_ACTION_HEIGHT + slop.top + slop.bottom).toBeGreaterThanOrEqual(MIN_TOUCH);
+    });
+});
+
+describe('TootCard opens profiles', () => {
+    // Shows the routes pushed so far
+    const StackProbe = () => {
+        const { stack } = useNavigator();
+        const { Text: MockText } = jest.requireActual('react-native');
+        return <MockText testID="stack">{JSON.stringify(stack.map(entry => entry.route))}</MockText>;
+    };
+    const renderInStack = (status: Status) =>
+        render(
+            <QueryClientProvider client={createTestQueryClient()}>
+                <NavigationProvider>
+                    <MediaViewerProvider>
+                        <TootCard status={status} />
+                        <StackProbe />
+                    </MediaViewerProvider>
+                </NavigationProvider>
+            </QueryClientProvider>
+        );
+    const pushed = () => JSON.parse(screen.getByTestId('stack').props.children);
+
+    it("opens the author's profile from the name and the avatar", async () => {
+        await renderInStack(statusA);
+        const author = statusA.account.display_name || statusA.account.username;
+
+        const links = screen.getAllByRole('link', { name: `${author}'s profile` });
+        expect(links).toHaveLength(2);
+        await fireEvent.press(links[0]);
+
+        expect(pushed()).toEqual([{ name: 'account', accountId: statusA.account.id, account: statusA.account }]);
+    });
+
+    it('opens the booster from the boost line', async () => {
+        const booster = { ...statusB.account, id: 'booster', username: 'booster', display_name: 'Booster' };
+        await renderInStack({ ...makeStatus('boost', { replies: 0, boosts: 0, favs: 0 }), account: booster, reblog: statusA } as Status);
+
+        await fireEvent.press(screen.getByText('Booster boosted'));
+
+        expect(pushed()[0]).toMatchObject({ name: 'account', accountId: 'booster' });
     });
 });
 

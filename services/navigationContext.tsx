@@ -1,7 +1,12 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import { Account } from './mastodon/types';
 
-// Screens that open on top of the tabs. Profiles, hashtags, links and lists join in later phases.
-export type Route = { name: 'thread'; statusId: string } | { name: 'settings' };
+// Screens that open on top of the tabs. Hashtags, links and lists join in later phases.
+// An account route can carry the account we already have, so its profile shows at once.
+export type Route =
+    | { name: 'thread'; statusId: string }
+    | { name: 'settings' }
+    | { name: 'account'; accountId: string; account?: Account };
 
 // Each entry gets its own key, so the same screen can sit in the stack twice (thread → other → same thread)
 export interface StackEntry {
@@ -12,7 +17,9 @@ export interface StackEntry {
 // Hidden screens stay mounted to keep their scroll position, so the stack has a limit
 export const MAX_STACK_DEPTH = 10;
 
-export const sameRoute = (a: Route, b: Route) => JSON.stringify(a) === JSON.stringify(b);
+// The account copy carried by a route doesn't make it a different screen
+const routeIdentity = (route: Route) => (route.name === 'account' ? { name: route.name, accountId: route.accountId } : route);
+export const sameRoute = (a: Route, b: Route) => JSON.stringify(routeIdentity(a)) === JSON.stringify(routeIdentity(b));
 
 // Adds a screen on top, unless it's already the top one; past the limit the oldest screen goes
 export const pushRoute = (stack: StackEntry[], route: Route, key: string): StackEntry[] => {

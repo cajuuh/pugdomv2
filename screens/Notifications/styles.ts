@@ -196,19 +196,6 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     handle: {
         color: colors.textMuted,
     },
-    followState: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: space.xs,
-        height: 34,
-        paddingHorizontal: space.md,
-        borderRadius: radii.pill,
-        backgroundColor: colors.accentSoft,
-    },
-    followStateText: {
-        color: colors.accentText,
-        fontSize: 13,
-    },
 });
 
 export { FAVOURITE_SIZE, STACKED_AVATAR };
