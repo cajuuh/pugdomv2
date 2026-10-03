@@ -2,9 +2,11 @@ import { StyleSheet, Text, View } from 'react-native';
 import { PugMark } from '../../components/ui';
 import { space } from '../../services/theme/shape';
 import { useTheme } from '../../services/themeContext';
+import { useI18n } from '../../services/i18n/i18nContext';
 
 export default function Search() {
     const { colors ,type,coat} = useTheme();
+    const { t } = useI18n();
 
     return (
     <View
@@ -22,7 +24,7 @@ export default function Search() {
                 { color: colors.textPrimary },
             ]}
         >
-            Search is on its way
+            {t('search.comingSoon')}
         </Text>
     </View>
 );

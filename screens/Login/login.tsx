@@ -12,6 +12,7 @@ import { saveCredentials } from '../../services/storage'
 import { getCurrentAccount } from '../../services/mastodon/accounts'
 import { useAuth } from '../../services/authContext'
 import { useTheme } from '../../services/themeContext'
+import { useI18n } from '../../services/i18n/i18nContext';
 
 // web browser helper to complete authorizations on Android/Web
 WebBrowser.maybeCompleteAuthSession();
@@ -26,10 +27,11 @@ const Login: React.FC<LoginProps> = ({ onCancel }) => {
     const [focused,setFocused] = useState<boolean>(false);
     const { login } = useAuth();
     const { colors,type,coat } = useTheme();
+    const { t } = useI18n();
 
     const handleLogin = async () => {
         if (!instance.trim()) {
-            Alert.alert('Error', 'Please enter a Mastodon Instance URL');
+            Alert.alert(t('common.error'), t('login.enterInstance'));
             return;
         }
         setLoading(true);
@@ -70,7 +72,7 @@ const Login: React.FC<LoginProps> = ({ onCancel }) => {
             }
         } catch (error: any) {
             console.error(error);
-            Alert.alert('Authentication Failed', error.message || 'An unexpected error ocurred.')
+            Alert.alert(t('login.failed'), error.message || t('login.unexpected'))
         } finally {
             setLoading(false);
         }
@@ -103,14 +105,14 @@ const Login: React.FC<LoginProps> = ({ onCancel }) => {
                         { color: colors.textSecondary },
                     ]}
                 >
-                    A friendly home for your federated social conversations.
+                    {t('login.tagline')}
                 </Text>
 
                 <View style={styles.form}>
                     <TextInput
                         value={instance}
                         onChangeText={setInstance}
-                        placeholder="e.g. mastodon.social"
+                        placeholder={t('login.instancePlaceholder')}
                         placeholderTextColor={colors.textMuted}
                         editable={!loading}
                         autoCapitalize="none"
@@ -131,7 +133,7 @@ const Login: React.FC<LoginProps> = ({ onCancel }) => {
                     />
 
                     <PillButton
-                        label="Continue"
+                        label={t('common.continue')}
                         onPress={handleLogin}
                         loading={loading}
                         disabled={loading}
@@ -140,7 +142,7 @@ const Login: React.FC<LoginProps> = ({ onCancel }) => {
 
                     {onCancel && (
                         <PillButton
-                            label="Cancel"
+                            label={t('common.cancel')}
                             onPress={onCancel}
                             variant="ghost"
                             disabled={loading}

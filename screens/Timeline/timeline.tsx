@@ -9,14 +9,12 @@ import { SegmentedPill } from '../../components/ui';
 import { useTheme } from '../../services/themeContext';
 import { makeStyles } from './styles';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
+import { useI18n } from '../../services/i18n/i18nContext';
 
 type FeedType = 'home' | 'local' | 'federated';
 
-const FEEDS: { value: FeedType; label: string }[] = [
-    { value: 'home', label: 'Home' },
-    { value: 'local', label: 'Local' },
-    { value: 'federated', label: 'Federated' },
-];
+const FEEDS: FeedType[] = ['home', 'local', 'federated'];
+const EMPTY_KEY = { home: 'timeline.emptyHome', local: 'timeline.emptyLocal', federated: 'timeline.emptyFederated' } as const;
 
 // FlashList keeps the first visible post in place while posts above it get measured, which cut an
 // animated scrollToOffset(0) short after scrolling far. scrollToIndex pauses that correction, jumps
@@ -34,6 +32,8 @@ interface TimelineProps {
 const Timeline = ({ onStatusPress }: TimelineProps) => {
     const { colors } = useTheme();
     const styles = useThemedStyles(makeStyles);
+    const { t } = useI18n();
+    const feeds = useMemo(() => FEEDS.map(value => ({ value, label: t(`timeline.${value}`) })), [t]);
     const [activeFeed, setActiveFeed] = useState<FeedType>('home');
     const queryClient = useQueryClient();
     const listRef = useRef<FlashListRef<Status>>(null);
@@ -95,7 +95,7 @@ const Timeline = ({ onStatusPress }: TimelineProps) => {
         return (
             <View style={styles.emptyContainer}>
                 <Text style={styles.emptyText}>
-                    No toots on your {activeFeed} timeline yet!
+                    {t(EMPTY_KEY[activeFeed])}
                 </Text>
             </View>
         );
@@ -104,7 +104,7 @@ const Timeline = ({ onStatusPress }: TimelineProps) => {
     return (
         <View style={styles.container}>
             <View style={styles.feedPicker}>
-                <SegmentedPill options={FEEDS} value={activeFeed} onChange={setActiveFeed} />
+                <SegmentedPill options={feeds} value={activeFeed} onChange={setActiveFeed} />
             </View>
             
             {isLoading && statuses.length === 0 ? (

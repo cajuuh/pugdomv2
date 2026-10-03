@@ -28,6 +28,7 @@ import Setup from './screens/Setup/setup';
 import { useEmojiCachePrimer } from './hooks/useCustomEmojis';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './services/queryClient';
+import { I18nProvider, useI18n } from './services/i18n/i18nContext';
 
 // Keep the pug splash up until the fonts and the saved account are loaded
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -36,6 +37,7 @@ function NavigationRoot() {
   const { user, loading, logout, isAddingAccount, setAddingAccount, needsSetup, finishSetup } = useAuth();
   const { openCompose } = useCompose();
   const { colors, isDark, fontsReady } = useTheme();
+  const { languageReady } = useI18n();
   const [activeTab, setActiveTab] = useState<'home' | 'search' | 'notifications' | 'profile'>('home');
   const [currentScreen, setCurrentScreen] = useState<'main' | 'settings' | 'thread'>('main');
   const [threadStatusId, setThreadStatusId] = useState<string | null>(null);
@@ -66,7 +68,7 @@ function NavigationRoot() {
   };
 
   const statusBarStyle = isDark ? 'light' : 'dark';
-  const ready = !loading && fontsReady;
+  const ready = !loading && fontsReady && languageReady;
 
   useEffect(() => {
     if (ready) {
@@ -150,6 +152,7 @@ export default function App() {
       {/* Above AuthProvider so it can reset cached server state when the account changes */}
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
+          <I18nProvider>
           <SettingsProvider>
             <AuthProvider>
               <ComposeProvider>
@@ -159,6 +162,7 @@ export default function App() {
               </ComposeProvider>
             </AuthProvider>
           </SettingsProvider>
+          </I18nProvider>
         </ThemeProvider>
       </QueryClientProvider>
     </SafeAreaProvider>

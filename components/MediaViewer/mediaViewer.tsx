@@ -8,6 +8,7 @@ import ImageViewing from 'react-native-image-viewing';
 import { Attachment } from '../../services/mastodon/types';
 import { styles } from './styles';
 import { mediaColors } from '../../services/theme/media';
+import { useI18n } from '../../services/i18n/i18nContext';
 
 interface MediaViewerContextType {
     openMedia: (attachments: Attachment[], index: number) => void;
@@ -24,6 +25,7 @@ type OpenMedia =
 // Mounted only while a video is open, so a player exists only for the video being watched
 const VideoModal = ({ attachment, onClose }: { attachment: Attachment; onClose: () => void }) => {
     const insets = useSafeAreaInsets();
+    const { t } = useI18n();
     const player = useVideoPlayer(attachment.url, player => {
         // gifv attachments are silent looping GIFs converted to video
         player.loop = attachment.type === 'gifv';
@@ -44,7 +46,7 @@ const VideoModal = ({ attachment, onClose }: { attachment: Attachment; onClose: 
                 <TouchableOpacity
                     onPress={onClose}
                     style={[styles.closeButton, { top: insets.top + 12 }]}
-                    accessibilityLabel="Close video"
+                    accessibilityLabel={t('media.closeVideo')}
                 >
                     <Ionicons name="close" size={30} color={mediaColors.ink} />
                 </TouchableOpacity>

@@ -9,6 +9,8 @@ import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
 import { PillButton, Well } from '../ui';
 import { makeStyles } from './styles';
+import { useI18n } from '../../services/i18n/i18nContext';
+import { defaultTranslator, Translator } from '../../services/i18n/translate';
 
 interface PollProps {
     initialPoll: PollType;
@@ -16,15 +18,15 @@ interface PollProps {
 }
 
 // "18h left", "3d left", "5m left"; "Closed" once the poll has ended
-export const pollTimeLeft = (poll: Pick<PollType, 'expired' | 'expires_at'>, now = Date.now()) => {
-    if (poll.expired) return 'Closed';
+export const pollTimeLeft = (poll: Pick<PollType, 'expired' | 'expires_at'>, now = Date.now(), { t }: Translator = defaultTranslator()) => {
+    if (poll.expired) return t('poll.closed');
     if (!poll.expires_at) return null;
     const minutes = Math.floor((new Date(poll.expires_at).getTime() - now) / 60000);
-    if (minutes <= 0) return 'Closed';
-    if (minutes < 60) return `${minutes}m left`;
+    if (minutes <= 0) return t('poll.closed');
+    if (minutes < 60) return t('poll.minutesLeft', { count: minutes });
     const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h left`;
-    return `${Math.floor(hours / 24)}d left`;
+    if (hours < 24) return t('poll.hoursLeft', { count: hours });
+    return t('poll.daysLeft', { count: Math.floor(hours / 24) });
 };
 
 // Past this width the winner's bar sits under its label, so the label can use the on-accent ink
@@ -34,6 +36,8 @@ const ON_ACCENT_LABEL_MIN_PERCENT = 60;
 export const Poll: React.FC<PollProps> = ({ initialPoll, onPollUpdated }) => {
     const { colors, type } = useTheme();
     const styles = useThemedStyles(makeStyles);
+    const i18n = useI18n();
+    const { t, tn } = i18n;
     // Reset when the parent card is recycled for a status with a different poll
     const [poll, setPoll] = useRecyclingState<PollType>(initialPoll, [initialPoll.id]);
     const [selectedChoices, setSelectedChoices] = useRecyclingState<number[]>([], [initialPoll.id]);
@@ -70,7 +74,7 @@ export const Poll: React.FC<PollProps> = ({ initialPoll, onPollUpdated }) => {
                 setPoll(updatedPoll);
             }
         } catch (error) {
-            Alert.alert('Error', 'Failed to submit vote. Please try again.');
+            Alert.alert(t('common.error'), t('poll.voteFailed'));
         } finally {
             if (renderedPollId.current === pollId) {
                 setIsVoting(false);
@@ -90,7 +94,7 @@ export const Poll: React.FC<PollProps> = ({ initialPoll, onPollUpdated }) => {
                 key={index}
                 style={styles.result}
                 accessible
-                accessibilityLabel={`${option.title}, ${percent} percent${isOwnVote ? ', your vote' : ''}`}
+                accessibilityLabel={t(isOwnVote ? 'poll.optionYourVote' : 'poll.option', { title: option.title, percent })}
             >
                 <View style={[styles.resultBar, isWinner && styles.resultBarWinner, { width: `${percent}%` }]} />
                 <View style={styles.resultLabels}>
@@ -134,8 +138,8 @@ export const Poll: React.FC<PollProps> = ({ initialPoll, onPollUpdated }) => {
         );
     };
 
-    const timeLeft = pollTimeLeft(poll);
-    const summary = [`${poll.votes_count} ${poll.votes_count === 1 ? 'vote' : 'votes'}`, timeLeft].filter(Boolean).join(' · ');
+    const timeLeft = pollTimeLeft(poll, Date.now(), i18n);
+    const summary = [tn('poll.votes', poll.votes_count), timeLeft].filter(Boolean).join(' · ');
 
     return (
         <Well style={styles.container} accessibilityRole={isClosed ? undefined : poll.multiple ? undefined : 'radiogroup'}>
@@ -145,7 +149,7 @@ export const Poll: React.FC<PollProps> = ({ initialPoll, onPollUpdated }) => {
                 <Text style={[type.meta, styles.footerText]}>{summary}</Text>
                 {!isClosed && (
                     <PillButton
-                        label="Vote"
+                        label={t('poll.vote')}
                         onPress={handleVote}
                         loading={isVoting}
                         disabled={selectedChoices.length === 0}

@@ -10,6 +10,7 @@ import { CustomEmoji } from '../../services/mastodon/types';
 import { fetchInstanceConfiguration } from '../../services/mastodon/instance';
 import { CUSTOM_EMOJIS_KEY, EMOJI_STALE_TIME, fetchAndCacheEmojis } from '../../hooks/useCustomEmojis';
 import { makeStyles } from './styles';
+import { useI18n } from '../../services/i18n/i18nContext';
 
 // Setup never holds the user longer than this
 export const SETUP_TIMEOUT_MS = 30_000;
@@ -50,19 +51,8 @@ export async function runSetup(queryClient: QueryClient, onProgress: (progress: 
         .catch(() => {});
 }
 
-// What the pug is up to while things load; the details (thousands of emoji on big servers) stay behind the scenes
-export const SETUP_MESSAGES = [
-    'Barking at a tree',
-    "Sniffing out your server's emoji",
-    'Chasing our own tail',
-    'Fetching the ball… and your emoji',
-    'Snorting happily',
-    'Burying emoji for later',
-    'Looking for a sunny spot',
-    'Wiggling a curly tail',
-    'Waiting patiently for treats',
-    'Just a tiny nap',
-];
+// The pug's messages (setup.messages in the dictionaries) rotate at this pace; the details, like thousands
+// of emoji on big servers, stay behind the scenes
 const MESSAGE_INTERVAL_MS = 2500;
 
 // One bar for the whole setup: the emoji list is quick, the images take most of the time
@@ -86,6 +76,8 @@ interface SetupProps {
 // Shown once after logging in to (or adding) an account on a server we haven't set up yet
 const Setup: React.FC<SetupProps> = ({ onDone }) => {
     const { type, coat } = useTheme();
+    const { t, dict } = useI18n();
+    const messages = dict.setup.messages;
     const styles = useThemedStyles(makeStyles);
     const queryClient = useQueryClient();
     // Nothing shows until we know there's work to do, so cached servers don't flash this screen
@@ -110,7 +102,7 @@ const Setup: React.FC<SetupProps> = ({ onDone }) => {
                 clearTimeout(timeout);
                 finish();
             });
-        const rotate = setInterval(() => setMessage(index => (index + 1) % SETUP_MESSAGES.length), MESSAGE_INTERVAL_MS);
+        const rotate = setInterval(() => setMessage(index => index + 1), MESSAGE_INTERVAL_MS);
         return () => {
             clearTimeout(timeout);
             clearInterval(rotate);
@@ -126,24 +118,24 @@ const Setup: React.FC<SetupProps> = ({ onDone }) => {
     return (
         <View style={styles.container}>
             <PugMark coat={coat} size={88} />
-            <Text accessibilityRole="header" style={[type.title, styles.title]}>Setting things up</Text>
+            <Text accessibilityRole="header" style={[type.title, styles.title]}>{t('setup.title')}</Text>
             {!!server && <Text style={[type.body, styles.server]}>{server}</Text>}
 
             {/* The jokes are for sighted users; screen readers get the bar's percentage */}
             <Text style={[type.name, styles.message]} importantForAccessibility="no" accessibilityElementsHidden>
-                {SETUP_MESSAGES[message]}…
+                {messages[message % messages.length]}…
             </Text>
             <View
                 style={styles.track}
                 accessible
                 accessibilityRole="progressbar"
-                accessibilityLabel="Setting things up"
+                accessibilityLabel={t('setup.title')}
                 accessibilityValue={{ min: 0, max: 100, now: percent }}
             >
                 <View style={[styles.fill, { width: `${percent}%` }]} />
             </View>
 
-            <PillButton label="Skip" variant="ghost" onPress={finish} style={styles.skip} />
+            <PillButton label={t('common.skip')} variant="ghost" onPress={finish} style={styles.skip} />
         </View>
     );
 };

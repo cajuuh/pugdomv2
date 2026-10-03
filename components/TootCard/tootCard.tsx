@@ -35,8 +35,10 @@ import { renderTextWithEmojis } from '../../services/emojiHelper';
 import { useUpdateCachedStatus } from '../../hooks/useUpdateCachedStatus';
 import { useMediaViewer } from '../MediaViewer/mediaViewer';
 import { hitSlopFor } from '../../services/theme/shape';
+import { useI18n } from '../../services/i18n/i18nContext';
+import { defaultTranslator, Translator } from '../../services/i18n/translate';
 
-const getRelativeTime = (dateString: string) => {
+const getRelativeTime = (dateString: string, { t }: Translator) => {
     const now = new Date();
     const created = new Date(dateString);
     const diffMs = now.getTime() - created.getTime();
@@ -46,48 +48,51 @@ const getRelativeTime = (dateString: string) => {
     const diffDays = Math.floor(diffHr / 24);
 
     if (diffSec < 60) {
-        return 'now';
+        return t('common.now');
     } else if (diffMin < 60) {
-        return `${diffMin}m`;
+        return t('common.minutesShort', { count: diffMin });
     } else if (diffHr < 24) {
-        return `${diffHr}h`;
+        return t('common.hoursShort', { count: diffHr });
     } else {
-        return `${diffDays}d`;
+        return t('common.daysShort', { count: diffDays });
     }
 };
 
 // Alt text when the author wrote one, otherwise the media's position in the post
-const MEDIA_KIND: Record<Attachment['type'], string> = { image: 'Image', video: 'Video', gifv: 'GIF', unknown: 'Attachment' };
-const mediaLabel = (attachment: Attachment, index: number, count: number) =>
-    attachment.description || `${MEDIA_KIND[attachment.type] ?? 'Attachment'} ${index + 1} of ${count}`;
+const MEDIA_KIND = { image: 'post.image', video: 'post.video', gifv: 'post.gif', unknown: 'post.attachment' } as const;
+const mediaLabel = (attachment: Attachment, index: number, count: number, { t }: Translator) =>
+    attachment.description ||
+    t('post.mediaPosition', { kind: t(MEDIA_KIND[attachment.type] ?? 'post.attachment'), index: index + 1, count });
 
 // "1 photo", "3 videos", "2 attachments" (mixed kinds)
-export const countMedia = (attachments: Attachment[]) => {
-    const nouns = new Set(attachments.map(a => (a.type === 'image' ? 'photo' : a.type === 'video' || a.type === 'gifv' ? 'video' : 'attachment')));
-    const noun = nouns.size === 1 ? [...nouns][0] : 'attachment';
-    return `${attachments.length} ${noun}${attachments.length === 1 ? '' : 's'}`;
+export const countMedia = (attachments: Attachment[], { tn }: Translator = defaultTranslator()) => {
+    const nouns = new Set(attachments.map(a => (a.type === 'image' ? 'photos' : a.type === 'video' || a.type === 'gifv' ? 'videos' : 'attachments')));
+    const noun = nouns.size === 1 ? [...nouns][0] : 'attachments';
+    return tn(`post.${noun}` as 'post.photos' | 'post.videos' | 'post.attachments', attachments.length);
 };
 
 const hasText = (html: string) => html.replace(/<[^>]*>/g, '').trim().length > 0;
 
 // What a collapsed content warning hides, e.g. "Text and 2 photos hidden"
-export const describeHidden = (status: Status) => {
+export const describeHidden = (status: Status, i18n: Translator = defaultTranslator()) => {
+    const { t } = i18n;
     const parts: string[] = [];
-    if (hasText(status.content)) parts.push('text');
-    if (status.poll) parts.push('a poll');
-    if (status.media_attachments?.length) parts.push(countMedia(status.media_attachments));
-    if (status.card) parts.push('a link');
+    if (hasText(status.content)) parts.push(t('post.hiddenText'));
+    if (status.poll) parts.push(t('post.hiddenPoll'));
+    if (status.media_attachments?.length) parts.push(countMedia(status.media_attachments, i18n));
+    if (status.card) parts.push(t('post.hiddenLink'));
     if (parts.length === 0) return null;
-    const list = parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
-    return `${list.charAt(0).toUpperCase()}${list.slice(1)} hidden`;
+    const list = parts.length === 1 ? parts[0] : t('common.listAnd', { list: parts.slice(0, -1).join(', '), last: parts[parts.length - 1] });
+    const sentence = t('post.hidden', { list });
+    return `${sentence.charAt(0).toUpperCase()}${sentence.slice(1)}`;
 };
 
-const getDomainName = (urlStr: string) => {
+const getDomainName = (urlStr: string, fallback: string) => {
     try {
         const matches = urlStr.match(/^https?:\/\/([^/?#]+)(?:[/?#]|$)/i);
-        return matches && matches[1] ? matches[1].replace('www.', '') : 'Link';
+        return matches && matches[1] ? matches[1].replace('www.', '') : fallback;
     } catch {
-        return 'Link';
+        return fallback;
     }
 };
 
@@ -114,6 +119,8 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
 
     const updateCachedStatus = useUpdateCachedStatus();
     const queryClient = useQueryClient();
+    const i18n = useI18n();
+    const { t, tn } = i18n;
 
     // FlashList reuses this component for other statuses, so all per-status state resets when the status changes
     const recyclingDeps = [targetStatus.id];
@@ -149,7 +156,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             }
             setIsFavorited(previousIsFavorited);
             setFavCount(previousFavCount);
-            Alert.alert('Error', 'Failed to update favorite status. Please try again.');
+            Alert.alert(t('common.error'), t('post.favouriteFailed'));
         }
     };
 
@@ -169,7 +176,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 return;
             }
             setIsBookmarked(previousIsBookmarked);
-            Alert.alert('Error', 'Failed to update the bookmark. Please try again.');
+            Alert.alert(t('common.error'), t('post.bookmarkFailed'));
         }
     };
 
@@ -192,7 +199,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             }
             setIsreblogged(previousIsReblogged);
             setBoostCount(previousBoostCount);
-            Alert.alert('Error', 'Failed to update boost status. Please try again.');
+            Alert.alert(t('common.error'), t('post.boostFailed'));
         }
     };
 
@@ -230,7 +237,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 style={[styles.singleMedia, compactMode && styles.singleMediaCompact]}
                 onPress={() => openMedia(attachments, 0)}
                 accessibilityRole="imagebutton"
-                accessibilityLabel={mediaLabel(attachments[0], 0, count)}
+                accessibilityLabel={mediaLabel(attachments[0], 0, count, i18n)}
             >
                 <Image source={{ uri: attachments[0].preview_url || attachments[0].url }} style={styles.mediaImage} resizeMode="cover" />
             </Pressable>
@@ -242,7 +249,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                         style={[styles.gridMedia, compactMode && styles.gridMediaCompact, { width: count === 2 ? '48%' : '31%' }]}
                         onPress={() => openMedia(attachments, idx)}
                         accessibilityRole="imagebutton"
-                        accessibilityLabel={mediaLabel(item, idx, count)}
+                        accessibilityLabel={mediaLabel(item, idx, count, i18n)}
                     >
                         <Image source={{ uri: item.preview_url || item.url }} style={styles.mediaImage} resizeMode="cover" />
                     </Pressable>
@@ -266,9 +273,9 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                         <View style={styles.veil}>
                             <View style={styles.veilLabel}>
                                 <Ionicons name="eye-off-outline" size={16} color={colors.textPrimary} />
-                                <Text style={[type.name, styles.veilText]}>Sensitive · {countMedia(attachments)}</Text>
+                                <Text style={[type.name, styles.veilText]}>{t('post.sensitive', { media: countMedia(attachments, i18n) })}</Text>
                             </View>
-                            <PillButton label="Show" size="small" variant="secondary" onPress={() => setIsMediaRevealed(true)} />
+                            <PillButton label={t('common.show')} size="small" variant="secondary" onPress={() => setIsMediaRevealed(true)} />
                         </View>
                     </View>
                 ) : (
@@ -276,7 +283,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                         style={styles.hideMediaChip}
                         onPress={() => setIsMediaRevealed(false)}
                         accessibilityRole="button"
-                        accessibilityLabel="Hide media"
+                        accessibilityLabel={t('post.hideMedia')}
                         hitSlop={6}
                     >
                         <Ionicons name="eye-off-outline" size={16} color={colors.textPrimary} />
@@ -287,7 +294,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     };
 
     const renderLinkPreview = (card: PreviewCard) => {
-        const domain = getDomainName(card.url);
+        const domain = getDomainName(card.url, t('common.link'));
         // Compact Mode skips the thumbnail: a title + domain row
         if (!card.image || compactMode) {
             return (
@@ -349,24 +356,24 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             return <View style={[styles.content, compactMode && styles.contentCompact]}>{body}</View>;
         }
         if (isSpoilerCollapsed) {
-            const hidden = describeHidden(targetStatus);
+            const hidden = describeHidden(targetStatus, i18n);
             return (
                 <View style={styles.cwRibbon}>
                     <Ionicons name="warning-outline" size={22} color={colors.accentText} />
                     <View style={styles.cwText}>
-                        <Text style={[type.label, styles.cwLabel]}>Content warning</Text>
+                        <Text style={[type.label, styles.cwLabel]}>{t('post.contentWarning')}</Text>
                         <Text style={[type.name, styles.cwSpoiler]}>{targetStatus.spoiler_text}</Text>
                         {hidden && <Text style={[type.meta, styles.cwHidden]}>{hidden}</Text>}
                     </View>
-                    <PillButton label="Show" variant="secondary" onPress={() => setIsSpoilerCollapsed(false)} />
+                    <PillButton label={t('common.show')} variant="secondary" onPress={() => setIsSpoilerCollapsed(false)} />
                 </View>
             );
         }
         return (
             <View style={styles.cwFrame}>
                 <View style={styles.cwFrameHeader}>
-                    <Text style={[type.name, styles.cwFrameTitle]} numberOfLines={2}>CW · {targetStatus.spoiler_text}</Text>
-                    <PillButton label="Hide" size="small" variant="subtle" onPress={() => setIsSpoilerCollapsed(true)} />
+                    <Text style={[type.name, styles.cwFrameTitle]} numberOfLines={2}>{t('post.cwTitle', { text: targetStatus.spoiler_text })}</Text>
+                    <PillButton label={t('common.hide')} size="small" variant="subtle" onPress={() => setIsSpoilerCollapsed(true)} />
                 </View>
                 <View style={styles.cwFrameContent}>{body}</View>
             </View>
@@ -385,7 +392,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             <Text style={[type.meta, styles.handle, compactMode && styles.handleInline]} numberOfLines={1}>@{targetStatus.account.acct}</Text>
         </View>
     );
-    const time = <Text style={[type.meta, styles.time]}>{getRelativeTime(targetStatus.created_at)}</Text>;
+    const time = <Text style={[type.meta, styles.time]}>{getRelativeTime(targetStatus.created_at, i18n)}</Text>;
     const avatar = (
         <Avatar
             name={targetStatus.account.display_name || targetStatus.account.username}
@@ -405,7 +412,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 hitSlop={actionHitSlop}
                 onPress={() => openCompose({ replyToStatus: targetStatus })}
                 accessibilityRole="button"
-                accessibilityLabel={`Reply, ${targetStatus.replies_count || 0} replies`}
+                accessibilityLabel={tn('post.replies', targetStatus.replies_count || 0)}
             >
                 <Ionicons name="arrow-undo-outline" size={actionIcon} color={colors.textMuted} />
                 <Text style={[type.meta, styles.actionCount]}>{targetStatus.replies_count || 0}</Text>
@@ -415,7 +422,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 hitSlop={actionHitSlop}
                 onPress={toggleReblog}
                 accessibilityRole="button"
-                accessibilityLabel={`${isReblogged ? 'Boosted' : 'Boost'}, ${boostCount || 0} boosts`}
+                accessibilityLabel={tn(isReblogged ? 'post.boostedCount' : 'post.boost', boostCount || 0)}
                 accessibilityState={{ selected: isReblogged }}
             >
                 <Ionicons name="repeat" size={actionIcon} color={isReblogged ? colors.accentText : colors.textMuted} />
@@ -426,7 +433,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 hitSlop={actionHitSlop}
                 onPress={toggleFavorite}
                 accessibilityRole="button"
-                accessibilityLabel={`${isFavorited ? 'Favourited' : 'Favourite'}, ${favCount || 0} favourites`}
+                accessibilityLabel={tn(isFavorited ? 'post.favouritedCount' : 'post.favourite', favCount || 0)}
                 accessibilityState={{ selected: isFavorited }}
             >
                 <Ionicons name={isFavorited ? 'star' : 'star-outline'} size={actionIcon} color={isFavorited ? colors.accentText : colors.textMuted} />
@@ -437,12 +444,12 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 hitSlop={actionHitSlop}
                 onPress={toggleBookmark}
                 accessibilityRole="button"
-                accessibilityLabel={isBookmarked ? 'Bookmarked' : 'Bookmark'}
+                accessibilityLabel={isBookmarked ? t('post.bookmarked') : t('post.bookmark')}
                 accessibilityState={{ selected: isBookmarked }}
             >
                 <Ionicons name={isBookmarked ? 'bookmark' : 'bookmark-outline'} size={actionIcon} color={isBookmarked ? colors.accentText : colors.textMuted} />
             </Pressable>
-            <Pressable style={actionButtonStyle} hitSlop={actionHitSlop} onPress={handleShare} accessibilityRole="button" accessibilityLabel="Share">
+            <Pressable style={actionButtonStyle} hitSlop={actionHitSlop} onPress={handleShare} accessibilityRole="button" accessibilityLabel={t('post.share')}>
                 <Ionicons name="share-outline" size={actionIcon} color={colors.textMuted} />
             </Pressable>
         </View>
@@ -455,7 +462,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     <Ionicons name="repeat" size={14} color={colors.textMuted} />
                     <Avatar name={status.account.display_name || status.account.username} uri={status.account.avatar} size={18} />
                     {renderTextWithEmojis(
-                        (status.account.display_name || status.account.username) + ' boosted',
+                        t('post.boosted', { name: status.account.display_name || status.account.username }),
                         status.account.emojis || [],
                         [type.meta, styles.boostText],
                         12.5
@@ -502,7 +509,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         return card;
     }
     return (
-        <Pressable onPress={() => onPress(targetStatus.id)} accessibilityHint="Opens the thread">
+        <Pressable onPress={() => onPress(targetStatus.id)} accessibilityHint={t('post.opensThread')}>
             {card}
         </Pressable>
     );

@@ -5,6 +5,7 @@ import { UNAUTHORIZED_EVENT } from './api/client';
 import { getCurrentAccount } from './mastodon/accounts';
 import { Account } from './mastodon/types';
 import { getCredentials, clearCredentials, saveCredentials, getSavedAccounts, addSavedAccount, removeSavedAccount, SavedAccount } from './storage';
+import { useI18n } from './i18n/i18nContext';
 
 interface AuthContextType {
     user: Account | null;
@@ -30,6 +31,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [isAddingAccount, setAddingAccount] = useState<boolean>(false);
     const [needsSetup, setNeedsSetup] = useState<boolean>(false);
     const queryClient = useQueryClient();
+    const { t } = useI18n();
     // Tokens already handled, so a burst of 401s from one token only logs out once
     const handledUnauthorizedTokens = useRef(new Set<string>());
 
@@ -144,10 +146,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const accounts = await getSavedAccounts();
         const expired = accounts.find(a => a.accessToken === accessToken);
         Alert.alert(
-            'Session expired',
+            t('auth.sessionExpired'),
             expired
-                ? `Please log in again to @${expired.userInfo.acct}.`
-                : 'Please log in again.'
+                ? t('auth.logInAgainTo', { acct: expired.userInfo.acct })
+                : t('auth.logInAgain')
         );
         await logout(expired?.id);
     };

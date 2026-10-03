@@ -18,30 +18,28 @@ import { hitSlopFor } from '../../services/theme/shape';
 import { FAVOURITE_SIZE, STACKED_AVATAR, makeStyles } from './styles';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { ListItem, actorsText, buildListItems, notificationTime, plainText, withoutLeadingMentions } from './rows';
+import { useI18n } from '../../services/i18n/i18nContext';
+import { TKey, Translator } from '../../services/i18n/translate';
 
 interface NotificationsProps {
     onStatusPress?: (id: string) => void;
 }
 
-const FILTERS: SegmentOption<NotificationFilter>[] = [
-    { value: 'all', label: 'All' },
-    { value: 'mentions', label: 'Mentions' },
-    { value: 'follows', label: 'Follows' },
-];
+const FILTERS: NotificationFilter[] = ['all', 'mentions', 'follows'];
 
 // Types share the accent and differ by glyph and wording
-const TYPE_CONFIG: Record<string, { badge: React.ComponentProps<typeof Ionicons>['name']; action: string }> = {
-    mention: { badge: 'at', action: 'mentioned you' },
-    favourite: { badge: 'star', action: 'favourited your post' },
-    reblog: { badge: 'repeat', action: 'boosted your post' },
-    follow: { badge: 'person-add', action: 'followed you' },
+const TYPE_CONFIG: Record<string, { badge: React.ComponentProps<typeof Ionicons>['name']; action: TKey }> = {
+    mention: { badge: 'at', action: 'notifications.mention' },
+    favourite: { badge: 'star', action: 'notifications.favourite' },
+    reblog: { badge: 'repeat', action: 'notifications.reblog' },
+    follow: { badge: 'person-add', action: 'notifications.follow' },
 };
 
 const nameOf = (account: Account) => account.display_name || account.username;
 
 // What the row shows of the post: the content warning when there is one, never the text behind it
-const statusText = (status: Status, type: Notification['type']) => {
-    if (status.spoiler_text) return `CW: ${status.spoiler_text}`;
+const statusText = (status: Status, type: Notification['type'], { t }: Translator) => {
+    if (status.spoiler_text) return t('notifications.cw', { text: status.spoiler_text });
     const text = plainText(status.content);
     return type === 'mention' ? withoutLeadingMentions(text) : text;
 };
@@ -54,6 +52,7 @@ interface FollowBackProps {
 const FollowBack = ({ accountId, relationship }: FollowBackProps) => {
     const { colors, type } = useTheme();
     const styles = useThemedStyles(makeStyles);
+    const { t } = useI18n();
     const followAccount = useFollowAccount();
     // FlashList recycles rows, so reset when the row shows another account
     const [pending, setPending] = useRecyclingState(false, [accountId]);
@@ -64,7 +63,7 @@ const FollowBack = ({ accountId, relationship }: FollowBackProps) => {
     }
     if (relationship.following || relationship.requested) {
         // Locked accounts approve follows first, so a follow sent to them stays "Requested"
-        const label = relationship.following ? 'Following' : 'Requested';
+        const label = relationship.following ? t('notifications.following') : t('notifications.requested');
         return (
             <View style={styles.followState} accessible accessibilityLabel={label}>
                 <Ionicons name={relationship.following ? 'checkmark' : 'time-outline'} size={15} color={colors.accentText} />
@@ -78,7 +77,7 @@ const FollowBack = ({ accountId, relationship }: FollowBackProps) => {
         try {
             await followAccount(accountId);
         } catch (error) {
-            Alert.alert('Error', 'Failed to follow this account. Please try again.');
+            Alert.alert(t('common.error'), t('notifications.followFailed'));
         } finally {
             setPending(false);
         }
@@ -86,7 +85,7 @@ const FollowBack = ({ accountId, relationship }: FollowBackProps) => {
 
     return (
         <PillButton
-            label={pending ? 'Following…' : 'Follow back'}
+            label={pending ? t('notifications.followingPending') : t('notifications.followBack')}
             size="small"
             disabled={pending}
             onPress={handleFollow}
@@ -97,6 +96,7 @@ const FollowBack = ({ accountId, relationship }: FollowBackProps) => {
 const MentionActions = ({ status }: { status: Status }) => {
     const { colors } = useTheme();
     const styles = useThemedStyles(makeStyles);
+    const { t } = useI18n();
     const { openCompose } = useCompose();
     const updateCachedStatus = useUpdateCachedStatus();
     const [isFavourited, setIsFavourited] = useRecyclingState(!!status.favourited, [status.id]);
@@ -113,14 +113,14 @@ const MentionActions = ({ status }: { status: Status }) => {
         } catch (error) {
             if (renderedStatusId.current !== status.id) return;
             setIsFavourited(previous);
-            Alert.alert('Error', 'Failed to update favorite status. Please try again.');
+            Alert.alert(t('common.error'), t('notifications.favouriteFailed'));
         }
     };
 
     return (
         <View style={styles.actions}>
             <PillButton
-                label="Reply"
+                label={t('notifications.reply')}
                 icon="arrow-undo-outline"
                 variant="secondary"
                 size="small"
@@ -129,7 +129,7 @@ const MentionActions = ({ status }: { status: Status }) => {
             <Pressable
                 onPress={toggleFavourite}
                 accessibilityRole="button"
-                accessibilityLabel="Favourite"
+                accessibilityLabel={t('notifications.favouriteAction')}
                 accessibilityState={{ selected: isFavourited }}
                 hitSlop={hitSlopFor(FAVOURITE_SIZE, FAVOURITE_SIZE)}
                 style={({ pressed }) => [styles.favourite, isFavourited && styles.favouriteOn, pressed && { opacity: 0.7 }]}
@@ -168,29 +168,32 @@ interface NotificationRowProps {
 const NotificationRow = ({ group, relationship, onStatusPress }: NotificationRowProps) => {
     const { type } = useTheme();
     const styles = useThemedStyles(makeStyles);
+    const i18n = useI18n();
+    const { t, tn } = i18n;
     const config = TYPE_CONFIG[group.type];
+    const action = t(config.action);
     const { status } = group;
     const account = group.accounts[0];
     const name = account ? nameOf(account) : '';
-    const time = notificationTime(group.created_at);
+    const time = notificationTime(group.created_at, new Date(), i18n);
     const openStatus = status && onStatusPress ? () => onStatusPress(status.id) : undefined;
 
     // Up to two names in bold, then "and N others" with the action
     const shown = group.accounts.slice(0, group.count > 2 ? 2 : group.count);
     const others = group.count - shown.length;
-    const actors = actorsText(group.accounts.map(nameOf), group.count);
+    const actors = actorsText(group.accounts.map(nameOf), group.count, i18n);
     const headline = (
         <Text style={styles.headlineText} numberOfLines={2}>
             {shown.map((person, index) => (
                 <React.Fragment key={person.id}>
                     {index > 0 && (others > 0
                         ? <Text style={[type.name, styles.displayName]}>, </Text>
-                        : <Text style={[type.body, styles.action]}> and </Text>)}
+                        : <Text style={[type.body, styles.action]}> {t('common.and')} </Text>)}
                     {renderTextWithEmojis(nameOf(person), person.emojis || [], [type.name, styles.displayName], 16)}
                 </React.Fragment>
             ))}
             <Text style={[type.body, styles.action]}>
-                {others > 0 ? ` and ${others} ${others === 1 ? 'other' : 'others'}` : ''} {config.action}
+                {others > 0 ? ` ${t('common.and')} ${tn('common.others', others)}` : ''} {action}
             </Text>
         </Text>
     );
@@ -211,7 +214,7 @@ const NotificationRow = ({ group, relationship, onStatusPress }: NotificationRow
         );
     }
 
-    const text = status ? statusText(status, group.type) : '';
+    const text = status ? statusText(status, group.type, i18n) : '';
     const body = (
         <>
             <View style={styles.headline}>
@@ -231,7 +234,7 @@ const NotificationRow = ({ group, relationship, onStatusPress }: NotificationRow
             )}
         </>
     );
-    const label = `${actors} ${config.action}, ${time}${text ? `: ${text}` : ''}`;
+    const label = t(text ? 'notifications.rowWithText' : 'notifications.row', { actors, action, time, text });
 
     if (group.type === 'mention' && status) {
         // The row isn't one accessible element here, or screen readers couldn't reach Reply and Favourite;
@@ -265,6 +268,9 @@ const NotificationRow = ({ group, relationship, onStatusPress }: NotificationRow
 
 const Notifications = ({ onStatusPress }: NotificationsProps) => {
     const { colors, type } = useTheme();
+    const i18n = useI18n();
+    const { t } = i18n;
+    const filters: SegmentOption<NotificationFilter>[] = FILTERS.map(value => ({ value, label: t(`notifications.${value}`) }));
     const styles = useThemedStyles(makeStyles);
     const queryClient = useQueryClient();
     const [activeFilter, setActiveFilter] = useState<NotificationFilter>('all');
@@ -278,7 +284,7 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
         () => mergeGroups(data?.pages.flatMap(page => page.groups) ?? []).filter(g => SUPPORTED_NOTIFICATION_TYPES.includes(g.type)),
         [data]
     );
-    const listItems = useMemo(() => buildListItems(notifications), [notifications]);
+    const listItems = useMemo(() => buildListItems(notifications, new Date(), i18n), [notifications, i18n]);
 
     const followerIds = useMemo(
         () => notifications.filter(g => g.type === 'follow' && g.accounts[0]).map(g => g.accounts[0].id),
@@ -301,7 +307,7 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
             await markNotificationsRead(newestId);
             setMarkedReadId(newestId);
         } catch (error) {
-            Alert.alert('Error', 'Failed to mark notifications as read. Please try again.');
+            Alert.alert(t('common.error'), t('notifications.markReadFailed'));
         }
     };
     const allRead = !!newestId && markedReadId === newestId;
@@ -351,7 +357,7 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
         if (isLoading) return null;
         return (
             <View style={styles.emptyContainer}>
-                <Text style={[type.body, styles.emptyText]}>No notifications yet!</Text>
+                <Text style={[type.body, styles.emptyText]}>{t('notifications.empty')}</Text>
             </View>
         );
     };
@@ -359,10 +365,10 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <Text accessibilityRole="header" style={[type.title, styles.title]}>Notifications</Text>
+                <Text accessibilityRole="header" style={[type.title, styles.title]}>{t('notifications.title')}</Text>
                 <IconButton
                     icon="checkmark-done"
-                    accessibilityLabel="Mark all as read"
+                    accessibilityLabel={t('notifications.markAllRead')}
                     onPress={handleMarkRead}
                     selected={allRead}
                     disabled={!newestId}
@@ -371,7 +377,7 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
                 />
             </View>
             <View style={styles.filters}>
-                <SegmentedPill variant="chips" options={FILTERS} value={activeFilter} onChange={setActiveFilter} />
+                <SegmentedPill variant="chips" options={filters} value={activeFilter} onChange={setActiveFilter} />
             </View>
             {isLoading && notifications.length === 0 ? (
                 <View style={styles.loadingContainer}>

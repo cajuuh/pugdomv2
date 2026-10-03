@@ -4,7 +4,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
-import Setup, { runSetup, SETUP_MESSAGES, setupFraction, SetupProgress } from '../screens/Setup/setup';
+import Setup, { runSetup, setupFraction, SetupProgress } from '../screens/Setup/setup';
+import { en } from '../services/i18n/en';
+
+const SETUP_MESSAGES = en.setup.messages;
 import { emojiCacheKey, loadCachedEmojis, prefetchEmojiImages, saveCachedEmojis } from '../services/emojiCache';
 import { CUSTOM_EMOJIS_KEY, EMOJI_STALE_TIME, useEmojiCachePrimer } from '../hooks/useCustomEmojis';
 import { fetchCustomEmojis } from '../services/mastodon/customEmojis';
