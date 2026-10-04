@@ -226,6 +226,7 @@ const Timeline = ({ onStatusPress }: TimelineProps) => {
                 onClose={() => setFeedsSheetOpen(false)}
                 onSelectFeed={setActiveFeed}
                 onCreateFeed={() => push({ name: 'feedEditor' })}
+                onEditList={listId => push({ name: 'listEditor', listId })}
             />
         </View>
     );

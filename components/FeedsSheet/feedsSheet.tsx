@@ -4,7 +4,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../../services/themeContext';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { usePinnedFeeds } from '../../hooks/usePinnedFeeds';
-import { createHashtagFeed, describeCriteria, FeedDescriptor, feedIcon, feedLabel, TRENDING_FEED } from '../../services/mastodon/feedTypes';
+import { createHashtagFeed, createListFeed, describeCriteria, FeedDescriptor, feedIcon, feedLabel, TRENDING_FEED } from '../../services/mastodon/feedTypes';
+import { useLists } from '../../hooks/useLists';
 import { radii, space } from '../../services/theme/shape';
 import { IconButton, PillButton, SectionLabel } from '../ui';
 import { BottomSheet } from '../ComposeModal/optionSheet';
@@ -16,22 +17,25 @@ interface FeedsSheetProps {
     onSelectFeed: (feed: FeedDescriptor) => void;
     // Opens the screen to make a new hashtag feed
     onCreateFeed: () => void;
+    // Opens the list editor: an existing list, or a new one without an id
+    onEditList: (listId?: string) => void;
 }
 
 // Every feed you can pin above the timeline: what's pinned, trending posts, followed hashtags and your
 // own hashtag feeds. Tapping a row opens that feed; the pill on the right pins or unpins it.
-export const FeedsSheet: React.FC<FeedsSheetProps> = ({ visible, onClose, onSelectFeed, onCreateFeed }) => {
+export const FeedsSheet: React.FC<FeedsSheetProps> = ({ visible, onClose, onSelectFeed, onCreateFeed, onEditList }) => {
     const { colors, type } = useTheme();
     const i18n = useI18n();
     const { t } = i18n;
     const { pinnedFeeds, customFeeds, followedTags, pinFeed, unpinFeed, removeCustomFeed, isPinned } = usePinnedFeeds();
+    const { data: lists } = useLists(visible);
 
     const open = (feed: FeedDescriptor) => {
         onSelectFeed(feed);
         onClose();
     };
 
-    const row = (feed: FeedDescriptor, options: { subtitle?: string; onDelete?: () => void } = {}) => {
+    const row = (feed: FeedDescriptor, options: { subtitle?: string; onDelete?: () => void; onEdit?: () => void } = {}) => {
         const label = feedLabel(feed, i18n);
         const pinned = isPinned(feed.id);
         return (
@@ -52,6 +56,9 @@ export const FeedsSheet: React.FC<FeedsSheetProps> = ({ visible, onClose, onSele
                         )}
                     </View>
                 </Pressable>
+                {options.onEdit && (
+                    <IconButton icon="create-outline" size={18} color={colors.textMuted} accessibilityLabel={t('lists.editListLabel', { list: label })} onPress={options.onEdit} />
+                )}
                 {options.onDelete && (
                     <IconButton icon="trash-outline" size={18} color={colors.textMuted} accessibilityLabel={t('feeds.deleteFeed', { feed: label })} onPress={options.onDelete} />
                 )}
@@ -70,6 +77,27 @@ export const FeedsSheet: React.FC<FeedsSheetProps> = ({ visible, onClose, onSele
         );
     };
 
+    const edit = (listId?: string) => {
+        onClose();
+        onEditList(listId);
+    };
+
+    // A dashed "make something new" row
+    const createButton = (title: string, subtitle: string, onPress: () => void) => (
+        <Pressable
+            onPress={onPress}
+            accessibilityRole="button"
+            accessibilityLabel={title}
+            style={({ pressed }) => [styles.create, { borderColor: colors.borderColor }, pressed && { opacity: 0.7 }]}
+        >
+            <Ionicons name="add-circle-outline" size={20} color={colors.accentText} />
+            <View style={styles.rowText}>
+                <Text style={[type.name, { color: colors.accentText }]}>{title}</Text>
+                <Text style={[type.meta, { color: colors.textMuted }]}>{subtitle}</Text>
+            </View>
+        </Pressable>
+    );
+
     // Each followed hashtag as a feed of its own
     const tagFeeds = followedTags.map(tag => createHashtagFeed(tag.name));
 
@@ -82,6 +110,13 @@ export const FeedsSheet: React.FC<FeedsSheetProps> = ({ visible, onClose, onSele
                 <SectionLabel style={styles.section}>{t('feeds.discover')}</SectionLabel>
                 {row(TRENDING_FEED, { subtitle: t('feeds.trendingSubtitle') })}
 
+                <SectionLabel style={styles.section}>{t('lists.title')}</SectionLabel>
+                {lists && lists.length === 0 && (
+                    <Text style={[type.meta, styles.empty, { color: colors.textMuted }]}>{t('lists.none')}</Text>
+                )}
+                {lists?.map(list => row(createListFeed(list), { onEdit: () => edit(list.id) }))}
+                {createButton(t('lists.newList'), t('lists.newListSubtitle'), () => edit())}
+
                 <SectionLabel style={styles.section}>{t('feeds.followedTags')}</SectionLabel>
                 {tagFeeds.length === 0 ? (
                     <Text style={[type.meta, styles.empty, { color: colors.textMuted }]}>{t('feeds.noFollowedTags')}</Text>
@@ -91,20 +126,10 @@ export const FeedsSheet: React.FC<FeedsSheetProps> = ({ visible, onClose, onSele
 
                 <SectionLabel style={styles.section}>{t('feeds.customFeeds')}</SectionLabel>
                 {customFeeds.map(feed => row(feed, { subtitle: describeCriteria(feed.criteria), onDelete: () => removeCustomFeed(feed.id) }))}
-                <Pressable
-                    onPress={() => {
-                        onClose();
-                        onCreateFeed();
-                    }}
-                    accessibilityRole="button"
-                    style={({ pressed }) => [styles.create, { borderColor: colors.borderColor }, pressed && { opacity: 0.7 }]}
-                >
-                    <Ionicons name="add-circle-outline" size={20} color={colors.accentText} />
-                    <View style={styles.rowText}>
-                        <Text style={[type.name, { color: colors.accentText }]}>{t('feeds.createCustom')}</Text>
-                        <Text style={[type.meta, { color: colors.textMuted }]}>{t('feeds.createCustomSubtitle')}</Text>
-                    </View>
-                </Pressable>
+                {createButton(t('feeds.createCustom'), t('feeds.createCustomSubtitle'), () => {
+                    onClose();
+                    onCreateFeed();
+                })}
             </ScrollView>
         </BottomSheet>
     );

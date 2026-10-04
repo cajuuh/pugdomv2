@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Alert, Image, Pressable, Share, Text, View, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../../services/themeContext';
@@ -13,6 +13,7 @@ import { hitSlopFor, space } from '../../services/theme/shape';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { AVATAR_SIZE, BANNER_HEIGHT, SHARE_SIZE, makeStyles } from './styles';
+import { AccountListsSheet } from '../../components/AccountListsSheet/accountListsSheet';
 
 const originOf = (url?: string) => url?.match(/^https?:\/\/[^/?#]+/i)?.[0];
 
@@ -47,6 +48,7 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
     const { width } = useWindowDimensions();
     const { openMention, openHashtag, openLinkInApp } = useOpenAccount();
     const name = user.display_name || user.username;
+    const [listsOpen, setListsOpen] = useState(false);
     const remoteServer = mode === 'other' && user.acct.includes('@') ? user.acct.split('@').pop() : undefined;
 
     const handleEditProfile = async () => {
@@ -110,6 +112,17 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
                             <PillButton label={t('profile.editProfile')} variant="secondary" onPress={handleEditProfile} />
                         ) : (
                             <FollowButton accountId={user.id} name={name} relationship={relationship} allowUnfollow size="medium" />
+                        )}
+                        {mode === 'other' && relationship && (
+                            <Pressable
+                                onPress={() => setListsOpen(true)}
+                                accessibilityRole="button"
+                                accessibilityLabel={t('lists.addToListsLabel', { name })}
+                                hitSlop={hitSlopFor(SHARE_SIZE, SHARE_SIZE)}
+                                style={({ pressed }) => [styles.share, pressed && { opacity: 0.7 }]}
+                            >
+                                <Ionicons name="list-outline" size={18} color={colors.textPrimary} />
+                            </Pressable>
                         )}
                         <Pressable
                             onPress={handleShare}
@@ -176,6 +189,9 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
             <View style={styles.tabs}>
                 <SegmentedPill variant="underline" options={tabs} value={tab} onChange={onChangeTab} />
             </View>
+            {mode === 'other' && (
+                <AccountListsSheet visible={listsOpen} onClose={() => setListsOpen(false)} account={user} following={!!relationship?.following} />
+            )}
         </View>
     );
 }

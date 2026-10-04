@@ -8,6 +8,7 @@ import {
     saveCustomFeed as saveCustomFeedStorage,
     deleteCustomFeed as deleteCustomFeedStorage,
     isFeedPinned,
+    updatePinnedFeed as updatePinnedFeedStorage,
 } from '../services/pinnedFeeds';
 import { getFollowedTags } from '../services/mastodon/tags';
 import { DEFAULT_PINNED_FEEDS, FeedDescriptor } from '../services/mastodon/feedTypes';
@@ -50,6 +51,14 @@ export const usePinnedFeeds = () => {
         },
     });
 
+    // A pinned feed's details changed (a renamed list): keep its pill up to date
+    const updatePinnedMutation = useMutation({
+        mutationFn: (feed: FeedDescriptor) => updatePinnedFeedStorage(accountId, feed),
+        onSuccess: (updated) => {
+            queryClient.setQueryData(['pinnedFeeds', accountId], updated);
+        },
+    });
+
     const addCustomFeedMutation = useMutation({
         mutationFn: async (feed: FeedDescriptor) => {
             await saveCustomFeedStorage(accountId, feed);
@@ -78,6 +87,7 @@ export const usePinnedFeeds = () => {
         isLoading: pinnedQuery.isLoading,
         pinFeed: pinMutation.mutateAsync,
         unpinFeed: unpinMutation.mutateAsync,
+        updatePinnedFeed: updatePinnedMutation.mutateAsync,
         addCustomFeed: addCustomFeedMutation.mutateAsync,
         removeCustomFeed: removeCustomFeedMutation.mutateAsync,
         isPinned: (feedId: string) => isFeedPinned(pinnedQuery.data ?? DEFAULT_PINNED_FEEDS, feedId),
