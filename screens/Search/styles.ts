@@ -90,4 +90,63 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     footer: {
         paddingVertical: space.lg,
     },
+    // Recent searches above explore
+    recentHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: space.lg,
+        paddingTop: space.sm,
+        paddingBottom: 2,
+    },
+    recentTitle: {
+        color: colors.textMuted,
+    },
+    clearRecent: {
+        color: colors.textMuted,
+        fontSize: 12,
+    },
+    recentRow: {
+        flexGrow: 0,
+    },
+    recentList: {
+        flexDirection: 'row',
+        gap: space.xs,
+        paddingHorizontal: space.lg,
+        paddingVertical: space.xs,
+    },
+    recentChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        height: 30,
+        paddingLeft: 10,
+        paddingRight: 6,
+        borderRadius: radii.pill,
+        backgroundColor: colors.inputBackground,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: colors.borderColor,
+    },
+    recentText: {
+        fontSize: 12.5,
+        color: colors.textPrimary,
+        maxWidth: 160,
+    },
+    recentRemove: {
+        padding: 2,
+    },
+    exploreContainer: {
+        flex: 1,
+    },
+    emptyExplore: {
+        alignItems: 'center',
+        gap: space.md,
+        paddingTop: space.xl * 1.5,
+        paddingHorizontal: space.xl,
+    },
+    emptyExploreText: {
+        color: colors.textMuted,
+        textAlign: 'center',
+    },
 });
+

@@ -7,7 +7,8 @@ export type Route =
     | { name: 'thread'; statusId: string }
     | { name: 'settings' }
     | { name: 'account'; accountId: string; account?: Account }
-    | { name: 'hashtag'; tag: string };
+    | { name: 'hashtag'; tag: string }
+    | { name: 'link'; url: string; title?: string };
 
 // Each entry gets its own key, so the same screen can sit in the stack twice (thread → other → same thread)
 export interface StackEntry {
@@ -22,6 +23,7 @@ export const MAX_STACK_DEPTH = 10;
 const routeIdentity = (route: Route) => {
     if (route.name === 'account') return { name: route.name, accountId: route.accountId };
     if (route.name === 'hashtag') return { name: route.name, tag: route.tag.toLowerCase() };
+    if (route.name === 'link') return { name: route.name, url: route.url };
     return route;
 };
 export const sameRoute = (a: Route, b: Route) => JSON.stringify(routeIdentity(a)) === JSON.stringify(routeIdentity(b));
