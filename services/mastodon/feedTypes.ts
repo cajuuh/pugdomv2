@@ -3,7 +3,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Translator } from '../i18n/translate';
 
 export type BuiltinFeedKind = 'home' | 'local' | 'federated' | 'trending';
-export type FeedKind = BuiltinFeedKind | 'hashtag';
+export type FeedKind = BuiltinFeedKind | 'hashtag' | 'list';
 
 export interface HashtagFeedCriteria {
     tag: string;
@@ -19,6 +19,8 @@ export interface FeedDescriptor {
     kind: FeedKind;
     title?: string;
     criteria?: HashtagFeedCriteria;
+    // For list feeds: the Mastodon list it shows (its title is `title`)
+    listId?: string;
     // Home always stays pinned
     canUnpin?: boolean;
 }
@@ -45,6 +47,15 @@ export const createHashtagFeed = (tag: string): FeedDescriptor => {
         canUnpin: true,
     };
 };
+
+// One of your Mastodon lists as a feed
+export const createListFeed = (list: { id: string; title: string }): FeedDescriptor => ({
+    id: `list:${list.id}`,
+    kind: 'list',
+    title: list.title,
+    listId: list.id,
+    canUnpin: true,
+});
 
 export const createCustomHashtagFeed = (
     title: string,
@@ -99,6 +110,8 @@ export const feedIcon = (kind: FeedKind): React.ComponentProps<typeof Ionicons>[
             return 'globe-outline';
         case 'trending':
             return 'flame-outline';
+        case 'list':
+            return 'list-outline';
         default:
             return 'pricetag-outline';
     }

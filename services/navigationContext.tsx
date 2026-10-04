@@ -9,7 +9,8 @@ export type Route =
     | { name: 'account'; accountId: string; account?: Account }
     | { name: 'hashtag'; tag: string }
     | { name: 'link'; url: string; title?: string }
-    | { name: 'feedEditor' };
+    | { name: 'feedEditor' }
+    | { name: 'listEditor'; listId?: string };
 
 // Each entry gets its own key, so the same screen can sit in the stack twice (thread → other → same thread)
 export interface StackEntry {

@@ -51,6 +51,15 @@ export async function unpinFeed(accountId: string, feedId: string): Promise<Feed
     return updated;
 }
 
+// A pinned feed's details changed (e.g. a list was renamed): update the saved copy, if pinned
+export async function updatePinnedFeed(accountId: string, feed: FeedDescriptor): Promise<FeedDescriptor[]> {
+    const current = await getPinnedFeeds(accountId);
+    if (!current.some(f => f.id === feed.id)) return current;
+    const updated = current.map(f => (f.id === feed.id ? feed : f));
+    await savePinnedFeeds(accountId, updated);
+    return updated;
+}
+
 export const isFeedPinned = (pinnedList: FeedDescriptor[], feedId: string): boolean => {
     return pinnedList.some(f => f.id === feedId);
 };

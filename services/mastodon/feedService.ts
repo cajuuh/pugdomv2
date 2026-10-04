@@ -13,6 +13,14 @@ export const parseTrendingOffset = (cursor?: string): number => {
     return 0;
 };
 
+// A list's posts, newest first; sinceId for checking what's new
+export async function getListTimeline(listId: string, maxId?: string, sinceId?: string): Promise<Status[]> {
+    const response = await apiClient.get<Status[]>(`/timelines/list/${listId}`, {
+        params: { max_id: maxId, since_id: sinceId, limit: sinceId ? NEW_POSTS_LIMIT : undefined },
+    });
+    return response.data;
+}
+
 export async function fetchFeedPage(feed: FeedDescriptor, pageParam?: string): Promise<Status[]> {
     switch (feed.kind) {
         case 'home':
@@ -25,6 +33,8 @@ export async function fetchFeedPage(feed: FeedDescriptor, pageParam?: string): P
             const offset = parseTrendingOffset(pageParam);
             return getTrendingStatuses(20, offset || undefined);
         }
+        case 'list':
+            return feed.listId ? getListTimeline(feed.listId, pageParam) : [];
         case 'hashtag': {
             if (!feed.criteria?.tag) return [];
             const options: TagTimelineOptions = {
@@ -62,6 +72,8 @@ export async function fetchFeedNewer(feed: FeedDescriptor, sinceId: string): Pro
                 return [];
             }
         }
+        case 'list':
+            return feed.listId ? getListTimeline(feed.listId, undefined, sinceId) : [];
         case 'trending':
         default:
             return [];

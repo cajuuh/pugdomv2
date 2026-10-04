@@ -120,7 +120,7 @@ describe('pinned feeds storage', () => {
 
 describe('Feeds sheet', () => {
     const renderSheet = (props: Partial<React.ComponentProps<typeof FeedsSheet>> = {}) =>
-        render(withQuery(<FeedsSheet visible onClose={jest.fn()} onSelectFeed={jest.fn()} onCreateFeed={jest.fn()} {...props} />));
+        render(withQuery(<FeedsSheet visible onClose={jest.fn()} onSelectFeed={jest.fn()} onCreateFeed={jest.fn()} onEditList={jest.fn()} {...props} />));
 
     it('lists pinned feeds, trending and followed hashtags', async () => {
         serve([{ name: 'pugs' }]);
