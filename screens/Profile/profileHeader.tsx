@@ -45,7 +45,7 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
     const { t, locale } = useI18n();
     const styles = useThemedStyles(makeStyles);
     const { width } = useWindowDimensions();
-    const { openMention, openHashtag } = useOpenAccount();
+    const { openMention, openHashtag, openLinkInApp } = useOpenAccount();
     const name = user.display_name || user.username;
     const remoteServer = mode === 'other' && user.acct.includes('@') ? user.acct.split('@').pop() : undefined;
 
@@ -162,7 +162,7 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
                         width={width - 40}
                         onPressMention={openMention}
                         onPressHashtag={openHashtag}
-                        onPressLink={openLink}
+                        onPressLink={openLinkInApp}
                     />
                 )}
 
