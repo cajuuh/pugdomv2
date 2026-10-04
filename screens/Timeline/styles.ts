@@ -3,6 +3,8 @@ import { ThemeColors } from '../../services/themeContext';
 import { TAB_BAR_CLEARANCE } from '../../components/TabBar/styles';
 import { radii, space } from '../../services/theme/shape';
 
+export const FEED_PILL_HEIGHT = 34;
+
 export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     container: {
         flex: 1,
@@ -92,5 +94,43 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         color: colors.textSecondary,
         fontSize: 16,
         textAlign: 'center'
-    }
-})
+    },
+    feedPillsScroll: {
+        paddingHorizontal: space.lg,
+        gap: space.sm,
+        alignItems: 'center',
+    },
+    // Pinned feeds: a scrollable row of pills, then "+"
+    feedPill: {
+        height: FEED_PILL_HEIGHT,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 14,
+        borderRadius: radii.pill,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: colors.borderColor,
+        backgroundColor: colors.cardBackground,
+    },
+    feedPillActive: {
+        backgroundColor: colors.accentColor,
+        borderColor: colors.accentColor,
+    },
+    feedPillText: {
+        fontSize: 13.5,
+        color: colors.textSecondary,
+    },
+    feedPillTextActive: {
+        color: colors.buttonTextColor,
+    },
+    addFeedButton: {
+        width: FEED_PILL_HEIGHT,
+        height: FEED_PILL_HEIGHT,
+        borderRadius: radii.pill,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: colors.borderColor,
+        backgroundColor: colors.cardBackground,
+    },
+});

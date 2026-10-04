@@ -11,6 +11,8 @@ import { getTagTimeline, followTag, tagFromHref, unfollowTag, weeklyUsage } from
 import { Status } from '../services/mastodon/types';
 
 jest.mock('../services/api/client', () => ({ __esModule: true, default: { get: jest.fn(), post: jest.fn() } }));
+// Pinned feeds are kept per account
+jest.mock('../services/authContext', () => ({ useAuth: () => ({ user: { id: 'me' } }) }));
 jest.mock('../services/themeContext', () => ({
     useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
 }));

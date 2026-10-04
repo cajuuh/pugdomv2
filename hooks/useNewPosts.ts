@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { FeedType, fetchNewerPosts, NEW_POSTS_LIMIT } from '../services/mastodon/timeline';
+import { FeedType, NEW_POSTS_LIMIT } from '../services/mastodon/timeline';
+import { FeedDescriptor } from '../services/mastodon/feedTypes';
+import { fetchFeedNewer } from '../services/mastodon/feedService';
 import { Account, Status } from '../services/mastodon/types';
 
 export const NEW_POSTS_INTERVAL_MS = 60_000;
@@ -29,8 +31,9 @@ export const summarizeNewPosts = (posts: Status[]): NewPosts => {
 // Only pause in the background: at launch the state can still be 'unknown'
 const isForeground = (state: AppStateStatus | null) => state !== 'background';
 
-export const useNewPosts = (feed: FeedType, newestId: string | undefined): NewPosts => {
+export const useNewPosts = (feed: FeedType | FeedDescriptor, newestId: string | undefined): NewPosts => {
     const [active, setActive] = useState(isForeground(AppState.currentState));
+    const descriptor: FeedDescriptor = typeof feed === 'string' ? { id: feed, kind: feed } : feed;
 
     useEffect(() => {
         const subscription = AppState.addEventListener('change', state => setActive(isForeground(state)));
@@ -38,9 +41,9 @@ export const useNewPosts = (feed: FeedType, newestId: string | undefined): NewPo
     }, []);
 
     const { data } = useQuery({
-        queryKey: ['newPosts', feed, newestId],
-        queryFn: () => fetchNewerPosts(feed, newestId!),
-        enabled: !!newestId && active,
+        queryKey: ['newPosts', descriptor.id, newestId],
+        queryFn: () => fetchFeedNewer(descriptor, newestId!),
+        enabled: !!newestId && active && descriptor.kind !== 'trending',
         // The list was just loaded, so the first check waits a full interval
         initialData: [],
         initialDataUpdatedAt: () => Date.now(),
