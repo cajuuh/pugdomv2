@@ -47,6 +47,17 @@ export async function getTagTimeline(tag: string, maxId?: string, options: TagTi
     return response.data;
 }
 
+export async function getFollowedTags(limit = 100): Promise<Tag[]> {
+    try {
+        const response = await apiClient.get<Tag[]>('/followed_tags', {
+            params: { limit },
+        });
+        return Array.isArray(response.data) ? response.data : [];
+    } catch {
+        return [];
+    }
+}
+
 // Posts and people using the tag over the last week (history is per day, newest first)
 export const weeklyUsage = (tag?: Pick<Tag, 'history'>) =>
     (tag?.history ?? []).slice(0, 7).reduce(

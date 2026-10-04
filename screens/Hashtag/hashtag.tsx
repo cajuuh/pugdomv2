@@ -11,6 +11,8 @@ import { Status } from '../../services/mastodon/types';
 import { TootCard } from '../../components/TootCard/tootCard';
 import { IconButton, PillButton } from '../../components/ui';
 import { makeStyles } from './styles';
+import { usePinnedFeeds } from '../../hooks/usePinnedFeeds';
+import { createHashtagFeed } from '../../services/mastodon/feedTypes';
 
 interface HashtagProps {
     tag: string;
@@ -29,6 +31,10 @@ const Hashtag = ({ tag, onBack, onStatusPress }: HashtagProps) => {
 
     const { data: info, refetch: refetchInfo } = useTag(tag);
     const toggleFollow = useToggleFollowTag(tag);
+    // Pinning makes the hashtag a pill above the timeline, whether or not you follow it
+    const { isPinned, pinFeed, unpinFeed } = usePinnedFeeds();
+    const tagFeed = createHashtagFeed(tag);
+    const pinned = isPinned(tagFeed.id);
     const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage, refetch } = useTagTimeline(tag);
     const statuses = data?.pages.flat() ?? [];
     // The server's spelling of the tag once known (e.g. #PugsOfMastodon)
@@ -79,6 +85,13 @@ const Hashtag = ({ tag, onBack, onStatusPress }: HashtagProps) => {
                 )
             )}
             {info && !info.following && <Text style={[type.meta, styles.followHint]}>{t('hashtag.followHint')}</Text>}
+            <PillButton
+                label={pinned ? t('feeds.pinnedTag') : t('feeds.pinTag')}
+                icon={pinned ? 'checkmark' : 'pin-outline'}
+                variant="subtle"
+                size="small"
+                onPress={() => (pinned ? unpinFeed(tagFeed.id) : pinFeed(tagFeed))}
+            />
         </View>
     );
 

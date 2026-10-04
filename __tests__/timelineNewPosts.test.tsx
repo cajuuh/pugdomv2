@@ -7,6 +7,9 @@ import { NewPosts } from '../hooks/useNewPosts';
 import Timeline from '../screens/Timeline/timeline';
 import { Account, Status } from '../services/mastodon/types';
 
+// Pinned feeds are kept per account
+jest.mock('../services/mastodon/tags', () => ({ ...jest.requireActual('../services/mastodon/tags'), getFollowedTags: jest.fn(async () => []) }));
+jest.mock('../services/authContext', () => ({ useAuth: () => ({ user: { id: 'me' } }) }));
 jest.mock('../services/themeContext', () => ({
     useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
 }));
