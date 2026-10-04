@@ -1,149 +1,111 @@
 @AGENTS.md
 
-# Gemini AI Context - Expo Mastodon Client
+# Gemini AI Context & Engineering Guidelines - Pugdom
 
-This file serves as a contextual guide and prompt anchor for Gemini AI when assisting with the development of the Expo-based Mastodon application. It ensures the AI understands the project's tech stack, design architecture, and integration points.
-
----
-
-## 🚀 Project Overview
-
-This project is a cross-platform mobile application built using **Expo** and **React Native**. The core functionality of the app is to interface with the **Mastodon** decentralized social network, allowing users to log in via OAuth, view their timelines, post statuses, and interact with the Fediverse natively.
-
-### Core Stack
-- **Framework:** Expo SDK 56 (React Native 0.85), see AGENTS.md
-- **Language:** TypeScript (`yarn typecheck`)
-- **State Management:** React Context for app state, TanStack Query hooks in `hooks/` for server state
-- **Styling:** `react-native-ui-lib` components + `StyleSheet` files next to each screen/component, colors from `services/themeContext.tsx`
-- **Lists:** `@shopify/flash-list` v2 (use `useRecyclingState` for per-row state)
-- **Tests:** jest + `@testing-library/react-native` (`yarn test`)
+This file is the single source of truth and prompt anchor for Gemini AI / Antigravity when assisting with the development of **Pugdom**, an Expo-based Mastodon client for iOS and Android.
 
 ---
 
-## 📚 Official Documentation & Sources
+## 🛑 Non-Negotiable Core Rules & Flow
 
-When generating code, debugging, or designing features, prioritize the official standards and implementations described in these references:
+### 1. Step-by-Step Execution
+- **Never rush ahead across multiple phases or tasks autonomously.** Attack one task at a time.
+- Always check the roadmap and active task note in the knowledge base before writing code.
 
-- 🐘 **Mastodon API Documentation:** [https://docs.joinmastodon.org/](https://docs.joinmastodon.org/)
-- 🚀 **Expo Guides & Documentation:** [https://docs.expo.dev/guides/overview/](https://docs.expo.dev/guides/overview/)
+### 2. User Verification on Device First
+- **Every finished feature, bug fix, or task MUST be tested and verified by the user on their device / simulator first.**
+- When implementation and local tests pass, provide the user with a concise, clear testing checklist:
+  - What changed and what to expect on screen.
+  - Exactly how to test the new functionality or edge cases on their running app.
+- **Stop and wait for the user's feedback.** Do not assume completion until the user confirms the app works as intended.
 
----
-
-## 🛠️ Key Architectural Instructions
-
-### 1. Mastodon API & Authentication Flow
-- **OAuth Registration:** The app must dynamically register an application on the user's specified Mastodon instance (`POST /api/v1/apps`) to obtain a `client_id` and `client_secret`.
-- **User Authentication:** Use Expo's `WebBrowser` or `AuthSession` modules to handle the OAuth2 code exchange flow safely on mobile devices.
-- **Token Storage:** Safely persist the user's access token and the instance URL using `expo-secure-store`. Never expose these in plain AsyncStorage.
-- **API Versioning:** Default to the stable `/api/v1/` endpoints unless specified (e.g., streaming or specialized media filters available in `/api/v2/`).
-
-### 2. Expo & Mobile Environment Guidelines
-- **TypeScript Strictness:** Always enforce strict typing for API responses (e.g., typing Mastodon `Status`, `Account`, and `Context` objects accurately).
-- **Asynchronous Safe Rendering:** Ensure list views utilize `FlashList` (from Shopify) or Expo-optimized `FlatList` to handle infinite scrolling timelines smoothly without memory leaks.
-- **Image & Media Handling:** Use optimized image components to handle Mastodon's extensive image attachments, animated GIFs, and custom emojis seamlessly.
-
-### 3. Feature Roadmap AI Directives
-When asked to build features, implement them in alignment with these standard Mastodon paradigms:
-- **Home Timeline:** Fetch via `GET /api/v1/timelines/home` supporting pagination using `max_id` and `since_id`.
-- **Publishing Statuses:** Implement a character counter (500-character standard default) and support Content Warnings (CW) via `spoiler_text`.
-- **Media Uploads:** Handle multi-part form uploads (`POST /api/v1/media`) before attaching the returned IDs to a new status.
-
-### 4. User Settings
-- Use `yarn` this project was wrote to work with yarn
-- This projects uses [gitmoji-cli](https://github.com/carloscuesta/gitmoji-cli), the commit command is `gitmoji -c` the user is prompted to select what kind of commit it is and after select it, the title and the message of the commit
+### 3. User Approves and Merges Pull Requests
+- **The AI NEVER merges pull requests.**
+- The AI creates the feature branch, implements the code, runs typecheck and unit tests, pushes to GitHub, and opens the PR against `develop`.
+- **The user is the sole person who reviews, approves, and merges the PR** after testing the build.
 
 ---
 
-# Pugdom: Mobile Client Design Specification
+## 🧠 Knowledge Base: Obsidian Vault
 
-Here is the comprehensive technical design document for **Pugdom**, a modern mobile Mastodon client. This document translates the visual language and user flows from your reference materials into a clean, implementable spec sheet.
+The canonical knowledge base and task tracking system lives at:
+📁 `/Volumes/PortableSSD/obsidian2/Linux/Projects/pugdom`
+
+### Vault Structure & Files
+- **`Tasklist.md`**: Master checklist tracking all completed (`[x]`) and open (`[ ]`) tasks across phases, with issue numbers, branches, completion dates, and PR links.
+- **`Tasks/`**: Folder containing individual task specifications (e.g. `Tasks/Phase 7/Task - 51 - Explore.md`):
+  - YAML frontmatter: `status` (`todo` | `in-progress` | `done`), `phase`, `branch`, `difficulty`, `github`, `pr`, `created`, `completed`.
+  - Detailed task context, key files, approach, and checklist.
+- **`Pugdom v2 Search, Timelines & Media Plan (2026-10-03).md`**: The active multi-phase roadmap for Search, Feeds, Lists, and Media (Phases 1–11).
+- **Design Plans**: `Pugdom v2 Design Plan - Apricot Pug (2026-09-28).md` and related design references.
+
+### Knowledge Base Protocol
+1. **Before starting a task**: Read the corresponding note in `Tasks/` and the active plan in the vault. If no note exists, create one with the standard frontmatter and checklist.
+2. **During the task**: Follow the approach laid out in the task note.
+3. **When completing a task**: Update the frontmatter (`status: done`, `completed: YYYY-MM-DD`, `pr: ...`), check off all checklist items, and update `Tasklist.md`.
 
 ---
 
-## 1. Design Philosophy & System Core
+## 🔄 Development Flow & Skills (from .claude / plat-dev)
 
-Pugdom combines the decentralized power of Mastodon with an ultra-modern, highly fluid interface. The visual identity relies heavily on **Glassmorphism**, depth layering, bold micro-interactions, and clear content containerization.
-
-### Color Archetypes
-
-* **Light Mode (Pristine):** High-translucency pure white surfaces over soft, colorful ambient background gradients (pinks, blues, and teals).
-* **Dark Mode (Obsidian):** Deep charcoal tones (`#121318`) with emerald/lime green or neon cyan accent highlights to make key interactions pop.
-
----
-
-## 2. Navigation Architecture (Floating Dock Component)
-
-The navigation bar is the focal anchor of the application, utilizing a floating pill/dock layout isolated from the screen edges instead of a traditional bottom tab bar.
+Follow this rigorous engineering flow on every task:
 
 ```
-       [ Home ]   [ Search ]   (  +  )   [ Notifications ]   [ Profile ]
-     └───────────────────────────▲─────────────────────────────────────┘
-                          Central Action Anchor
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌────────────────┐     ┌──────────────┐
+│ Investigate  │ ──> │ Spec & Plan  │ ──> │  Implement   │ ──> │ Verify Tests │ ──> │ User Test Run  │ ──> │ Open PR &    │
+│ & Context    │     │  (Vault)     │     │ & TypeScript │     │ & Typecheck  │     │   on Device    │     │ User Merges  │
+└──────────────┘     └──────────────┘     └──────────────┘     └──────────────┘     └────────────────┘     └──────────────┘
 ```
 
-### Visual Specifications
-
-* **Geometry:** High border-radius (fully rounded pill shape) with distinct padding separating it from the screen edges.
-* **Material:** Background blur layer (`backdrop-filter: blur(20px)`) coupled with a thin, low-opacity white border overlay to mimic physical glass.
-* **The Centerpiece (Compose Trigger):**
-  * A perfectly circular floating button containing a crisp plus (`+`) or action icon.
-  * The center button sits nested inside a subtle geometric dip or protrudes slightly over the dock boundary.
-  * **Micro-interaction:** Tapping the center action expands a circular sub-dock or floating ring revealing direct quick-actions (e.g., Quick Post, Post Media, Audio Status).
-
----
-
-## 3. Timeline & Feed Spec (Card Architecture)
-
-The timeline prioritizes readability, high-fidelity media presentation, and instant context recognition.
-
-### Header Element: Active Peer Rings
-
-* Positioned directly at the top of the main timeline feed.
-* A horizontally scrollable row of high-resolution avatar circles representing active users, instances, or pinned hashtags.
-* Outlined with gradient status rings indicating unread content or live updates.
-
-### Post Container Design
-
-* **Card Isolation:** Every status (toot) is housed within an independent card container featuring smooth, rounded corners (`border-radius: 16px` to `24px`).
-* **Grid-Based Media Layouts:**
-  * Single images adapt fluidly to aspect ratios with high-quality cropping.
-  * Multiple image attachments break into asymmetric mosaic grids (e.g., side-by-side or square quadrants) with tight, unified spacing.
-* **Meta Content Placement:**
-  * User identification data (Avatar, Display Name, Instance Handle) cleanly separated at the top.
-  * Clear timestamp and privacy scope indicators (Public, Unlisted, Followers Only).
-
-### Footer Interaction Layer
-
-* Minimalist iconography for core Mastodon interactions: **Reply**, **Boost**, **Favorite**, and **Bookmark**.
-* Inline counters displaying dynamic engagement counts (e.g., "120+ Likes", "65 Comments") placed adjacent to the icons.
+1. **Investigate:**
+   - Inspect existing components, types, services, and hooks.
+   - Reference Mastodon API specifications: https://docs.joinmastodon.org/
+   - Reference versioned Expo SDK 56 documentation: https://docs.expo.dev/versions/v56.0.0/
+2. **Spec & Plan:**
+   - Define exact requirements, state handling, network requests, cache keys, error states, and localization keys.
+   - Sync with the Obsidian task note.
+3. **Implement:**
+   - Strict TypeScript (`tsc --noEmit`).
+   - Use theme tokens from `services/themeContext.tsx` and typography tokens from `type` (zero color literals).
+   - Localization: Always add keys to both `services/i18n/en.ts` and `services/i18n/pt-BR.ts`.
+   - List recycling: FlashList rows must use `useRecyclingState` for per-item interactive state.
+4. **Verify:**
+   - Run `yarn typecheck` and ensure 0 errors.
+   - Run `yarn test` and ensure all test suites pass.
+   - Add unit and component tests for new features and regressions in `__tests__/`.
+5. **User Test Run:**
+   - Explain to the user what was added and how to test it in the running Expo dev client.
+   - Await user verification.
+6. **PR & Merge:**
+   - Commit with [gitmoji](https://gitmoji.dev/) format (e.g. `✨ ...`, `🐛 ...`, `Fixes #N`).
+   - Push feature branch to `origin`.
+   - Open PR against `develop` using `gh pr create`.
+   - **Do not merge.** Prompt the user to review and merge when satisfied.
 
 ---
 
-## 4. Interaction Flows & Screen States
+## 🛠️ Tech Stack & Architecture
 
-### A. Discover / Explore State
+- **Framework:** Expo SDK 56 (React Native 0.85) targeting iOS and Android using development builds (`expo-dev-client`).
+- **Package Manager:** Strictly `yarn` (`yarn.lock`). Do NOT use `npm` or `pnpm`.
+- **State Management:**
+  - Server state: TanStack Query (`@tanstack/react-query`) hooks in `hooks/`.
+  - Client state: React Context (`services/authContext.tsx`, `services/themeContext.tsx`, `services/navigationContext.tsx`).
+- **Storage:**
+  - Sensitive data (access tokens, instance URLs): `expo-secure-store`.
+  - Non-sensitive user preferences (coat theme, recent searches, pinned feeds): `@react-native-async-storage/async-storage`.
+- **Lists:** `@shopify/flash-list` v2 for infinite scrolling timelines.
+- **Git & Gitmoji:**
+  - Branching off `develop`. PRs target `develop`. `main` is reserved for releases.
+  - Commits follow `gitmoji -c` conventions (`✨` feature, `🐛` bug fix, `💄` UI/style, `♻️` refactor, `🧪` tests, `🔧` config).
 
-* Clean category badges or segmented control pills nested under the main search input field (e.g., "For You", "Following", "Local", "Federated").
-* Asymmetric multi-column masonry grids for browsing discovery media tags.
+---
 
-### B. Rich Profile View
+## 🎨 Design System: Apricot Pug
 
-* **Hero Section:** A full-bleed profile banner fading smoothly into the card surface below.
-* **Stat Trays:** Horizontal analytical panels displaying structural counts (Followers, Following, Total Posts) using clean dividing lines.
-* **Categorized Content Tabs:** Clean toggle buttons separating regular Posts, Media attachments, and Public Replies.
-
-### C. Notifications Screen (High-Contrast Activity Blocks)
-
-The Activity feed abandons standard thin list rows in favor of full-bleed, beautifully containerized notification blocks inspired by modern project UI blocks. Each notification is mapped to an expressive, high-contrast block layout.
-
-#### Core Card Blueprint
-* **Card Geometry:** Large rounded rectangles (`border-radius: 20px`) stacked vertically with explicit margins (`mb-4`) to establish physical separation.
-* **Asymmetric Tag Layer:** The top-right corner of each card contains sharp, minimalist pill badges indicating context (e.g., standard text tag like `MENTION`, or system status labels like `NEW`).
-* **Header Architecture:** The top-left corner features the performing user's Avatar/Instance Badge right alongside their clear plain-text display metadata.
-
-#### Color Coding by Notification Type (`GET /api/v1/notifications`)
-To maximize scan-ability, cards map to explicit glassmorphic tints depending on the Mastodon interaction type:
-* **Mentions (`mention`):** *Soft Lavender/Pink Tint.* Focused on body copy text. The toot snippet is typeset in a bold, stylized high-contrast font choice directly across the face of the card.
-* **Reblogs/Boosts (`reblog`):** *Warm Ochre/Amber Gold Tint.* Highlights the original content title and features a secondary structural mini-badge tracking the boosting account.
-* **Favorites (`favourite`):** *Sky Cyan/Vibrant Blue Tint.* Minimalist card focusing on the post summary alongside a clear micro-icon indicating engagement success.
-* **New Followers (`follow`):** *Lime/Emerald Green Tint.* Highly visual, highlighting the new follower's bio snippet or a prominent follow-back interactive state.
+- **Glassmorphism & Depth:** Soft translucent card backgrounds, backdrop blurs on the floating dock, subtle borders.
+- **Coat Engine:** Dynamic theme coats (Apricot Pug, Fawn, Black Pug / Obsidian, Silver Pug) defined in `services/themeCoats.ts` and consumed via `useTheme()`.
+- **No Color Literals:** All colors must be sourced from `theme.colors.*` or `theme.coat.*`. Hardcoded hex codes (`#...`), `rgb()`, or named colors outside theme files are strictly forbidden (guarded by `__tests__/noColorLiterals.test.ts`).
+- **Typography:** Custom brand fonts (Fredoka / Sniglet / System) applied via tokens in `services/themeContext.tsx`.
+- **Floating Dock:** Bottom pill navigation bar isolated from screen edges with a central floating action button for compose.
+- **Notifications Feed:** Asymmetric high-contrast cards color-coded by interaction type (mentions, boosts, favorites, follows).
