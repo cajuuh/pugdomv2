@@ -37,6 +37,9 @@ const serve = (results: object) =>
             const all = { accounts: [ana], hashtags: [pugs], statuses: [postResult], ...results } as any;
             return { data: type ? { [type]: all[type] } : all };
         }
+        if (url.includes('/trends/statuses') || url.includes('/trends/tags') || url.includes('/trends/links') || url.includes('/suggestions')) {
+            return { data: [] };
+        }
         return { data: [{ id: 'ana', following: false, requested: false, followed_by: false }] };
     });
 
@@ -86,10 +89,13 @@ describe('Search screen', () => {
         await fireEvent.changeText(screen.getByLabelText('Search people, hashtags and posts'), text);
     };
 
-    it('explains what it can find before anything is typed', async () => {
+    it('shows explore tabs before anything is typed', async () => {
+        serve({});
         await renderSearch();
-        expect(screen.getByText('Find people, hashtags and posts on your server and beyond')).toBeTruthy();
-        expect(get).not.toHaveBeenCalled();
+        expect(screen.getByText('Posts')).toBeTruthy();
+        expect(screen.getByText('Hashtags')).toBeTruthy();
+        expect(screen.getByText('News')).toBeTruthy();
+        expect(screen.getByText('People')).toBeTruthy();
     });
 
     it('shows people, hashtags and posts for a query', async () => {

@@ -42,6 +42,12 @@ export const useOpenAccount = () => {
     // A hashtag link's tag; the screen shows the server's spelling once loaded
     const openHashtag = useCallback((tag: string) => push({ name: 'hashtag', tag }), [push]);
 
+    // Opens a link's timeline in pugdom
+    const openLinkTimeline = useCallback(
+        (url: string, title?: string) => push({ name: 'link', url, title }),
+        [push]
+    );
+
     // Links to posts or profiles (from any server) open in pugdom when our server can fetch them;
     // everything else, or anything it can't find, opens in the browser
     const openLinkInApp = useCallback(
@@ -69,5 +75,5 @@ export const useOpenAccount = () => {
         [push]
     );
 
-    return { openAccount, openMention, openHashtag, openLinkInApp };
+    return { openAccount, openMention, openHashtag, openLinkTimeline, openLinkInApp };
 };

@@ -32,6 +32,7 @@ import { I18nProvider, useI18n } from './services/i18n/i18nContext';
 import { NavigationProvider, StackEntry, useNavigator } from './services/navigationContext';
 import Account from './screens/Account/account';
 import Hashtag from './screens/Hashtag/hashtag';
+import LinkTimeline from './screens/LinkTimeline/linkTimeline';
 
 // Keep the pug splash up until the fonts and the saved account are loaded
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -88,6 +89,8 @@ function NavigationRoot() {
         return <Account accountId={route.accountId} account={route.account} onBack={pop} onStatusPress={openThread} onSettingsPress={openSettings} />;
       case 'hashtag':
         return <Hashtag tag={route.tag} onBack={pop} onStatusPress={openThread} />;
+      case 'link':
+        return <LinkTimeline url={route.url} title={route.title} onBack={pop} onStatusPress={openThread} />;
     }
   };
 

@@ -51,6 +51,12 @@ export interface PreviewCard {
     image?: string | null;
     provider_name?: string;
     provider_url?: string;
+    author_name?: string;
+    author_url?: string;
+    html?: string;
+    width?: number;
+    height?: number;
+    blurhash?: string | null;
 }
 
 export interface Status {
