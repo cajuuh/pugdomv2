@@ -71,10 +71,11 @@ Follow this rigorous engineering flow on every task:
    - List recycling: FlashList rows must use `useRecyclingState` for per-item interactive state.
 4. **Verify:**
    - Run `yarn typecheck` and ensure 0 errors.
-   - Run `yarn test` and ensure all test suites pass.
+   - Run `yarn test` and ensure all test suites pass. Use **Node 22** (CI's version); on Node 16 every suite fails with `FormData is not defined`.
    - Add unit and component tests for new features and regressions in `__tests__/`.
 5. **User Test Run:**
    - Explain to the user what was added and how to test it in the running Expo dev client.
+   - The app runs in pugdom's own development build, never in Expo Go (Expo Go is a different SDK and shows "Project is incompatible").
    - Await user verification.
 6. **PR & Merge:**
    - Commit with [gitmoji](https://gitmoji.dev/) format (e.g. `✨ ...`, `🐛 ...`, `Fixes #N`).
@@ -86,7 +87,8 @@ Follow this rigorous engineering flow on every task:
 
 ## 🛠️ Tech Stack & Architecture
 
-- **Framework:** Expo SDK 56 (React Native 0.85) targeting iOS and Android using development builds (`expo-dev-client`).
+- **Framework:** Expo SDK 56 (React Native 0.85) targeting iOS and Android using development builds (`expo-dev-client`). App id `com.cajuuh.pugdom` on both platforms.
+- **Native modules:** merges to `develop` ship OTA to installed builds of the same `expo.version` (runtime version). Adding a native module needs a version bump and a new build; never add one silently.
 - **Package Manager:** Strictly `yarn` (`yarn.lock`). Do NOT use `npm` or `pnpm`.
 - **State Management:**
   - Server state: TanStack Query (`@tanstack/react-query`) hooks in `hooks/`.
@@ -97,15 +99,17 @@ Follow this rigorous engineering flow on every task:
 - **Lists:** `@shopify/flash-list` v2 for infinite scrolling timelines.
 - **Git & Gitmoji:**
   - Branching off `develop`. PRs target `develop`. `main` is reserved for releases.
-  - Commits follow `gitmoji -c` conventions (`✨` feature, `🐛` bug fix, `💄` UI/style, `♻️` refactor, `🧪` tests, `🔧` config).
+  - Commits follow `gitmoji -c` conventions (`✨` feature, `🐛` bug fix, `💄` UI/style, `♻️` refactor, `✅` tests, `🔧` config, `🌐` i18n, `📝` docs).
+  - Every change goes through a PR into `develop`, including docs; don't push to `develop` or `main` directly.
 
 ---
 
 ## 🎨 Design System: Apricot Pug
 
-- **Glassmorphism & Depth:** Soft translucent card backgrounds, backdrop blurs on the floating dock, subtle borders.
-- **Coat Engine:** Dynamic theme coats (Apricot Pug, Fawn, Black Pug / Obsidian, Silver Pug) defined in `services/themeCoats.ts` and consumed via `useTheme()`.
-- **No Color Literals:** All colors must be sourced from `theme.colors.*` or `theme.coat.*`. Hardcoded hex codes (`#...`), `rgb()`, or named colors outside theme files are strictly forbidden (guarded by `__tests__/noColorLiterals.test.ts`).
-- **Typography:** Custom brand fonts (Fredoka / Sniglet / System) applied via tokens in `services/themeContext.tsx`.
+- **Surfaces:** cards are solid (`colors.cardBackground`, hairline `borderColor`, a soft shadow in light mode only). The floating dock is the one glass surface (`BlurView` + translucent `tabBarBackground`; keep it translucent).
+- **Coat Engine:** nine coats (Apricot, Fawn, Brindle, Black pug, Silver, Sage, Blueberry, Plum, Rose) defined in `services/theme/coats.ts`, light / dark / system mode and an optional "tint surfaces" setting, all consumed via `useTheme()` (`colors`, `type`, `coat`, `isDark`).
+- **No Color Literals:** All colors come from `useTheme().colors` (or `mediaColors` in `services/theme/media.ts` for media overlays). Hardcoded hex codes (`#...`), `rgb()`, or named colors in `components/` and `screens/` are forbidden (guarded by `__tests__/noColorLiterals.test.ts`). Text and icons on surfaces use `accentText`; anything on an accent fill uses `buttonTextColor`.
+- **Typography:** Fraunces (display: titles, wordmark) and Nunito (text) from `services/theme/typography.ts`, applied through `useTheme().type` (`title`, `sheetTitle`, `name`, `body`, `label`, `meta`).
+- **Pug mark:** the logo is the author's one-eyed pug (`components/ui/pugMark.tsx`): the missing eye is a flat closed line on the viewer's right. Keep it in every pug drawing.
 - **Floating Dock:** Bottom pill navigation bar isolated from screen edges with a central floating action button for compose.
-- **Notifications Feed:** Asymmetric high-contrast cards color-coded by interaction type (mentions, boosts, favorites, follows).
+- **Notifications:** rows grouped under Today / Earlier; every type uses the coat accent and is told apart by its badge glyph (mention @, favourite ★, boost ⟲, follow +); favourites and boosts of the same post are grouped.
