@@ -1,12 +1,13 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { Account } from './mastodon/types';
 
-// Screens that open on top of the tabs. Hashtags, links and lists join in later phases.
+// Screens that open on top of the tabs. Links and lists join in later phases.
 // An account route can carry the account we already have, so its profile shows at once.
 export type Route =
     | { name: 'thread'; statusId: string }
     | { name: 'settings' }
-    | { name: 'account'; accountId: string; account?: Account };
+    | { name: 'account'; accountId: string; account?: Account }
+    | { name: 'hashtag'; tag: string };
 
 // Each entry gets its own key, so the same screen can sit in the stack twice (thread → other → same thread)
 export interface StackEntry {
@@ -18,7 +19,11 @@ export interface StackEntry {
 export const MAX_STACK_DEPTH = 10;
 
 // The account copy carried by a route doesn't make it a different screen
-const routeIdentity = (route: Route) => (route.name === 'account' ? { name: route.name, accountId: route.accountId } : route);
+const routeIdentity = (route: Route) => {
+    if (route.name === 'account') return { name: route.name, accountId: route.accountId };
+    if (route.name === 'hashtag') return { name: route.name, tag: route.tag.toLowerCase() };
+    return route;
+};
 export const sameRoute = (a: Route, b: Route) => JSON.stringify(routeIdentity(a)) === JSON.stringify(routeIdentity(b));
 
 // Adds a screen on top, unless it's already the top one; past the limit the oldest screen goes

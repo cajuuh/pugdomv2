@@ -121,7 +121,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
 
     const updateCachedStatus = useUpdateCachedStatus();
     const queryClient = useQueryClient();
-    const { openAccount, openMention } = useOpenAccount();
+    const { openAccount, openMention, openHashtag } = useOpenAccount();
     // Stable for StatusHtmlContent's memo: mentions resolve against this post's mention list
     const handleMention = useCallback((href: string) => openMention(href, targetStatus.mentions), [openMention, targetStatus.mentions]);
     const i18n = useI18n();
@@ -341,7 +341,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     compactMode={compactMode}
                     width={contentWidth}
                     onPressMention={onPressMention ?? handleMention}
-                    onPressHashtag={onPressHashtag}
+                    onPressHashtag={onPressHashtag ?? openHashtag}
                     onPressLink={openLink}
                 />
             )}

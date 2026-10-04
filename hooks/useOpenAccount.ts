@@ -8,7 +8,7 @@ import { useNavigator } from '../services/navigationContext';
 export const mentionFor = (mentions: Mention[] | undefined, href: string) =>
     mentions?.find(mention => mention.url === href || mention.url === href.replace(/\/$/, ''));
 
-// Opens profiles inside pugdom: from an account we have, or from a mention link
+// Opens profiles and hashtags inside pugdom: from an account we have, a mention link, or a hashtag
 export const useOpenAccount = () => {
     const { push } = useNavigator();
 
@@ -39,5 +39,8 @@ export const useOpenAccount = () => {
         [push]
     );
 
-    return { openAccount, openMention };
+    // A hashtag link's tag; the screen shows the server's spelling once loaded
+    const openHashtag = useCallback((tag: string) => push({ name: 'hashtag', tag }), [push]);
+
+    return { openAccount, openMention, openHashtag };
 };
