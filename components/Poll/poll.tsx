@@ -15,6 +15,8 @@ import { defaultTranslator, Translator } from '../../services/i18n/translate';
 interface PollProps {
     initialPoll: PollType;
     onPollUpdated?: (poll: PollType) => void;
+    // Results only: a post from another server we can't vote on from here
+    readOnly?: boolean;
 }
 
 // "18h left", "3d left", "5m left"; "Closed" once the poll has ended
@@ -33,7 +35,7 @@ export const pollTimeLeft = (poll: Pick<PollType, 'expired' | 'expires_at'>, now
 // (which is light for black pug and would vanish on the surface beyond a short bar)
 const ON_ACCENT_LABEL_MIN_PERCENT = 60;
 
-export const Poll: React.FC<PollProps> = ({ initialPoll, onPollUpdated }) => {
+export const Poll: React.FC<PollProps> = ({ initialPoll, onPollUpdated, readOnly }) => {
     const { colors, type } = useTheme();
     const styles = useThemedStyles(makeStyles);
     const i18n = useI18n();
@@ -47,7 +49,7 @@ export const Poll: React.FC<PollProps> = ({ initialPoll, onPollUpdated }) => {
     const renderedPollId = useRef(initialPoll.id);
     renderedPollId.current = initialPoll.id;
 
-    const isClosed = poll.expired || poll.voted;
+    const isClosed = poll.expired || poll.voted || !!readOnly;
     const totalVotes = poll.voters_count || poll.votes_count || 0;
     const topVotes = Math.max(0, ...poll.options.map(option => option.votes_count || 0));
 

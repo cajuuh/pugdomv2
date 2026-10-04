@@ -120,7 +120,7 @@ describe('pinned feeds storage', () => {
 
 describe('Feeds sheet', () => {
     const renderSheet = (props: Partial<React.ComponentProps<typeof FeedsSheet>> = {}) =>
-        render(withQuery(<FeedsSheet visible onClose={jest.fn()} onSelectFeed={jest.fn()} onCreateFeed={jest.fn()} onEditList={jest.fn()} {...props} />));
+        render(withQuery(<FeedsSheet visible onClose={jest.fn()} onSelectFeed={jest.fn()} onCreateFeed={jest.fn()} onEditList={jest.fn()} onAddServer={jest.fn()} {...props} />));
 
     it('lists pinned feeds, trending and followed hashtags', async () => {
         serve([{ name: 'pugs' }]);
@@ -210,6 +210,37 @@ describe('Timeline feed pills', () => {
         await fireEvent.press(screen.getByRole('button', { name: /New hashtag feed/ }));
 
         expect(JSON.parse(screen.getByTestId('stack').props.children)).toEqual([{ name: 'feedEditor' }]);
+    });
+
+    it('previews a feed from the sheet without pinning it, then pins it', async () => {
+        await render(withQuery(<Timeline />));
+        await screen.findByText('post /timelines/home');
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Feeds' }));
+        await fireEvent.press(screen.getByRole('button', { name: 'Open Trending' }));
+
+        expect(await screen.findByText('post /trends/statuses')).toBeTruthy();
+        expect(screen.getByRole('tab', { name: 'Trending' })).toBeSelected();
+        expect((await getPinnedFeeds('me')).some(feed => feed.id === 'trending')).toBe(false);
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Pin Trending' }));
+
+        await waitFor(async () => expect((await getPinnedFeeds('me')).some(feed => feed.id === 'trending')).toBe(true));
+        expect(screen.queryByRole('button', { name: 'Pin Trending' })).toBeNull();
+        expect(screen.getByRole('tab', { name: 'Trending' })).toBeSelected();
+    });
+
+    it('drops the preview when switching to a pinned feed', async () => {
+        await render(withQuery(<Timeline />));
+        await screen.findByText('post /timelines/home');
+        await fireEvent.press(screen.getByRole('button', { name: 'Feeds' }));
+        await fireEvent.press(screen.getByRole('button', { name: 'Open Trending' }));
+        await screen.findByText('post /trends/statuses');
+
+        await fireEvent.press(screen.getByRole('tab', { name: 'Local' }));
+
+        expect(screen.queryByRole('tab', { name: 'Trending' })).toBeNull();
+        expect(screen.getByRole('tab', { name: 'Local' })).toBeSelected();
     });
 
     it('switches to a feed made in the editor', async () => {

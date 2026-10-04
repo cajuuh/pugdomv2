@@ -19,11 +19,13 @@ interface FeedsSheetProps {
     onCreateFeed: () => void;
     // Opens the list editor: an existing list, or a new one without an id
     onEditList: (listId?: string) => void;
+    // Opens the screen to add another server's timeline
+    onAddServer: () => void;
 }
 
-// Every feed you can pin above the timeline: what's pinned, trending posts, followed hashtags and your
-// own hashtag feeds. Tapping a row opens that feed; the pill on the right pins or unpins it.
-export const FeedsSheet: React.FC<FeedsSheetProps> = ({ visible, onClose, onSelectFeed, onCreateFeed, onEditList }) => {
+// Every feed you can pin above the timeline: what's pinned, trending posts, lists, followed hashtags,
+// your own hashtag feeds and other servers' timelines. Tapping a row opens that feed; the pill on the right pins or unpins it.
+export const FeedsSheet: React.FC<FeedsSheetProps> = ({ visible, onClose, onSelectFeed, onCreateFeed, onEditList, onAddServer }) => {
     const { colors, type } = useTheme();
     const i18n = useI18n();
     const { t } = i18n;
@@ -100,12 +102,19 @@ export const FeedsSheet: React.FC<FeedsSheetProps> = ({ visible, onClose, onSele
 
     // Each followed hashtag as a feed of its own
     const tagFeeds = followedTags.map(tag => createHashtagFeed(tag.name));
+    // Server feeds live only as pins: unpinning one removes it
+    const serverFeeds = pinnedFeeds.filter(feed => feed.kind === 'server');
+    const subtitleFor = (feed: FeedDescriptor) => {
+        if (feed.kind === 'hashtag') return describeCriteria(feed.criteria);
+        if (feed.kind === 'server') return t('servers.localTimeline', { domain: feed.domain ?? '' });
+        return undefined;
+    };
 
     return (
         <BottomSheet visible={visible} title={t('feeds.title')} onClose={onClose}>
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
                 <SectionLabel style={styles.section}>{t('feeds.pinned')}</SectionLabel>
-                {pinnedFeeds.map(feed => row(feed, { subtitle: feed.kind === 'hashtag' ? describeCriteria(feed.criteria) : undefined }))}
+                {pinnedFeeds.map(feed => row(feed, { subtitle: subtitleFor(feed) }))}
 
                 <SectionLabel style={styles.section}>{t('feeds.discover')}</SectionLabel>
                 {row(TRENDING_FEED, { subtitle: t('feeds.trendingSubtitle') })}
@@ -129,6 +138,13 @@ export const FeedsSheet: React.FC<FeedsSheetProps> = ({ visible, onClose, onSele
                 {createButton(t('feeds.createCustom'), t('feeds.createCustomSubtitle'), () => {
                     onClose();
                     onCreateFeed();
+                })}
+
+                <SectionLabel style={styles.section}>{t('servers.title')}</SectionLabel>
+                {serverFeeds.map(feed => row(feed, { subtitle: subtitleFor(feed) }))}
+                {createButton(t('servers.add'), t('servers.addSubtitle'), () => {
+                    onClose();
+                    onAddServer();
                 })}
             </ScrollView>
         </BottomSheet>

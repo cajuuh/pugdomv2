@@ -4,6 +4,7 @@ import { fetchHomeTimeline, fetchPublicTimeline, fetchNewerPosts, NEW_POSTS_LIMI
 import { getTrendingStatuses } from './trends';
 import { getTagTimeline, TagTimelineOptions } from './tags';
 import { Status } from './types';
+import { getServerTimeline } from './servers';
 
 export const parseTrendingOffset = (cursor?: string): number => {
     if (cursor && cursor.startsWith('offset:')) {
@@ -35,6 +36,8 @@ export async function fetchFeedPage(feed: FeedDescriptor, pageParam?: string): P
         }
         case 'list':
             return feed.listId ? getListTimeline(feed.listId, pageParam) : [];
+        case 'server':
+            return feed.domain ? getServerTimeline(feed.domain, pageParam) : [];
         case 'hashtag': {
             if (!feed.criteria?.tag) return [];
             const options: TagTimelineOptions = {
@@ -74,6 +77,8 @@ export async function fetchFeedNewer(feed: FeedDescriptor, sinceId: string): Pro
         }
         case 'list':
             return feed.listId ? getListTimeline(feed.listId, undefined, sinceId) : [];
+        case 'server':
+            return feed.domain ? getServerTimeline(feed.domain, undefined, sinceId, NEW_POSTS_LIMIT) : [];
         case 'trending':
         default:
             return [];

@@ -107,9 +107,12 @@ interface TootCardProps {
     threadMode?: boolean;
     hasThreadLineTop?: boolean;
     hasThreadLineBottom?: boolean;
+    // A post read from another server (its ids aren't ours): no buttons that act on it here; tapping it,
+    // its author or "open to interact" finds it through our server first
+    remote?: boolean;
 }
 
-export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPressHashtag, onPress, threadMode, hasThreadLineTop, hasThreadLineBottom }) => {
+export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPressHashtag, onPress, threadMode, hasThreadLineTop, hasThreadLineBottom, remote }) => {
     const { compactMode } = useSettings();
     const { colors, type } = useTheme();
     const styles = useThemedStyles(makeStyles);
@@ -123,7 +126,14 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const queryClient = useQueryClient();
     const { openAccount, openMention, openHashtag, openLinkInApp } = useOpenAccount();
     // Stable for StatusHtmlContent's memo: mentions resolve against this post's mention list
-    const handleMention = useCallback((href: string) => openMention(href, targetStatus.mentions), [openMention, targetStatus.mentions]);
+    // (a remote post's mention ids belong to its server, so those are looked up by URL)
+    const handleMention = useCallback(
+        (href: string) => openMention(href, remote ? undefined : targetStatus.mentions),
+        [openMention, remote, targetStatus.mentions]
+    );
+    // Remote posts and people open through our server, by their address
+    const openPost = () => openLinkInApp(targetStatus.url ?? targetStatus.uri);
+    const openPerson = (account: Status['account']) => (remote && account.url ? openLinkInApp(account.url) : openAccount(account));
     const i18n = useI18n();
     const { t, tn } = i18n;
 
@@ -349,6 +359,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 <Poll
                     initialPoll={targetStatus.poll}
                     onPollUpdated={(poll) => updateCachedStatus({ ...targetStatus, poll })}
+                    readOnly={remote}
                 />
             )}
             {renderMedia(targetStatus.media_attachments)}
@@ -392,7 +403,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         compactMode ? 13 : 15
     );
     const authorName = targetStatus.account.display_name || targetStatus.account.username;
-    const openAuthor = () => openAccount(targetStatus.account);
+    const openAuthor = () => openPerson(targetStatus.account);
     // Name and handle open the author's profile
     const names = (
         <Pressable
@@ -420,7 +431,27 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const actionIcon = compactMode ? COMPACT_ACTION_ICON : 20;
     const actionButtonStyle = [styles.actionButton, compactMode && styles.actionButtonCompact];
     const actionHitSlop = compactMode ? hitSlopFor(44, COMPACT_ACTION_HEIGHT) : undefined;
-    const actions = (
+    const shareButton = (
+        <Pressable style={actionButtonStyle} hitSlop={actionHitSlop} onPress={handleShare} accessibilityRole="button" accessibilityLabel={t('post.share')}>
+            <Ionicons name="share-outline" size={actionIcon} color={colors.textMuted} />
+        </Pressable>
+    );
+    const actions = remote ? (
+        <View style={[styles.actionRow, compactMode && styles.actionRowCompact]}>
+            <Pressable
+                style={actionButtonStyle}
+                hitSlop={actionHitSlop}
+                onPress={openPost}
+                accessibilityRole="button"
+                accessibilityLabel={t('servers.openToInteract')}
+                accessibilityHint={t('servers.openToInteractHint')}
+            >
+                <Ionicons name="log-in-outline" size={actionIcon} color={colors.accentText} />
+                <Text style={[type.meta, styles.actionCount, styles.actionCountActive]}>{t('servers.openToInteract')}</Text>
+            </Pressable>
+            {shareButton}
+        </View>
+    ) : (
         <View style={[styles.actionRow, compactMode && styles.actionRowCompact]}>
             <Pressable
                 style={actionButtonStyle}
@@ -464,9 +495,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             >
                 <Ionicons name={isBookmarked ? 'bookmark' : 'bookmark-outline'} size={actionIcon} color={isBookmarked ? colors.accentText : colors.textMuted} />
             </Pressable>
-            <Pressable style={actionButtonStyle} hitSlop={actionHitSlop} onPress={handleShare} accessibilityRole="button" accessibilityLabel={t('post.share')}>
-                <Ionicons name="share-outline" size={actionIcon} color={colors.textMuted} />
-            </Pressable>
+            {shareButton}
         </View>
     );
 
@@ -474,7 +503,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         <Card style={[styles.card, compactMode && styles.cardCompact, threadMode && styles.cardThread]}>
             {isReblog && (
                 <Pressable
-                    onPress={() => openAccount(status.account)}
+                    onPress={() => openPerson(status.account)}
                     accessibilityRole="link"
                     style={[styles.boostRow, compactMode && styles.boostRowCompact]}
                 >
@@ -524,6 +553,13 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         </Card>
     );
 
+    if (remote) {
+        return (
+            <Pressable onPress={openPost} accessibilityHint={t('servers.openToInteractHint')}>
+                {card}
+            </Pressable>
+        );
+    }
     if (!onPress) {
         return card;
     }

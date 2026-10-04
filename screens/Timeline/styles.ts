@@ -116,6 +116,16 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         backgroundColor: colors.accentColor,
         borderColor: colors.accentColor,
     },
+    // A feed you're looking at without having pinned it
+    feedPillPreview: {
+        borderStyle: 'dashed',
+        borderColor: colors.buttonTextColor,
+    },
+    feedPillDivider: {
+        width: StyleSheet.hairlineWidth,
+        height: FEED_PILL_HEIGHT - 12,
+        backgroundColor: colors.borderColor,
+    },
     feedPillText: {
         fontSize: 13.5,
         color: colors.textSecondary,
