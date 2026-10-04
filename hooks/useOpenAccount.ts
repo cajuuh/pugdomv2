@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { openLink } from '../components/TootCard/htmlContent';
-import { resolveAccount } from '../services/mastodon/search';
+import { fediverseLinkKind, resolveAccount, resolveStatus } from '../services/mastodon/search';
 import { Account, Mention } from '../services/mastodon/types';
 import { useNavigator } from '../services/navigationContext';
 
@@ -42,5 +42,32 @@ export const useOpenAccount = () => {
     // A hashtag link's tag; the screen shows the server's spelling once loaded
     const openHashtag = useCallback((tag: string) => push({ name: 'hashtag', tag }), [push]);
 
-    return { openAccount, openMention, openHashtag };
+    // Links to posts or profiles (from any server) open in pugdom when our server can fetch them;
+    // everything else, or anything it can't find, opens in the browser
+    const openLinkInApp = useCallback(
+        async (href: string) => {
+            const kind = fediverseLinkKind(href);
+            try {
+                if (kind === 'post') {
+                    const status = await resolveStatus(href);
+                    if (status) {
+                        push({ name: 'thread', statusId: status.id });
+                        return;
+                    }
+                } else if (kind === 'profile') {
+                    const account = await resolveAccount(href);
+                    if (account) {
+                        push({ name: 'account', accountId: account.id, account });
+                        return;
+                    }
+                }
+            } catch {
+                // fall through to the browser
+            }
+            openLink(href);
+        },
+        [push]
+    );
+
+    return { openAccount, openMention, openHashtag, openLinkInApp };
 };

@@ -4,7 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { BlurView } from 'expo-blur';
 import { useRecyclingState } from '@shopify/flash-list';
 import { Status, Attachment, PreviewCard } from '../../services/mastodon/types';
-import { StatusHtmlContent, openLink } from './htmlContent';
+import { StatusHtmlContent } from './htmlContent';
 import { useSettings } from '../../services/settingsContext';
 import { useTheme } from '../../services/themeContext';
 import { useCompose } from '../../services/composeContext';
@@ -121,7 +121,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
 
     const updateCachedStatus = useUpdateCachedStatus();
     const queryClient = useQueryClient();
-    const { openAccount, openMention, openHashtag } = useOpenAccount();
+    const { openAccount, openMention, openHashtag, openLinkInApp } = useOpenAccount();
     // Stable for StatusHtmlContent's memo: mentions resolve against this post's mention list
     const handleMention = useCallback((href: string) => openMention(href, targetStatus.mentions), [openMention, targetStatus.mentions]);
     const i18n = useI18n();
@@ -303,7 +303,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         // Compact Mode skips the thumbnail: a title + domain row
         if (!card.image || compactMode) {
             return (
-                <Pressable style={[styles.linkPlain, compactMode && styles.linkPlainCompact]} onPress={() => openLink(card.url)} accessibilityRole="link" accessibilityLabel={card.title || domain}>
+                <Pressable style={[styles.linkPlain, compactMode && styles.linkPlainCompact]} onPress={() => openLinkInApp(card.url)} accessibilityRole="link" accessibilityLabel={card.title || domain}>
                     <View style={styles.linkIconBox}>
                         <Ionicons name="link" size={18} color={colors.accentText} />
                     </View>
@@ -315,7 +315,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             );
         }
         return (
-            <Pressable style={styles.linkPreview} onPress={() => openLink(card.url)} accessibilityRole="link" accessibilityLabel={card.title || domain}>
+            <Pressable style={styles.linkPreview} onPress={() => openLinkInApp(card.url)} accessibilityRole="link" accessibilityLabel={card.title || domain}>
                 <View style={styles.linkThumb}>
                     <Image source={{ uri: card.image }} style={StyleSheet.absoluteFill} resizeMode="cover" />
                 </View>
@@ -342,7 +342,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     width={contentWidth}
                     onPressMention={onPressMention ?? handleMention}
                     onPressHashtag={onPressHashtag ?? openHashtag}
-                    onPressLink={openLink}
+                    onPressLink={openLinkInApp}
                 />
             )}
             {targetStatus.poll && (
