@@ -4,6 +4,7 @@ import * as WebBrowser from 'expo-web-browser';
 import RenderHtml, { HTMLElementModel, HTMLContentModel, defaultSystemFonts } from 'react-native-render-html';
 import { CustomEmoji } from '../../services/mastodon/types';
 import { fontFamilies } from '../../services/theme/typography';
+import { tagFromHref } from '../../services/mastodon/tags';
 
 // Post (and bio) HTML: custom emoji inline, mentions / hashtags / links routed to the handlers
 
@@ -32,18 +33,29 @@ const renderers = {
 // RenderHtml ignores font families it wasn't told about
 const systemFonts = [...defaultSystemFonts, ...Object.values(fontFamilies)];
 
+// What a link in a post is. Mastodon marks hashtags as class="mention hashtag" (rel="tag"), so check for
+// hashtags before mentions; links from other software may only have the /tags/ path.
+export const linkKind = (href: string, attribs: { class?: string; rel?: string } = {}): 'hashtag' | 'mention' | 'link' => {
+    const classes = (attribs.class || '').split(/\s+/);
+    if (classes.includes('hashtag') || (attribs.rel || '').split(/\s+/).includes('tag') || /\/tags\/[^/?#]+\/?(?:[?#]|$)/.test(href)) {
+        return 'hashtag';
+    }
+    if (classes.includes('mention')) return 'mention';
+    return 'link';
+};
+
 export const StatusHtmlContent = React.memo(({ content, emojis, colors, bodyFont, compactMode, width, onPressMention, onPressHashtag, onPressLink }: any) => {
     const renderersProps = React.useMemo(() => ({
         a: {
             onPress: (event: any, href: string, htmlAttribs: any) => {
-                const className = htmlAttribs.class || '';
-                if (className.includes('mention')) {
+                const kind = linkKind(href, htmlAttribs);
+                if (kind === 'hashtag') {
+                    const tag = tagFromHref(href);
+                    if (onPressHashtag && tag) onPressHashtag(tag);
+                    else onPressLink(href);
+                } else if (kind === 'mention') {
                     // The profile URL; callers match it against the post's mentions to find the account
                     if (onPressMention) onPressMention(href);
-                    else onPressLink(href);
-                } else if (className.includes('hashtag')) {
-                    const tag = href.split('/').pop()?.replace(/^#/, '');
-                    if (onPressHashtag && tag) onPressHashtag(tag);
                     else onPressLink(href);
                 } else {
                     onPressLink(href);

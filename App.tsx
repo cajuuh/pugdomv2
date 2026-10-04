@@ -31,6 +31,7 @@ import { queryClient } from './services/queryClient';
 import { I18nProvider, useI18n } from './services/i18n/i18nContext';
 import { NavigationProvider, StackEntry, useNavigator } from './services/navigationContext';
 import Account from './screens/Account/account';
+import Hashtag from './screens/Hashtag/hashtag';
 
 // Keep the pug splash up until the fonts and the saved account are loaded
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -85,6 +86,8 @@ function NavigationRoot() {
       // Back from a profile returns to the post or notification it was opened from
       case 'account':
         return <Account accountId={route.accountId} account={route.account} onBack={pop} onStatusPress={openThread} onSettingsPress={openSettings} />;
+      case 'hashtag':
+        return <Hashtag tag={route.tag} onBack={pop} onStatusPress={openThread} />;
     }
   };
 
