@@ -5,6 +5,7 @@ import RenderHtml, { HTMLElementModel, HTMLContentModel, defaultSystemFonts } fr
 import { CustomEmoji } from '../../services/mastodon/types';
 import { fontFamilies } from '../../services/theme/typography';
 import { tagFromHref } from '../../services/mastodon/tags';
+import { withoutQuoteInline } from '../../services/htmlText';
 
 // Post (and bio) HTML: custom emoji inline, mentions / hashtags / links routed to the handlers
 
@@ -82,7 +83,7 @@ export const StatusHtmlContent = React.memo(({ content, emojis, colors, bodyFont
     }), [colors, bodyFont, compactMode]);
 
     const processedHtml = React.useMemo(() => {
-        let html = content || '';
+        let html = withoutQuoteInline(content || '');
         html = html.replace(/<span class="invisible">https?:\/\/<\/span>/gi, '');
         html = html.replace(/<span class="invisible">.*?<\/span>/gi, (match: string) => {
             const inner = match.replace(/<[^>]*>/g, '');

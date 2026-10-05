@@ -53,16 +53,7 @@ export const notificationTime = (createdAt: string, now = new Date(), { t, local
     });
 };
 
-const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", '#39': "'", nbsp: ' ' };
-
-// Post HTML as plain text, keeping paragraph and line breaks
-export const plainText = (html?: string) =>
-    (html ?? '')
-        .replace(/<br\s*\/?>/gi, '\n')
-        .replace(/<\/p>\s*<p[^>]*>/gi, '\n\n')
-        .replace(/<[^>]*>/g, '')
-        .replace(/&(amp|lt|gt|quot|apos|#39|nbsp);/g, (_, entity: string) => ENTITIES[entity])
-        .trim();
+export { plainText } from '../../services/htmlText';
 
 // "Ana", "Ana and Joon", "Ana, Joon and 4 others": who a row is from, given the names it can show and how many there are
 export const actorsText = (names: string[], count: number, { t, tn }: Translator = defaultTranslator()) => {
