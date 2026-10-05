@@ -43,6 +43,8 @@ import { QuotedPost } from './quotedPost';
 import { useNavigator } from '../../services/navigationContext';
 import { ActionSheet, BottomSheet } from '../ComposeModal/optionSheet';
 import { quotePermission } from '../../services/mastodon/quotes';
+import { useOptionalAuth } from '../../services/authContext';
+import { useModeration } from '../../hooks/useModeration';
 
 const getRelativeTime = (dateString: string, { t }: Translator) => {
     const now = new Date();
@@ -165,6 +167,9 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     // The boost menu (boost or quote), mounted once opened so every card doesn't carry a modal
     const [boostMenuMounted, setBoostMenuMounted] = useRecyclingState(false, recyclingDeps);
     const [boostMenuOpen, setBoostMenuOpen] = useRecyclingState(false, recyclingDeps);
+    // The ⋯ menu: report, mute, block
+    const [postMenuMounted, setPostMenuMounted] = useRecyclingState(false, recyclingDeps);
+    const [postMenuOpen, setPostMenuOpen] = useRecyclingState(false, recyclingDeps);
 
     // Lets async handlers skip state updates if the card was recycled while a request was in flight
     const renderedStatusId = useRef(targetStatus.id);
@@ -248,6 +253,12 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     // iOS can't present the compose modal while the menu's own modal is still closing
     const quotePost = () => setTimeout(() => openCompose({ quoteStatus: targetStatus }), Platform.OS === 'ios' ? 400 : 0);
     const quoteDescription = { automatic: t('quotes.quoteHint'), manual: t('quotes.needsApproval'), denied: t('quotes.notAllowed') };
+
+    const auth = useOptionalAuth();
+    const moderation = useModeration();
+    // Not for your own posts, nor for posts read from another server (their ids aren't ours)
+    const showPostMenu = !remote && !!auth?.user && auth.user.id !== targetStatus.account.id;
+    const author = targetStatus.account;
 
     const handleShare = async () => {
         // Remote statuses may have no `url`; `uri` always points to the original post
@@ -468,7 +479,25 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             <Text style={[type.meta, styles.handle, compactMode && styles.handleInline]} numberOfLines={1}>@{targetStatus.account.acct}</Text>
         </Pressable>
     );
-    const time = <Text style={[type.meta, styles.time]}>{getRelativeTime(targetStatus.created_at, i18n)}</Text>;
+    const time = (
+        <>
+            <Text style={[type.meta, styles.time]}>{getRelativeTime(targetStatus.created_at, i18n)}</Text>
+            {showPostMenu && (
+                <Pressable
+                    onPress={() => {
+                        setPostMenuMounted(true);
+                        setPostMenuOpen(true);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('moderation.postMenu')}
+                    hitSlop={hitSlopFor(18, 22)}
+                    style={styles.postMenuButton}
+                >
+                    <Ionicons name="ellipsis-horizontal" size={18} color={colors.textMuted} />
+                </Pressable>
+            )}
+        </>
+    );
     const avatar = (
         <Pressable onPress={openAuthor} accessibilityRole="link" accessibilityLabel={t('post.openProfile', { name: authorName })}>
             <Avatar
@@ -629,6 +658,19 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                             disabled: quoting === 'denied',
                             onPress: quotePost,
                         },
+                    ]}
+                />
+            )}
+            {postMenuMounted && showPostMenu && (
+                <ActionSheet
+                    visible={postMenuOpen}
+                    title={t('moderation.moreOptions')}
+                    subtitle={t('moderation.postMenuTitle', { acct: author.acct })}
+                    onClose={() => setPostMenuOpen(false)}
+                    actions={[
+                        { key: 'report', icon: 'flag-outline', label: t('moderation.reportPost'), onPress: () => moderation.report(author, targetStatus) },
+                        { key: 'mute', icon: 'volume-mute-outline', label: t('moderation.muteAccount', { acct: author.acct }), description: t('moderation.muteHint'), onPress: () => moderation.mute(author) },
+                        { key: 'block', icon: 'hand-left-outline', label: t('moderation.blockAccount', { acct: author.acct }), description: t('moderation.blockHint'), onPress: () => moderation.block(author) },
                     ]}
                 />
             )}

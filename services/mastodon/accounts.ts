@@ -38,3 +38,25 @@ export async function getRelationships(accountIds: string[]): Promise<Relationsh
     const response = await apiClient.get<Relationship[]>('/accounts/relationships', { params: { id: accountIds } });
     return response.data;
 }
+
+// Blocking hides them from you and you from them, and removes any follow between you
+export async function blockAccount(accountId: string): Promise<Relationship> {
+    const response = await apiClient.post<Relationship>(`/accounts/${accountId}/block`);
+    return response.data;
+}
+
+export async function unblockAccount(accountId: string): Promise<Relationship> {
+    const response = await apiClient.post<Relationship>(`/accounts/${accountId}/unblock`);
+    return response.data;
+}
+
+// Muting hides their posts (and, by default, notifications from them); they aren't told
+export async function muteAccount(accountId: string): Promise<Relationship> {
+    const response = await apiClient.post<Relationship>(`/accounts/${accountId}/mute`, { notifications: true });
+    return response.data;
+}
+
+export async function unmuteAccount(accountId: string): Promise<Relationship> {
+    const response = await apiClient.post<Relationship>(`/accounts/${accountId}/unmute`);
+    return response.data;
+}

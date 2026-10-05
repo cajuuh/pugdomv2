@@ -311,6 +311,14 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         paddingBottom: space.sm,
         paddingHorizontal: space.xs,
     },
+    pickerTitleWithSubtitle: {
+        paddingBottom: 2,
+    },
+    pickerSubtitle: {
+        color: colors.textMuted,
+        paddingBottom: space.sm,
+        paddingHorizontal: space.xs,
+    },
     option: {
         minHeight: 52,
         paddingVertical: 10,

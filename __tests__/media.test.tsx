@@ -22,7 +22,7 @@ jest.mock('../services/storage', () => ({
     getCredentials: async () => ({ accessToken: 'token', instanceUrl: 'https://home.social' }),
 }));
 const me: Account = { id: '1', username: 'me', acct: 'me', display_name: 'Me', avatar: '', emojis: [] };
-jest.mock('../services/authContext', () => ({ useAuth: () => ({ user: me }) }));
+jest.mock('../services/authContext', () => ({ useAuth: () => ({ user: me }), useOptionalAuth: () => ({ user: me }) }));
 jest.mock('../services/themeContext', () => ({
     useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
 }));

@@ -14,7 +14,7 @@ const me: Account = { id: 'me', username: 'me', acct: 'me', display_name: 'Me', 
 const ana: Account = { id: 'ana', username: 'ana', acct: 'ana', display_name: 'Ana', avatar: '', emojis: [] };
 
 const mockOpenCompose = jest.fn();
-jest.mock('../services/authContext', () => ({ useAuth: () => ({ user: me }) }));
+jest.mock('../services/authContext', () => ({ useAuth: () => ({ user: me }), useOptionalAuth: () => ({ user: me }) }));
 jest.mock('../services/themeContext', () => ({
     useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
 }));

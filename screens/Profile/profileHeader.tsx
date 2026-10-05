@@ -14,6 +14,8 @@ import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { AVATAR_SIZE, BANNER_HEIGHT, SHARE_SIZE, makeStyles } from './styles';
 import { AccountListsSheet } from '../../components/AccountListsSheet/accountListsSheet';
+import { ActionSheet } from '../../components/ComposeModal/optionSheet';
+import { useModeration } from '../../hooks/useModeration';
 
 const originOf = (url?: string) => url?.match(/^https?:\/\/[^/?#]+/i)?.[0];
 
@@ -49,6 +51,8 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
     const { openMention, openHashtag, openLinkInApp } = useOpenAccount();
     const name = user.display_name || user.username;
     const [listsOpen, setListsOpen] = useState(false);
+    const [menuOpen, setMenuOpen] = useState(false);
+    const moderation = useModeration();
     const remoteServer = mode === 'other' && user.acct.includes('@') ? user.acct.split('@').pop() : undefined;
 
     const handleEditProfile = async () => {
@@ -133,6 +137,17 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
                         >
                             <Ionicons name="share-outline" size={18} color={colors.textPrimary} />
                         </Pressable>
+                        {mode === 'other' && (
+                            <Pressable
+                                onPress={() => setMenuOpen(true)}
+                                accessibilityRole="button"
+                                accessibilityLabel={t('moderation.profileMenu', { name })}
+                                hitSlop={hitSlopFor(SHARE_SIZE, SHARE_SIZE)}
+                                style={({ pressed }) => [styles.share, pressed && { opacity: 0.7 }]}
+                            >
+                                <Ionicons name="ellipsis-horizontal" size={18} color={colors.textPrimary} />
+                            </Pressable>
+                        )}
                     </View>
                 </View>
 
@@ -191,6 +206,23 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
             </View>
             {mode === 'other' && (
                 <AccountListsSheet visible={listsOpen} onClose={() => setListsOpen(false)} account={user} following={!!relationship?.following} />
+            )}
+            {mode === 'other' && (
+                <ActionSheet
+                    visible={menuOpen}
+                    title={t('moderation.moreOptions')}
+                    subtitle={`@${user.acct}`}
+                    onClose={() => setMenuOpen(false)}
+                    actions={[
+                        { key: 'report', icon: 'flag-outline', label: t('moderation.reportAccount', { acct: user.acct }), onPress: () => moderation.report(user) },
+                        relationship?.muting
+                            ? { key: 'unmute', icon: 'volume-high-outline', label: t('moderation.unmuteAccount', { acct: user.acct }), onPress: () => moderation.unmute(user) }
+                            : { key: 'mute', icon: 'volume-mute-outline', label: t('moderation.muteAccount', { acct: user.acct }), description: t('moderation.muteHint'), onPress: () => moderation.mute(user) },
+                        relationship?.blocking
+                            ? { key: 'unblock', icon: 'hand-left', label: t('moderation.unblockAccount', { acct: user.acct }), onPress: () => moderation.unblock(user) }
+                            : { key: 'block', icon: 'hand-left-outline', label: t('moderation.blockAccount', { acct: user.acct }), description: t('moderation.blockHint'), onPress: () => moderation.block(user) },
+                    ]}
+                />
             )}
         </View>
     );

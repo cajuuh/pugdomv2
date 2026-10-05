@@ -14,12 +14,14 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 interface BottomSheetProps {
     visible: boolean;
     title: string;
+    // A line under the title in the text font, for things like handles that look wrong in the display font
+    subtitle?: string;
     onClose: () => void;
     children: React.ReactNode;
 }
 
 // A small sheet over the compose sheet, for pickers
-export const BottomSheet: React.FC<BottomSheetProps> = ({ visible, title, onClose, children }) => {
+export const BottomSheet: React.FC<BottomSheetProps> = ({ visible, title, subtitle, onClose, children }) => {
     const { type } = useTheme();
     const { t } = useI18n();
     const styles = useThemedStyles(makeStyles);
@@ -50,7 +52,10 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({ visible, title, onClos
                         <View style={styles.grabberRow}>
                             <View style={styles.grabber} />
                         </View>
-                        <Text accessibilityRole="header" style={[type.sheetTitle, styles.pickerTitle]}>{title}</Text>
+                        <Text accessibilityRole="header" style={[type.sheetTitle, styles.pickerTitle, !!subtitle && styles.pickerTitleWithSubtitle]}>
+                            {title}
+                        </Text>
+                        {!!subtitle && <Text style={[type.meta, styles.pickerSubtitle]} numberOfLines={1}>{subtitle}</Text>}
                     </View>
                     {children}
                 </Animated.View>
@@ -124,17 +129,18 @@ export interface SheetAction {
 interface ActionSheetProps {
     visible: boolean;
     title: string;
+    subtitle?: string;
     actions: SheetAction[];
     onClose: () => void;
 }
 
 // A short list of things to do; picking one closes the sheet first
-export function ActionSheet({ visible, title, actions, onClose }: ActionSheetProps) {
+export function ActionSheet({ visible, title, subtitle, actions, onClose }: ActionSheetProps) {
     const { colors, type } = useTheme();
     const styles = useThemedStyles(makeStyles);
 
     return (
-        <BottomSheet visible={visible} title={title} onClose={onClose}>
+        <BottomSheet visible={visible} title={title} subtitle={subtitle} onClose={onClose}>
             {actions.map(action => (
                 <Pressable
                     key={action.key}

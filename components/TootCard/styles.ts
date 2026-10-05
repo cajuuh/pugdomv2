@@ -220,6 +220,11 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         fontSize: 12.5,
         color: colors.textPrimary,
     },
+    // The ⋯ after the time; small, with a full touch target from its hitSlop
+    postMenuButton: {
+        marginLeft: space.xs,
+        paddingVertical: 2,
+    },
     altChip: {
         position: 'absolute',
         left: space.sm,

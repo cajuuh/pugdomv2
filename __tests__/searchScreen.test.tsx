@@ -13,7 +13,7 @@ jest.mock('../services/storage', () => ({
     getCredentials: jest.fn().mockResolvedValue({ accessToken: 't', instanceUrl: 'https://pug.social' }),
 }));
 jest.mock('expo-web-browser', () => ({ openBrowserAsync: jest.fn() }));
-jest.mock('../services/authContext', () => ({ useAuth: () => ({ user: { id: 'me' } }) }));
+jest.mock('../services/authContext', () => ({ useAuth: () => ({ user: { id: 'me' } }), useOptionalAuth: () => ({ user: { id: 'me' } }) }));
 jest.mock('../services/themeContext', () => ({
     useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
 }));

@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
-import { Account } from './mastodon/types';
+import { Account, Status } from './mastodon/types';
 
 // Screens that open on top of the tabs. Links and lists join in later phases.
 // An account route can carry the account we already have, so its profile shows at once.
@@ -11,7 +11,9 @@ export type Route =
     | { name: 'link'; url: string; title?: string }
     | { name: 'feedEditor' }
     | { name: 'listEditor'; listId?: string }
-    | { name: 'serverPicker' };
+    | { name: 'serverPicker' }
+    // Reporting an account to the server's moderators, about one of their posts when given
+    | { name: 'report'; account: Account; status?: Status };
 
 // Each entry gets its own key, so the same screen can sit in the stack twice (thread → other → same thread)
 export interface StackEntry {
