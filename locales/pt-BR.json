@@ -1,0 +1,6 @@
+{
+  "ios": {
+    "NSPhotoLibraryUsageDescription": "O pugdon abre suas fotos para você anexá-las às publicações.",
+    "NSCameraUsageDescription": "O pugdon usa a câmera para você tirar uma foto para uma publicação."
+  }
+}

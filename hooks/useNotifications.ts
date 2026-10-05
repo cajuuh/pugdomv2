@@ -5,7 +5,7 @@ import { Notification } from '../services/mastodon/types';
 export type NotificationFilter = 'all' | 'mentions' | 'follows';
 
 // The notification types the screen knows how to render
-export const SUPPORTED_NOTIFICATION_TYPES: Notification['type'][] = ['mention', 'reblog', 'favourite', 'follow'];
+export const SUPPORTED_NOTIFICATION_TYPES: Notification['type'][] = ['mention', 'reblog', 'favourite', 'follow', 'quote'];
 
 // Filtering happens on the server, so every page is full of matching notifications
 const FILTER_TYPES: Record<NotificationFilter, Notification['type'][]> = {

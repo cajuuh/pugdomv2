@@ -82,12 +82,21 @@ describe('fetchInstanceConfiguration', () => {
             data: { configuration: { statuses: { max_characters: 5000 }, polls: { max_options: 8, max_characters_per_option: 100 } } },
         });
 
+        // Media limits not given: Mastodon's defaults
         await expect(fetchInstanceConfiguration()).resolves.toEqual({
+            ...DEFAULT_INSTANCE_CONFIGURATION,
             maxCharacters: 5000,
             maxPollOptions: 8,
             maxCharactersPerPollOption: 100,
         });
         expect(mockedGet).toHaveBeenCalledWith('https://one.social/api/v2/instance');
+    });
+
+    it('knows quote posts come with Mastodon API version 7', async () => {
+        mockedGet.mockResolvedValue({ data: { api_versions: { mastodon: 7 } } });
+        await expect(fetchInstanceConfiguration()).resolves.toMatchObject({ supportsQuotes: true });
+        mockedGet.mockResolvedValue({ data: { api_versions: { mastodon: 6 } } });
+        await expect(fetchInstanceConfiguration()).resolves.toMatchObject({ supportsQuotes: false });
     });
 
     it("falls back to Mastodon's defaults for missing fields", async () => {

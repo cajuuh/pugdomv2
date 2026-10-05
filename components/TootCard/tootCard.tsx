@@ -1,10 +1,10 @@
-import React, { useRef } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { Alert, Image, Platform, Pressable, Share, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { BlurView } from 'expo-blur';
 import { useRecyclingState } from '@shopify/flash-list';
 import { Status, Attachment, PreviewCard } from '../../services/mastodon/types';
-import { StatusHtmlContent, openLink } from './htmlContent';
+import { StatusHtmlContent } from './htmlContent';
 import { useSettings } from '../../services/settingsContext';
 import { useTheme } from '../../services/themeContext';
 import { useCompose } from '../../services/composeContext';
@@ -37,6 +37,16 @@ import { useMediaViewer } from '../MediaViewer/mediaViewer';
 import { hitSlopFor } from '../../services/theme/shape';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { defaultTranslator, Translator } from '../../services/i18n/translate';
+import { useOpenAccount } from '../../hooks/useOpenAccount';
+import { FocusedImage } from './focusedImage';
+import { QuotedPost } from './quotedPost';
+import { useNavigator } from '../../services/navigationContext';
+import { ActionSheet, BottomSheet } from '../ComposeModal/optionSheet';
+import { quotePermission } from '../../services/mastodon/quotes';
+import { useOptionalAuth } from '../../services/authContext';
+import { useModeration } from '../../hooks/useModeration';
+import { usePostActions } from '../../hooks/usePostActions';
+import { EditHistorySheet } from './editHistorySheet';
 
 const getRelativeTime = (dateString: string, { t }: Translator) => {
     const now = new Date();
@@ -100,14 +110,18 @@ interface TootCardProps {
     status: Status;
     onPressMention?: (acct: string) => void;
     onPressHashtag?: (hashtag: string) => void;
+    // Gets the mention's profile URL; by default the profile opens in pugdom
     // Receives the id of the status to open; for boosts that's the original, since a boost has no thread of its own
     onPress?: (statusId: string) => void;
     threadMode?: boolean;
     hasThreadLineTop?: boolean;
     hasThreadLineBottom?: boolean;
+    // A post read from another server (its ids aren't ours): no buttons that act on it here; tapping it,
+    // its author or "open to interact" finds it through our server first
+    remote?: boolean;
 }
 
-export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPressHashtag, onPress, threadMode, hasThreadLineTop, hasThreadLineBottom }) => {
+export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPressHashtag, onPress, threadMode, hasThreadLineTop, hasThreadLineBottom, remote }) => {
     const { compactMode } = useSettings();
     const { colors, type } = useTheme();
     const styles = useThemedStyles(makeStyles);
@@ -119,6 +133,22 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
 
     const updateCachedStatus = useUpdateCachedStatus();
     const queryClient = useQueryClient();
+    const { openAccount, openMention, openHashtag, openLinkInApp } = useOpenAccount();
+    // Stable for StatusHtmlContent's memo: mentions resolve against this post's mention list
+    // (a remote post's mention ids belong to its server, so those are looked up by URL)
+    const handleMention = useCallback(
+        (href: string) => openMention(href, remote ? undefined : targetStatus.mentions),
+        [openMention, remote, targetStatus.mentions]
+    );
+    // Remote posts and people open through our server, by their address
+    const openPost = () => openLinkInApp(targetStatus.url ?? targetStatus.uri);
+    const { push } = useNavigator();
+    // A quoted post inside a remote one has the other server's id too
+    const openQuoted = useCallback(
+        (quoted: Status) => (remote ? openLinkInApp(quoted.url ?? quoted.uri) : onPress ? onPress(quoted.id) : push({ name: 'thread', statusId: quoted.id })),
+        [remote, openLinkInApp, onPress, push]
+    );
+    const openPerson = (account: Status['account']) => (remote && account.url ? openLinkInApp(account.url) : openAccount(account));
     const i18n = useI18n();
     const { t, tn } = i18n;
 
@@ -133,6 +163,18 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const [boostCount, setBoostCount] = useRecyclingState(targetStatus.reblogs_count, recyclingDeps);
     const [isBookmarked, setIsBookmarked] = useRecyclingState(!!targetStatus.bookmarked, recyclingDeps);
     const [isMediaRevealed, setIsMediaRevealed] = useRecyclingState(false, recyclingDeps);
+    // The image description opened from an ALT chip; kept while its sheet slides away
+    const [shownDescription, setShownDescription] = useRecyclingState<string | null>(null, recyclingDeps);
+    const [descriptionOpen, setDescriptionOpen] = useRecyclingState(false, recyclingDeps);
+    // The boost menu (boost or quote), mounted once opened so every card doesn't carry a modal
+    const [boostMenuMounted, setBoostMenuMounted] = useRecyclingState(false, recyclingDeps);
+    const [boostMenuOpen, setBoostMenuOpen] = useRecyclingState(false, recyclingDeps);
+    // The ⋯ menu: report, mute, block
+    const [postMenuMounted, setPostMenuMounted] = useRecyclingState(false, recyclingDeps);
+    const [postMenuOpen, setPostMenuOpen] = useRecyclingState(false, recyclingDeps);
+    // The edit history of an edited post
+    const [historyMounted, setHistoryMounted] = useRecyclingState(false, recyclingDeps);
+    const [historyOpen, setHistoryOpen] = useRecyclingState(false, recyclingDeps);
 
     // Lets async handlers skip state updates if the card was recycled while a request was in flight
     const renderedStatusId = useRef(targetStatus.id);
@@ -203,6 +245,29 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         }
     };
 
+    // On servers with quote posts, boost opens a menu to boost or quote; elsewhere it boosts at once
+    const quoting = quotePermission(targetStatus);
+    const pressBoost = () => {
+        if (quoting === null) {
+            toggleReblog();
+            return;
+        }
+        setBoostMenuMounted(true);
+        setBoostMenuOpen(true);
+    };
+    // iOS can't present the compose modal while the menu's own modal is still closing
+    const quotePost = () => setTimeout(() => openCompose({ quoteStatus: targetStatus }), Platform.OS === 'ios' ? 400 : 0);
+    const quoteDescription = { automatic: t('quotes.quoteHint'), manual: t('quotes.needsApproval'), denied: t('quotes.notAllowed') };
+
+    const auth = useOptionalAuth();
+    const moderation = useModeration();
+    const postActions = usePostActions();
+    // Not for posts read from another server (their ids aren't ours). Your own posts get edit and
+    // delete; other people's, report, mute and block.
+    const showPostMenu = !remote && !!auth?.user;
+    const ownPost = !!auth?.user && auth.user.id === targetStatus.account.id;
+    const author = targetStatus.account;
+
     const handleShare = async () => {
         // Remote statuses may have no `url`; `uri` always points to the original post
         const link = targetStatus.url || targetStatus.uri;
@@ -232,6 +297,22 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
 
         const count = attachments.length;
         const veiled = targetStatus.sensitive && !isMediaRevealed;
+        // Images with a description say so; tapping the chip reads it, tapping the image still opens it
+        const altChip = (item: Attachment) =>
+            !!item.description && (
+                <Pressable
+                    onPress={() => {
+                        setShownDescription(item.description!);
+                        setDescriptionOpen(true);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('post.readDescription')}
+                    hitSlop={6}
+                    style={styles.altChip}
+                >
+                    <Text style={[type.label, styles.altChipText]}>ALT</Text>
+                </Pressable>
+            );
         const tiles = count === 1 ? (
             <Pressable
                 style={[styles.singleMedia, compactMode && styles.singleMediaCompact]}
@@ -239,7 +320,8 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 accessibilityRole="imagebutton"
                 accessibilityLabel={mediaLabel(attachments[0], 0, count, i18n)}
             >
-                <Image source={{ uri: attachments[0].preview_url || attachments[0].url }} style={styles.mediaImage} resizeMode="cover" />
+                <FocusedImage attachment={attachments[0]} style={styles.mediaImage} />
+                {altChip(attachments[0])}
             </Pressable>
         ) : (
             <View style={styles.mediaGrid}>
@@ -251,7 +333,8 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                         accessibilityRole="imagebutton"
                         accessibilityLabel={mediaLabel(item, idx, count, i18n)}
                     >
-                        <Image source={{ uri: item.preview_url || item.url }} style={styles.mediaImage} resizeMode="cover" />
+                        <FocusedImage attachment={item} style={styles.mediaImage} />
+                        {altChip(item)}
                     </Pressable>
                 ))}
             </View>
@@ -298,7 +381,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         // Compact Mode skips the thumbnail: a title + domain row
         if (!card.image || compactMode) {
             return (
-                <Pressable style={[styles.linkPlain, compactMode && styles.linkPlainCompact]} onPress={() => openLink(card.url)} accessibilityRole="link" accessibilityLabel={card.title || domain}>
+                <Pressable style={[styles.linkPlain, compactMode && styles.linkPlainCompact]} onPress={() => openLinkInApp(card.url)} accessibilityRole="link" accessibilityLabel={card.title || domain}>
                     <View style={styles.linkIconBox}>
                         <Ionicons name="link" size={18} color={colors.accentText} />
                     </View>
@@ -310,7 +393,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             );
         }
         return (
-            <Pressable style={styles.linkPreview} onPress={() => openLink(card.url)} accessibilityRole="link" accessibilityLabel={card.title || domain}>
+            <Pressable style={styles.linkPreview} onPress={() => openLinkInApp(card.url)} accessibilityRole="link" accessibilityLabel={card.title || domain}>
                 <View style={styles.linkThumb}>
                     <Image source={{ uri: card.image }} style={StyleSheet.absoluteFill} resizeMode="cover" />
                 </View>
@@ -335,19 +418,23 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     bodyFont={type.body}
                     compactMode={compactMode}
                     width={contentWidth}
-                    onPressMention={onPressMention}
-                    onPressHashtag={onPressHashtag}
-                    onPressLink={openLink}
+                    onPressMention={onPressMention ?? handleMention}
+                    onPressHashtag={onPressHashtag ?? openHashtag}
+                    onPressLink={openLinkInApp}
                 />
             )}
             {targetStatus.poll && (
                 <Poll
                     initialPoll={targetStatus.poll}
                     onPollUpdated={(poll) => updateCachedStatus({ ...targetStatus, poll })}
+                    readOnly={remote}
                 />
             )}
             {renderMedia(targetStatus.media_attachments)}
             {targetStatus.card && renderLinkPreview(targetStatus.card)}
+            {targetStatus.quote && (
+                <QuotedPost quote={targetStatus.quote} onOpen={openQuoted} timeOf={createdAt => getRelativeTime(createdAt, i18n)} />
+            )}
         </>
     );
 
@@ -386,26 +473,87 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         [type.name, styles.displayName, compactMode && { fontSize: 13 }],
         compactMode ? 13 : 15
     );
+    const authorName = targetStatus.account.display_name || targetStatus.account.username;
+    const openAuthor = () => openPerson(targetStatus.account);
+    // Name and handle open the author's profile
     const names = (
-        <View style={[styles.names, compactMode && styles.namesInline]}>
+        <Pressable
+            onPress={openAuthor}
+            accessibilityRole="link"
+            accessibilityLabel={t('post.openProfile', { name: authorName })}
+            style={[styles.names, compactMode && styles.namesInline]}
+        >
             {displayName}
             <Text style={[type.meta, styles.handle, compactMode && styles.handleInline]} numberOfLines={1}>@{targetStatus.account.acct}</Text>
-        </View>
+        </Pressable>
     );
-    const time = <Text style={[type.meta, styles.time]}>{getRelativeTime(targetStatus.created_at, i18n)}</Text>;
+    const time = (
+        <>
+            <Text style={[type.meta, styles.time]}>{getRelativeTime(targetStatus.created_at, i18n)}</Text>
+            {!!targetStatus.edited_at && (
+                <Pressable
+                    onPress={() => {
+                        setHistoryMounted(true);
+                        setHistoryOpen(true);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('posts.editedLabel')}
+                    hitSlop={hitSlopFor(40, 22)}
+                >
+                    <Text style={[type.meta, styles.time]}> · {t('posts.edited')}</Text>
+                </Pressable>
+            )}
+            {showPostMenu && (
+                <Pressable
+                    onPress={() => {
+                        setPostMenuMounted(true);
+                        setPostMenuOpen(true);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('moderation.postMenu')}
+                    hitSlop={hitSlopFor(18, 22)}
+                    style={styles.postMenuButton}
+                >
+                    <Ionicons name="ellipsis-horizontal" size={18} color={colors.textMuted} />
+                </Pressable>
+            )}
+        </>
+    );
     const avatar = (
-        <Avatar
-            name={targetStatus.account.display_name || targetStatus.account.username}
-            uri={targetStatus.account.avatar}
-            size={avatarSize}
-        />
+        <Pressable onPress={openAuthor} accessibilityRole="link" accessibilityLabel={t('post.openProfile', { name: authorName })}>
+            <Avatar
+                name={targetStatus.account.display_name || targetStatus.account.username}
+                uri={targetStatus.account.avatar}
+                size={avatarSize}
+            />
+        </Pressable>
     );
 
     // Compact buttons are shorter but keep a MIN_TOUCH hit area
     const actionIcon = compactMode ? COMPACT_ACTION_ICON : 20;
     const actionButtonStyle = [styles.actionButton, compactMode && styles.actionButtonCompact];
     const actionHitSlop = compactMode ? hitSlopFor(44, COMPACT_ACTION_HEIGHT) : undefined;
-    const actions = (
+    const shareButton = (
+        <Pressable style={actionButtonStyle} hitSlop={actionHitSlop} onPress={handleShare} accessibilityRole="button" accessibilityLabel={t('post.share')}>
+            <Ionicons name="share-outline" size={actionIcon} color={colors.textMuted} />
+        </Pressable>
+    );
+    const actions = remote ? (
+        <View style={[styles.actionRow, compactMode && styles.actionRowCompact]}>
+            <Pressable
+                style={actionButtonStyle}
+                hitSlop={actionHitSlop}
+                onPress={openPost}
+                accessibilityRole="button"
+                accessibilityLabel={t('servers.openToInteract')}
+                accessibilityHint={t('servers.openToInteractHint')}
+            >
+                <Ionicons name="log-in-outline" size={actionIcon} color={colors.accentText} />
+                <Text style={[type.meta, styles.actionCount, styles.actionCountActive]}>{t('servers.openToInteract')}</Text>
+            </Pressable>
+            {shareButton}
+        </View>
+    ) : (
         <View style={[styles.actionRow, compactMode && styles.actionRowCompact]}>
             <Pressable
                 style={actionButtonStyle}
@@ -420,7 +568,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             <Pressable
                 style={actionButtonStyle}
                 hitSlop={actionHitSlop}
-                onPress={toggleReblog}
+                onPress={pressBoost}
                 accessibilityRole="button"
                 accessibilityLabel={tn(isReblogged ? 'post.boostedCount' : 'post.boost', boostCount || 0)}
                 accessibilityState={{ selected: isReblogged }}
@@ -449,16 +597,18 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             >
                 <Ionicons name={isBookmarked ? 'bookmark' : 'bookmark-outline'} size={actionIcon} color={isBookmarked ? colors.accentText : colors.textMuted} />
             </Pressable>
-            <Pressable style={actionButtonStyle} hitSlop={actionHitSlop} onPress={handleShare} accessibilityRole="button" accessibilityLabel={t('post.share')}>
-                <Ionicons name="share-outline" size={actionIcon} color={colors.textMuted} />
-            </Pressable>
+            {shareButton}
         </View>
     );
 
     const card = (
         <Card style={[styles.card, compactMode && styles.cardCompact, threadMode && styles.cardThread]}>
             {isReblog && (
-                <View style={[styles.boostRow, compactMode && styles.boostRowCompact]}>
+                <Pressable
+                    onPress={() => openPerson(status.account)}
+                    accessibilityRole="link"
+                    style={[styles.boostRow, compactMode && styles.boostRowCompact]}
+                >
                     <Ionicons name="repeat" size={14} color={colors.textMuted} />
                     <Avatar name={status.account.display_name || status.account.username} uri={status.account.avatar} size={18} />
                     {renderTextWithEmojis(
@@ -467,7 +617,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                         [type.meta, styles.boostText],
                         12.5
                     )}
-                </View>
+                </Pressable>
             )}
 
             {avatarColumn ? (
@@ -505,10 +655,86 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         </Card>
     );
 
-    if (!onPress) {
-        return card;
+    const withDescription = (content: React.ReactNode) => (
+        <>
+            {content}
+            {boostMenuMounted && quoting && (
+                <ActionSheet
+                    visible={boostMenuOpen}
+                    title={t('quotes.menuTitle')}
+                    onClose={() => setBoostMenuOpen(false)}
+                    actions={[
+                        {
+                            key: 'boost',
+                            icon: 'repeat',
+                            label: isReblogged ? t('quotes.undoBoost') : t('quotes.boost'),
+                            description: isReblogged ? undefined : t('quotes.boostHint'),
+                            onPress: toggleReblog,
+                        },
+                        {
+                            key: 'quote',
+                            icon: 'chatbox-ellipses-outline',
+                            label: t('quotes.quote'),
+                            description: quoteDescription[quoting],
+                            disabled: quoting === 'denied',
+                            onPress: quotePost,
+                        },
+                    ]}
+                />
+            )}
+            {historyMounted && !!targetStatus.edited_at && (
+                <EditHistorySheet
+                    visible={historyOpen}
+                    statusId={targetStatus.id}
+                    onClose={() => setHistoryOpen(false)}
+                    timeOf={createdAt => getRelativeTime(createdAt, i18n)}
+                />
+            )}
+            {postMenuMounted && showPostMenu && ownPost && (
+                <ActionSheet
+                    visible={postMenuOpen}
+                    title={t('moderation.moreOptions')}
+                    subtitle={t('posts.yourPost')}
+                    onClose={() => setPostMenuOpen(false)}
+                    actions={[
+                        { key: 'edit', icon: 'create-outline', label: t('posts.edit'), onPress: () => postActions.edit(targetStatus) },
+                        { key: 'redraft', icon: 'refresh', label: t('posts.redraft'), description: t('posts.redraftHint'), onPress: () => postActions.redraft(targetStatus) },
+                        { key: 'delete', icon: 'trash-outline', label: t('posts.delete'), onPress: () => postActions.remove(targetStatus) },
+                    ]}
+                />
+            )}
+            {postMenuMounted && showPostMenu && !ownPost && (
+                <ActionSheet
+                    visible={postMenuOpen}
+                    title={t('moderation.moreOptions')}
+                    subtitle={t('moderation.postMenuTitle', { acct: author.acct })}
+                    onClose={() => setPostMenuOpen(false)}
+                    actions={[
+                        { key: 'report', icon: 'flag-outline', label: t('moderation.reportPost'), onPress: () => moderation.report(author, targetStatus) },
+                        { key: 'mute', icon: 'volume-mute-outline', label: t('moderation.muteAccount', { acct: author.acct }), description: t('moderation.muteHint'), onPress: () => moderation.mute(author) },
+                        { key: 'block', icon: 'hand-left-outline', label: t('moderation.blockAccount', { acct: author.acct }), description: t('moderation.blockHint'), onPress: () => moderation.block(author) },
+                    ]}
+                />
+            )}
+            {shownDescription !== null && (
+                <BottomSheet visible={descriptionOpen} title={t('post.descriptionTitle')} onClose={() => setDescriptionOpen(false)}>
+                    <Text selectable style={[type.body, styles.descriptionText]}>{shownDescription}</Text>
+                </BottomSheet>
+            )}
+        </>
+    );
+
+    if (remote) {
+        return withDescription(
+            <Pressable onPress={openPost} accessibilityHint={t('servers.openToInteractHint')}>
+                {card}
+            </Pressable>
+        );
     }
-    return (
+    if (!onPress) {
+        return withDescription(card);
+    }
+    return withDescription(
         <Pressable onPress={() => onPress(targetStatus.id)} accessibilityHint={t('post.opensThread')}>
             {card}
         </Pressable>

@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "pugdom",
+    "name": "pugdon",
     "slug": "pugdom",
     "scheme": "pugdom",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -26,7 +26,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.cajuuh1337.pugdom"
+      "package": "com.cajuuh.pugdom"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -57,7 +57,18 @@
           }
         }
       ],
-      "expo-web-browser"
-    ]
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "pugdon opens your photos so you can attach them to posts.",
+          "cameraPermission": "pugdon uses the camera so you can take a photo for a post.",
+          "microphonePermission": false
+        }
+      ]
+    ],
+    "locales": {
+      "pt-BR": "./locales/pt-BR.json"
+    }
   }
 }

@@ -48,6 +48,7 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     headerSideEnd: {
         justifyContent: 'flex-end',
     },
+    // The sides share what the title leaves, so titles stay short (one line) to leave room for the buttons
     headerTitle: {
         color: colors.textPrimary,
     },
@@ -162,6 +163,37 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     },
     toolActive: {
         backgroundColor: colors.accentSoft,
+    },
+    // An edited post's poll, shown but not editable
+    lockedPoll: {
+        marginHorizontal: space.lg,
+        gap: space.xs,
+    },
+    lockedPollTitle: {
+        color: colors.textSecondary,
+    },
+    lockedPollOption: {
+        color: colors.textPrimary,
+    },
+    lockedPollNote: {
+        color: colors.textMuted,
+    },
+    quoteNote: {
+        marginHorizontal: 20,
+        color: colors.textMuted,
+    },
+    // The quoted post under the text, with its ✕ over the corner
+    quote: {
+        marginHorizontal: space.lg,
+    },
+    quoteRemove: {
+        position: 'absolute',
+        top: 0,
+        right: -space.sm,
+    },
+    // Kept mounted but out of the way (the post while describing an image)
+    hidden: {
+        display: 'none',
     },
     toolbarSpacer: {
         flex: 1,
@@ -290,6 +322,14 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     pickerTitle: {
         color: colors.textPrimary,
         paddingTop: space.md,
+        paddingBottom: space.sm,
+        paddingHorizontal: space.xs,
+    },
+    pickerTitleWithSubtitle: {
+        paddingBottom: 2,
+    },
+    pickerSubtitle: {
+        color: colors.textMuted,
         paddingBottom: space.sm,
         paddingHorizontal: space.xs,
     },

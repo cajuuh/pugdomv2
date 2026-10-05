@@ -75,7 +75,7 @@ describe('Notifications', () => {
         await renderScreen();
 
         await screen.findByText(/mentioned you/);
-        expect(mockedFetch).toHaveBeenCalledWith(undefined, ['mention', 'reblog', 'favourite', 'follow']);
+        expect(mockedFetch).toHaveBeenCalledWith(undefined, ['mention', 'reblog', 'favourite', 'follow', 'quote']);
     });
 
     it.each([
@@ -102,6 +102,14 @@ describe('Notifications', () => {
 
         expect(await screen.findByText(/favourited your post/)).toBeTruthy();
         expect(screen.getAllByText(/your post|mentioned you|followed you/)).toHaveLength(1);
+    });
+
+    it('shows when someone quotes your post, with what they wrote', async () => {
+        mockedFetch.mockResolvedValue([notification('1', 'quote', account('a', 'alice'))]);
+        await renderScreen();
+
+        expect(await screen.findByText(/quoted your post/)).toBeTruthy();
+        expect(screen.getByText('post 1')).toBeTruthy();
     });
 
     it('keeps notifications cached when coming back to the tab', async () => {

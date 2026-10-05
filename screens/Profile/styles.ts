@@ -5,7 +5,7 @@ import { radii, space } from '../../services/theme/shape';
 
 export const AVATAR_SIZE = 88;
 export const SHARE_SIZE = 38;
-const BANNER_HEIGHT = 168;
+export const BANNER_HEIGHT = 168;
 const RING = 5;
 
 export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
@@ -51,6 +51,36 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     info: {
         paddingHorizontal: 20,
         gap: space.md,
+    },
+    bannerButtonLeft: {
+        right: undefined,
+        left: space.lg,
+    },
+    // "Follows you" and the link to a remote profile, under the handle
+    otherInfo: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        gap: space.sm,
+        marginTop: space.sm,
+    },
+    followsYou: {
+        paddingVertical: 3,
+        paddingHorizontal: space.sm,
+        borderRadius: radii.pill,
+        backgroundColor: colors.accentSoft,
+    },
+    followsYouText: {
+        fontSize: 10.5,
+        color: colors.accentText,
+    },
+    remoteLink: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.xs,
+    },
+    remoteLinkText: {
+        color: colors.accentText,
     },
     avatarRow: {
         flexDirection: 'row',

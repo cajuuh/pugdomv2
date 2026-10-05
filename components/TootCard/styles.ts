@@ -220,6 +220,29 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         fontSize: 12.5,
         color: colors.textPrimary,
     },
+    // The ⋯ after the time; small, with a full touch target from its hitSlop
+    postMenuButton: {
+        marginLeft: space.xs,
+        paddingVertical: 2,
+    },
+    altChip: {
+        position: 'absolute',
+        left: space.sm,
+        bottom: space.sm,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: radii.pill,
+        backgroundColor: colors.veilStrong,
+    },
+    altChipText: {
+        fontSize: 10,
+        color: colors.textPrimary,
+    },
+    descriptionText: {
+        color: colors.textPrimary,
+        paddingHorizontal: space.xs,
+        paddingBottom: space.md,
+    },
     hideMediaChip: {
         position: 'absolute',
         left: space.sm,

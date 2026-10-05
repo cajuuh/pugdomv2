@@ -14,12 +14,14 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 interface BottomSheetProps {
     visible: boolean;
     title: string;
+    // A line under the title in the text font, for things like handles that look wrong in the display font
+    subtitle?: string;
     onClose: () => void;
     children: React.ReactNode;
 }
 
 // A small sheet over the compose sheet, for pickers
-export const BottomSheet: React.FC<BottomSheetProps> = ({ visible, title, onClose, children }) => {
+export const BottomSheet: React.FC<BottomSheetProps> = ({ visible, title, subtitle, onClose, children }) => {
     const { type } = useTheme();
     const { t } = useI18n();
     const styles = useThemedStyles(makeStyles);
@@ -50,7 +52,10 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({ visible, title, onClos
                         <View style={styles.grabberRow}>
                             <View style={styles.grabber} />
                         </View>
-                        <Text accessibilityRole="header" style={[type.sheetTitle, styles.pickerTitle]}>{title}</Text>
+                        <Text accessibilityRole="header" style={[type.sheetTitle, styles.pickerTitle, !!subtitle && styles.pickerTitleWithSubtitle]}>
+                            {title}
+                        </Text>
+                        {!!subtitle && <Text style={[type.meta, styles.pickerSubtitle]} numberOfLines={1}>{subtitle}</Text>}
                     </View>
                     {children}
                 </Animated.View>
@@ -107,6 +112,56 @@ export function OptionSheet<T extends string | number>({ visible, title, options
                     );
                 })}
             </ScrollView>
+        </BottomSheet>
+    );
+}
+
+export interface SheetAction {
+    key: string;
+    label: string;
+    description?: string;
+    icon?: React.ComponentProps<typeof Ionicons>['name'];
+    // Shown, but can't be picked; the description says why
+    disabled?: boolean;
+    onPress: () => void;
+}
+
+interface ActionSheetProps {
+    visible: boolean;
+    title: string;
+    subtitle?: string;
+    actions: SheetAction[];
+    onClose: () => void;
+}
+
+// A short list of things to do; picking one closes the sheet first
+export function ActionSheet({ visible, title, subtitle, actions, onClose }: ActionSheetProps) {
+    const { colors, type } = useTheme();
+    const styles = useThemedStyles(makeStyles);
+
+    return (
+        <BottomSheet visible={visible} title={title} subtitle={subtitle} onClose={onClose}>
+            {actions.map(action => (
+                <Pressable
+                    key={action.key}
+                    onPress={() => {
+                        onClose();
+                        action.onPress();
+                    }}
+                    disabled={action.disabled}
+                    accessibilityRole="button"
+                    accessibilityLabel={action.label}
+                    accessibilityHint={action.description}
+                    accessibilityState={{ disabled: !!action.disabled }}
+                    style={({ pressed }) => [styles.option, pressed && styles.optionSelected, action.disabled && { opacity: 0.5 }]}
+                >
+                    {action.icon && <Ionicons name={action.icon} size={20} color={action.disabled ? colors.textMuted : colors.accentText} />}
+                    <View style={styles.optionText}>
+                        <Text style={[type.name, styles.optionLabel]}>{action.label}</Text>
+                        {action.description && <Text style={[type.meta, styles.optionDescription]}>{action.description}</Text>}
+                    </View>
+                </Pressable>
+            ))}
         </BottomSheet>
     );
 }

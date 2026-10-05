@@ -13,6 +13,12 @@ export interface Attachment {
     url: string;
     preview_url: string;
     description?: string;
+    // Sizes and the focal point (-1..1, y up), when the server knows them
+    meta?: {
+        original?: { width?: number; height?: number };
+        small?: { width?: number; height?: number };
+        focus?: { x: number; y: number };
+    } | null;
 }
 
 export interface Account {
@@ -33,6 +39,8 @@ export interface Account {
         language?: string | null;
         // Default visibility for new posts
         privacy?: Status['visibility'];
+        // Who can quote new posts by default (Mastodon 4.5)
+        quote_policy?: 'public' | 'followers' | 'nobody';
     };
 }
 
@@ -51,6 +59,12 @@ export interface PreviewCard {
     image?: string | null;
     provider_name?: string;
     provider_url?: string;
+    author_name?: string;
+    author_url?: string;
+    html?: string;
+    width?: number;
+    height?: number;
+    blurhash?: string | null;
 }
 
 export interface Status {
@@ -78,6 +92,59 @@ export interface Status {
     bookmarked?: boolean;
     card?: PreviewCard | null;
     poll?: Poll | null;
+    // When it was last edited, if ever
+    edited_at?: string | null;
+    // The source text, only in the answer to a delete (for "delete and redraft")
+    text?: string;
+    // Quote posts (Mastodon 4.4+); older servers send none of these
+    quote?: Quote | null;
+    quotes_count?: number;
+    quote_approval?: QuoteApproval | null;
+}
+
+// What a post was written as, to edit it
+export interface StatusSource {
+    id: string;
+    text: string;
+    spoiler_text: string;
+}
+
+// One version of an edited post
+export interface StatusEdit {
+    content: string;
+    spoiler_text: string;
+    sensitive: boolean;
+    created_at: string;
+    account: Account;
+    media_attachments: Attachment[];
+    emojis: CustomEmoji[];
+    poll?: { options: { title: string }[] } | null;
+}
+
+// Only `accepted` quotes are shown; any state not listed here counts as unauthorized
+export type QuoteState =
+    | 'pending'
+    | 'accepted'
+    | 'rejected'
+    | 'revoked'
+    | 'deleted'
+    | 'unauthorized'
+    | 'blocked_account'
+    | 'blocked_domain'
+    | 'muted_account';
+
+// The quoted post, or (for a quote inside a quoted post) only its id
+export interface Quote {
+    state: QuoteState | (string & {});
+    quoted_status?: Status | null;
+    quoted_status_id?: string | null;
+}
+
+// Who can quote a post, and what that means for the person looking at it
+export interface QuoteApproval {
+    automatic: string[];
+    manual: string[];
+    current_user: 'automatic' | 'manual' | 'denied' | 'unknown' | (string & {});
 }
 
 export interface PollOption {
@@ -103,11 +170,20 @@ export interface Relationship {
     following: boolean;
     requested: boolean;
     followed_by: boolean;
+    blocking?: boolean;
+    muting?: boolean;
+}
+
+// One of a server's rules (shown when reporting)
+export interface Rule {
+    id: string;
+    text: string;
+    hint?: string;
 }
 
 export interface Notification {
     id: string;
-    type: 'mention' | 'status' | 'reblog' | 'follow' | 'follow_request' | 'favourite' | 'poll' | 'update' | 'admin.sign_up' | 'admin.report' | 'severed_relationships' | 'moderation_warning';
+    type: 'mention' | 'status' | 'reblog' | 'follow' | 'follow_request' | 'favourite' | 'poll' | 'update' | 'admin.sign_up' | 'admin.report' | 'severed_relationships' | 'moderation_warning' | 'quote' | 'quoted_update';
     created_at: string;
     account: Account;
     status?: Status;

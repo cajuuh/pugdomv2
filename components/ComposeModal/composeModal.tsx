@@ -19,7 +19,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '../../services/authContext';
 import { useTheme } from '../../services/themeContext';
-import { createStatus } from '../../services/mastodon/statuses';
+import { createStatus, editStatus, getStatusSource } from '../../services/mastodon/statuses';
+import { plainText } from '../../services/htmlText';
+import { STATUS_UPDATED_EVENT, useUpdateCachedStatus } from '../../hooks/useUpdateCachedStatus';
+import type { ExistingPost } from '../../services/composeContext';
 import { Account, Status } from '../../services/mastodon/types';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
 import { replyMentionsText } from '../../services/mastodon/mentions';
@@ -34,6 +37,17 @@ import { OptionSheet, SheetOption } from './optionSheet';
 import { DEFAULT_POLL_DURATION, PollEditor } from './pollEditor';
 import { useDragToDismiss, useSheetTransition } from './sheetTransition';
 import { PILL_HEIGHT, makeStyles } from './styles';
+import { AttachmentStrip } from './attachmentStrip';
+import { AltTextEditor } from './altTextEditor';
+import { AltReminderSheet } from './altReminderSheet';
+import { useMediaAttachments } from '../../hooks/useMediaAttachments';
+import { pickImages, takePhoto } from '../../services/media/pick';
+import { ImageEditor } from '../ImageEditor/imageEditor';
+import { applyEdits } from '../../services/media/edit';
+import { ImageEdits, Point, sameEdits } from '../../services/media/geometry';
+import { PickedImage } from '../../services/media/prepare';
+import { QuotedPost } from '../TootCard/quotedPost';
+import { effectiveQuotePolicy, QuotePolicy } from '../../services/mastodon/quotes';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { Translator } from '../../services/i18n/translate';
 
@@ -81,9 +95,19 @@ const deviceLanguage = () => {
 export const defaultLanguage = (user: Account | null) =>
     [user?.source?.language, deviceLanguage()].find(code => code && LANGUAGES.some(l => l.code === code)) ?? 'en';
 
-// Replies keep the parent's visibility; new posts use the account's default
-export const defaultVisibility = (user: Account | null, replyToStatus: Status | null): Visibility =>
-    replyToStatus?.visibility ?? user?.source?.privacy ?? 'public';
+// Replies keep the parent's visibility; new posts use the account's default. Quoting a followers-only
+// post makes the quote followers-only too (Mastodon enforces it).
+export const defaultVisibility = (user: Account | null, replyToStatus: Status | null, quoteStatus: Status | null = null): Visibility => {
+    const visibility = replyToStatus?.visibility ?? user?.source?.privacy ?? 'public';
+    return quoteStatus?.visibility === 'private' && (visibility === 'public' || visibility === 'unlisted') ? 'private' : visibility;
+};
+
+type QuotePolicyOption = SheetOption<QuotePolicy> & { icon: React.ComponentProps<typeof Ionicons>['name'] };
+export const quotePolicies = ({ t }: Translator): QuotePolicyOption[] => [
+    { value: 'public', label: t('compose.quoteAnyone'), description: t('compose.quoteAnyoneDescription'), icon: 'globe-outline' },
+    { value: 'followers', label: t('compose.quoteFollowers'), description: t('compose.quoteFollowersDescription'), icon: 'people-outline' },
+    { value: 'nobody', label: t('compose.quoteNobody'), description: t('compose.quoteNobodyDescription'), icon: 'lock-closed-outline' },
+];
 
 // Mastodon rejects polls with fewer than two choices or repeated choices
 const pollValidationError = (options: string[], { t }: Translator) => {
@@ -128,17 +152,29 @@ const useKeyboard = (windowHeight: number) => {
     return keyboard;
 };
 
-// Anything typed beyond the reply mentions the sheet opened with, a poll, or a content warning
-export const hasDraft = ({ text, initialText, showPoll, spoilerText }: { text: string; initialText: string; showPoll: boolean; spoilerText: string }) =>
-    text.trim() !== initialText.trim() || showPoll || spoilerText.trim().length > 0;
+// Anything typed beyond the reply mentions the sheet opened with, a poll, a content warning or images
+export const hasDraft = ({ text, initialText, showPoll, spoilerText, hasMedia = false }: { text: string; initialText: string; showPoll: boolean; spoilerText: string; hasMedia?: boolean }) =>
+    text.trim() !== initialText.trim() || showPoll || spoilerText.trim().length > 0 || hasMedia;
 
 interface ComposeModalProps {
     isOpen: boolean;
     replyToStatus: Status | null;
+    // The post being quoted, shown under the text
+    quoteStatus?: Status | null;
+    // One of your posts to edit, or to redraft after deleting it
+    existingPost?: ExistingPost | null;
     closeCompose: () => void;
 }
 
-const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, closeCompose }) => {
+// What an edit sends back for a poll it can't change: the same choices and the time it has left
+// (leaving the poll out would remove it; new choices would reset its votes)
+const unchangedPoll = (poll: NonNullable<Status['poll']>) => ({
+    options: poll.options.map(option => option.title),
+    multiple: poll.multiple,
+    expires_in: Math.max(300, Math.round(((poll.expires_at ? new Date(poll.expires_at).getTime() : Date.now()) - Date.now()) / 1000)),
+});
+
+const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quoteStatus = null, existingPost = null, closeCompose }) => {
     const { user } = useAuth();
     const { colors, type } = useTheme();
     const i18n = useI18n();
@@ -155,14 +191,26 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
     const [spoilerText, setSpoilerText] = useState('');
     const [loading, setLoading] = useState(false);
     const [language, setLanguage] = useState(() => defaultLanguage(user));
-    const [visibility, setVisibility] = useState<Visibility>(() => defaultVisibility(user, replyToStatus));
-    const [picker, setPicker] = useState<'language' | 'visibility' | 'emoji' | null>(null);
+    const [visibility, setVisibility] = useState<Visibility>(() => defaultVisibility(user, replyToStatus, quoteStatus));
+    const [picker, setPicker] = useState<'language' | 'visibility' | 'emoji' | 'quotePolicy' | null>(null);
+    // The post being quoted (✕ drops it) and who may quote this one
+    const [quote, setQuote] = useState<Status | null>(quoteStatus);
+    const [quotePolicy, setQuotePolicy] = useState<QuotePolicy>(user?.source?.quote_policy ?? 'public');
 
     // Poll States
     const [showPoll, setShowPoll] = useState(false);
     const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
     const [pollDuration, setPollDuration] = useState<number>(DEFAULT_POLL_DURATION);
     const [pollMultiple, setPollMultiple] = useState(false);
+
+    const media = useMediaAttachments(instanceConfiguration);
+    // The image whose description (and focal point) is being edited, shown in place of the post
+    const [altEditing, setAltEditing] = useState<{ key: string; draft: string; focus?: Point } | null>(null);
+    const [reminderOpen, setReminderOpen] = useState(false);
+    // The image open in the editor: its original and the edits so far
+    const [imageEditing, setImageEditing] = useState<{ key: string; original: PickedImage; edits: ImageEdits } | null>(null);
+    // The pug asks about missing descriptions once per post
+    const reminded = useRef(false);
 
     const inputRef = useRef<TextInput>(null);
     const cursor = useRef(0);
@@ -174,10 +222,17 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
     const shownReply = useRef(replyToStatus);
     if (isOpen) shownReply.current = replyToStatus;
     const reply = shownReply.current;
+    const shownExisting = useRef(existingPost);
+    if (isOpen) shownExisting.current = existingPost;
+    const existing = shownExisting.current;
+    const editing = existing?.mode === 'edit';
+    // An edit keeps the post's poll as it is
+    const lockedPoll = editing ? existing.status.poll ?? null : null;
+    const updateCachedStatus = useUpdateCachedStatus();
 
     // Swiping the sheet down closes it, asking first if there's a draft
     const { drag, panHandlers } = useDragToDismiss(cancel => {
-        if (!hasDraft({ text, initialText: initialText.current, showPoll, spoilerText })) {
+        if (!hasDraft({ text, initialText: initialText.current, showPoll, spoilerText, hasMedia: media.attachments.length > 0 })) {
             closeCompose();
             return;
         }
@@ -197,32 +252,91 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
             setSensitive(false);
             setSpoilerText('');
             setLanguage(defaultLanguage(user));
-            setVisibility(defaultVisibility(user, replyToStatus));
+            setVisibility(defaultVisibility(user, replyToStatus, quoteStatus));
+            setQuote(quoteStatus);
+            setQuotePolicy(user?.source?.quote_policy ?? 'public');
             setLoading(false);
             setShowPoll(false);
             setPollOptions(['', '']);
             setPollDuration(DEFAULT_POLL_DURATION);
             setPollMultiple(false);
             setPicker(null);
+            media.reset();
+            setAltEditing(null);
+            setImageEditing(null);
+            setReminderOpen(false);
+            reminded.current = false;
+
+            // Your post, back in compose: its words, warning, language, quote, images and poll
+            let current = true;
+            if (existingPost) {
+                const post = existingPost.status;
+                const source = existingPost.mode === 'redraft' ? post.text ?? plainText(post.content) : plainText(post.content);
+                initialText.current = source;
+                setText(source);
+                cursor.current = source.length;
+                setSensitive(!!post.spoiler_text);
+                setSpoilerText(post.spoiler_text ?? '');
+                setVisibility(post.visibility);
+                if (post.language && LANGUAGES.some(option => option.code === post.language)) setLanguage(post.language);
+                setQuote(post.quote?.quoted_status ?? null);
+                if (post.poll && existingPost.mode === 'redraft') {
+                    setShowPoll(true);
+                    setPollOptions(post.poll.options.map(option => option.title));
+                    setPollMultiple(post.poll.multiple);
+                }
+                media.addExisting(post.media_attachments ?? []);
+                // The rendered post loses some of what was typed; edits start from the source
+                if (existingPost.mode === 'edit') {
+                    getStatusSource(post.id)
+                        .then(written => {
+                            // Keep the rendered text if the source doesn't come back as expected
+                            if (!current || typeof written?.text !== 'string') return;
+                            initialText.current = written.text;
+                            setText(written.text);
+                            cursor.current = written.text.length;
+                            setSensitive(!!written.spoiler_text);
+                            setSpoilerText(written.spoiler_text ?? '');
+                        })
+                        .catch(error => console.warn('Could not load the post source:', error));
+                }
+            }
 
             // Focus once the sheet is in place
             const timer = setTimeout(() => {
                 inputRef.current?.focus();
             }, 150);
-            return () => clearTimeout(timer);
+            return () => {
+                current = false;
+                clearTimeout(timer);
+            };
         }
-    }, [isOpen, replyToStatus, drag]);
+    }, [isOpen, replyToStatus, quoteStatus, existingPost, drag]);
+
+    // Closing stops uploads that are still going
+    const cancelUploads = media.cancel;
+    useEffect(() => {
+        if (!isOpen) cancelUploads();
+    }, [isOpen, cancelUploads]);
 
     if (!mounted) return null;
 
     const remaining = instanceConfiguration.maxCharacters - statusLength(text, sensitive ? spoilerText : '');
     const isOverLimit = remaining < 0;
-    const isEmpty = text.trim().length === 0;
+    // Images can be posted without text
+    const isEmpty = text.trim().length === 0 && media.attachments.length === 0;
     const pollError = showPoll ? pollValidationError(pollOptions, i18n) : null;
-    const isPublishDisabled = isEmpty || isOverLimit || !!pollError || loading;
+    const isPublishDisabled = isEmpty || isOverLimit || !!pollError || media.pending || loading;
+    const editingAttachment = altEditing ? media.attachments.find(attachment => attachment.key === altEditing.key) : undefined;
+    const altOverLimit = !!altEditing && altEditing.draft.length > instanceConfiguration.descriptionLimit;
     const visibilityOptions = visibilities(i18n);
     const selectedVisibility = visibilityOptions.find(v => v.value === visibility) ?? visibilityOptions[0];
     const selectedLanguage = LANGUAGES.find(l => l.code === language) ?? LANGUAGES[0];
+    // Followers-only and private posts can't be quoted by others, whatever the setting says
+    const quotePolicyOptions = quotePolicies(i18n);
+    const shownQuotePolicy = effectiveQuotePolicy(quotePolicy, visibility);
+    const quotePolicyLocked = shownQuotePolicy !== quotePolicy || visibility === 'private' || visibility === 'direct';
+    const selectedQuotePolicy = quotePolicyOptions.find(option => option.value === shownQuotePolicy) ?? quotePolicyOptions[0];
 
     const resetPoll = () => {
         setShowPoll(false);
@@ -237,8 +351,68 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
         cursor.current = next.cursor;
     };
 
-    const handlePublish = async () => {
+    const describeImage = (key: string) => {
+        const attachment = media.attachments.find(item => item.key === key);
+        if (attachment) setAltEditing({ key, draft: attachment.description, focus: attachment.focus });
+    };
+
+    const saveDescription = () => {
+        if (!altEditing || altOverLimit) return;
+        media.describe(altEditing.key, altEditing.draft);
+        media.setFocus(altEditing.key, altEditing.focus);
+        setAltEditing(null);
+    };
+
+    const editImage = (key: string) => {
+        const history = media.editsFor(key);
+        if (history) setImageEditing({ key, ...history });
+    };
+
+    // Applies the edits to the original and uploads the result in place of the last upload
+    const finishEditing = async (edits: ImageEdits) => {
+        if (!imageEditing) return;
+        if (sameEdits(edits, imageEditing.edits)) {
+            setImageEditing(null);
+            return;
+        }
+        try {
+            const edited = await applyEdits(imageEditing.original, edits);
+            media.edit(imageEditing.key, edited, edits);
+            setImageEditing(null);
+        } catch (error) {
+            console.warn('Could not edit the image:', error);
+            Alert.alert(t('editor.failedTitle'), t('editor.failed'));
+        }
+    };
+
+    const addFromLibrary = async () => {
+        try {
+            media.add(await pickImages(media.room));
+        } catch (error) {
+            console.warn('Could not open the gallery:', error);
+        }
+    };
+
+    const addFromCamera = async () => {
+        try {
+            const photo = await takePhoto();
+            if (photo === 'denied') {
+                Alert.alert(t('compose.cameraDeniedTitle'), t('compose.cameraDenied'));
+                return;
+            }
+            media.add(photo);
+        } catch (error) {
+            console.warn('Could not open the camera:', error);
+        }
+    };
+
+    const handlePublish = async (skipReminder = false) => {
         if (isPublishDisabled) return;
+        if (!skipReminder && !reminded.current && media.missingDescription.length > 0) {
+            reminded.current = true;
+            setReminderOpen(true);
+            return;
+        }
         setLoading(true);
         const pollParams = showPoll
             ? {
@@ -249,14 +423,35 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
             : undefined;
 
         try {
+            if (editing && existing) {
+                const { ids, attributes } = media.editAttributes();
+                const updated = await editStatus(existing.status.id, {
+                    status: text,
+                    spoiler_text: sensitive ? spoilerText : '',
+                    sensitive,
+                    language,
+                    media_ids: ids,
+                    media_attributes: attributes.length > 0 ? attributes : undefined,
+                    poll: lockedPoll ? unchangedPoll(lockedPoll) : undefined,
+                    quote_approval_policy: instanceConfiguration.supportsQuotes ? shownQuotePolicy : undefined,
+                });
+                updateCachedStatus(updated);
+                DeviceEventEmitter.emit(STATUS_UPDATED_EVENT, updated);
+                closeCompose();
+                return;
+            }
+            const mediaIds = await media.finish();
             await createStatus({
                 status: text,
-                in_reply_to_id: reply ? reply.id : null,
+                in_reply_to_id: reply ? reply.id : existing?.status.in_reply_to_id ?? null,
                 sensitive,
                 spoiler_text: sensitive ? spoilerText : undefined,
                 language: language,
                 visibility,
                 poll: pollParams,
+                media_ids: mediaIds.length > 0 ? mediaIds : undefined,
+                quoted_status_id: quote?.id,
+                quote_approval_policy: instanceConfiguration.supportsQuotes ? shownQuotePolicy : undefined,
             });
 
             DeviceEventEmitter.emit('status_published');
@@ -264,7 +459,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
         } catch (error: any) {
             console.error('Failed to post status:', error);
             Alert.alert(
-                t('compose.publishFailed'),
+                editing ? t('compose.saveFailed') : t('compose.publishFailed'),
                 error.response?.data?.error || error.message || t('compose.publishFailedMessage')
             );
         } finally {
@@ -272,12 +467,13 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
         }
     };
 
-    const tool = (icon: React.ComponentProps<typeof Ionicons>['name'], label: string, onPress: () => void, active = false) => (
+    const tool = (icon: React.ComponentProps<typeof Ionicons>['name'], label: string, onPress: () => void, active = false, disabled = false) => (
         <IconButton
             icon={icon}
             accessibilityLabel={label}
             onPress={onPress}
             selected={active}
+            disabled={disabled}
             color={active ? colors.accentText : colors.textSecondary}
             style={[styles.tool, active && styles.toolActive]}
         />
@@ -299,18 +495,60 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
 
                 <View style={styles.header}>
                     <View style={styles.headerSide}>
-                        <PillButton label={t('common.cancel')} variant="ghost" onPress={closeCompose} style={styles.cancel} />
+                        <PillButton
+                            label={t('common.cancel')}
+                            variant="ghost"
+                            onPress={altEditing ? () => setAltEditing(null) : closeCompose}
+                            style={styles.cancel}
+                        />
                     </View>
-                    <Text accessibilityRole="header" style={[type.sheetTitle, styles.headerTitle]}>
-                        {reply ? t('compose.reply') : t('compose.newPost')}
+                    <Text accessibilityRole="header" style={[type.sheetTitle, styles.headerTitle]} numberOfLines={1}>
+                        {altEditing
+                            ? t('compose.describeTitle')
+                            : editing
+                              ? t('compose.editPost')
+                              : reply
+                                ? t('compose.reply')
+                                : quote
+                                  ? t('compose.quotePost')
+                                  : t('compose.newPost')}
                     </Text>
                     <View style={[styles.headerSide, styles.headerSideEnd]}>
-                        <PillButton label={t('compose.post')} onPress={handlePublish} disabled={isPublishDisabled && !loading} loading={loading} />
+                        {altEditing ? (
+                            <PillButton label={t('compose.done')} onPress={saveDescription} disabled={altOverLimit} />
+                        ) : (
+                            <PillButton
+                                label={editing ? t('compose.save') : t('compose.post')}
+                                onPress={() => handlePublish()}
+                                disabled={isPublishDisabled && !loading}
+                                loading={loading}
+                            />
+                        )}
                     </View>
                 </View>
             </View>
 
-            <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+            {altEditing && editingAttachment && (
+                <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+                    <AltTextEditor
+                        uri={editingAttachment.uri}
+                        width={editingAttachment.width}
+                        height={editingAttachment.height}
+                        value={altEditing.draft}
+                        onChange={draft => setAltEditing({ ...altEditing, draft })}
+                        maxLength={instanceConfiguration.descriptionLimit}
+                        focus={altEditing.focus}
+                        onFocusChange={focus => setAltEditing({ ...altEditing, focus })}
+                    />
+                </ScrollView>
+            )}
+
+            {/* Hidden, not unmounted, while describing an image, so the post keeps its scroll and cursor */}
+            <ScrollView
+                style={[styles.scroll, altEditing && styles.hidden]}
+                contentContainerStyle={styles.scrollContent}
+                keyboardShouldPersistTaps="handled"
+            >
                 {reply && (
                     <Well style={styles.replyWell}>
                         <View style={styles.replyHeader}>
@@ -341,16 +579,20 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                                 {renderTextWithEmojis(user.display_name || user.username, user.emojis, [type.name, styles.authorName])}
                             </Text>
                             <View style={styles.pills}>
+                                {/* Visibility can't change once posted */}
                                 <Pressable
                                     onPress={() => setPicker('visibility')}
+                                    disabled={editing}
                                     accessibilityRole="button"
                                     accessibilityLabel={t('compose.visibilityLabel', { value: selectedVisibility.label })}
+                                    accessibilityHint={editing ? t('compose.visibilityLocked') : undefined}
+                                    accessibilityState={{ disabled: editing }}
                                     hitSlop={hitSlopFor(0, PILL_HEIGHT)}
-                                    style={({ pressed }) => [styles.pill, pressed && { opacity: 0.7 }]}
+                                    style={({ pressed }) => [styles.pill, (pressed || editing) && { opacity: 0.7 }]}
                                 >
                                     <Ionicons name={selectedVisibility.icon} size={14} color={colors.accentText} />
                                     <Text style={[type.name, styles.pillText]}>{selectedVisibility.label}</Text>
-                                    <Ionicons name="chevron-down" size={12} color={colors.textSecondary} />
+                                    {!editing && <Ionicons name="chevron-down" size={12} color={colors.textSecondary} />}
                                 </Pressable>
                                 <Pressable
                                     onPress={() => setPicker('language')}
@@ -364,9 +606,28 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                                     </Text>
                                     <Ionicons name="chevron-down" size={12} color={colors.textSecondary} />
                                 </Pressable>
+                                {instanceConfiguration.supportsQuotes && (
+                                    <Pressable
+                                        onPress={() => setPicker('quotePolicy')}
+                                        disabled={quotePolicyLocked}
+                                        accessibilityRole="button"
+                                        accessibilityLabel={t('compose.quotePolicyLabel', { value: selectedQuotePolicy.label })}
+                                        accessibilityState={{ disabled: quotePolicyLocked }}
+                                        hitSlop={hitSlopFor(0, PILL_HEIGHT)}
+                                        style={({ pressed }) => [styles.pill, (pressed || quotePolicyLocked) && { opacity: 0.7 }]}
+                                    >
+                                        <Ionicons name="chatbox-ellipses-outline" size={14} color={colors.accentText} />
+                                        <Text style={[type.name, styles.pillText]}>{selectedQuotePolicy.label}</Text>
+                                        {!quotePolicyLocked && <Ionicons name="chevron-down" size={12} color={colors.textSecondary} />}
+                                    </Pressable>
+                                )}
                             </View>
                         </View>
                     </View>
+                )}
+
+                {quote?.visibility === 'private' && (
+                    <Text style={[type.meta, styles.quoteNote]}>{t('compose.quotePrivateNote')}</Text>
                 )}
 
                 {sensitive && (
@@ -401,6 +662,39 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                     }}
                 />
 
+                {quote && (
+                    <View style={styles.quote}>
+                        <QuotedPost quote={{ state: 'accepted', quoted_status: quote }} />
+                        {/* An edit can't drop or change the quote */}
+                        {!editing && <IconButton
+                            icon="close-circle"
+                            size={22}
+                            color={colors.textMuted}
+                            accessibilityLabel={t('compose.removeQuote')}
+                            onPress={() => setQuote(null)}
+                            style={styles.quoteRemove}
+                        />}
+                    </View>
+                )}
+
+                {lockedPoll && (
+                    <Well style={styles.lockedPoll}>
+                        <Text style={[type.label, styles.lockedPollTitle]}>{t('pollEditor.title')}</Text>
+                        {lockedPoll.options.map((option, index) => (
+                            <Text key={index} style={[type.body, styles.lockedPollOption]}>· {option.title}</Text>
+                        ))}
+                        <Text style={[type.meta, styles.lockedPollNote]}>{t('compose.pollLocked')}</Text>
+                    </Well>
+                )}
+
+                <AttachmentStrip
+                    attachments={media.attachments}
+                    onDescribe={describeImage}
+                    onEdit={editImage}
+                    onRemove={media.remove}
+                    onRetry={media.retry}
+                />
+
                 {showPoll && (
                     <PollEditor
                         options={pollOptions}
@@ -419,10 +713,12 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
 
             <View
                 accessibilityRole="toolbar"
-                style={[styles.toolbar, { paddingBottom: keyboard.visible ? 10 : Math.max(insets.bottom, 10) }]}
+                style={[styles.toolbar, { paddingBottom: keyboard.visible ? 10 : Math.max(insets.bottom, 10) }, altEditing && styles.hidden]}
             >
-                {tool('image-outline', t('compose.addMedia'), () => Alert.alert(t('compose.mediaSoonTitle'), t('compose.mediaSoon')))}
-                {tool(showPoll ? 'stats-chart' : 'stats-chart-outline', t('compose.poll'), () => (showPoll ? resetPoll() : setShowPoll(true)), showPoll)}
+                {/* A post has either images or a poll */}
+                {tool('image-outline', t('compose.addMedia'), addFromLibrary, false, showPoll || !!lockedPoll || media.room === 0)}
+                {tool('camera-outline', t('compose.takePhoto'), addFromCamera, false, showPoll || !!lockedPoll || media.room === 0)}
+                {tool(showPoll ? 'stats-chart' : 'stats-chart-outline', t('compose.poll'), () => (showPoll ? resetPoll() : setShowPoll(true)), showPoll, media.attachments.length > 0 || editing)}
                 {tool('warning-outline', t('compose.contentWarning'), () => setSensitive(!sensitive), sensitive)}
                 {tool('happy-outline', t('compose.customEmoji'), () => setPicker('emoji'))}
                 <View style={styles.toolbarSpacer} />
@@ -463,7 +759,36 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                 onSelect={setLanguage}
                 onClose={() => setPicker(null)}
             />
+            <OptionSheet
+                visible={picker === 'quotePolicy'}
+                title={t('compose.whoCanQuote')}
+                options={quotePolicyOptions}
+                value={quotePolicy}
+                onSelect={setQuotePolicy}
+                onClose={() => setPicker(null)}
+            />
             <EmojiPicker visible={picker === 'emoji'} onPick={insertEmoji} onClose={() => setPicker(null)} />
+            <ImageEditor
+                visible={!!imageEditing}
+                image={imageEditing?.original ?? null}
+                initialEdits={imageEditing?.edits}
+                onCancel={() => setImageEditing(null)}
+                onDone={finishEditing}
+            />
+            <AltReminderSheet
+                visible={reminderOpen}
+                count={media.missingDescription.length}
+                onDescribe={() => {
+                    setReminderOpen(false);
+                    const first = media.missingDescription[0];
+                    if (first) describeImage(first.key);
+                }}
+                onPostAnyway={() => {
+                    setReminderOpen(false);
+                    handlePublish(true);
+                }}
+                onClose={() => setReminderOpen(false)}
+            />
         </Modal>
     );
 };

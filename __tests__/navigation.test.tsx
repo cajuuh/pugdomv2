@@ -1,6 +1,6 @@
 import React from 'react';
-import { DeviceEventEmitter } from 'react-native';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react-native';
+import { BackHandler, DeviceEventEmitter } from 'react-native';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react-native';
 import App from '../App';
 import { queryClient } from '../services/queryClient';
 import { TAB_BAR_CLEARANCE } from '../components/TabBar/styles';
@@ -69,13 +69,25 @@ jest.mock('../screens/Profile/profile', () => () => {
     const { Text } = require('react-native');
     return <Text>Profile screen</Text>;
 });
-jest.mock('../screens/Settings/settings', () => () => {
-    const { Text } = require('react-native');
-    return <Text>Settings screen</Text>;
+jest.mock('../screens/Settings/settings', () => ({ onBack }: { onBack: () => void }) => {
+    const { Pressable, Text } = require('react-native');
+    return (
+        <Pressable accessibilityRole="button" accessibilityLabel="Close settings" onPress={onBack}>
+            <Text>Settings screen</Text>
+        </Pressable>
+    );
 });
-jest.mock('../screens/Thread/thread', () => () => {
-    const { Text } = require('react-native');
-    return <Text>Thread screen</Text>;
+// A thread shows its id, can open a reply (post id + 1) and go back
+jest.mock('../screens/Thread/thread', () => ({ statusId, onBack, onStatusPress }: { statusId: string; onBack: () => void; onStatusPress: (id: string) => void }) => {
+    const { Pressable, Text, View } = require('react-native');
+    return (
+        <View>
+            <Text>Thread {statusId}</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="Open reply" onPress={() => onStatusPress(String(Number(statusId) + 1))} />
+            <Pressable accessibilityRole="button" accessibilityLabel="Reopen this post" onPress={() => onStatusPress(statusId)} />
+            <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} />
+        </View>
+    );
 });
 
 const openSettings = async () => {
@@ -118,11 +130,11 @@ describe('App navigation', () => {
     it('closes a thread when a tab is pressed', async () => {
         await render(<App />);
         await fireEvent.press(await screen.findByRole('button', { name: 'Open post' }));
-        expect(screen.getByText('Thread screen')).toBeTruthy();
+        expect(screen.getByText('Thread 42')).toBeTruthy();
 
         await fireEvent.press(screen.getByRole('tab', { name: 'Search' }));
 
-        expect(screen.queryByText('Thread screen')).toBeNull();
+        expect(screen.queryByText('Thread 42')).toBeNull();
         expect(screen.getByText('Search screen')).toBeTruthy();
     });
 
@@ -143,5 +155,101 @@ describe('Settings dock clearance', () => {
     it('pads Settings and Appearance by the dock height', () => {
         expect(makeSettingsStyles(mockTheme.colors).contentContainer.paddingBottom).toBeGreaterThanOrEqual(TAB_BAR_CLEARANCE);
         expect(makeAppearanceStyles(mockTheme.colors).content.paddingBottom).toBeGreaterThanOrEqual(TAB_BAR_CLEARANCE);
+    });
+
+    describe('screen stack', () => {
+        // The listener App registers for Android's back button
+        let backPress: (() => boolean | null | undefined) | undefined;
+        beforeEach(() => {
+            jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_, handler) => {
+                backPress = handler;
+                return { remove: jest.fn() } as any;
+            });
+        });
+        afterEach(() => jest.restoreAllMocks());
+
+        const openPost = async () => {
+            await render(<App />);
+            await fireEvent.press(await screen.findByRole('button', { name: 'Open post' }));
+        };
+
+        it('opens a post from a thread on top, and the header arrow goes back to the tabs', async () => {
+            await openPost();
+            await fireEvent.press(screen.getByRole('button', { name: 'Open reply' }));
+            expect(screen.getByText('Thread 43')).toBeTruthy();
+            // The thread below stays mounted but hidden
+            expect(screen.queryByText('Thread 42')).toBeNull();
+
+            await fireEvent.press(screen.getByRole('button', { name: 'Back' }));
+
+            expect(screen.getByText('Home screen')).toBeTruthy();
+            expect(screen.queryByText('Thread 42')).toBeNull();
+        });
+
+        it('does not stack the same post twice', async () => {
+            await openPost();
+            await fireEvent.press(screen.getByRole('button', { name: 'Reopen this post' }));
+
+            await act(async () => {
+                backPress?.();
+            });
+
+            expect(screen.getByText('Home screen')).toBeTruthy();
+        });
+
+        it("closes the top screen with Android's back button, and lets it leave the app when nothing is open", async () => {
+            await openPost();
+            await fireEvent.press(screen.getByRole('button', { name: 'Open reply' }));
+
+            await act(async () => {
+                expect(backPress?.()).toBe(true);
+            });
+            expect(screen.getByText('Thread 42')).toBeTruthy();
+
+            await act(async () => {
+                expect(backPress?.()).toBe(true);
+            });
+            expect(screen.getByText('Home screen')).toBeTruthy();
+            expect(backPress?.()).toBe(false);
+        });
+
+        it('hides the tabs from screen readers while a post is open over them', async () => {
+            await openPost();
+
+            // The top bar and timeline are under the post, so they can't be reached
+            expect(screen.queryByRole('button', { name: 'Settings' })).toBeNull();
+            expect(screen.queryByText('Home screen')).toBeNull();
+            // The dock stays on top and usable
+            expect(screen.getByRole('tab', { name: 'Home' })).toBeTruthy();
+        });
+
+        it('closes Settings with its back arrow', async () => {
+            await render(<App />);
+            await fireEvent.press(await screen.findByRole('button', { name: 'Settings' }));
+
+            await fireEvent.press(screen.getByRole('button', { name: 'Close settings' }));
+
+            expect(screen.getByText('Home screen')).toBeTruthy();
+        });
+    });
+});
+describe('pushRoute', () => {
+    const { pushRoute, MAX_STACK_DEPTH } = jest.requireActual('../services/navigationContext');
+    const thread = (statusId: string) => ({ name: 'thread', statusId });
+
+    it('adds a screen on top unless it is already the top one', () => {
+        const one = pushRoute([], thread('1'), 'a');
+        expect(one).toEqual([{ key: 'a', route: thread('1') }]);
+        expect(pushRoute(one, thread('1'), 'b')).toBe(one);
+        expect(pushRoute(one, thread('2'), 'b')).toHaveLength(2);
+    });
+
+    it('drops the oldest screen past the limit', () => {
+        let stack: any[] = [];
+        for (let i = 0; i < MAX_STACK_DEPTH + 3; i++) stack = pushRoute(stack, thread(String(i)), `k${i}`);
+
+        expect(stack).toHaveLength(MAX_STACK_DEPTH);
+        expect(stack[0].route).toEqual(thread('3'));
+        expect(stack[stack.length - 1].route).toEqual(thread(String(MAX_STACK_DEPTH + 2)));
     });
 });
