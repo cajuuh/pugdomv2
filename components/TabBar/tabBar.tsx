@@ -13,6 +13,8 @@ interface TabBarProps {
     activeTab: Tab;
     onTabPress: (tab: Tab) => void;
     onComposePress: () => void;
+    // A dot on the bell for notifications you haven't seen
+    unreadNotifications?: boolean;
 }
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -25,15 +27,17 @@ const TABS: Record<Tab, { icon: IconName; activeIcon: IconName }> = {
     profile: { icon: 'person-outline', activeIcon: 'person' },
 };
 
-export const TabBar: React.FC<TabBarProps> = ({ activeTab, onTabPress, onComposePress }) => {
+export const TabBar: React.FC<TabBarProps> = ({ activeTab, onTabPress, onComposePress, unreadNotifications = false }) => {
     const { colors, isDark } = useTheme();
     const styles = useThemedStyles(makeStyles);
     const { t } = useI18n();
 
     const tab = (key: Tab) => {
         const { icon, activeIcon } = TABS[key];
-        const label = t(`tabs.${key}`);
         const active = key === activeTab;
+        // The open tab already shows them
+        const dot = key === 'notifications' && unreadNotifications && !active;
+        const label = dot ? t('tabs.notificationsUnread') : t(`tabs.${key}`);
         return (
             <Pressable
                 key={key}
@@ -43,7 +47,10 @@ export const TabBar: React.FC<TabBarProps> = ({ activeTab, onTabPress, onCompose
                 accessibilityState={{ selected: active }}
                 style={({ pressed }) => [styles.tab, active && styles.tabActive, pressed && { opacity: 0.7 }]}
             >
-                <Ionicons name={active ? activeIcon : icon} size={24} color={active ? colors.accentText : colors.textMuted} />
+                <View>
+                    <Ionicons name={active ? activeIcon : icon} size={24} color={active ? colors.accentText : colors.textMuted} />
+                    {dot && <View testID="unread-dot" style={styles.dot} />}
+                </View>
             </Pressable>
         );
     };
