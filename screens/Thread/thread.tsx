@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 
 import {
     ActivityIndicator,
+    DeviceEventEmitter,
     RefreshControl,
     StyleSheet,
     Text,
@@ -20,6 +21,7 @@ import { TootCard } from '../../components/TootCard/tootCard';
 import { useTheme } from '../../services/themeContext';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
+import { STATUS_DELETED_EVENT, STATUS_UPDATED_EVENT } from '../../hooks/useUpdateCachedStatus';
 
 interface ThreadProps {
     statusId: string;
@@ -76,6 +78,24 @@ export default function Thread({
         setLoading(true);
         loadThread();
     }, [statusId]);
+
+    // Your edits and deletes show here too; deleting the post the thread is about leaves it
+    useEffect(() => {
+        const updated = DeviceEventEmitter.addListener(STATUS_UPDATED_EVENT, (status: Status) =>
+            setStatuses(current => current.map(item => (item.id === status.id ? { ...status, isMain: item.isMain } : item)))
+        );
+        const deleted = DeviceEventEmitter.addListener(STATUS_DELETED_EVENT, (id: string) => {
+            if (id === statusId) {
+                onBack();
+                return;
+            }
+            setStatuses(current => current.filter(item => item.id !== id));
+        });
+        return () => {
+            updated.remove();
+            deleted.remove();
+        };
+    }, [statusId, onBack]);
 
     const handleRefresh = useCallback(() => {
         setRefreshing(true);

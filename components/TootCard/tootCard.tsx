@@ -45,6 +45,8 @@ import { ActionSheet, BottomSheet } from '../ComposeModal/optionSheet';
 import { quotePermission } from '../../services/mastodon/quotes';
 import { useOptionalAuth } from '../../services/authContext';
 import { useModeration } from '../../hooks/useModeration';
+import { usePostActions } from '../../hooks/usePostActions';
+import { EditHistorySheet } from './editHistorySheet';
 
 const getRelativeTime = (dateString: string, { t }: Translator) => {
     const now = new Date();
@@ -170,6 +172,9 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     // The ⋯ menu: report, mute, block
     const [postMenuMounted, setPostMenuMounted] = useRecyclingState(false, recyclingDeps);
     const [postMenuOpen, setPostMenuOpen] = useRecyclingState(false, recyclingDeps);
+    // The edit history of an edited post
+    const [historyMounted, setHistoryMounted] = useRecyclingState(false, recyclingDeps);
+    const [historyOpen, setHistoryOpen] = useRecyclingState(false, recyclingDeps);
 
     // Lets async handlers skip state updates if the card was recycled while a request was in flight
     const renderedStatusId = useRef(targetStatus.id);
@@ -256,8 +261,11 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
 
     const auth = useOptionalAuth();
     const moderation = useModeration();
-    // Not for your own posts, nor for posts read from another server (their ids aren't ours)
-    const showPostMenu = !remote && !!auth?.user && auth.user.id !== targetStatus.account.id;
+    const postActions = usePostActions();
+    // Not for posts read from another server (their ids aren't ours). Your own posts get edit and
+    // delete; other people's, report, mute and block.
+    const showPostMenu = !remote && !!auth?.user;
+    const ownPost = !!auth?.user && auth.user.id === targetStatus.account.id;
     const author = targetStatus.account;
 
     const handleShare = async () => {
@@ -482,6 +490,19 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const time = (
         <>
             <Text style={[type.meta, styles.time]}>{getRelativeTime(targetStatus.created_at, i18n)}</Text>
+            {!!targetStatus.edited_at && (
+                <Pressable
+                    onPress={() => {
+                        setHistoryMounted(true);
+                        setHistoryOpen(true);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('posts.editedLabel')}
+                    hitSlop={hitSlopFor(40, 22)}
+                >
+                    <Text style={[type.meta, styles.time]}> · {t('posts.edited')}</Text>
+                </Pressable>
+            )}
             {showPostMenu && (
                 <Pressable
                     onPress={() => {
@@ -661,7 +682,28 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     ]}
                 />
             )}
-            {postMenuMounted && showPostMenu && (
+            {historyMounted && !!targetStatus.edited_at && (
+                <EditHistorySheet
+                    visible={historyOpen}
+                    statusId={targetStatus.id}
+                    onClose={() => setHistoryOpen(false)}
+                    timeOf={createdAt => getRelativeTime(createdAt, i18n)}
+                />
+            )}
+            {postMenuMounted && showPostMenu && ownPost && (
+                <ActionSheet
+                    visible={postMenuOpen}
+                    title={t('moderation.moreOptions')}
+                    subtitle={t('posts.yourPost')}
+                    onClose={() => setPostMenuOpen(false)}
+                    actions={[
+                        { key: 'edit', icon: 'create-outline', label: t('posts.edit'), onPress: () => postActions.edit(targetStatus) },
+                        { key: 'redraft', icon: 'refresh', label: t('posts.redraft'), description: t('posts.redraftHint'), onPress: () => postActions.redraft(targetStatus) },
+                        { key: 'delete', icon: 'trash-outline', label: t('posts.delete'), onPress: () => postActions.remove(targetStatus) },
+                    ]}
+                />
+            )}
+            {postMenuMounted && showPostMenu && !ownPost && (
                 <ActionSheet
                     visible={postMenuOpen}
                     title={t('moderation.moreOptions')}

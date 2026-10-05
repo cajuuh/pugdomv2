@@ -164,6 +164,20 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     toolActive: {
         backgroundColor: colors.accentSoft,
     },
+    // An edited post's poll, shown but not editable
+    lockedPoll: {
+        marginHorizontal: space.lg,
+        gap: space.xs,
+    },
+    lockedPollTitle: {
+        color: colors.textSecondary,
+    },
+    lockedPollOption: {
+        color: colors.textPrimary,
+    },
+    lockedPollNote: {
+        color: colors.textMuted,
+    },
     quoteNote: {
         marginHorizontal: 20,
         color: colors.textMuted,

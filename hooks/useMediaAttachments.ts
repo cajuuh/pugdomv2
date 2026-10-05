@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { InstanceConfiguration } from '../services/mastodon/instance';
 import { updateMedia, uploadMedia } from '../services/mastodon/media';
 import { imageType, PickedImage, prepareImage } from '../services/media/prepare';
-import { ImageEdits, NO_EDITS, Point } from '../services/media/geometry';
+import { fromMastodonFocus, ImageEdits, NO_EDITS, Point, toMastodonFocus } from '../services/media/geometry';
+import { Attachment } from '../services/mastodon/types';
 
 export interface ComposeAttachment {
     key: string;
@@ -21,6 +22,8 @@ export interface ComposeAttachment {
     // The focal point, 0–1 from the top left; crops in timelines keep it in view
     focus?: Point;
     savedFocus?: Point;
+    // Already on the server (editing or redrafting a post): there's no picked original to crop again
+    existing?: boolean;
 }
 
 const sameFocus = (a?: Point, b?: Point) => a?.x === b?.x && a?.y === b?.y;
@@ -92,6 +95,33 @@ export const useMediaAttachments = (limits: Limits) => {
         start(key, upload.image, upload);
     }, [start, update]);
 
+    // A post's images, already uploaded: ready, with their descriptions and focal points
+    const addExisting = useCallback((existing: Attachment[]) => {
+        const added: ComposeAttachment[] = existing
+            .filter(item => item.type === 'image' || item.type === 'gifv')
+            .map(item => {
+                const size = item.meta?.original ?? item.meta?.small;
+                const focus = item.meta?.focus ? fromMastodonFocus(item.meta.focus) : undefined;
+                return {
+                    key: `media-${nextKey.current++}`,
+                    uri: item.preview_url || item.url,
+                    width: size?.width ?? 0,
+                    height: size?.height ?? 0,
+                    isGif: item.type === 'gifv',
+                    status: 'ready',
+                    progress: 1,
+                    mediaId: item.id,
+                    description: item.description ?? '',
+                    savedDescription: item.description ?? '',
+                    focus,
+                    savedFocus: focus,
+                    existing: true,
+                };
+            });
+        count.current += added.length;
+        setAttachments(list => [...list, ...added]);
+    }, []);
+
     // The picked image and the edits so far, for the editor to start from
     const editsFor = useCallback((key: string) => {
         const upload = uploads.current.get(key);
@@ -156,11 +186,30 @@ export const useMediaAttachments = (limits: Limits) => {
         return ready.map(attachment => attachment.mediaId!);
     }, [attachments, update]);
 
+    // For an edit: the ids, and every description and focal point as media_attributes (media already
+    // attached to a post can only be changed through the edit itself)
+    const editAttributes = useCallback(() => {
+        const ready = attachments.filter(attachment => attachment.mediaId);
+        return {
+            ids: ready.map(attachment => attachment.mediaId!),
+            attributes: ready.map(attachment => {
+                const focus = attachment.focus && toMastodonFocus(attachment.focus);
+                return {
+                    id: attachment.mediaId!,
+                    description: attachment.description.trim(),
+                    focus: focus ? `${focus.x.toFixed(2)},${focus.y.toFixed(2)}` : undefined,
+                };
+            }),
+        };
+    }, [attachments]);
+
     useEffect(() => cancel, [cancel]);
 
     return {
         attachments,
         add,
+        addExisting,
+        editAttributes,
         retry,
         remove,
         describe,

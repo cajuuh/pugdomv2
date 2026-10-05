@@ -45,7 +45,7 @@ export const AttachmentStrip: React.FC<AttachmentStripProps> = ({ attachments, o
 
                         {attachment.status === 'uploading' && (
                             <View
-                                style={[styles.progressTrack, !attachment.isGif && styles.progressTrackBesideEdit, { backgroundColor: mediaColors.scrim }]}
+                                style={[styles.progressTrack, !attachment.isGif && !attachment.existing && styles.progressTrackBesideEdit, { backgroundColor: mediaColors.scrim }]}
                                 accessible
                                 accessibilityRole="progressbar"
                                 accessibilityLabel={t('attachments.uploading', { index })}
@@ -84,7 +84,7 @@ export const AttachmentStrip: React.FC<AttachmentStripProps> = ({ attachments, o
                             </Text>
                         </View>
 
-                        {!attachment.isGif && attachment.status !== 'failed' && (
+                        {!attachment.isGif && !attachment.existing && attachment.status !== 'failed' && (
                             <Pressable
                                 onPress={() => onEdit(attachment.key)}
                                 accessibilityRole="button"

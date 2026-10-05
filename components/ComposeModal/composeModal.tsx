@@ -19,7 +19,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '../../services/authContext';
 import { useTheme } from '../../services/themeContext';
-import { createStatus } from '../../services/mastodon/statuses';
+import { createStatus, editStatus, getStatusSource } from '../../services/mastodon/statuses';
+import { plainText } from '../../services/htmlText';
+import { STATUS_UPDATED_EVENT, useUpdateCachedStatus } from '../../hooks/useUpdateCachedStatus';
+import type { ExistingPost } from '../../services/composeContext';
 import { Account, Status } from '../../services/mastodon/types';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
 import { replyMentionsText } from '../../services/mastodon/mentions';
@@ -158,10 +161,20 @@ interface ComposeModalProps {
     replyToStatus: Status | null;
     // The post being quoted, shown under the text
     quoteStatus?: Status | null;
+    // One of your posts to edit, or to redraft after deleting it
+    existingPost?: ExistingPost | null;
     closeCompose: () => void;
 }
 
-const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quoteStatus = null, closeCompose }) => {
+// What an edit sends back for a poll it can't change: the same choices and the time it has left
+// (leaving the poll out would remove it; new choices would reset its votes)
+const unchangedPoll = (poll: NonNullable<Status['poll']>) => ({
+    options: poll.options.map(option => option.title),
+    multiple: poll.multiple,
+    expires_in: Math.max(300, Math.round(((poll.expires_at ? new Date(poll.expires_at).getTime() : Date.now()) - Date.now()) / 1000)),
+});
+
+const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quoteStatus = null, existingPost = null, closeCompose }) => {
     const { user } = useAuth();
     const { colors, type } = useTheme();
     const i18n = useI18n();
@@ -209,6 +222,13 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
     const shownReply = useRef(replyToStatus);
     if (isOpen) shownReply.current = replyToStatus;
     const reply = shownReply.current;
+    const shownExisting = useRef(existingPost);
+    if (isOpen) shownExisting.current = existingPost;
+    const existing = shownExisting.current;
+    const editing = existing?.mode === 'edit';
+    // An edit keeps the post's poll as it is
+    const lockedPoll = editing ? existing.status.poll ?? null : null;
+    const updateCachedStatus = useUpdateCachedStatus();
 
     // Swiping the sheet down closes it, asking first if there's a draft
     const { drag, panHandlers } = useDragToDismiss(cancel => {
@@ -247,13 +267,51 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
             setReminderOpen(false);
             reminded.current = false;
 
+            // Your post, back in compose: its words, warning, language, quote, images and poll
+            let current = true;
+            if (existingPost) {
+                const post = existingPost.status;
+                const source = existingPost.mode === 'redraft' ? post.text ?? plainText(post.content) : plainText(post.content);
+                initialText.current = source;
+                setText(source);
+                cursor.current = source.length;
+                setSensitive(!!post.spoiler_text);
+                setSpoilerText(post.spoiler_text ?? '');
+                setVisibility(post.visibility);
+                if (post.language && LANGUAGES.some(option => option.code === post.language)) setLanguage(post.language);
+                setQuote(post.quote?.quoted_status ?? null);
+                if (post.poll && existingPost.mode === 'redraft') {
+                    setShowPoll(true);
+                    setPollOptions(post.poll.options.map(option => option.title));
+                    setPollMultiple(post.poll.multiple);
+                }
+                media.addExisting(post.media_attachments ?? []);
+                // The rendered post loses some of what was typed; edits start from the source
+                if (existingPost.mode === 'edit') {
+                    getStatusSource(post.id)
+                        .then(written => {
+                            // Keep the rendered text if the source doesn't come back as expected
+                            if (!current || typeof written?.text !== 'string') return;
+                            initialText.current = written.text;
+                            setText(written.text);
+                            cursor.current = written.text.length;
+                            setSensitive(!!written.spoiler_text);
+                            setSpoilerText(written.spoiler_text ?? '');
+                        })
+                        .catch(error => console.warn('Could not load the post source:', error));
+                }
+            }
+
             // Focus once the sheet is in place
             const timer = setTimeout(() => {
                 inputRef.current?.focus();
             }, 150);
-            return () => clearTimeout(timer);
+            return () => {
+                current = false;
+                clearTimeout(timer);
+            };
         }
-    }, [isOpen, replyToStatus, quoteStatus, drag]);
+    }, [isOpen, replyToStatus, quoteStatus, existingPost, drag]);
 
     // Closing stops uploads that are still going
     const cancelUploads = media.cancel;
@@ -365,10 +423,27 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
             : undefined;
 
         try {
+            if (editing && existing) {
+                const { ids, attributes } = media.editAttributes();
+                const updated = await editStatus(existing.status.id, {
+                    status: text,
+                    spoiler_text: sensitive ? spoilerText : '',
+                    sensitive,
+                    language,
+                    media_ids: ids,
+                    media_attributes: attributes.length > 0 ? attributes : undefined,
+                    poll: lockedPoll ? unchangedPoll(lockedPoll) : undefined,
+                    quote_approval_policy: instanceConfiguration.supportsQuotes ? shownQuotePolicy : undefined,
+                });
+                updateCachedStatus(updated);
+                DeviceEventEmitter.emit(STATUS_UPDATED_EVENT, updated);
+                closeCompose();
+                return;
+            }
             const mediaIds = await media.finish();
             await createStatus({
                 status: text,
-                in_reply_to_id: reply ? reply.id : null,
+                in_reply_to_id: reply ? reply.id : existing?.status.in_reply_to_id ?? null,
                 sensitive,
                 spoiler_text: sensitive ? spoilerText : undefined,
                 language: language,
@@ -384,7 +459,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
         } catch (error: any) {
             console.error('Failed to post status:', error);
             Alert.alert(
-                t('compose.publishFailed'),
+                editing ? t('compose.saveFailed') : t('compose.publishFailed'),
                 error.response?.data?.error || error.message || t('compose.publishFailedMessage')
             );
         } finally {
@@ -428,13 +503,26 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                         />
                     </View>
                     <Text accessibilityRole="header" style={[type.sheetTitle, styles.headerTitle]} numberOfLines={1}>
-                        {altEditing ? t('compose.describeTitle') : reply ? t('compose.reply') : quote ? t('compose.quotePost') : t('compose.newPost')}
+                        {altEditing
+                            ? t('compose.describeTitle')
+                            : editing
+                              ? t('compose.editPost')
+                              : reply
+                                ? t('compose.reply')
+                                : quote
+                                  ? t('compose.quotePost')
+                                  : t('compose.newPost')}
                     </Text>
                     <View style={[styles.headerSide, styles.headerSideEnd]}>
                         {altEditing ? (
                             <PillButton label={t('compose.done')} onPress={saveDescription} disabled={altOverLimit} />
                         ) : (
-                            <PillButton label={t('compose.post')} onPress={() => handlePublish()} disabled={isPublishDisabled && !loading} loading={loading} />
+                            <PillButton
+                                label={editing ? t('compose.save') : t('compose.post')}
+                                onPress={() => handlePublish()}
+                                disabled={isPublishDisabled && !loading}
+                                loading={loading}
+                            />
                         )}
                     </View>
                 </View>
@@ -491,16 +579,20 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                                 {renderTextWithEmojis(user.display_name || user.username, user.emojis, [type.name, styles.authorName])}
                             </Text>
                             <View style={styles.pills}>
+                                {/* Visibility can't change once posted */}
                                 <Pressable
                                     onPress={() => setPicker('visibility')}
+                                    disabled={editing}
                                     accessibilityRole="button"
                                     accessibilityLabel={t('compose.visibilityLabel', { value: selectedVisibility.label })}
+                                    accessibilityHint={editing ? t('compose.visibilityLocked') : undefined}
+                                    accessibilityState={{ disabled: editing }}
                                     hitSlop={hitSlopFor(0, PILL_HEIGHT)}
-                                    style={({ pressed }) => [styles.pill, pressed && { opacity: 0.7 }]}
+                                    style={({ pressed }) => [styles.pill, (pressed || editing) && { opacity: 0.7 }]}
                                 >
                                     <Ionicons name={selectedVisibility.icon} size={14} color={colors.accentText} />
                                     <Text style={[type.name, styles.pillText]}>{selectedVisibility.label}</Text>
-                                    <Ionicons name="chevron-down" size={12} color={colors.textSecondary} />
+                                    {!editing && <Ionicons name="chevron-down" size={12} color={colors.textSecondary} />}
                                 </Pressable>
                                 <Pressable
                                     onPress={() => setPicker('language')}
@@ -573,15 +665,26 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 {quote && (
                     <View style={styles.quote}>
                         <QuotedPost quote={{ state: 'accepted', quoted_status: quote }} />
-                        <IconButton
+                        {/* An edit can't drop or change the quote */}
+                        {!editing && <IconButton
                             icon="close-circle"
                             size={22}
                             color={colors.textMuted}
                             accessibilityLabel={t('compose.removeQuote')}
                             onPress={() => setQuote(null)}
                             style={styles.quoteRemove}
-                        />
+                        />}
                     </View>
+                )}
+
+                {lockedPoll && (
+                    <Well style={styles.lockedPoll}>
+                        <Text style={[type.label, styles.lockedPollTitle]}>{t('pollEditor.title')}</Text>
+                        {lockedPoll.options.map((option, index) => (
+                            <Text key={index} style={[type.body, styles.lockedPollOption]}>· {option.title}</Text>
+                        ))}
+                        <Text style={[type.meta, styles.lockedPollNote]}>{t('compose.pollLocked')}</Text>
+                    </Well>
                 )}
 
                 <AttachmentStrip
@@ -613,9 +716,9 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 style={[styles.toolbar, { paddingBottom: keyboard.visible ? 10 : Math.max(insets.bottom, 10) }, altEditing && styles.hidden]}
             >
                 {/* A post has either images or a poll */}
-                {tool('image-outline', t('compose.addMedia'), addFromLibrary, false, showPoll || media.room === 0)}
-                {tool('camera-outline', t('compose.takePhoto'), addFromCamera, false, showPoll || media.room === 0)}
-                {tool(showPoll ? 'stats-chart' : 'stats-chart-outline', t('compose.poll'), () => (showPoll ? resetPoll() : setShowPoll(true)), showPoll, media.attachments.length > 0)}
+                {tool('image-outline', t('compose.addMedia'), addFromLibrary, false, showPoll || !!lockedPoll || media.room === 0)}
+                {tool('camera-outline', t('compose.takePhoto'), addFromCamera, false, showPoll || !!lockedPoll || media.room === 0)}
+                {tool(showPoll ? 'stats-chart' : 'stats-chart-outline', t('compose.poll'), () => (showPoll ? resetPoll() : setShowPoll(true)), showPoll, media.attachments.length > 0 || editing)}
                 {tool('warning-outline', t('compose.contentWarning'), () => setSensitive(!sensitive), sensitive)}
                 {tool('happy-outline', t('compose.customEmoji'), () => setPicker('emoji'))}
                 <View style={styles.toolbarSpacer} />

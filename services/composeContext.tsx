@@ -7,8 +7,22 @@ interface ComposeContextType {
     replyToStatus: Status | null;
     // The post being quoted (Mastodon 4.5)
     quoteStatus: Status | null;
-    openCompose: (params?: { replyToStatus?: Status; quoteStatus?: Status }) => void;
+    // One of your posts being edited, or redrafted after deleting it
+    existingPost: ExistingPost | null;
+    openCompose: (params?: ComposeParams) => void;
     closeCompose: () => void;
+}
+
+// Editing keeps the post (PUT); redrafting got it back from the delete and posts it anew
+export interface ExistingPost {
+    mode: 'edit' | 'redraft';
+    status: Status;
+}
+
+interface ComposeParams {
+    replyToStatus?: Status;
+    quoteStatus?: Status;
+    existingPost?: ExistingPost;
 }
 
 const ComposeContext = createContext<ComposeContextType | undefined>(undefined);
@@ -17,10 +31,12 @@ export const ComposeProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const [isOpen, setIsOpen] = useState(false);
     const [replyToStatus, setReplyToStatus] = useState<Status | null>(null);
     const [quoteStatus, setQuoteStatus] = useState<Status | null>(null);
+    const [existingPost, setExistingPost] = useState<ExistingPost | null>(null);
 
-    const openCompose = (params?: { replyToStatus?: Status; quoteStatus?: Status }) => {
+    const openCompose = (params?: ComposeParams) => {
         setReplyToStatus(params?.replyToStatus ?? null);
         setQuoteStatus(params?.quoteStatus ?? null);
+        setExistingPost(params?.existingPost ?? null);
         setIsOpen(true);
     };
 
@@ -28,12 +44,19 @@ export const ComposeProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setIsOpen(false);
         setReplyToStatus(null);
         setQuoteStatus(null);
+        setExistingPost(null);
     };
 
     return (
-        <ComposeContext.Provider value={{ isOpen, replyToStatus, quoteStatus, openCompose, closeCompose }}>
+        <ComposeContext.Provider value={{ isOpen, replyToStatus, quoteStatus, existingPost, openCompose, closeCompose }}>
             {children}
-            <ComposeModal isOpen={isOpen} replyToStatus={replyToStatus} quoteStatus={quoteStatus} closeCompose={closeCompose} />
+            <ComposeModal
+                isOpen={isOpen}
+                replyToStatus={replyToStatus}
+                quoteStatus={quoteStatus}
+                existingPost={existingPost}
+                closeCompose={closeCompose}
+            />
         </ComposeContext.Provider>
     );
 };
