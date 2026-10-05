@@ -36,6 +36,8 @@ const TYPE_CONFIG: Record<string, { badge: React.ComponentProps<typeof Ionicons>
     reblog: { badge: 'repeat', action: 'notifications.reblog' },
     follow: { badge: 'person-add', action: 'notifications.follow' },
     quote: { badge: 'chatbox-ellipses', action: 'notifications.quote' },
+    // The post attached is your quote; the post it quotes was edited
+    quoted_update: { badge: 'create', action: 'notifications.quotedUpdate' },
 };
 
 const nameOf = (account: Account) => account.display_name || account.username;

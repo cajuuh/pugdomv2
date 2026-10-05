@@ -60,3 +60,9 @@ export async function unmuteAccount(accountId: string): Promise<Relationship> {
     const response = await apiClient.post<Relationship>(`/accounts/${accountId}/unmute`);
     return response.data;
 }
+
+// Who can quote your new posts by default (Mastodon 4.5)
+export async function updateDefaultQuotePolicy(policy: 'public' | 'followers' | 'nobody'): Promise<Account> {
+    const response = await apiClient.patch<Account>('/accounts/update_credentials', { source: { quote_policy: policy } });
+    return response.data;
+}

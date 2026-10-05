@@ -17,6 +17,8 @@ interface AuthContextType {
     switchAccount: (accountId: string) => Promise<void>;
     isAddingAccount: boolean;
     setAddingAccount: (val: boolean) => void;
+    // The signed-in account changed on the server (settings like the default quote policy)
+    updateUser: (user: Account) => void;
     // True right after logging in (or adding an account), until the setup screen is done
     needsSetup: boolean;
     finishSetup: () => void;
@@ -177,6 +179,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setAddingAccount,
                 needsSetup,
                 finishSetup: () => setNeedsSetup(false),
+                updateUser: setUser,
             }}>
             {children}
         </AuthContext.Provider>

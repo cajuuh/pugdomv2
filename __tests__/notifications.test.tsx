@@ -75,7 +75,7 @@ describe('Notifications', () => {
         await renderScreen();
 
         await screen.findByText(/mentioned you/);
-        expect(mockedFetch).toHaveBeenCalledWith(undefined, ['mention', 'reblog', 'favourite', 'follow', 'quote']);
+        expect(mockedFetch).toHaveBeenCalledWith(undefined, ['mention', 'reblog', 'favourite', 'follow', 'quote', 'quoted_update']);
     });
 
     it.each([
