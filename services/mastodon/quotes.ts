@@ -1,4 +1,4 @@
-import { Quote, Status } from './types';
+import { Account, Quote, Status } from './types';
 
 // Why a quote can't be shown
 export type QuoteNotice = 'pending' | 'removed' | 'deleted' | 'unavailable' | 'blocked' | 'muted';
@@ -28,3 +28,30 @@ export const quoteView = (quote?: Quote | null): QuoteView | null => {
             return { kind: 'notice', notice: 'unavailable' };
     }
 };
+
+// Who can quote a post you write (Mastodon's quote_approval_policy)
+export type QuotePolicy = 'public' | 'followers' | 'nobody';
+
+// Whether you can quote a post: `manual` means its author has to approve the quote first.
+// Null when the server has no quote posts (it sends no quote_approval).
+export const quotePermission = (status: Status, me?: Pick<Account, 'id'> | null): 'automatic' | 'manual' | 'denied' | null => {
+    // Private mentions can never be quoted
+    if (status.visibility === 'direct') return status.quote_approval ? 'denied' : null;
+    // Authors can always quote their own posts
+    if (me && status.account.id === me.id) return status.quote_approval ? 'automatic' : null;
+    switch (status.quote_approval?.current_user) {
+        case undefined:
+            return null;
+        case 'automatic':
+            return 'automatic';
+        case 'manual':
+            return 'manual';
+        // `unknown` means policies Mastodon doesn't support; treated as denied
+        default:
+            return 'denied';
+    }
+};
+
+// Followers-only and private posts can't be quoted by others, whatever the setting
+export const effectiveQuotePolicy = (policy: QuotePolicy, visibility: Status['visibility']): QuotePolicy =>
+    visibility === 'private' || visibility === 'direct' ? 'nobody' : policy;

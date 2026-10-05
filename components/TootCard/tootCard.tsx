@@ -41,7 +41,8 @@ import { useOpenAccount } from '../../hooks/useOpenAccount';
 import { FocusedImage } from './focusedImage';
 import { QuotedPost } from './quotedPost';
 import { useNavigator } from '../../services/navigationContext';
-import { BottomSheet } from '../ComposeModal/optionSheet';
+import { ActionSheet, BottomSheet } from '../ComposeModal/optionSheet';
+import { quotePermission } from '../../services/mastodon/quotes';
 
 const getRelativeTime = (dateString: string, { t }: Translator) => {
     const now = new Date();
@@ -161,6 +162,9 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     // The image description opened from an ALT chip; kept while its sheet slides away
     const [shownDescription, setShownDescription] = useRecyclingState<string | null>(null, recyclingDeps);
     const [descriptionOpen, setDescriptionOpen] = useRecyclingState(false, recyclingDeps);
+    // The boost menu (boost or quote), mounted once opened so every card doesn't carry a modal
+    const [boostMenuMounted, setBoostMenuMounted] = useRecyclingState(false, recyclingDeps);
+    const [boostMenuOpen, setBoostMenuOpen] = useRecyclingState(false, recyclingDeps);
 
     // Lets async handlers skip state updates if the card was recycled while a request was in flight
     const renderedStatusId = useRef(targetStatus.id);
@@ -230,6 +234,20 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             Alert.alert(t('common.error'), t('post.boostFailed'));
         }
     };
+
+    // On servers with quote posts, boost opens a menu to boost or quote; elsewhere it boosts at once
+    const quoting = quotePermission(targetStatus);
+    const pressBoost = () => {
+        if (quoting === null) {
+            toggleReblog();
+            return;
+        }
+        setBoostMenuMounted(true);
+        setBoostMenuOpen(true);
+    };
+    // iOS can't present the compose modal while the menu's own modal is still closing
+    const quotePost = () => setTimeout(() => openCompose({ quoteStatus: targetStatus }), Platform.OS === 'ios' ? 400 : 0);
+    const quoteDescription = { automatic: t('quotes.quoteHint'), manual: t('quotes.needsApproval'), denied: t('quotes.notAllowed') };
 
     const handleShare = async () => {
         // Remote statuses may have no `url`; `uri` always points to the original post
@@ -500,7 +518,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             <Pressable
                 style={actionButtonStyle}
                 hitSlop={actionHitSlop}
-                onPress={toggleReblog}
+                onPress={pressBoost}
                 accessibilityRole="button"
                 accessibilityLabel={tn(isReblogged ? 'post.boostedCount' : 'post.boost', boostCount || 0)}
                 accessibilityState={{ selected: isReblogged }}
@@ -590,6 +608,30 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const withDescription = (content: React.ReactNode) => (
         <>
             {content}
+            {boostMenuMounted && quoting && (
+                <ActionSheet
+                    visible={boostMenuOpen}
+                    title={t('quotes.menuTitle')}
+                    onClose={() => setBoostMenuOpen(false)}
+                    actions={[
+                        {
+                            key: 'boost',
+                            icon: 'repeat',
+                            label: isReblogged ? t('quotes.undoBoost') : t('quotes.boost'),
+                            description: isReblogged ? undefined : t('quotes.boostHint'),
+                            onPress: toggleReblog,
+                        },
+                        {
+                            key: 'quote',
+                            icon: 'chatbox-ellipses-outline',
+                            label: t('quotes.quote'),
+                            description: quoteDescription[quoting],
+                            disabled: quoting === 'denied',
+                            onPress: quotePost,
+                        },
+                    ]}
+                />
+            )}
             {shownDescription !== null && (
                 <BottomSheet visible={descriptionOpen} title={t('post.descriptionTitle')} onClose={() => setDescriptionOpen(false)}>
                     <Text selectable style={[type.body, styles.descriptionText]}>{shownDescription}</Text>

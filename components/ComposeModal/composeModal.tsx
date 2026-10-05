@@ -43,6 +43,8 @@ import { ImageEditor } from '../ImageEditor/imageEditor';
 import { applyEdits } from '../../services/media/edit';
 import { ImageEdits, Point, sameEdits } from '../../services/media/geometry';
 import { PickedImage } from '../../services/media/prepare';
+import { QuotedPost } from '../TootCard/quotedPost';
+import { effectiveQuotePolicy, QuotePolicy } from '../../services/mastodon/quotes';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { Translator } from '../../services/i18n/translate';
 
@@ -90,9 +92,19 @@ const deviceLanguage = () => {
 export const defaultLanguage = (user: Account | null) =>
     [user?.source?.language, deviceLanguage()].find(code => code && LANGUAGES.some(l => l.code === code)) ?? 'en';
 
-// Replies keep the parent's visibility; new posts use the account's default
-export const defaultVisibility = (user: Account | null, replyToStatus: Status | null): Visibility =>
-    replyToStatus?.visibility ?? user?.source?.privacy ?? 'public';
+// Replies keep the parent's visibility; new posts use the account's default. Quoting a followers-only
+// post makes the quote followers-only too (Mastodon enforces it).
+export const defaultVisibility = (user: Account | null, replyToStatus: Status | null, quoteStatus: Status | null = null): Visibility => {
+    const visibility = replyToStatus?.visibility ?? user?.source?.privacy ?? 'public';
+    return quoteStatus?.visibility === 'private' && (visibility === 'public' || visibility === 'unlisted') ? 'private' : visibility;
+};
+
+type QuotePolicyOption = SheetOption<QuotePolicy> & { icon: React.ComponentProps<typeof Ionicons>['name'] };
+export const quotePolicies = ({ t }: Translator): QuotePolicyOption[] => [
+    { value: 'public', label: t('compose.quoteAnyone'), description: t('compose.quoteAnyoneDescription'), icon: 'globe-outline' },
+    { value: 'followers', label: t('compose.quoteFollowers'), description: t('compose.quoteFollowersDescription'), icon: 'people-outline' },
+    { value: 'nobody', label: t('compose.quoteNobody'), description: t('compose.quoteNobodyDescription'), icon: 'lock-closed-outline' },
+];
 
 // Mastodon rejects polls with fewer than two choices or repeated choices
 const pollValidationError = (options: string[], { t }: Translator) => {
@@ -144,10 +156,12 @@ export const hasDraft = ({ text, initialText, showPoll, spoilerText, hasMedia = 
 interface ComposeModalProps {
     isOpen: boolean;
     replyToStatus: Status | null;
+    // The post being quoted, shown under the text
+    quoteStatus?: Status | null;
     closeCompose: () => void;
 }
 
-const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, closeCompose }) => {
+const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quoteStatus = null, closeCompose }) => {
     const { user } = useAuth();
     const { colors, type } = useTheme();
     const i18n = useI18n();
@@ -164,8 +178,11 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
     const [spoilerText, setSpoilerText] = useState('');
     const [loading, setLoading] = useState(false);
     const [language, setLanguage] = useState(() => defaultLanguage(user));
-    const [visibility, setVisibility] = useState<Visibility>(() => defaultVisibility(user, replyToStatus));
-    const [picker, setPicker] = useState<'language' | 'visibility' | 'emoji' | null>(null);
+    const [visibility, setVisibility] = useState<Visibility>(() => defaultVisibility(user, replyToStatus, quoteStatus));
+    const [picker, setPicker] = useState<'language' | 'visibility' | 'emoji' | 'quotePolicy' | null>(null);
+    // The post being quoted (✕ drops it) and who may quote this one
+    const [quote, setQuote] = useState<Status | null>(quoteStatus);
+    const [quotePolicy, setQuotePolicy] = useState<QuotePolicy>(user?.source?.quote_policy ?? 'public');
 
     // Poll States
     const [showPoll, setShowPoll] = useState(false);
@@ -215,7 +232,9 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
             setSensitive(false);
             setSpoilerText('');
             setLanguage(defaultLanguage(user));
-            setVisibility(defaultVisibility(user, replyToStatus));
+            setVisibility(defaultVisibility(user, replyToStatus, quoteStatus));
+            setQuote(quoteStatus);
+            setQuotePolicy(user?.source?.quote_policy ?? 'public');
             setLoading(false);
             setShowPoll(false);
             setPollOptions(['', '']);
@@ -234,7 +253,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
             }, 150);
             return () => clearTimeout(timer);
         }
-    }, [isOpen, replyToStatus, drag]);
+    }, [isOpen, replyToStatus, quoteStatus, drag]);
 
     // Closing stops uploads that are still going
     const cancelUploads = media.cancel;
@@ -255,6 +274,11 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
     const visibilityOptions = visibilities(i18n);
     const selectedVisibility = visibilityOptions.find(v => v.value === visibility) ?? visibilityOptions[0];
     const selectedLanguage = LANGUAGES.find(l => l.code === language) ?? LANGUAGES[0];
+    // Followers-only and private posts can't be quoted by others, whatever the setting says
+    const quotePolicyOptions = quotePolicies(i18n);
+    const shownQuotePolicy = effectiveQuotePolicy(quotePolicy, visibility);
+    const quotePolicyLocked = shownQuotePolicy !== quotePolicy || visibility === 'private' || visibility === 'direct';
+    const selectedQuotePolicy = quotePolicyOptions.find(option => option.value === shownQuotePolicy) ?? quotePolicyOptions[0];
 
     const resetPoll = () => {
         setShowPoll(false);
@@ -351,6 +375,8 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                 visibility,
                 poll: pollParams,
                 media_ids: mediaIds.length > 0 ? mediaIds : undefined,
+                quoted_status_id: quote?.id,
+                quote_approval_policy: instanceConfiguration.supportsQuotes ? shownQuotePolicy : undefined,
             });
 
             DeviceEventEmitter.emit('status_published');
@@ -402,7 +428,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                         />
                     </View>
                     <Text accessibilityRole="header" style={[type.sheetTitle, styles.headerTitle]} numberOfLines={1}>
-                        {altEditing ? t('compose.describeTitle') : reply ? t('compose.reply') : t('compose.newPost')}
+                        {altEditing ? t('compose.describeTitle') : reply ? t('compose.reply') : quote ? t('compose.quotePost') : t('compose.newPost')}
                     </Text>
                     <View style={[styles.headerSide, styles.headerSideEnd]}>
                         {altEditing ? (
@@ -488,9 +514,28 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                                     </Text>
                                     <Ionicons name="chevron-down" size={12} color={colors.textSecondary} />
                                 </Pressable>
+                                {instanceConfiguration.supportsQuotes && (
+                                    <Pressable
+                                        onPress={() => setPicker('quotePolicy')}
+                                        disabled={quotePolicyLocked}
+                                        accessibilityRole="button"
+                                        accessibilityLabel={t('compose.quotePolicyLabel', { value: selectedQuotePolicy.label })}
+                                        accessibilityState={{ disabled: quotePolicyLocked }}
+                                        hitSlop={hitSlopFor(0, PILL_HEIGHT)}
+                                        style={({ pressed }) => [styles.pill, (pressed || quotePolicyLocked) && { opacity: 0.7 }]}
+                                    >
+                                        <Ionicons name="chatbox-ellipses-outline" size={14} color={colors.accentText} />
+                                        <Text style={[type.name, styles.pillText]}>{selectedQuotePolicy.label}</Text>
+                                        {!quotePolicyLocked && <Ionicons name="chevron-down" size={12} color={colors.textSecondary} />}
+                                    </Pressable>
+                                )}
                             </View>
                         </View>
                     </View>
+                )}
+
+                {quote?.visibility === 'private' && (
+                    <Text style={[type.meta, styles.quoteNote]}>{t('compose.quotePrivateNote')}</Text>
                 )}
 
                 {sensitive && (
@@ -524,6 +569,20 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                         cursor.current = event.nativeEvent.selection.end;
                     }}
                 />
+
+                {quote && (
+                    <View style={styles.quote}>
+                        <QuotedPost quote={{ state: 'accepted', quoted_status: quote }} />
+                        <IconButton
+                            icon="close-circle"
+                            size={22}
+                            color={colors.textMuted}
+                            accessibilityLabel={t('compose.removeQuote')}
+                            onPress={() => setQuote(null)}
+                            style={styles.quoteRemove}
+                        />
+                    </View>
+                )}
 
                 <AttachmentStrip
                     attachments={media.attachments}
@@ -595,6 +654,14 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                 options={LANGUAGE_OPTIONS}
                 value={language}
                 onSelect={setLanguage}
+                onClose={() => setPicker(null)}
+            />
+            <OptionSheet
+                visible={picker === 'quotePolicy'}
+                title={t('compose.whoCanQuote')}
+                options={quotePolicyOptions}
+                value={quotePolicy}
+                onSelect={setQuotePolicy}
                 onClose={() => setPicker(null)}
             />
             <EmojiPicker visible={picker === 'emoji'} onPick={insertEmoji} onClose={() => setPicker(null)} />

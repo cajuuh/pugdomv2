@@ -92,6 +92,13 @@ describe('fetchInstanceConfiguration', () => {
         expect(mockedGet).toHaveBeenCalledWith('https://one.social/api/v2/instance');
     });
 
+    it('knows quote posts come with Mastodon API version 7', async () => {
+        mockedGet.mockResolvedValue({ data: { api_versions: { mastodon: 7 } } });
+        await expect(fetchInstanceConfiguration()).resolves.toMatchObject({ supportsQuotes: true });
+        mockedGet.mockResolvedValue({ data: { api_versions: { mastodon: 6 } } });
+        await expect(fetchInstanceConfiguration()).resolves.toMatchObject({ supportsQuotes: false });
+    });
+
     it("falls back to Mastodon's defaults for missing fields", async () => {
         mockedGet.mockResolvedValue({ data: {} });
         await expect(fetchInstanceConfiguration()).resolves.toEqual(DEFAULT_INSTANCE_CONFIGURATION);

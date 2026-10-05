@@ -164,6 +164,19 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     toolActive: {
         backgroundColor: colors.accentSoft,
     },
+    quoteNote: {
+        marginHorizontal: 20,
+        color: colors.textMuted,
+    },
+    // The quoted post under the text, with its ✕ over the corner
+    quote: {
+        marginHorizontal: space.lg,
+    },
+    quoteRemove: {
+        position: 'absolute',
+        top: 0,
+        right: -space.sm,
+    },
     // Kept mounted but out of the way (the post while describing an image)
     hidden: {
         display: 'none',
