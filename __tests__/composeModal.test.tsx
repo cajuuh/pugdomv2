@@ -8,7 +8,7 @@ import { shouldDismiss } from '../components/ComposeModal/sheetTransition';
 import { counterState } from '../components/ComposeModal/characterCounter';
 import { fetchCustomEmojis } from '../services/mastodon/customEmojis';
 import { createStatus } from '../services/mastodon/statuses';
-import { fetchInstanceConfiguration } from '../services/mastodon/instance';
+import { DEFAULT_INSTANCE_CONFIGURATION, fetchInstanceConfiguration } from '../services/mastodon/instance';
 import { Account, Status } from '../services/mastodon/types';
 
 const me: Account = { id: '1', username: 'me', acct: 'me', display_name: 'Me', avatar: '', emojis: [], source: { language: 'pt' } };
@@ -65,7 +65,7 @@ describe('ComposeModal', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         mockedCreateStatus.mockResolvedValue({} as Status);
-        mockedInstance.mockResolvedValue({ maxCharacters: 500, maxPollOptions: 4, maxCharactersPerPollOption: 50 });
+        mockedInstance.mockResolvedValue({ ...DEFAULT_INSTANCE_CONFIGURATION, maxCharacters: 500, maxPollOptions: 4, maxCharactersPerPollOption: 50 });
     });
 
     it('does not load instance limits while closed', async () => {
@@ -96,7 +96,7 @@ describe('ComposeModal', () => {
     });
 
     it('counts URLs as 23 characters against the instance limit', async () => {
-        mockedInstance.mockResolvedValue({ maxCharacters: 1000, maxPollOptions: 4, maxCharactersPerPollOption: 50 });
+        mockedInstance.mockResolvedValue({ ...DEFAULT_INSTANCE_CONFIGURATION, maxCharacters: 1000, maxPollOptions: 4, maxCharactersPerPollOption: 50 });
         await renderCompose();
         await screen.findByText('1000');
 
@@ -158,7 +158,7 @@ describe('ComposeModal', () => {
     });
 
     it('warns near the limit and blocks posting over it', async () => {
-        mockedInstance.mockResolvedValue({ maxCharacters: 30, maxPollOptions: 4, maxCharactersPerPollOption: 50 });
+        mockedInstance.mockResolvedValue({ ...DEFAULT_INSTANCE_CONFIGURATION, maxCharacters: 30, maxPollOptions: 4, maxCharactersPerPollOption: 50 });
         await renderCompose();
         await screen.findByText('30');
 

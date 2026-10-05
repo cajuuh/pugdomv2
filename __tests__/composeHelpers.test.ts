@@ -82,7 +82,9 @@ describe('fetchInstanceConfiguration', () => {
             data: { configuration: { statuses: { max_characters: 5000 }, polls: { max_options: 8, max_characters_per_option: 100 } } },
         });
 
+        // Media limits not given: Mastodon's defaults
         await expect(fetchInstanceConfiguration()).resolves.toEqual({
+            ...DEFAULT_INSTANCE_CONFIGURATION,
             maxCharacters: 5000,
             maxPollOptions: 8,
             maxCharactersPerPollOption: 100,

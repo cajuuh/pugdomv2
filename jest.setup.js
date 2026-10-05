@@ -20,3 +20,20 @@ jest.mock('./services/i18n/defaults', () => ({
     ...jest.requireActual('./services/i18n/defaults'),
     DEFAULT_LANGUAGE: 'en',
 }));
+
+// Native image modules: tests mock what they return (see __tests__/media.test.tsx)
+jest.mock('expo-image-picker', () => ({
+    launchImageLibraryAsync: jest.fn(async () => ({ canceled: true, assets: null })),
+    launchCameraAsync: jest.fn(async () => ({ canceled: true, assets: null })),
+    requestCameraPermissionsAsync: jest.fn(async () => ({ granted: true })),
+}));
+jest.mock('expo-image-manipulator', () => {
+    const context = {
+        resize: jest.fn(() => context),
+        renderAsync: jest.fn(async () => ({ saveAsync: jest.fn(async () => ({ uri: 'file:///cache/converted.jpg', width: 1, height: 1 })) })),
+    };
+    return {
+        ImageManipulator: { manipulate: jest.fn(() => context) },
+        SaveFormat: { JPEG: 'jpeg', PNG: 'png', WEBP: 'webp' },
+    };
+});

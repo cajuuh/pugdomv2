@@ -3,7 +3,7 @@
     "name": "pugdom",
     "slug": "pugdom",
     "scheme": "pugdom",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -57,7 +57,18 @@
           }
         }
       ],
-      "expo-web-browser"
-    ]
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "pugdom opens your photos so you can attach them to posts.",
+          "cameraPermission": "pugdom uses the camera so you can take a photo for a post.",
+          "microphonePermission": false
+        }
+      ]
+    ],
+    "locales": {
+      "pt-BR": "./locales/pt-BR.json"
+    }
   }
 }
