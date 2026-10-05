@@ -113,9 +113,11 @@ describe('Post menu', () => {
         await fireEvent.press(screen.getByRole('button', { name: 'More options for this post' }));
     };
 
-    it("isn't offered on your own posts or other servers' feeds", async () => {
+    it("offers editing instead on your own posts, and nothing in other servers' feeds", async () => {
         await render(wrap(<TootCard status={post({ account: me })} />));
-        expect(screen.queryByRole('button', { name: 'More options for this post' })).toBeNull();
+        await fireEvent.press(screen.getByRole('button', { name: 'More options for this post' }));
+        expect(await screen.findByRole('button', { name: 'Edit' })).toBeTruthy();
+        expect(screen.queryByRole('button', { name: 'Report this post' })).toBeNull();
 
         await render(wrap(<TootCard status={post()} remote />));
         expect(screen.queryByRole('button', { name: 'More options for this post' })).toBeNull();

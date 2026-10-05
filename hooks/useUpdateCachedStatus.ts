@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { DeviceEventEmitter } from 'react-native';
 import { InfiniteData, useQueryClient } from '@tanstack/react-query';
 import { Status } from '../services/mastodon/types';
 import { NotificationGroupsPage } from '../services/mastodon/notifications';
@@ -9,6 +10,10 @@ type StatusPage = Status[] | BookmarksPage;
 
 const mapPage = (page: StatusPage, update: (status: Status) => Status): StatusPage =>
     Array.isArray(page) ? page.map(update) : { ...page, statuses: page.statuses.map(update) };
+
+// Screens that keep posts in their own state (threads) listen for these
+export const STATUS_UPDATED_EVENT = 'status_updated';
+export const STATUS_DELETED_EVENT = 'status_deleted';
 
 // Replaces a status in every cached timeline, including where it appears as a boost, and in cached notifications
 export const useUpdateCachedStatus = () => {
@@ -44,5 +49,24 @@ export const useUpdateCachedStatus = () => {
                 })),
             };
         });
+    }, [queryClient]);
+};
+
+// Removes a deleted status, and boosts of it, from every cached timeline and notification
+export const useRemoveCachedStatus = () => {
+    const queryClient = useQueryClient();
+
+    return useCallback((id: string) => {
+        const keep = (status: Status) => status.id !== id && status.reblog?.id !== id;
+        queryClient.setQueriesData<InfiniteData<StatusPage>>({ queryKey: ['timeline'] }, (data) =>
+            data && {
+                ...data,
+                pages: data.pages.map(page => (Array.isArray(page) ? page.filter(keep) : { ...page, statuses: page.statuses.filter(keep) })),
+            }
+        );
+        queryClient.setQueriesData<InfiniteData<NotificationGroupsPage>>({ queryKey: ['notifications'] }, (data) =>
+            data && { ...data, pages: data.pages.map(page => ({ ...page, groups: page.groups.filter(group => group.status?.id !== id) })) }
+        );
+        DeviceEventEmitter.emit(STATUS_DELETED_EVENT, id);
     }, [queryClient]);
 };

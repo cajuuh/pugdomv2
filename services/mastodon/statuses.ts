@@ -1,5 +1,5 @@
 import apiClient from '../api/client';
-import { Status } from './types';
+import { Status, StatusEdit, StatusSource } from './types';
 
 export interface CreateStatusParams {
     status: string;
@@ -62,5 +62,42 @@ export async function getStatus(id: string): Promise<Status> {
 
 export async function getStatusContext(id: string): Promise<{ ancestors: Status[], descendants: Status[] }> {
     const response = await apiClient.get(`/statuses/${id}/context`);
+    return response.data;
+}
+
+// Deletes one of your posts. The answer carries its source text, for "delete and redraft"; its media
+// stays reusable for about a day unless deleteMedia is set.
+export async function deleteStatus(id: string, { deleteMedia = false }: { deleteMedia?: boolean } = {}): Promise<Status> {
+    const response = await apiClient.delete<Status>(`/statuses/${id}`, { params: deleteMedia ? { delete_media: true } : undefined });
+    return response.data;
+}
+
+export interface EditStatusParams {
+    status: string;
+    spoiler_text?: string;
+    sensitive?: boolean;
+    language?: string;
+    media_ids?: string[];
+    // Descriptions and focal points ("x,y", -1..1) of the post's media
+    media_attributes?: { id: string; description?: string; focus?: string }[];
+    poll?: CreateStatusParams['poll'];
+    quote_approval_policy?: CreateStatusParams['quote_approval_policy'];
+}
+
+// Saves an edit; visibility, the reply and the quote can't change
+export async function editStatus(id: string, params: EditStatusParams): Promise<Status> {
+    const response = await apiClient.put<Status>(`/statuses/${id}`, params);
+    return response.data;
+}
+
+// The plain text a post was written as, to edit it
+export async function getStatusSource(id: string): Promise<StatusSource> {
+    const response = await apiClient.get<StatusSource>(`/statuses/${id}/source`);
+    return response.data;
+}
+
+// Every version of an edited post, oldest first
+export async function getStatusHistory(id: string): Promise<StatusEdit[]> {
+    const response = await apiClient.get<StatusEdit[]>(`/statuses/${id}/history`);
     return response.data;
 }

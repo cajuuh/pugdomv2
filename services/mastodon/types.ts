@@ -92,10 +92,33 @@ export interface Status {
     bookmarked?: boolean;
     card?: PreviewCard | null;
     poll?: Poll | null;
+    // When it was last edited, if ever
+    edited_at?: string | null;
+    // The source text, only in the answer to a delete (for "delete and redraft")
+    text?: string;
     // Quote posts (Mastodon 4.4+); older servers send none of these
     quote?: Quote | null;
     quotes_count?: number;
     quote_approval?: QuoteApproval | null;
+}
+
+// What a post was written as, to edit it
+export interface StatusSource {
+    id: string;
+    text: string;
+    spoiler_text: string;
+}
+
+// One version of an edited post
+export interface StatusEdit {
+    content: string;
+    spoiler_text: string;
+    sensitive: boolean;
+    created_at: string;
+    account: Account;
+    media_attachments: Attachment[];
+    emojis: CustomEmoji[];
+    poll?: { options: { title: string }[] } | null;
 }
 
 // Only `accepted` quotes are shown; any state not listed here counts as unauthorized
