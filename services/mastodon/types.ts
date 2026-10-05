@@ -90,6 +90,36 @@ export interface Status {
     bookmarked?: boolean;
     card?: PreviewCard | null;
     poll?: Poll | null;
+    // Quote posts (Mastodon 4.4+); older servers send none of these
+    quote?: Quote | null;
+    quotes_count?: number;
+    quote_approval?: QuoteApproval | null;
+}
+
+// Only `accepted` quotes are shown; any state not listed here counts as unauthorized
+export type QuoteState =
+    | 'pending'
+    | 'accepted'
+    | 'rejected'
+    | 'revoked'
+    | 'deleted'
+    | 'unauthorized'
+    | 'blocked_account'
+    | 'blocked_domain'
+    | 'muted_account';
+
+// The quoted post, or (for a quote inside a quoted post) only its id
+export interface Quote {
+    state: QuoteState | (string & {});
+    quoted_status?: Status | null;
+    quoted_status_id?: string | null;
+}
+
+// Who can quote a post, and what that means for the person looking at it
+export interface QuoteApproval {
+    automatic: string[];
+    manual: string[];
+    current_user: 'automatic' | 'manual' | 'denied' | 'unknown' | (string & {});
 }
 
 export interface PollOption {
@@ -119,7 +149,7 @@ export interface Relationship {
 
 export interface Notification {
     id: string;
-    type: 'mention' | 'status' | 'reblog' | 'follow' | 'follow_request' | 'favourite' | 'poll' | 'update' | 'admin.sign_up' | 'admin.report' | 'severed_relationships' | 'moderation_warning';
+    type: 'mention' | 'status' | 'reblog' | 'follow' | 'follow_request' | 'favourite' | 'poll' | 'update' | 'admin.sign_up' | 'admin.report' | 'severed_relationships' | 'moderation_warning' | 'quote' | 'quoted_update';
     created_at: string;
     account: Account;
     status?: Status;

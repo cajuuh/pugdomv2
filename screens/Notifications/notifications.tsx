@@ -35,6 +35,7 @@ const TYPE_CONFIG: Record<string, { badge: React.ComponentProps<typeof Ionicons>
     favourite: { badge: 'star', action: 'notifications.favourite' },
     reblog: { badge: 'repeat', action: 'notifications.reblog' },
     follow: { badge: 'person-add', action: 'notifications.follow' },
+    quote: { badge: 'chatbox-ellipses', action: 'notifications.quote' },
 };
 
 const nameOf = (account: Account) => account.display_name || account.username;

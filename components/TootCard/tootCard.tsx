@@ -39,6 +39,8 @@ import { useI18n } from '../../services/i18n/i18nContext';
 import { defaultTranslator, Translator } from '../../services/i18n/translate';
 import { useOpenAccount } from '../../hooks/useOpenAccount';
 import { FocusedImage } from './focusedImage';
+import { QuotedPost } from './quotedPost';
+import { useNavigator } from '../../services/navigationContext';
 import { BottomSheet } from '../ComposeModal/optionSheet';
 
 const getRelativeTime = (dateString: string, { t }: Translator) => {
@@ -135,6 +137,12 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     );
     // Remote posts and people open through our server, by their address
     const openPost = () => openLinkInApp(targetStatus.url ?? targetStatus.uri);
+    const { push } = useNavigator();
+    // A quoted post inside a remote one has the other server's id too
+    const openQuoted = useCallback(
+        (quoted: Status) => (remote ? openLinkInApp(quoted.url ?? quoted.uri) : onPress ? onPress(quoted.id) : push({ name: 'thread', statusId: quoted.id })),
+        [remote, openLinkInApp, onPress, push]
+    );
     const openPerson = (account: Status['account']) => (remote && account.url ? openLinkInApp(account.url) : openAccount(account));
     const i18n = useI18n();
     const { t, tn } = i18n;
@@ -387,6 +395,9 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             )}
             {renderMedia(targetStatus.media_attachments)}
             {targetStatus.card && renderLinkPreview(targetStatus.card)}
+            {targetStatus.quote && (
+                <QuotedPost quote={targetStatus.quote} onOpen={openQuoted} timeOf={createdAt => getRelativeTime(createdAt, i18n)} />
+            )}
         </>
     );
 
