@@ -28,12 +28,21 @@ jest.mock('expo-image-picker', () => ({
     requestCameraPermissionsAsync: jest.fn(async () => ({ granted: true })),
 }));
 jest.mock('expo-image-manipulator', () => {
+    const rendered = {
+        width: 1000,
+        height: 800,
+        saveAsync: jest.fn(async () => ({ uri: 'file:///cache/converted.jpg', width: 1, height: 1 })),
+    };
     const context = {
         resize: jest.fn(() => context),
-        renderAsync: jest.fn(async () => ({ saveAsync: jest.fn(async () => ({ uri: 'file:///cache/converted.jpg', width: 1, height: 1 })) })),
+        rotate: jest.fn(() => context),
+        flip: jest.fn(() => context),
+        crop: jest.fn(() => context),
+        renderAsync: jest.fn(async () => rendered),
     };
     return {
         ImageManipulator: { manipulate: jest.fn(() => context) },
         SaveFormat: { JPEG: 'jpeg', PNG: 'png', WEBP: 'webp' },
+        FlipType: { Horizontal: 'horizontal', Vertical: 'vertical' },
     };
 });

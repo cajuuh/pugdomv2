@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { InstanceConfiguration } from '../services/mastodon/instance';
 import { updateMedia, uploadMedia } from '../services/mastodon/media';
 import { imageType, PickedImage, prepareImage } from '../services/media/prepare';
+import { ImageEdits, NO_EDITS } from '../services/media/geometry';
 
 export interface ComposeAttachment {
     key: string;
@@ -25,7 +26,8 @@ type Limits = Pick<InstanceConfiguration, 'maxMediaAttachments' | 'imageSizeLimi
 // by the time you post; removing one cancels its upload.
 export const useMediaAttachments = (limits: Limits) => {
     const [attachments, setAttachments] = useState<ComposeAttachment[]>([]);
-    const uploads = useRef(new Map<string, { image: PickedImage; controller: AbortController }>());
+    // Per attachment: the image being uploaded, and the picked original with the edits that made it
+    const uploads = useRef(new Map<string, { image: PickedImage; original: PickedImage; edits: ImageEdits; controller: AbortController }>());
     const nextKey = useRef(0);
     // Latest limits for uploads started from callbacks
     const limitsRef = useRef(limits);
@@ -38,9 +40,9 @@ export const useMediaAttachments = (limits: Limits) => {
         setAttachments(list => list.map(attachment => (attachment.key === key ? { ...attachment, ...patch } : attachment)));
     }, []);
 
-    const start = useCallback(async (key: string, image: PickedImage) => {
+    const start = useCallback(async (key: string, image: PickedImage, history?: { original: PickedImage; edits: ImageEdits }) => {
         const controller = new AbortController();
-        uploads.current.set(key, { image, controller });
+        uploads.current.set(key, { image, original: history?.original ?? image, edits: history?.edits ?? NO_EDITS, controller });
         try {
             const file = await prepareImage(image, limitsRef.current);
             if (controller.signal.aborted) return;
@@ -82,7 +84,31 @@ export const useMediaAttachments = (limits: Limits) => {
         const upload = uploads.current.get(key);
         if (!upload) return;
         update(key, { status: 'uploading', progress: 0 });
-        start(key, upload.image);
+        start(key, upload.image, upload);
+    }, [start, update]);
+
+    // The picked image and the edits so far, for the editor to start from
+    const editsFor = useCallback((key: string) => {
+        const upload = uploads.current.get(key);
+        return upload ? { original: upload.original, edits: upload.edits } : null;
+    }, []);
+
+    // Swaps in an edited image (made from the original) and uploads it in place of the last one
+    const edit = useCallback((key: string, edited: PickedImage, edits: ImageEdits) => {
+        const upload = uploads.current.get(key);
+        if (!upload) return;
+        upload.controller.abort();
+        update(key, {
+            uri: edited.uri,
+            width: edited.width,
+            height: edited.height,
+            status: 'uploading',
+            progress: 0,
+            mediaId: undefined,
+            // The description stays, but the new upload doesn't have it yet
+            savedDescription: '',
+        });
+        start(key, edited, { original: upload.original, edits });
     }, [start, update]);
 
     const remove = useCallback((key: string) => {
@@ -129,6 +155,8 @@ export const useMediaAttachments = (limits: Limits) => {
         retry,
         remove,
         describe,
+        editsFor,
+        edit,
         reset,
         cancel,
         finish,

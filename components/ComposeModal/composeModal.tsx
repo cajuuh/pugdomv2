@@ -39,6 +39,10 @@ import { AltTextEditor } from './altTextEditor';
 import { AltReminderSheet } from './altReminderSheet';
 import { useMediaAttachments } from '../../hooks/useMediaAttachments';
 import { pickImages, takePhoto } from '../../services/media/pick';
+import { ImageEditor } from '../ImageEditor/imageEditor';
+import { applyEdits } from '../../services/media/edit';
+import { ImageEdits, sameEdits } from '../../services/media/geometry';
+import { PickedImage } from '../../services/media/prepare';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { Translator } from '../../services/i18n/translate';
 
@@ -173,6 +177,8 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
     // The image whose description is being written, shown in place of the post
     const [altEditing, setAltEditing] = useState<{ key: string; draft: string } | null>(null);
     const [reminderOpen, setReminderOpen] = useState(false);
+    // The image open in the editor: its original and the edits so far
+    const [imageEditing, setImageEditing] = useState<{ key: string; original: PickedImage; edits: ImageEdits } | null>(null);
     // The pug asks about missing descriptions once per post
     const reminded = useRef(false);
 
@@ -218,6 +224,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
             setPicker(null);
             media.reset();
             setAltEditing(null);
+            setImageEditing(null);
             setReminderOpen(false);
             reminded.current = false;
 
@@ -271,6 +278,28 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
         if (!altEditing || altOverLimit) return;
         media.describe(altEditing.key, altEditing.draft);
         setAltEditing(null);
+    };
+
+    const editImage = (key: string) => {
+        const history = media.editsFor(key);
+        if (history) setImageEditing({ key, ...history });
+    };
+
+    // Applies the edits to the original and uploads the result in place of the last upload
+    const finishEditing = async (edits: ImageEdits) => {
+        if (!imageEditing) return;
+        if (sameEdits(edits, imageEditing.edits)) {
+            setImageEditing(null);
+            return;
+        }
+        try {
+            const edited = await applyEdits(imageEditing.original, edits);
+            media.edit(imageEditing.key, edited, edits);
+            setImageEditing(null);
+        } catch (error) {
+            console.warn('Could not edit the image:', error);
+            Alert.alert(t('editor.failedTitle'), t('editor.failed'));
+        }
     };
 
     const addFromLibrary = async () => {
@@ -493,7 +522,13 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                     }}
                 />
 
-                <AttachmentStrip attachments={media.attachments} onDescribe={describeImage} onRemove={media.remove} onRetry={media.retry} />
+                <AttachmentStrip
+                    attachments={media.attachments}
+                    onDescribe={describeImage}
+                    onEdit={editImage}
+                    onRemove={media.remove}
+                    onRetry={media.retry}
+                />
 
                 {showPoll && (
                     <PollEditor
@@ -560,6 +595,13 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                 onClose={() => setPicker(null)}
             />
             <EmojiPicker visible={picker === 'emoji'} onPick={insertEmoji} onClose={() => setPicker(null)} />
+            <ImageEditor
+                visible={!!imageEditing}
+                image={imageEditing?.original ?? null}
+                initialEdits={imageEditing?.edits}
+                onCancel={() => setImageEditing(null)}
+                onDone={finishEditing}
+            />
             <AltReminderSheet
                 visible={reminderOpen}
                 count={media.missingDescription.length}

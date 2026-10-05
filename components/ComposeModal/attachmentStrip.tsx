@@ -13,13 +13,15 @@ interface AttachmentStripProps {
     attachments: ComposeAttachment[];
     // Opens the description editor
     onDescribe: (key: string) => void;
+    // Opens the image editor (not for GIFs: editing would flatten them)
+    onEdit: (key: string) => void;
     onRemove: (key: string) => void;
     onRetry: (key: string) => void;
 }
 
 // The images attached to a post: each shows its upload progress, an ALT badge once described,
-// and buttons to remove it or retry a failed upload. Tapping one edits its description.
-export const AttachmentStrip: React.FC<AttachmentStripProps> = ({ attachments, onDescribe, onRemove, onRetry }) => {
+// and buttons to edit or remove it, or retry a failed upload. Tapping one edits its description.
+export const AttachmentStrip: React.FC<AttachmentStripProps> = ({ attachments, onDescribe, onEdit, onRemove, onRetry }) => {
     const { colors, type } = useTheme();
     const { t } = useI18n();
     if (attachments.length === 0) return null;
@@ -43,7 +45,7 @@ export const AttachmentStrip: React.FC<AttachmentStripProps> = ({ attachments, o
 
                         {attachment.status === 'uploading' && (
                             <View
-                                style={[styles.progressTrack, { backgroundColor: mediaColors.scrim }]}
+                                style={[styles.progressTrack, !attachment.isGif && styles.progressTrackBesideEdit, { backgroundColor: mediaColors.scrim }]}
                                 accessible
                                 accessibilityRole="progressbar"
                                 accessibilityLabel={t('attachments.uploading', { index })}
@@ -82,12 +84,24 @@ export const AttachmentStrip: React.FC<AttachmentStripProps> = ({ attachments, o
                             </Text>
                         </View>
 
+                        {!attachment.isGif && attachment.status !== 'failed' && (
+                            <Pressable
+                                onPress={() => onEdit(attachment.key)}
+                                accessibilityRole="button"
+                                accessibilityLabel={t('attachments.edit', { index })}
+                                hitSlop={8}
+                                style={[styles.corner, styles.edit, { backgroundColor: mediaColors.scrimStrong }]}
+                            >
+                                <Ionicons name="crop" size={14} color={mediaColors.ink} />
+                            </Pressable>
+                        )}
+
                         <Pressable
                             onPress={() => onRemove(attachment.key)}
                             accessibilityRole="button"
                             accessibilityLabel={t('attachments.remove', { index })}
                             hitSlop={8}
-                            style={[styles.remove, { backgroundColor: mediaColors.scrimStrong }]}
+                            style={[styles.corner, styles.remove, { backgroundColor: mediaColors.scrimStrong }]}
                         >
                             <Ionicons name="close" size={16} color={mediaColors.ink} />
                         </Pressable>
@@ -122,6 +136,10 @@ const styles = StyleSheet.create({
         borderRadius: radii.pill,
         overflow: 'hidden',
     },
+    // Leaves the bottom right corner to the edit button
+    progressTrackBesideEdit: {
+        right: 24 + space.xs * 2,
+    },
     progressBar: {
         height: '100%',
     },
@@ -144,14 +162,20 @@ const styles = StyleSheet.create({
         borderRadius: radii.pill,
         overflow: 'hidden',
     },
-    remove: {
+    corner: {
         position: 'absolute',
-        right: space.xs,
-        top: space.xs,
         width: 24,
         height: 24,
         borderRadius: radii.pill,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    remove: {
+        right: space.xs,
+        top: space.xs,
+    },
+    edit: {
+        right: space.xs,
+        bottom: space.xs,
     },
 });
