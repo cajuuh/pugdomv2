@@ -40,9 +40,9 @@ export const TopBar: React.FC<TopBarProps> = ({ user, onProfilePress, onSettings
                     <Avatar name={user?.display_name || user?.username || ''} uri={user?.avatar} size={36} ring />
                 </Pressable>
 
-                <View style={styles.wordmark} accessible accessibilityRole="header" accessibilityLabel="pugdom">
+                <View style={styles.wordmark} accessible accessibilityRole="header" accessibilityLabel="pugdon">
                     <PugMark coat={coat} size={28} />
-                    <Text style={[type.title, styles.wordmarkText]}>pugdom</Text>
+                    <Text style={[type.title, styles.wordmarkText]}>pugdon</Text>
                 </View>
 
                 <IconButton icon="options-outline" accessibilityLabel={t('common.settings')} onPress={onSettingsPress} color={colors.textSecondary} size={24} style={styles.settingsButton} />

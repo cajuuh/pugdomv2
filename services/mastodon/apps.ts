@@ -9,7 +9,7 @@ export async function registerApp(instanceUrl: string, redirectUri: string): Pro
     const response = await publicClient.post<AppRegistrationData>(
         `${instanceUrl}/api/v1/apps`,
         {
-            client_name: 'Pugdom',
+            client_name: 'pugdon',
             redirect_uris: redirectUri,
             scopes: 'read write follow push',
             website: 'https://github.com/cajuuh/pugdomv2'

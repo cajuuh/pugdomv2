@@ -61,7 +61,7 @@ describe('TopBar', () => {
     it('shows the wordmark and opens settings from its own button', async () => {
         const { onSettingsPress } = await renderHeader();
 
-        expect(screen.getByRole('header', { name: 'pugdom' })).toBeTruthy();
+        expect(screen.getByRole('header', { name: 'pugdon' })).toBeTruthy();
         await fireEvent.press(screen.getByRole('button', { name: 'Settings' }));
         expect(onSettingsPress).toHaveBeenCalled();
     });

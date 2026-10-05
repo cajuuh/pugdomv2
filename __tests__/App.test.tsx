@@ -33,7 +33,7 @@ describe('App', () => {
     it('boots to the login screen when no account is saved', async () => {
         await render(<App />);
 
-       expect(await screen.findByText('pugdom')).toBeTruthy();
+       expect(await screen.findByText('pugdon')).toBeTruthy();
 expect(
     screen.getByText('A friendly home for your federated social conversations.')
 ).toBeTruthy();

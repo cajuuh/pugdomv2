@@ -1,13 +1,13 @@
-# 🐾 Pugdom
+# 🐾 Pugdon
 
 [![Expo](https://img.shields.io/badge/Expo-v56-000000?style=for-the-badge&logo=expo&logoColor=white)](https://expo.dev/)
 [![React Native](https://img.shields.io/badge/React_Native-0.85-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactnative.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
-**Pugdom** is a gorgeous, premium, open-source cross-platform Mastodon client designed for the decentralized Fediverse. Powered by **Expo** and **React Native UI Lib**, Pugdom runs natively on **iOS**, **Android**, and the **Web** from a single TypeScript codebase. 
+**Pugdon** (as in Mastodon; the code and app ids still say pugdom) is a gorgeous, premium, open-source cross-platform Mastodon client designed for the decentralized Fediverse. Powered by **Expo** and **React Native UI Lib**, Pugdon runs natively on **iOS**, **Android**, and the **Web** from a single TypeScript codebase. 
 
-With its modern visual language, dynamic dark mode, and smooth interface, Pugdom makes exploring, reading, and interacting with the Fediverse a delightful experience.
+With its modern visual language, dynamic dark mode, and smooth interface, Pugdon makes exploring, reading, and interacting with the Fediverse a delightful experience.
 
 ---
 
@@ -15,7 +15,7 @@ With its modern visual language, dynamic dark mode, and smooth interface, Pugdom
 
 | 🏠 Home Timeline | ⚙️ Profile & Settings |
 | :-: | :-: |
-| <img src="./assets/screen1.png" width="360" alt="Pugdom Home Timeline"/> | <img src="./assets/screen2.png" width="360" alt="Pugdom Settings and Profile"/> |
+| <img src="./assets/screen1.png" width="360" alt="Pugdon Home Timeline"/> | <img src="./assets/screen2.png" width="360" alt="Pugdon Settings and Profile"/> |
 
 ---
 
@@ -43,7 +43,7 @@ With its modern visual language, dynamic dark mode, and smooth interface, Pugdom
 
 ## 🛠️ How It Works (Architecture)
 
-Pugdom is structured with clean separation of concerns and modular service providers:
+Pugdon is structured with clean separation of concerns and modular service providers:
 
 ```mermaid
 graph TD
@@ -128,7 +128,7 @@ Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, tes
 
 ## 🔒 Privacy
 
-pugdom collects no data: it talks only to your Mastodon server. See the [privacy policy](PRIVACY.md) (English and Português).
+pugdon collects no data: it talks only to your Mastodon server. See the [privacy policy](PRIVACY.md) (English and Português).
 
 ---
 
