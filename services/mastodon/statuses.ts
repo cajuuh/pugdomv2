@@ -8,6 +8,8 @@ export interface CreateStatusParams {
     spoiler_text?: string;
     visibility?: 'public' | 'unlisted' | 'private' | 'direct';
     language?: string;
+    // Uploaded media (see media.ts); a post can't have both media and a poll
+    media_ids?: string[];
     poll?: {
         options: string[];
         expires_in: number;

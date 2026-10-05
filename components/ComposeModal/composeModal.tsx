@@ -34,6 +34,11 @@ import { OptionSheet, SheetOption } from './optionSheet';
 import { DEFAULT_POLL_DURATION, PollEditor } from './pollEditor';
 import { useDragToDismiss, useSheetTransition } from './sheetTransition';
 import { PILL_HEIGHT, makeStyles } from './styles';
+import { AttachmentStrip } from './attachmentStrip';
+import { AltTextEditor } from './altTextEditor';
+import { AltReminderSheet } from './altReminderSheet';
+import { useMediaAttachments } from '../../hooks/useMediaAttachments';
+import { pickImages, takePhoto } from '../../services/media/pick';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { Translator } from '../../services/i18n/translate';
 
@@ -128,9 +133,9 @@ const useKeyboard = (windowHeight: number) => {
     return keyboard;
 };
 
-// Anything typed beyond the reply mentions the sheet opened with, a poll, or a content warning
-export const hasDraft = ({ text, initialText, showPoll, spoilerText }: { text: string; initialText: string; showPoll: boolean; spoilerText: string }) =>
-    text.trim() !== initialText.trim() || showPoll || spoilerText.trim().length > 0;
+// Anything typed beyond the reply mentions the sheet opened with, a poll, a content warning or images
+export const hasDraft = ({ text, initialText, showPoll, spoilerText, hasMedia = false }: { text: string; initialText: string; showPoll: boolean; spoilerText: string; hasMedia?: boolean }) =>
+    text.trim() !== initialText.trim() || showPoll || spoilerText.trim().length > 0 || hasMedia;
 
 interface ComposeModalProps {
     isOpen: boolean;
@@ -164,6 +169,13 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
     const [pollDuration, setPollDuration] = useState<number>(DEFAULT_POLL_DURATION);
     const [pollMultiple, setPollMultiple] = useState(false);
 
+    const media = useMediaAttachments(instanceConfiguration);
+    // The image whose description is being written, shown in place of the post
+    const [altEditing, setAltEditing] = useState<{ key: string; draft: string } | null>(null);
+    const [reminderOpen, setReminderOpen] = useState(false);
+    // The pug asks about missing descriptions once per post
+    const reminded = useRef(false);
+
     const inputRef = useRef<TextInput>(null);
     const cursor = useRef(0);
 
@@ -177,7 +189,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
 
     // Swiping the sheet down closes it, asking first if there's a draft
     const { drag, panHandlers } = useDragToDismiss(cancel => {
-        if (!hasDraft({ text, initialText: initialText.current, showPoll, spoilerText })) {
+        if (!hasDraft({ text, initialText: initialText.current, showPoll, spoilerText, hasMedia: media.attachments.length > 0 })) {
             closeCompose();
             return;
         }
@@ -204,6 +216,10 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
             setPollDuration(DEFAULT_POLL_DURATION);
             setPollMultiple(false);
             setPicker(null);
+            media.reset();
+            setAltEditing(null);
+            setReminderOpen(false);
+            reminded.current = false;
 
             // Focus once the sheet is in place
             const timer = setTimeout(() => {
@@ -213,13 +229,22 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
         }
     }, [isOpen, replyToStatus, drag]);
 
+    // Closing stops uploads that are still going
+    const cancelUploads = media.cancel;
+    useEffect(() => {
+        if (!isOpen) cancelUploads();
+    }, [isOpen, cancelUploads]);
+
     if (!mounted) return null;
 
     const remaining = instanceConfiguration.maxCharacters - statusLength(text, sensitive ? spoilerText : '');
     const isOverLimit = remaining < 0;
-    const isEmpty = text.trim().length === 0;
+    // Images can be posted without text
+    const isEmpty = text.trim().length === 0 && media.attachments.length === 0;
     const pollError = showPoll ? pollValidationError(pollOptions, i18n) : null;
-    const isPublishDisabled = isEmpty || isOverLimit || !!pollError || loading;
+    const isPublishDisabled = isEmpty || isOverLimit || !!pollError || media.pending || loading;
+    const editingAttachment = altEditing ? media.attachments.find(attachment => attachment.key === altEditing.key) : undefined;
+    const altOverLimit = !!altEditing && altEditing.draft.length > instanceConfiguration.descriptionLimit;
     const visibilityOptions = visibilities(i18n);
     const selectedVisibility = visibilityOptions.find(v => v.value === visibility) ?? visibilityOptions[0];
     const selectedLanguage = LANGUAGES.find(l => l.code === language) ?? LANGUAGES[0];
@@ -237,8 +262,45 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
         cursor.current = next.cursor;
     };
 
-    const handlePublish = async () => {
+    const describeImage = (key: string) => {
+        const attachment = media.attachments.find(item => item.key === key);
+        if (attachment) setAltEditing({ key, draft: attachment.description });
+    };
+
+    const saveDescription = () => {
+        if (!altEditing || altOverLimit) return;
+        media.describe(altEditing.key, altEditing.draft);
+        setAltEditing(null);
+    };
+
+    const addFromLibrary = async () => {
+        try {
+            media.add(await pickImages(media.room));
+        } catch (error) {
+            console.warn('Could not open the gallery:', error);
+        }
+    };
+
+    const addFromCamera = async () => {
+        try {
+            const photo = await takePhoto();
+            if (photo === 'denied') {
+                Alert.alert(t('compose.cameraDeniedTitle'), t('compose.cameraDenied'));
+                return;
+            }
+            media.add(photo);
+        } catch (error) {
+            console.warn('Could not open the camera:', error);
+        }
+    };
+
+    const handlePublish = async (skipReminder = false) => {
         if (isPublishDisabled) return;
+        if (!skipReminder && !reminded.current && media.missingDescription.length > 0) {
+            reminded.current = true;
+            setReminderOpen(true);
+            return;
+        }
         setLoading(true);
         const pollParams = showPoll
             ? {
@@ -249,6 +311,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
             : undefined;
 
         try {
+            const mediaIds = await media.finish();
             await createStatus({
                 status: text,
                 in_reply_to_id: reply ? reply.id : null,
@@ -257,6 +320,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                 language: language,
                 visibility,
                 poll: pollParams,
+                media_ids: mediaIds.length > 0 ? mediaIds : undefined,
             });
 
             DeviceEventEmitter.emit('status_published');
@@ -272,12 +336,13 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
         }
     };
 
-    const tool = (icon: React.ComponentProps<typeof Ionicons>['name'], label: string, onPress: () => void, active = false) => (
+    const tool = (icon: React.ComponentProps<typeof Ionicons>['name'], label: string, onPress: () => void, active = false, disabled = false) => (
         <IconButton
             icon={icon}
             accessibilityLabel={label}
             onPress={onPress}
             selected={active}
+            disabled={disabled}
             color={active ? colors.accentText : colors.textSecondary}
             style={[styles.tool, active && styles.toolActive]}
         />
@@ -299,18 +364,45 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
 
                 <View style={styles.header}>
                     <View style={styles.headerSide}>
-                        <PillButton label={t('common.cancel')} variant="ghost" onPress={closeCompose} style={styles.cancel} />
+                        <PillButton
+                            label={t('common.cancel')}
+                            variant="ghost"
+                            onPress={altEditing ? () => setAltEditing(null) : closeCompose}
+                            style={styles.cancel}
+                        />
                     </View>
-                    <Text accessibilityRole="header" style={[type.sheetTitle, styles.headerTitle]}>
-                        {reply ? t('compose.reply') : t('compose.newPost')}
+                    <Text accessibilityRole="header" style={[type.sheetTitle, styles.headerTitle]} numberOfLines={1}>
+                        {altEditing ? t('compose.describeTitle') : reply ? t('compose.reply') : t('compose.newPost')}
                     </Text>
                     <View style={[styles.headerSide, styles.headerSideEnd]}>
-                        <PillButton label={t('compose.post')} onPress={handlePublish} disabled={isPublishDisabled && !loading} loading={loading} />
+                        {altEditing ? (
+                            <PillButton label={t('compose.done')} onPress={saveDescription} disabled={altOverLimit} />
+                        ) : (
+                            <PillButton label={t('compose.post')} onPress={() => handlePublish()} disabled={isPublishDisabled && !loading} loading={loading} />
+                        )}
                     </View>
                 </View>
             </View>
 
-            <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+            {altEditing && editingAttachment && (
+                <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+                    <AltTextEditor
+                        uri={editingAttachment.uri}
+                        width={editingAttachment.width}
+                        height={editingAttachment.height}
+                        value={altEditing.draft}
+                        onChange={draft => setAltEditing({ key: altEditing.key, draft })}
+                        maxLength={instanceConfiguration.descriptionLimit}
+                    />
+                </ScrollView>
+            )}
+
+            {/* Hidden, not unmounted, while describing an image, so the post keeps its scroll and cursor */}
+            <ScrollView
+                style={[styles.scroll, altEditing && styles.hidden]}
+                contentContainerStyle={styles.scrollContent}
+                keyboardShouldPersistTaps="handled"
+            >
                 {reply && (
                     <Well style={styles.replyWell}>
                         <View style={styles.replyHeader}>
@@ -401,6 +493,8 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                     }}
                 />
 
+                <AttachmentStrip attachments={media.attachments} onDescribe={describeImage} onRemove={media.remove} onRetry={media.retry} />
+
                 {showPoll && (
                     <PollEditor
                         options={pollOptions}
@@ -419,10 +513,12 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
 
             <View
                 accessibilityRole="toolbar"
-                style={[styles.toolbar, { paddingBottom: keyboard.visible ? 10 : Math.max(insets.bottom, 10) }]}
+                style={[styles.toolbar, { paddingBottom: keyboard.visible ? 10 : Math.max(insets.bottom, 10) }, altEditing && styles.hidden]}
             >
-                {tool('image-outline', t('compose.addMedia'), () => Alert.alert(t('compose.mediaSoonTitle'), t('compose.mediaSoon')))}
-                {tool(showPoll ? 'stats-chart' : 'stats-chart-outline', t('compose.poll'), () => (showPoll ? resetPoll() : setShowPoll(true)), showPoll)}
+                {/* A post has either images or a poll */}
+                {tool('image-outline', t('compose.addMedia'), addFromLibrary, false, showPoll || media.room === 0)}
+                {tool('camera-outline', t('compose.takePhoto'), addFromCamera, false, showPoll || media.room === 0)}
+                {tool(showPoll ? 'stats-chart' : 'stats-chart-outline', t('compose.poll'), () => (showPoll ? resetPoll() : setShowPoll(true)), showPoll, media.attachments.length > 0)}
                 {tool('warning-outline', t('compose.contentWarning'), () => setSensitive(!sensitive), sensitive)}
                 {tool('happy-outline', t('compose.customEmoji'), () => setPicker('emoji'))}
                 <View style={styles.toolbarSpacer} />
@@ -464,6 +560,20 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                 onClose={() => setPicker(null)}
             />
             <EmojiPicker visible={picker === 'emoji'} onPick={insertEmoji} onClose={() => setPicker(null)} />
+            <AltReminderSheet
+                visible={reminderOpen}
+                count={media.missingDescription.length}
+                onDescribe={() => {
+                    setReminderOpen(false);
+                    const first = media.missingDescription[0];
+                    if (first) describeImage(first.key);
+                }}
+                onPostAnyway={() => {
+                    setReminderOpen(false);
+                    handlePublish(true);
+                }}
+                onClose={() => setReminderOpen(false)}
+            />
         </Modal>
     );
 };

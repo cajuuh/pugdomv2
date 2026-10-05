@@ -11,7 +11,7 @@ const SETUP_MESSAGES = en.setup.messages;
 import { emojiCacheKey, loadCachedEmojis, prefetchEmojiImages, saveCachedEmojis } from '../services/emojiCache';
 import { CUSTOM_EMOJIS_KEY, EMOJI_STALE_TIME, useEmojiCachePrimer } from '../hooks/useCustomEmojis';
 import { fetchCustomEmojis } from '../services/mastodon/customEmojis';
-import { fetchInstanceConfiguration } from '../services/mastodon/instance';
+import { DEFAULT_INSTANCE_CONFIGURATION, fetchInstanceConfiguration } from '../services/mastodon/instance';
 import { CustomEmoji } from '../services/mastodon/types';
 
 jest.mock('../services/themeContext', () => ({
@@ -44,7 +44,7 @@ beforeEach(async () => {
     await AsyncStorage.clear();
     prefetch = jest.spyOn(Image, 'prefetch').mockResolvedValue(true);
     mockedFetchEmojis.mockResolvedValue([emoji('pug'), emoji('blobcat'), emoji('hidden', false)]);
-    mockedInstance.mockResolvedValue({ maxCharacters: 500, maxPollOptions: 4, maxCharactersPerPollOption: 50 });
+    mockedInstance.mockResolvedValue({ ...DEFAULT_INSTANCE_CONFIGURATION, maxCharacters: 500, maxPollOptions: 4, maxCharactersPerPollOption: 50 });
 });
 
 afterEach(() => prefetch.mockRestore());

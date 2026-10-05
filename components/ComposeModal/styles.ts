@@ -48,6 +48,7 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     headerSideEnd: {
         justifyContent: 'flex-end',
     },
+    // The sides share what the title leaves, so titles stay short (one line) to leave room for the buttons
     headerTitle: {
         color: colors.textPrimary,
     },
@@ -162,6 +163,10 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     },
     toolActive: {
         backgroundColor: colors.accentSoft,
+    },
+    // Kept mounted but out of the way (the post while describing an image)
+    hidden: {
+        display: 'none',
     },
     toolbarSpacer: {
         flex: 1,
