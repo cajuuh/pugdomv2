@@ -225,9 +225,10 @@ describe('Timeline feed pills', () => {
 
         await fireEvent.press(screen.getByRole('button', { name: 'Pin Trending' }));
 
-        await waitFor(async () => expect((await getPinnedFeeds('me')).some(feed => feed.id === 'trending')).toBe(true));
-        expect(screen.queryByRole('button', { name: 'Pin Trending' })).toBeNull();
+        // Once pinned it's a regular pill, still open
+        await waitFor(() => expect(screen.queryByRole('button', { name: 'Pin Trending' })).toBeNull());
         expect(screen.getByRole('tab', { name: 'Trending' })).toBeSelected();
+        expect((await getPinnedFeeds('me')).some(feed => feed.id === 'trending')).toBe(true);
     });
 
     it('drops the preview when switching to a pinned feed', async () => {
