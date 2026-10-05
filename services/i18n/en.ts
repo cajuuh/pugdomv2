@@ -209,6 +209,8 @@ export const en = {
         unsupported: "Your server doesn't support link timelines. You can still open the article directly.",
     },
     post: {
+        readDescription: 'Read the image description',
+        descriptionTitle: 'Image description',
         image: 'Image',
         video: 'Video',
         gif: 'GIF',
@@ -315,6 +317,9 @@ export const en = {
         altLabel: 'Description',
         altPlaceholder: "Describe what's in the image",
         altHint: "People who use screen readers hear this, and it shows when the image doesn't load.",
+        focusLabel: 'Focal point',
+        focusHint: 'Tap the image to mark what matters: crops in timelines keep it in view.',
+        focusReset: 'Center',
         reminderTitle: 'Woof, woof! 🐾',
         reminder_one: "The pug noticed {{count}} image without a description. People who use screen readers will love knowing what's in it.",
         reminder_other: "The pug noticed {{count}} images without a description. People who use screen readers will love knowing what's in them.",

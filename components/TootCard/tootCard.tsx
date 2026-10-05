@@ -38,6 +38,8 @@ import { hitSlopFor } from '../../services/theme/shape';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { defaultTranslator, Translator } from '../../services/i18n/translate';
 import { useOpenAccount } from '../../hooks/useOpenAccount';
+import { FocusedImage } from './focusedImage';
+import { BottomSheet } from '../ComposeModal/optionSheet';
 
 const getRelativeTime = (dateString: string, { t }: Translator) => {
     const now = new Date();
@@ -148,6 +150,9 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const [boostCount, setBoostCount] = useRecyclingState(targetStatus.reblogs_count, recyclingDeps);
     const [isBookmarked, setIsBookmarked] = useRecyclingState(!!targetStatus.bookmarked, recyclingDeps);
     const [isMediaRevealed, setIsMediaRevealed] = useRecyclingState(false, recyclingDeps);
+    // The image description opened from an ALT chip; kept while its sheet slides away
+    const [shownDescription, setShownDescription] = useRecyclingState<string | null>(null, recyclingDeps);
+    const [descriptionOpen, setDescriptionOpen] = useRecyclingState(false, recyclingDeps);
 
     // Lets async handlers skip state updates if the card was recycled while a request was in flight
     const renderedStatusId = useRef(targetStatus.id);
@@ -247,6 +252,22 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
 
         const count = attachments.length;
         const veiled = targetStatus.sensitive && !isMediaRevealed;
+        // Images with a description say so; tapping the chip reads it, tapping the image still opens it
+        const altChip = (item: Attachment) =>
+            !!item.description && (
+                <Pressable
+                    onPress={() => {
+                        setShownDescription(item.description!);
+                        setDescriptionOpen(true);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('post.readDescription')}
+                    hitSlop={6}
+                    style={styles.altChip}
+                >
+                    <Text style={[type.label, styles.altChipText]}>ALT</Text>
+                </Pressable>
+            );
         const tiles = count === 1 ? (
             <Pressable
                 style={[styles.singleMedia, compactMode && styles.singleMediaCompact]}
@@ -254,7 +275,8 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 accessibilityRole="imagebutton"
                 accessibilityLabel={mediaLabel(attachments[0], 0, count, i18n)}
             >
-                <Image source={{ uri: attachments[0].preview_url || attachments[0].url }} style={styles.mediaImage} resizeMode="cover" />
+                <FocusedImage attachment={attachments[0]} style={styles.mediaImage} />
+                {altChip(attachments[0])}
             </Pressable>
         ) : (
             <View style={styles.mediaGrid}>
@@ -266,7 +288,8 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                         accessibilityRole="imagebutton"
                         accessibilityLabel={mediaLabel(item, idx, count, i18n)}
                     >
-                        <Image source={{ uri: item.preview_url || item.url }} style={styles.mediaImage} resizeMode="cover" />
+                        <FocusedImage attachment={item} style={styles.mediaImage} />
+                        {altChip(item)}
                     </Pressable>
                 ))}
             </View>
@@ -553,17 +576,28 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         </Card>
     );
 
+    const withDescription = (content: React.ReactNode) => (
+        <>
+            {content}
+            {shownDescription !== null && (
+                <BottomSheet visible={descriptionOpen} title={t('post.descriptionTitle')} onClose={() => setDescriptionOpen(false)}>
+                    <Text selectable style={[type.body, styles.descriptionText]}>{shownDescription}</Text>
+                </BottomSheet>
+            )}
+        </>
+    );
+
     if (remote) {
-        return (
+        return withDescription(
             <Pressable onPress={openPost} accessibilityHint={t('servers.openToInteractHint')}>
                 {card}
             </Pressable>
         );
     }
     if (!onPress) {
-        return card;
+        return withDescription(card);
     }
-    return (
+    return withDescription(
         <Pressable onPress={() => onPress(targetStatus.id)} accessibilityHint={t('post.opensThread')}>
             {card}
         </Pressable>
