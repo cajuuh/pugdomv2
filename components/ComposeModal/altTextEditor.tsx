@@ -32,7 +32,7 @@ export const AltTextEditor: React.FC<AltTextEditorProps> = ({ uri, width, height
     const shown = fitSize({ width: boxWidth, height: MAX_IMAGE_HEIGHT }, { width: width || 1, height: height || 1 });
 
     return (
-        <View style={styles.container}>
+        <View style={styles.container} testID="alt-text-editor">
             <View onLayout={event => setBoxWidth(event.nativeEvent.layout.width)} style={styles.imageRow} testID="focus-image-box">
                 {shown.width > 0 && (
                     <Pressable
@@ -90,9 +90,11 @@ export const AltTextEditor: React.FC<AltTextEditorProps> = ({ uri, width, height
 };
 
 const styles = StyleSheet.create({
+    // The compose sheet's content has no side padding of its own; boxed blocks sit space.lg in, like the poll
     container: {
         gap: space.md,
         paddingTop: space.sm,
+        paddingHorizontal: space.lg,
     },
     imageRow: {
         alignItems: 'center',
