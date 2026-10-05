@@ -110,3 +110,52 @@ export function OptionSheet<T extends string | number>({ visible, title, options
         </BottomSheet>
     );
 }
+
+export interface SheetAction {
+    key: string;
+    label: string;
+    description?: string;
+    icon?: React.ComponentProps<typeof Ionicons>['name'];
+    // Shown, but can't be picked; the description says why
+    disabled?: boolean;
+    onPress: () => void;
+}
+
+interface ActionSheetProps {
+    visible: boolean;
+    title: string;
+    actions: SheetAction[];
+    onClose: () => void;
+}
+
+// A short list of things to do; picking one closes the sheet first
+export function ActionSheet({ visible, title, actions, onClose }: ActionSheetProps) {
+    const { colors, type } = useTheme();
+    const styles = useThemedStyles(makeStyles);
+
+    return (
+        <BottomSheet visible={visible} title={title} onClose={onClose}>
+            {actions.map(action => (
+                <Pressable
+                    key={action.key}
+                    onPress={() => {
+                        onClose();
+                        action.onPress();
+                    }}
+                    disabled={action.disabled}
+                    accessibilityRole="button"
+                    accessibilityLabel={action.label}
+                    accessibilityHint={action.description}
+                    accessibilityState={{ disabled: !!action.disabled }}
+                    style={({ pressed }) => [styles.option, pressed && styles.optionSelected, action.disabled && { opacity: 0.5 }]}
+                >
+                    {action.icon && <Ionicons name={action.icon} size={20} color={action.disabled ? colors.textMuted : colors.accentText} />}
+                    <View style={styles.optionText}>
+                        <Text style={[type.name, styles.optionLabel]}>{action.label}</Text>
+                        {action.description && <Text style={[type.meta, styles.optionDescription]}>{action.description}</Text>}
+                    </View>
+                </Pressable>
+            ))}
+        </BottomSheet>
+    );
+}

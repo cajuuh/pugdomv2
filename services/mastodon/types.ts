@@ -39,6 +39,8 @@ export interface Account {
         language?: string | null;
         // Default visibility for new posts
         privacy?: Status['visibility'];
+        // Who can quote new posts by default (Mastodon 4.5)
+        quote_policy?: 'public' | 'followers' | 'nobody';
     };
 }
 

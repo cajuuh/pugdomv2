@@ -10,6 +10,9 @@ export interface CreateStatusParams {
     language?: string;
     // Uploaded media (see media.ts); a post can't have both media and a poll
     media_ids?: string[];
+    // Quote posts (Mastodon 4.5): the post being quoted, and who may quote this one
+    quoted_status_id?: string;
+    quote_approval_policy?: 'public' | 'followers' | 'nobody';
     poll?: {
         options: string[];
         expires_in: number;

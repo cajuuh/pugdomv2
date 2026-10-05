@@ -26,10 +26,10 @@ const NOTICES: Record<QuoteNotice, { icon: React.ComponentProps<typeof Ionicons>
 
 interface QuotedPostProps {
     quote: Quote;
-    // Opens the quoted post
-    onOpen: (status: Status) => void;
-    // "3h", "Mon": the same relative time the card shows
-    timeOf: (createdAt: string) => string;
+    // Opens the quoted post; without it the card is read-only (as in compose)
+    onOpen?: (status: Status) => void;
+    // "3h", "Mon": the same relative time the card shows; without it, no time
+    timeOf?: (createdAt: string) => string;
 }
 
 // The post a post quotes, as a small card inside it; tapping opens it. Quotes that can't be shown
@@ -59,8 +59,9 @@ export const QuotedPost: React.FC<QuotedPostProps> = ({ quote, onOpen, timeOf })
 
     return (
         <Pressable
-            onPress={() => onOpen(status)}
-            accessibilityRole="button"
+            onPress={onOpen ? () => onOpen(status) : undefined}
+            disabled={!onOpen}
+            accessibilityRole={onOpen ? 'button' : undefined}
             accessibilityLabel={t('quotes.openQuoted', { name, text: status.spoiler_text || text })}
             style={({ pressed }) => [styles.box, { borderColor: colors.borderColor, backgroundColor: colors.inputBackground }, pressed && styles.pressed]}
         >
@@ -69,7 +70,8 @@ export const QuotedPost: React.FC<QuotedPostProps> = ({ quote, onOpen, timeOf })
                 <View style={styles.names}>
                     {renderTextWithEmojis(name, status.account.emojis ?? [], [type.name, styles.name, { color: colors.textPrimary }], 13)}
                     <Text style={[type.meta, styles.handle, { color: colors.textMuted }]} numberOfLines={1}>
-                        @{status.account.acct} · {timeOf(status.created_at)}
+                        @{status.account.acct}
+                        {timeOf ? ` · ${timeOf(status.created_at)}` : ''}
                     </Text>
                 </View>
             </View>

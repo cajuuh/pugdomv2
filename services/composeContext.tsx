@@ -5,7 +5,9 @@ import ComposeModal from '../components/ComposeModal/composeModal';
 interface ComposeContextType {
     isOpen: boolean;
     replyToStatus: Status | null;
-    openCompose: (params?: { replyToStatus?: Status }) => void;
+    // The post being quoted (Mastodon 4.5)
+    quoteStatus: Status | null;
+    openCompose: (params?: { replyToStatus?: Status; quoteStatus?: Status }) => void;
     closeCompose: () => void;
 }
 
@@ -14,25 +16,24 @@ const ComposeContext = createContext<ComposeContextType | undefined>(undefined);
 export const ComposeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [replyToStatus, setReplyToStatus] = useState<Status | null>(null);
+    const [quoteStatus, setQuoteStatus] = useState<Status | null>(null);
 
-    const openCompose = (params?: { replyToStatus?: Status }) => {
-        if (params?.replyToStatus) {
-            setReplyToStatus(params.replyToStatus);
-        } else {
-            setReplyToStatus(null);
-        }
+    const openCompose = (params?: { replyToStatus?: Status; quoteStatus?: Status }) => {
+        setReplyToStatus(params?.replyToStatus ?? null);
+        setQuoteStatus(params?.quoteStatus ?? null);
         setIsOpen(true);
     };
 
     const closeCompose = () => {
         setIsOpen(false);
         setReplyToStatus(null);
+        setQuoteStatus(null);
     };
 
     return (
-        <ComposeContext.Provider value={{ isOpen, replyToStatus, openCompose, closeCompose }}>
+        <ComposeContext.Provider value={{ isOpen, replyToStatus, quoteStatus, openCompose, closeCompose }}>
             {children}
-            <ComposeModal isOpen={isOpen} replyToStatus={replyToStatus} closeCompose={closeCompose} />
+            <ComposeModal isOpen={isOpen} replyToStatus={replyToStatus} quoteStatus={quoteStatus} closeCompose={closeCompose} />
         </ComposeContext.Provider>
     );
 };
