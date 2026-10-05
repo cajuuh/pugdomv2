@@ -27,7 +27,7 @@ export const AttachmentStrip: React.FC<AttachmentStripProps> = ({ attachments, o
     if (attachments.length === 0) return null;
 
     return (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.strip} keyboardShouldPersistTaps="handled">
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.strip} keyboardShouldPersistTaps="handled" testID="attachment-strip">
             {attachments.map((attachment, position) => {
                 const index = position + 1;
                 const described = attachment.description.trim().length > 0;
@@ -113,9 +113,11 @@ export const AttachmentStrip: React.FC<AttachmentStripProps> = ({ attachments, o
 };
 
 const styles = StyleSheet.create({
+    // Scrolls edge to edge, but starts in line with the other compose blocks
     strip: {
         gap: space.sm,
         paddingVertical: space.sm,
+        paddingHorizontal: space.lg,
     },
     thumb: {
         width: THUMB_SIZE,

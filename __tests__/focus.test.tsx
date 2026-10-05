@@ -222,3 +222,25 @@ describe('Images in posts', () => {
         expect(placed()).toMatchObject({ width: 400, height: 200, left: -200, top: 0 });
     });
 });
+
+describe('Compose margins', () => {
+    it('keeps the description screen and the image strip off the screen edges', async () => {
+        await render(
+            <QueryClientProvider client={createTestQueryClient()}>
+                <ComposeModal isOpen replyToStatus={null} closeCompose={jest.fn()} />
+            </QueryClientProvider>
+        );
+        library.mockResolvedValueOnce({
+            canceled: false,
+            assets: [{ uri: 'file:///photos/a.jpg', width: 1000, height: 500, mimeType: 'image/jpeg', fileName: 'a.jpg' }],
+        });
+        await fireEvent.press(screen.getByRole('button', { name: 'Add images' }));
+        await waitFor(() => expect(screen.getByRole('button', { name: 'Post' })).toBeEnabled());
+
+        // space.lg, like the poll and content warning boxes
+        expect(StyleSheet.flatten(screen.getByTestId('attachment-strip').props.contentContainerStyle)).toMatchObject({ paddingHorizontal: 16 });
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Describe image 1' }));
+        expect(StyleSheet.flatten(screen.getByTestId('alt-text-editor').props.style)).toMatchObject({ paddingHorizontal: 16 });
+    });
+});
