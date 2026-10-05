@@ -78,7 +78,7 @@ Follow this rigorous engineering flow on every task:
    - The app runs in pugdom's own development build, never in Expo Go (Expo Go is a different SDK and shows "Project is incompatible").
    - Await user verification.
 6. **PR & Merge:**
-   - Commit with [gitmoji](https://gitmoji.dev/) format (e.g. `✨ ...`, `🐛 ...`, `Fixes #N`).
+   - Commit with gitmoji + Conventional Commits: `<gitmoji> <type>(<scope>): <subject>` (e.g. `✨ feat(media): attach images to posts`, `🐛 fix(compose): ...`), with `Fixes #N` in the body.
    - Push feature branch to `origin`.
    - Open PR against `develop` using `gh pr create`.
    - **Do not merge.** Prompt the user to review and merge when satisfied.
@@ -97,9 +97,9 @@ Follow this rigorous engineering flow on every task:
   - Sensitive data (access tokens, instance URLs): `expo-secure-store`.
   - Non-sensitive user preferences (coat theme, recent searches, pinned feeds): `@react-native-async-storage/async-storage`.
 - **Lists:** `@shopify/flash-list` v2 for infinite scrolling timelines.
-- **Git & Gitmoji:**
+- **Git, Gitmoji & Conventional Commits:**
   - Branching off `develop`. PRs target `develop`. `main` is reserved for releases.
-  - Commits follow `gitmoji -c` conventions (`✨` feature, `🐛` bug fix, `💄` UI/style, `♻️` refactor, `✅` tests, `🔧` config, `🌐` i18n, `📝` docs).
+  - Commit and PR titles are `<gitmoji> <type>(<scope>): <subject>`: a gitmoji, then a Conventional Commits type, an optional scope (an area such as `media`, `feeds`, `compose`) and a short subject. Pairs: `✨ feat`, `🐛 fix`, `💄 style`, `♻️ refactor`, `⚡️ perf`, `✅ test`, `🔧 chore`, `⬆️ chore(deps)`, `👷 ci`, `🌐 feat(i18n)`, `📝 docs`.
   - Every change goes through a PR into `develop`, including docs; don't push to `develop` or `main` directly.
 
 ---

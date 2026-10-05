@@ -41,7 +41,8 @@ Tests live in `__tests__/`:
 
 - Branch off **`develop`** and open your PR against **`develop`**. `main` is the release branch.
 - Name branches by type: `fix/…`, `feat/…`, `refactor/…`, `perf/…`, `chore/…`, `ci/…`.
-- Commits use [gitmoji](https://gitmoji.dev/) (`gitmoji -c`), for example `🐛 Fix reply mentions for remote users` or `✨ Add hashtag timeline`. Use the same style for the PR title.
+- Commit titles are a [gitmoji](https://gitmoji.dev/) followed by a [Conventional Commits](https://www.conventionalcommits.org/) type, an optional scope and a short subject: `<gitmoji> <type>(<scope>): <subject>`. For example `🐛 fix(compose): keep reply mentions for remote users` or `✨ feat(timeline): add hashtag timelines`. Use the same style for the PR title.
+- Pair the emoji with its type: `✨ feat`, `🐛 fix`, `♻️ refactor`, `⚡️ perf`, `💄 style`, `✅ test`, `📝 docs`, `🔧 chore`, `⬆️ chore(deps)`, `👷 ci`, `🌐 feat(i18n)`.
 - In the PR description, say what changed and why, how you tested it (including anything checked on a device), and `Fixes #N` for the issues it closes.
 
 ## Native dependencies
