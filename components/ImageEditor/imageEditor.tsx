@@ -25,6 +25,7 @@ import {
     Size,
 } from '../../services/media/geometry';
 import { PillButton } from '../ui';
+import { DialogHost } from '../Dialog/dialogHost';
 
 // Smallest crop, in points on screen
 const MIN_CROP = 48;
@@ -254,6 +255,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ visible, image, initia
                     <PillButton label={t('editor.reset')} icon="arrow-undo" variant="secondary" onPress={reset} disabled={resetDisabled} />
                 </View>
             </View>
+            <DialogHost active={visible} />
         </Modal>
     );
 };

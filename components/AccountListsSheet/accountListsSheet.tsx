@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { BottomSheet } from '../ComposeModal/optionSheet';
 import { useAccountLists, useListActions, useLists } from '../../hooks/useLists';
@@ -7,6 +7,7 @@ import { Account } from '../../services/mastodon/types';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { useTheme } from '../../services/themeContext';
 import { space } from '../../services/theme/shape';
+import { dialog } from '../../services/dialog';
 
 interface AccountListsSheetProps {
     visible: boolean;
@@ -31,7 +32,7 @@ export const AccountListsSheet: React.FC<AccountListsSheetProps> = ({ visible, o
         try {
             await (inList ? removeMember(listId, account.id) : addMember(listId, account.id));
         } catch {
-            Alert.alert(t('common.error'), t('lists.failed'));
+            dialog.toast(t('lists.failed'));
         } finally {
             setPending(null);
         }
@@ -66,7 +67,7 @@ export const AccountListsSheet: React.FC<AccountListsSheetProps> = ({ visible, o
     };
 
     return (
-        <BottomSheet visible={visible} title={t('lists.addToListsTitle', { name })} onClose={onClose}>
+        <BottomSheet visible={visible} title={t('lists.addToListsTitle')} subtitle={name} onClose={onClose}>
             <ScrollView>
                 <View style={styles.list}>{content()}</View>
             </ScrollView>

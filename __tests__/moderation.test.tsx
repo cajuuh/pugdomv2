@@ -1,6 +1,7 @@
 import React from 'react';
 import { Alert, Text } from 'react-native';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
+import { DialogHost } from '../components/Dialog/dialogHost';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
 import apiClient from '../services/api/client';
@@ -67,16 +68,14 @@ const wrap = (children: React.ReactNode) => (
             <MediaViewerProvider>
                 {children}
                 <StackProbe />
+                <DialogHost />
             </MediaViewerProvider>
         </NavigationProvider>
     </QueryClientProvider>
 );
 const relationship = (extra: Partial<Relationship> = {}): Relationship => ({ id: 'ana', following: false, requested: false, followed_by: false, ...extra });
-// Presses the destructive button of the last Alert
-const confirmAlert = async () => {
-    const [, , buttons] = (Alert.alert as jest.Mock).mock.calls.at(-1);
-    await act(async () => buttons.find((button: { style?: string }) => button.style === 'destructive').onPress());
-};
+// Presses a button of the dialog on screen
+const pressInDialog = async (name: string) => fireEvent.press(within(await screen.findByTestId('dialog')).getByRole('button', { name }));
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -136,7 +135,7 @@ describe('Post menu', () => {
         await fireEvent.press(await screen.findByRole('button', { name: 'Mute @ana@art.social' }));
 
         await waitFor(() => expect(api.post).toHaveBeenCalledWith('/accounts/ana/mute', { notifications: true }));
-        await waitFor(() => expect(Alert.alert).toHaveBeenCalledWith('You muted @ana@art.social'));
+        expect(await screen.findByText('You muted @ana@art.social')).toBeTruthy();
         expect(invalidate).toHaveBeenCalledWith({ queryKey: ['timeline'] });
         expect(invalidate).toHaveBeenCalledWith({ queryKey: ['notifications'] });
     });
@@ -145,9 +144,12 @@ describe('Post menu', () => {
         await openMenu();
         await fireEvent.press(await screen.findByRole('button', { name: 'Block @ana@art.social' }));
 
-        expect(Alert.alert).toHaveBeenCalledWith('Block @ana@art.social?', expect.any(String), expect.any(Array));
+        const box = await screen.findByTestId('dialog');
+        expect(within(box).getByRole('header', { name: 'Block this account?' })).toBeTruthy();
+        // The handle sits under the title, in the text font
+        expect(within(box).getByText('@ana@art.social')).toBeTruthy();
         expect(api.post).not.toHaveBeenCalled();
-        await confirmAlert();
+        await pressInDialog('Block');
 
         expect(api.post).toHaveBeenCalledWith('/accounts/ana/block');
     });

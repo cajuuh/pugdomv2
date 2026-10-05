@@ -1,5 +1,5 @@
 import React, { useCallback, useRef } from 'react';
-import { Alert, Image, Platform, Pressable, Share, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Image, Platform, Pressable, Share, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { BlurView } from 'expo-blur';
 import { useRecyclingState } from '@shopify/flash-list';
@@ -48,6 +48,7 @@ import { useOptionalAuth } from '../../services/authContext';
 import { useModeration } from '../../hooks/useModeration';
 import { usePostActions } from '../../hooks/usePostActions';
 import { EditHistorySheet } from './editHistorySheet';
+import { dialog } from '../../services/dialog';
 
 const getRelativeTime = (dateString: string, { t }: Translator) => {
     const now = new Date();
@@ -202,7 +203,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             }
             setIsFavorited(previousIsFavorited);
             setFavCount(previousFavCount);
-            Alert.alert(t('common.error'), t('post.favouriteFailed'));
+            dialog.toast(t('post.favouriteFailed'));
         }
     };
 
@@ -222,7 +223,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 return;
             }
             setIsBookmarked(previousIsBookmarked);
-            Alert.alert(t('common.error'), t('post.bookmarkFailed'));
+            dialog.toast(t('post.bookmarkFailed'));
         }
     };
 
@@ -245,7 +246,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             }
             setIsreblogged(previousIsReblogged);
             setBoostCount(previousBoostCount);
-            Alert.alert(t('common.error'), t('post.boostFailed'));
+            dialog.toast(t('post.boostFailed'));
         }
     };
 
@@ -280,7 +281,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             updateCachedStatus(await setQuotePolicy(targetStatus.id, policy));
         } catch (error) {
             console.warn('Changing the quote policy failed:', error);
-            Alert.alert(t('common.error'), t('quotes.policyFailed'));
+            dialog.toast(t('quotes.policyFailed'));
         }
     };
 

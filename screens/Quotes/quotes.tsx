@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FlashList } from '@shopify/flash-list';
 import { InfiniteData, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
@@ -12,6 +12,7 @@ import { space } from '../../services/theme/shape';
 import { TAB_BAR_CLEARANCE } from '../../components/TabBar/styles';
 import { TootCard } from '../../components/TootCard/tootCard';
 import { IconButton, PillButton } from '../../components/ui';
+import { dialog } from '../../services/dialog';
 
 interface QuotesProps {
     // The post whose quotes these are
@@ -41,7 +42,7 @@ const Quotes = ({ status, onBack, onStatusPress }: QuotesProps) => {
     const quotes = data?.pages.flatMap(page => page.statuses) ?? [];
 
     const revoke = (quoting: Status) =>
-        Alert.alert(t('quotes.revokeTitle'), t('quotes.revokeMessage', { acct: quoting.account.acct }), [
+        dialog.alert(t('quotes.revokeTitle'), t('quotes.revokeMessage', { acct: quoting.account.acct }), [
             { text: t('common.cancel'), style: 'cancel' },
             {
                 text: t('quotes.revoke'),
@@ -54,7 +55,7 @@ const Quotes = ({ status, onBack, onStatusPress }: QuotesProps) => {
                         );
                     } catch (error) {
                         console.warn('Revoking the quote failed:', error);
-                        Alert.alert(t('common.error'), t('quotes.revokeFailed'));
+                        dialog.toast(t('quotes.revokeFailed'));
                     }
                 },
             },

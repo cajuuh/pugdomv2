@@ -8,6 +8,7 @@ import { space } from '../../services/theme/shape';
 import { makeStyles } from './styles';
 import { useDragToDismiss, useSheetTransition } from './sheetTransition';
 import { useI18n } from '../../services/i18n/i18nContext';
+import { DialogHost } from '../Dialog/dialogHost';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -59,6 +60,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({ visible, title, subtit
                     </View>
                     {children}
                 </Animated.View>
+                <DialogHost active={visible} />
             </View>
         </Modal>
     );

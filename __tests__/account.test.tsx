@@ -157,8 +157,9 @@ describe('FollowButton', () => {
         await renderButton({ relationship: relationship({ following: true }), allowUnfollow: true });
 
         await fireEvent.press(screen.getByRole('button', { name: 'Following' }));
-        const [title, , buttons] = (Alert.alert as jest.Mock).mock.calls[0];
-        expect(title).toBe('Unfollow Ana?');
+        const [title, subtitle, buttons] = (Alert.alert as jest.Mock).mock.calls[0];
+        expect(title).toBe('Unfollow?');
+        expect(subtitle).toBe('Ana');
         expect(mocked.unfollow).not.toHaveBeenCalled();
 
         await act(async () => {
@@ -172,7 +173,9 @@ describe('FollowButton', () => {
 
         await fireEvent.press(screen.getByRole('button', { name: 'Requested' }));
 
-        expect((Alert.alert as jest.Mock).mock.calls[0][0]).toBe('Cancel your follow request to Ana?');
+        const [title, subtitle] = (Alert.alert as jest.Mock).mock.calls[0];
+        expect(title).toBe('Cancel your follow request?');
+        expect(subtitle).toBe('Ana');
     });
 
     it('only shows the state where unfollowing is not offered', async () => {

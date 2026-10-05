@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, RefreshControl, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, Text, View } from 'react-native';
 import { FlashList, useRecyclingState } from '@shopify/flash-list';
 import { InfiniteData, useQueryClient } from '@tanstack/react-query';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -23,6 +23,7 @@ import { useI18n } from '../../services/i18n/i18nContext';
 import { TKey, Translator } from '../../services/i18n/translate';
 import { useOpenAccount } from '../../hooks/useOpenAccount';
 import { useMarkNotificationsSeen } from '../../hooks/useUnreadNotifications';
+import { dialog } from '../../services/dialog';
 
 interface NotificationsProps {
     onStatusPress?: (id: string) => void;
@@ -70,7 +71,7 @@ const MentionActions = ({ status }: { status: Status }) => {
         } catch (error) {
             if (renderedStatusId.current !== status.id) return;
             setIsFavourited(previous);
-            Alert.alert(t('common.error'), t('notifications.favouriteFailed'));
+            dialog.toast(t('notifications.favouriteFailed'));
         }
     };
 
@@ -287,7 +288,7 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
             await markNotificationsRead(newestId);
             setMarkedReadId(newestId);
         } catch (error) {
-            Alert.alert(t('common.error'), t('notifications.markReadFailed'));
+            dialog.toast(t('notifications.markReadFailed'));
         }
     };
     const allRead = !!newestId && markedReadId === newestId;

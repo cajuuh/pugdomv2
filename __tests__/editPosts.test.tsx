@@ -1,6 +1,7 @@
 import React from 'react';
 import { Alert, DeviceEventEmitter } from 'react-native';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
+import { DialogHost } from '../components/Dialog/dialogHost';
 import { InfiniteData, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
 import apiClient from '../services/api/client';
@@ -69,14 +70,15 @@ let queryClient: QueryClient;
 const wrap = (children: React.ReactNode) => (
     <QueryClientProvider client={queryClient}>
         <NavigationProvider>
-            <MediaViewerProvider>{children}</MediaViewerProvider>
+            <MediaViewerProvider>
+                {children}
+                <DialogHost />
+            </MediaViewerProvider>
         </NavigationProvider>
     </QueryClientProvider>
 );
-const confirmAlert = async () => {
-    const [, , buttons] = (Alert.alert as jest.Mock).mock.calls.at(-1);
-    await act(async () => buttons.find((button: { style?: string }) => button.style === 'destructive').onPress());
-};
+// Presses a button of the dialog on screen
+const pressInDialog = async (name: string) => fireEvent.press(within(await screen.findByTestId('dialog')).getByRole('button', { name }));
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -141,9 +143,9 @@ describe('Your own posts', () => {
         await openMenu();
         await fireEvent.press(await screen.findByRole('button', { name: 'Delete' }));
 
-        expect(Alert.alert).toHaveBeenCalledWith('Delete this post?', expect.any(String), expect.any(Array));
+        expect(await screen.findByText('Delete this post?')).toBeTruthy();
         expect(api.delete).not.toHaveBeenCalled();
-        await confirmAlert();
+        await pressInDialog('Delete');
 
         expect(api.delete).toHaveBeenCalledWith('/statuses/p1', { params: undefined });
         expect(queryClient.getQueryData<InfiniteData<Status[]>>(['timeline', 'home'])?.pages[0]).toEqual([]);
@@ -152,7 +154,7 @@ describe('Your own posts', () => {
     it('deletes and brings the text back to redraft', async () => {
         await openMenu();
         await fireEvent.press(await screen.findByRole('button', { name: 'Delete and redraft' }));
-        await confirmAlert();
+        await pressInDialog('Delete and redraft');
 
         await waitFor(() =>
             expect(mockOpenCompose).toHaveBeenCalledWith({
