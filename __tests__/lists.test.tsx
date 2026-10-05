@@ -154,7 +154,7 @@ describe('Lists in the Feeds sheet', () => {
     it('lists your lists to open, pin and edit, and starts a new one', async () => {
         const onEditList = jest.fn();
         const onSelectFeed = jest.fn();
-        await render(withQuery(<FeedsSheet visible onClose={jest.fn()} onSelectFeed={onSelectFeed} onCreateFeed={jest.fn()} onEditList={onEditList} />));
+        await render(withQuery(<FeedsSheet visible onClose={jest.fn()} onSelectFeed={onSelectFeed} onCreateFeed={jest.fn()} onEditList={onEditList} onAddServer={jest.fn()} />));
 
         await fireEvent.press(await screen.findByRole('button', { name: 'Edit Friends' }));
         await fireEvent.press(screen.getByRole('button', { name: 'New list' }));

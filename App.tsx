@@ -35,6 +35,7 @@ import Hashtag from './screens/Hashtag/hashtag';
 import LinkTimeline from './screens/LinkTimeline/linkTimeline';
 import FeedEditor from './screens/FeedEditor/feedEditor';
 import ListEditor from './screens/ListEditor/listEditor';
+import ServerPicker from './screens/ServerPicker/serverPicker';
 
 // Keep the pug splash up until the fonts and the saved account are loaded
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -97,6 +98,8 @@ function NavigationRoot() {
         return <FeedEditor onBack={pop} />;
       case 'listEditor':
         return <ListEditor listId={route.listId} onBack={pop} />;
+      case 'serverPicker':
+        return <ServerPicker onBack={pop} />;
     }
   };
 

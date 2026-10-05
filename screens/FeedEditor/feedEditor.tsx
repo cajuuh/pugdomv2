@@ -11,6 +11,8 @@ import { IconButton, PillButton, SectionLabel } from '../../components/ui';
 
 // Sent with the new feed, so the timeline can switch to it
 export const FEED_CREATED_EVENT = 'feed_created';
+// Sent with a feed to look at without pinning it (it shows as a preview pill)
+export const FEED_OPEN_EVENT = 'feed_open';
 
 // "#cats, pets  dogs" → ['cats', 'pets', 'dogs']: hashes optional, spaces or commas, no repeats
 export const parseTags = (text: string) =>

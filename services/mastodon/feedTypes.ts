@@ -3,7 +3,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Translator } from '../i18n/translate';
 
 export type BuiltinFeedKind = 'home' | 'local' | 'federated' | 'trending';
-export type FeedKind = BuiltinFeedKind | 'hashtag' | 'list';
+export type FeedKind = BuiltinFeedKind | 'hashtag' | 'list' | 'server';
 
 export interface HashtagFeedCriteria {
     tag: string;
@@ -21,6 +21,8 @@ export interface FeedDescriptor {
     criteria?: HashtagFeedCriteria;
     // For list feeds: the Mastodon list it shows (its title is `title`)
     listId?: string;
+    // For server feeds: the other server whose local timeline it shows
+    domain?: string;
     // Home always stays pinned
     canUnpin?: boolean;
 }
@@ -54,6 +56,15 @@ export const createListFeed = (list: { id: string; title: string }): FeedDescrip
     kind: 'list',
     title: list.title,
     listId: list.id,
+    canUnpin: true,
+});
+
+// Another server's local timeline, read without an account there
+export const createServerFeed = (server: { domain: string; title?: string }): FeedDescriptor => ({
+    id: `server:${server.domain}`,
+    kind: 'server',
+    title: server.title || server.domain,
+    domain: server.domain,
     canUnpin: true,
 });
 
@@ -112,6 +123,8 @@ export const feedIcon = (kind: FeedKind): React.ComponentProps<typeof Ionicons>[
             return 'flame-outline';
         case 'list':
             return 'list-outline';
+        case 'server':
+            return 'planet-outline';
         default:
             return 'pricetag-outline';
     }
