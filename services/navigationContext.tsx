@@ -13,7 +13,9 @@ export type Route =
     | { name: 'listEditor'; listId?: string }
     | { name: 'serverPicker' }
     // Reporting an account to the server's moderators, about one of their posts when given
-    | { name: 'report'; account: Account; status?: Status };
+    | { name: 'report'; account: Account; status?: Status }
+    // Posts quoting a post
+    | { name: 'quotes'; status: Status };
 
 // Each entry gets its own key, so the same screen can sit in the stack twice (thread → other → same thread)
 export interface StackEntry {

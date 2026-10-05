@@ -37,6 +37,7 @@ import FeedEditor from './screens/FeedEditor/feedEditor';
 import ListEditor from './screens/ListEditor/listEditor';
 import ServerPicker from './screens/ServerPicker/serverPicker';
 import Report from './screens/Report/report';
+import Quotes from './screens/Quotes/quotes';
 
 // Keep the pug splash up until the fonts and the saved account are loaded
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -103,6 +104,8 @@ function NavigationRoot() {
         return <ServerPicker onBack={pop} />;
       case 'report':
         return <Report account={route.account} status={route.status} onBack={pop} />;
+      case 'quotes':
+        return <Quotes status={route.status} onBack={pop} onStatusPress={openThread} />;
     }
   };
 

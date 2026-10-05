@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     DeviceEventEmitter,
+    Pressable,
     RefreshControl,
     StyleSheet,
     Text,
@@ -22,6 +23,7 @@ import { useTheme } from '../../services/themeContext';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
 import { STATUS_DELETED_EVENT, STATUS_UPDATED_EVENT } from '../../hooks/useUpdateCachedStatus';
+import { useNavigator } from '../../services/navigationContext';
 
 interface ThreadProps {
     statusId: string;
@@ -40,7 +42,8 @@ export default function Thread({
 }: ThreadProps) {
     const { colors, type } = useTheme();
     const insets = useSafeAreaInsets();
-    const { t } = useI18n();
+    const { t, tn } = useI18n();
+    const { push } = useNavigator();
 
     const [statuses, setStatuses] = useState<ThreadStatus[]>([]);
     const [loading, setLoading] = useState(true);
@@ -192,6 +195,18 @@ export default function Thread({
                                         index < statuses.length - 1
                                     }
                                 />
+                                {/* The post this thread is about says how often it was quoted */}
+                                {isMain && (item.quotes_count ?? 0) > 0 && (
+                                    <Pressable
+                                        onPress={() => push({ name: 'quotes', status: item })}
+                                        accessibilityRole="button"
+                                        style={styles.quotesLink}
+                                    >
+                                        <Text style={[type.meta, { color: colors.accentText }]}>
+                                            {tn('quotes.count', item.quotes_count ?? 0)}
+                                        </Text>
+                                    </Pressable>
+                                )}
                             </View>
                         );
                     }}
@@ -244,5 +259,12 @@ const styles = StyleSheet.create({
 
     postContainer: {
         borderBottomWidth: StyleSheet.hairlineWidth,
+    },
+    quotesLink: {
+        alignSelf: 'flex-start',
+        paddingHorizontal: space.lg,
+        paddingBottom: space.md,
+        minHeight: 32,
+        justifyContent: 'center',
     },
 });
