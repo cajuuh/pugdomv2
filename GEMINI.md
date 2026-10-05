@@ -4,6 +4,8 @@
 
 This file is the single source of truth and prompt anchor for Gemini AI / Antigravity when assisting with the development of **Pugdom**, an Expo-based Mastodon client for iOS and Android.
 
+> **Name:** users see the app as **pugdon** (lowercase, ending in N like Mastodon). That covers the app name, in-app text, the wordmark, the OAuth `client_name`, permission strings, the store listing and docs. Identifiers stay **pugdom**: `com.cajuuh.pugdom`, the slug and `pugdom://` scheme, the EAS project, storage keys (`pugdom_*`), code names and the repo (`pugdomv2`). Renaming those would break installs, sign-ins and links.
+
 ---
 
 ## 🛑 Non-Negotiable Core Rules & Flow

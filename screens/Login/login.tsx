@@ -95,7 +95,7 @@ const Login: React.FC<LoginProps> = ({ onCancel }) => {
                         { color: colors.textPrimary },
                     ]}
                 >
-                    pugdom
+                    pugdon
                 </Text>
 
                 <Text
