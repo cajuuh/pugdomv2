@@ -29,6 +29,7 @@ export const ptBR: Dictionary = {
         home: 'Início',
         search: 'Buscar',
         notifications: 'Notificações',
+        notificationsUnread: 'Notificações, há novas',
         profile: 'Perfil',
         newPost: 'Nova publicação',
     },

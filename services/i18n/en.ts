@@ -30,6 +30,7 @@ export const en = {
         home: 'Home',
         search: 'Search',
         notifications: 'Notifications',
+        notificationsUnread: 'Notifications, new',
         profile: 'Profile',
         newPost: 'New post',
     },

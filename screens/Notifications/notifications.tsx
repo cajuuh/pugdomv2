@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, RefreshControl, Text, View } from 'react-native';
 import { FlashList, useRecyclingState } from '@shopify/flash-list';
 import { InfiniteData, useQueryClient } from '@tanstack/react-query';
@@ -22,6 +22,7 @@ import { ListItem, actorsText, buildListItems, notificationTime, plainText, with
 import { useI18n } from '../../services/i18n/i18nContext';
 import { TKey, Translator } from '../../services/i18n/translate';
 import { useOpenAccount } from '../../hooks/useOpenAccount';
+import { useMarkNotificationsSeen } from '../../hooks/useUnreadNotifications';
 
 interface NotificationsProps {
     onStatusPress?: (id: string) => void;
@@ -273,6 +274,12 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
             .filter((id): id is string => !!id);
         return ids.reduce<string | null>((newest, id) => (!newest || isNewerId(id, newest) ? id : newest), null);
     }, [queryClient, data]);
+
+    // Showing them counts as seeing them: the bell's dot goes away (the server's marker stays)
+    const markSeen = useMarkNotificationsSeen();
+    useEffect(() => {
+        if (newestId) markSeen(newestId);
+    }, [newestId, markSeen]);
 
     const handleMarkRead = async () => {
         if (!newestId) return;

@@ -27,6 +27,7 @@ jest.mock('../services/authContext', () => {
     return {
         AuthProvider: ({ children }: { children: React.ReactNode }) => children,
         useAuth: () => auth,
+        useOptionalAuth: () => auth,
     };
 });
 
