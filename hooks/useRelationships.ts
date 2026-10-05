@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { followAccount, getRelationships, unfollowAccount } from '../services/mastodon/accounts';
+import { blockAccount, followAccount, getRelationships, muteAccount, unblockAccount, unfollowAccount, unmuteAccount } from '../services/mastodon/accounts';
 import { Relationship } from '../services/mastodon/types';
 
 // Fetches relationships for all given accounts in one request, keyed by account id
@@ -31,3 +31,20 @@ export const useFollowAccount = () => useRelationshipChange(followAccount);
 
 // Unfollows, or cancels a follow request that's still pending
 export const useUnfollowAccount = () => useRelationshipChange(unfollowAccount);
+
+// Blocking or muting changes what the server sends: reload timelines and notifications without them
+const useModerationChange = (change: (accountId: string) => Promise<Relationship>) => {
+    const queryClient = useQueryClient();
+    const changeRelationship = useRelationshipChange(change);
+    return useCallback(async (accountId: string) => {
+        const relationship = await changeRelationship(accountId);
+        queryClient.invalidateQueries({ queryKey: ['timeline'] });
+        queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        return relationship;
+    }, [queryClient, changeRelationship]);
+};
+
+export const useBlockAccount = () => useModerationChange(blockAccount);
+export const useUnblockAccount = () => useModerationChange(unblockAccount);
+export const useMuteAccount = () => useModerationChange(muteAccount);
+export const useUnmuteAccount = () => useModerationChange(unmuteAccount);

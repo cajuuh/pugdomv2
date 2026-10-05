@@ -183,6 +183,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
 };
 
+// For components that also render outside the provider (tests, previews): null there
+export const useOptionalAuth = () => useContext(AuthContext) ?? null;
+
 export const useAuth = () => {
     const context = useContext(AuthContext);
     if (!context) {

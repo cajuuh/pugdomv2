@@ -32,7 +32,7 @@ jest.mock('../services/mastodon/search', () => ({
     resolveStatus: jest.fn(),
     resolveAccount: jest.fn(),
 }));
-jest.mock('../services/authContext', () => ({ useAuth: () => ({ user: { id: 'me' } }) }));
+jest.mock('../services/authContext', () => ({ useAuth: () => ({ user: { id: 'me' } }), useOptionalAuth: () => ({ user: { id: 'me' } }) }));
 jest.mock('../services/themeContext', () => ({
     useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
 }));

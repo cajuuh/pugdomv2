@@ -147,6 +147,15 @@ export interface Relationship {
     following: boolean;
     requested: boolean;
     followed_by: boolean;
+    blocking?: boolean;
+    muting?: boolean;
+}
+
+// One of a server's rules (shown when reporting)
+export interface Rule {
+    id: string;
+    text: string;
+    hint?: string;
 }
 
 export interface Notification {
