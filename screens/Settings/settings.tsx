@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '../../services/authContext';
@@ -18,6 +18,7 @@ import { OptionSheet } from '../../components/ComposeModal/optionSheet';
 import { useInstanceConfiguration } from '../../hooks/useInstanceConfiguration';
 import { QuotePolicy, quotePolicies } from '../../services/mastodon/quotes';
 import { updateDefaultQuotePolicy } from '../../services/mastodon/accounts';
+import { dialog } from '../../services/dialog';
 
 interface SettingsProps {
     onBack: () => void;
@@ -51,7 +52,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
             updateUser(await updateDefaultQuotePolicy(policy));
         } catch (error) {
             console.warn('Changing the default quote policy failed:', error);
-            Alert.alert(t('common.error'), t('quotes.policyFailed'));
+            dialog.toast(t('quotes.policyFailed'));
         }
     };
     const coatName = t(`coats.${getCoat(coat).key}`);

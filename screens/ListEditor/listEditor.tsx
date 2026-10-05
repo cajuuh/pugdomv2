@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../../services/themeContext';
@@ -13,6 +13,7 @@ import { hitSlopFor, radii, space } from '../../services/theme/shape';
 import { TAB_BAR_CLEARANCE } from '../../components/TabBar/styles';
 import { Avatar, Card, IconButton, PillButton, SectionLabel, ThemedSwitch } from '../../components/ui';
 import { OptionSheet, SheetOption } from '../../components/ComposeModal/optionSheet';
+import { dialog } from '../../services/dialog';
 
 interface ListEditorProps {
     // Editing an existing list; without it, a new list is created
@@ -55,7 +56,7 @@ const ListEditor = ({ listId, onBack }: ListEditorProps) => {
         try {
             await task();
         } catch {
-            Alert.alert(t('common.error'), t('lists.failed'));
+            dialog.toast(t('lists.failed'));
         } finally {
             setBusy(false);
         }
@@ -75,7 +76,7 @@ const ListEditor = ({ listId, onBack }: ListEditorProps) => {
         });
 
     const confirmDelete = () =>
-        Alert.alert(t('lists.deleteTitle', { list: existing?.title ?? title }), t('lists.deleteMessage'), [
+        dialog.alert(t('lists.deleteTitle', { list: existing?.title ?? title }), t('lists.deleteMessage'), [
             { text: t('lists.keep'), style: 'cancel' },
             {
                 text: t('lists.delete'),

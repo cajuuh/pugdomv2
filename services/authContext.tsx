@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { Alert, DeviceEventEmitter } from 'react-native';
+import { DeviceEventEmitter } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { UNAUTHORIZED_EVENT } from './api/client';
 import { getCurrentAccount } from './mastodon/accounts';
 import { Account } from './mastodon/types';
 import { getCredentials, clearCredentials, saveCredentials, getSavedAccounts, addSavedAccount, removeSavedAccount, SavedAccount } from './storage';
 import { useI18n } from './i18n/i18nContext';
+import { dialog } from './dialog';
 
 interface AuthContextType {
     user: Account | null;
@@ -147,7 +148,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const accounts = await getSavedAccounts();
         const expired = accounts.find(a => a.accessToken === accessToken);
-        Alert.alert(
+        dialog.alert(
             t('auth.sessionExpired'),
             expired
                 ? t('auth.logInAgainTo', { acct: expired.userInfo.acct })

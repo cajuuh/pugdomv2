@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRecyclingState } from '@shopify/flash-list';
 import { PillButton } from '../ui';
@@ -8,6 +8,7 @@ import { useFollowAccount, useUnfollowAccount } from '../../hooks/useRelationshi
 import { useI18n } from '../../services/i18n/i18nContext';
 import { useTheme } from '../../services/themeContext';
 import { radii, space } from '../../services/theme/shape';
+import { dialog } from '../../services/dialog';
 
 interface FollowButtonProps {
     accountId: string;
@@ -37,7 +38,7 @@ export const FollowButton: React.FC<FollowButtonProps> = ({ accountId, name, rel
         try {
             await change(accountId);
         } catch {
-            Alert.alert(t('common.error'), failed);
+            dialog.toast(failed);
         } finally {
             setPending(false);
         }
@@ -55,8 +56,8 @@ export const FollowButton: React.FC<FollowButtonProps> = ({ accountId, name, rel
             );
         }
         const confirm = () =>
-            Alert.alert(
-                relationship.following ? t('follow.unfollowTitle', { name }) : t('follow.cancelRequestTitle', { name }),
+            dialog.alert(
+                relationship.following ? t('follow.unfollowTitle') : t('follow.cancelRequestTitle'),
                 undefined,
                 [
                     { text: t('follow.keep'), style: 'cancel' },
@@ -65,7 +66,8 @@ export const FollowButton: React.FC<FollowButtonProps> = ({ accountId, name, rel
                         style: 'destructive',
                         onPress: () => run(unfollow, t('follow.unfollowFailed')),
                     },
-                ]
+                ],
+                { subtitle: name }
             );
         return (
             <PillButton

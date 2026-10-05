@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Image, Pressable, Share, Text, View, useWindowDimensions } from 'react-native';
+import { Image, Pressable, Share, Text, View, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../../services/themeContext';
 import { getCredentials } from '../../services/storage';
@@ -16,6 +16,7 @@ import { AVATAR_SIZE, BANNER_HEIGHT, SHARE_SIZE, makeStyles } from './styles';
 import { AccountListsSheet } from '../../components/AccountListsSheet/accountListsSheet';
 import { ActionSheet } from '../../components/ComposeModal/optionSheet';
 import { useModeration } from '../../hooks/useModeration';
+import { dialog } from '../../services/dialog';
 
 const originOf = (url?: string) => url?.match(/^https?:\/\/[^/?#]+/i)?.[0];
 
@@ -68,7 +69,7 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
         try {
             await Share.share({ message: t('profile.shareMessage', { url: user.url }) });
         } catch (error: any) {
-            Alert.alert(t('profile.shareFailed'), error.message);
+            dialog.alert(t('profile.shareFailed'), error.message);
         }
     };
 

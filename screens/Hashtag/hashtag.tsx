@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, RefreshControl, Text, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, Text, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../services/themeContext';
@@ -13,6 +13,7 @@ import { IconButton, PillButton } from '../../components/ui';
 import { makeStyles } from './styles';
 import { usePinnedFeeds } from '../../hooks/usePinnedFeeds';
 import { createHashtagFeed } from '../../services/mastodon/feedTypes';
+import { dialog } from '../../services/dialog';
 
 interface HashtagProps {
     tag: string;
@@ -46,17 +47,17 @@ const Hashtag = ({ tag, onBack, onStatusPress }: HashtagProps) => {
         try {
             await toggleFollow(follow);
         } catch {
-            Alert.alert(t('common.error'), t('hashtag.followFailed'));
+            dialog.toast(t('hashtag.followFailed'));
         } finally {
             setFollowPending(false);
         }
     };
 
     const confirmUnfollow = () =>
-        Alert.alert(t('hashtag.unfollowTitle', { tag: name }), undefined, [
+        dialog.alert(t('hashtag.unfollowTitle'), undefined, [
             { text: t('hashtag.keep'), style: 'cancel' },
             { text: t('hashtag.unfollow'), style: 'destructive', onPress: () => setFollowing(false) },
-        ]);
+        ], { subtitle: `#${name}` });
 
     const handleRefresh = useCallback(async () => {
         setIsPullRefreshing(true);

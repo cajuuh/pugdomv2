@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRecyclingState } from '@shopify/flash-list';
 import { Poll as PollType, PollOption } from '../../services/mastodon/types';
@@ -11,6 +11,7 @@ import { PillButton, Well } from '../ui';
 import { makeStyles } from './styles';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { defaultTranslator, Translator } from '../../services/i18n/translate';
+import { dialog } from '../../services/dialog';
 
 interface PollProps {
     initialPoll: PollType;
@@ -76,7 +77,7 @@ export const Poll: React.FC<PollProps> = ({ initialPoll, onPollUpdated, readOnly
                 setPoll(updatedPoll);
             }
         } catch (error) {
-            Alert.alert(t('common.error'), t('poll.voteFailed'));
+            dialog.toast(t('poll.voteFailed'));
         } finally {
             if (renderedPollId.current === pollId) {
                 setIsVoting(false);

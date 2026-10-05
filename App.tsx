@@ -39,6 +39,7 @@ import ServerPicker from './screens/ServerPicker/serverPicker';
 import Report from './screens/Report/report';
 import Quotes from './screens/Quotes/quotes';
 import { useUnreadNotifications } from './hooks/useUnreadNotifications';
+import { DialogHost } from './components/Dialog/dialogHost';
 
 // Keep the pug splash up until the fonts and the saved account are loaded
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -206,6 +207,8 @@ export default function App() {
                 <MediaViewerProvider>
                   <NavigationProvider>
                     <NavigationRoot />
+                    {/* Dialogs and toasts over everything (compose and sheets have their own) */}
+                    <DialogHost />
                   </NavigationProvider>
                 </MediaViewerProvider>
               </ComposeProvider>

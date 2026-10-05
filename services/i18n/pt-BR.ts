@@ -3,6 +3,7 @@ import { Dictionary } from './en';
 // Português (Brasil), the default language. Terms follow Mastodon's own pt-BR interface where it has one
 export const ptBR: Dictionary = {
     common: {
+        ok: 'OK',
         cancel: 'Cancelar',
         close: 'Fechar',
         continue: 'Continuar',
@@ -107,7 +108,7 @@ export const ptBR: Dictionary = {
         failed: 'Não foi possível atualizar a lista. Tente de novo.',
         addToLists: 'Listas',
         addToListsLabel: 'Adicionar {{name}} a listas',
-        addToListsTitle: 'Listas com {{name}}',
+        addToListsTitle: 'Adicionar às listas',
         followFirst: 'Siga {{name}} para adicionar a uma lista.',
         inList: 'Em {{list}}',
         notInList: 'Fora de {{list}}',
@@ -419,7 +420,7 @@ export const ptBR: Dictionary = {
         unblockAccount: 'Desbloquear @{{acct}}',
         blockHint: 'Vocês deixam de ver as publicações um do outro, e quem seguia deixa de seguir',
         block: 'Bloquear',
-        blockTitle: 'Bloquear @{{acct}}?',
+        blockTitle: 'Bloquear esta conta?',
         blockMessage: 'Vocês deixam de ver as publicações um do outro, e quem seguia deixa de seguir. Dá para desbloquear no perfil.',
         blocked: 'Você bloqueou @{{acct}}',
         muted: 'Você silenciou @{{acct}}',
@@ -503,9 +504,9 @@ export const ptBR: Dictionary = {
         requested: 'Solicitado',
         pending: 'Seguindo…',
         failed: 'Não foi possível seguir esta conta. Tente de novo.',
-        unfollowTitle: 'Deixar de seguir {{name}}?',
+        unfollowTitle: 'Deixar de seguir?',
         unfollow: 'Deixar de seguir',
-        cancelRequestTitle: 'Cancelar a solicitação para seguir {{name}}?',
+        cancelRequestTitle: 'Cancelar a solicitação para seguir?',
         cancelRequest: 'Cancelar solicitação',
         keep: 'Manter',
         unfollowFailed: 'Não foi possível deixar de seguir. Tente de novo.',
@@ -521,7 +522,7 @@ export const ptBR: Dictionary = {
     hashtag: {
         follow: 'Seguir hashtag',
         following: 'Seguindo',
-        unfollowTitle: 'Deixar de seguir #{{tag}}?',
+        unfollowTitle: 'Deixar de seguir esta hashtag?',
         unfollow: 'Deixar de seguir',
         keep: 'Manter',
         followFailed: 'Não foi possível atualizar esta hashtag. Tente de novo.',
