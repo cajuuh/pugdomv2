@@ -1,6 +1,7 @@
 import apiClient from '../api/client';
 import { getCredentials } from '../storage';
 import { Attachment } from './types';
+import { Point, toMastodonFocus } from '../media/geometry';
 
 // A file on the device, ready to send
 export interface UploadFile {
@@ -61,8 +62,13 @@ export async function waitForProcessing(id: string, signal?: AbortSignal): Promi
     throw new Error('The server took too long to process this file');
 }
 
-// Alt text can change until the post is published
-export async function updateMedia(id: string, { description }: { description: string }): Promise<UploadedMedia> {
-    const response = await apiClient.put<UploadedMedia>(`/media/${id}`, { description });
+// Alt text and the focal point (0–1 from the top left) can change until the post is published
+export async function updateMedia(id: string, { description, focus }: { description: string; focus?: Point }): Promise<UploadedMedia> {
+    const body: { description: string; focus?: string } = { description };
+    if (focus) {
+        const { x, y } = toMastodonFocus(focus);
+        body.focus = `${x.toFixed(2)},${y.toFixed(2)}`;
+    }
+    const response = await apiClient.put<UploadedMedia>(`/media/${id}`, body);
     return response.data;
 }

@@ -41,7 +41,7 @@ import { useMediaAttachments } from '../../hooks/useMediaAttachments';
 import { pickImages, takePhoto } from '../../services/media/pick';
 import { ImageEditor } from '../ImageEditor/imageEditor';
 import { applyEdits } from '../../services/media/edit';
-import { ImageEdits, sameEdits } from '../../services/media/geometry';
+import { ImageEdits, Point, sameEdits } from '../../services/media/geometry';
 import { PickedImage } from '../../services/media/prepare';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { Translator } from '../../services/i18n/translate';
@@ -174,8 +174,8 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
     const [pollMultiple, setPollMultiple] = useState(false);
 
     const media = useMediaAttachments(instanceConfiguration);
-    // The image whose description is being written, shown in place of the post
-    const [altEditing, setAltEditing] = useState<{ key: string; draft: string } | null>(null);
+    // The image whose description (and focal point) is being edited, shown in place of the post
+    const [altEditing, setAltEditing] = useState<{ key: string; draft: string; focus?: Point } | null>(null);
     const [reminderOpen, setReminderOpen] = useState(false);
     // The image open in the editor: its original and the edits so far
     const [imageEditing, setImageEditing] = useState<{ key: string; original: PickedImage; edits: ImageEdits } | null>(null);
@@ -271,12 +271,13 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
 
     const describeImage = (key: string) => {
         const attachment = media.attachments.find(item => item.key === key);
-        if (attachment) setAltEditing({ key, draft: attachment.description });
+        if (attachment) setAltEditing({ key, draft: attachment.description, focus: attachment.focus });
     };
 
     const saveDescription = () => {
         if (!altEditing || altOverLimit) return;
         media.describe(altEditing.key, altEditing.draft);
+        media.setFocus(altEditing.key, altEditing.focus);
         setAltEditing(null);
     };
 
@@ -420,8 +421,10 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, clos
                         width={editingAttachment.width}
                         height={editingAttachment.height}
                         value={altEditing.draft}
-                        onChange={draft => setAltEditing({ key: altEditing.key, draft })}
+                        onChange={draft => setAltEditing({ ...altEditing, draft })}
                         maxLength={instanceConfiguration.descriptionLimit}
+                        focus={altEditing.focus}
+                        onFocusChange={focus => setAltEditing({ ...altEditing, focus })}
                     />
                 </ScrollView>
             )}

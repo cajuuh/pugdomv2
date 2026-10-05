@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { InstanceConfiguration } from '../services/mastodon/instance';
 import { updateMedia, uploadMedia } from '../services/mastodon/media';
 import { imageType, PickedImage, prepareImage } from '../services/media/prepare';
-import { ImageEdits, NO_EDITS } from '../services/media/geometry';
+import { ImageEdits, NO_EDITS, Point } from '../services/media/geometry';
 
 export interface ComposeAttachment {
     key: string;
@@ -18,7 +18,12 @@ export interface ComposeAttachment {
     description: string;
     // What the server has, so publishing only sends descriptions that changed
     savedDescription: string;
+    // The focal point, 0–1 from the top left; crops in timelines keep it in view
+    focus?: Point;
+    savedFocus?: Point;
 }
+
+const sameFocus = (a?: Point, b?: Point) => a?.x === b?.x && a?.y === b?.y;
 
 type Limits = Pick<InstanceConfiguration, 'maxMediaAttachments' | 'imageSizeLimit' | 'imageMatrixLimit' | 'supportedMimeTypes'>;
 
@@ -107,6 +112,9 @@ export const useMediaAttachments = (limits: Limits) => {
             mediaId: undefined,
             // The description stays, but the new upload doesn't have it yet
             savedDescription: '',
+            // A different picture: the old focal point may not be on it any more
+            focus: undefined,
+            savedFocus: undefined,
         });
         start(key, edited, { original: upload.original, edits });
     }, [start, update]);
@@ -119,6 +127,7 @@ export const useMediaAttachments = (limits: Limits) => {
     }, []);
 
     const describe = useCallback((key: string, description: string) => update(key, { description }), [update]);
+    const setFocus = useCallback((key: string, focus: Point | undefined) => update(key, { focus }), [update]);
 
     // Stops every upload; the attachments stay until reset
     const cancel = useCallback(() => {
@@ -132,16 +141,16 @@ export const useMediaAttachments = (limits: Limits) => {
         setAttachments([]);
     }, [cancel]);
 
-    // Sends the descriptions that changed, then gives the ids to post with, in order
+    // Sends the descriptions and focal points that changed, then gives the ids to post with, in order
     const finish = useCallback(async () => {
         const ready = attachments.filter(attachment => attachment.mediaId);
         await Promise.all(
             ready
-                .filter(attachment => attachment.description.trim() !== attachment.savedDescription)
+                .filter(attachment => attachment.description.trim() !== attachment.savedDescription || !sameFocus(attachment.focus, attachment.savedFocus))
                 .map(async attachment => {
                     const description = attachment.description.trim();
-                    await updateMedia(attachment.mediaId!, { description });
-                    update(attachment.key, { savedDescription: description });
+                    await updateMedia(attachment.mediaId!, { description, focus: attachment.focus });
+                    update(attachment.key, { savedDescription: description, savedFocus: attachment.focus });
                 })
         );
         return ready.map(attachment => attachment.mediaId!);
@@ -155,6 +164,7 @@ export const useMediaAttachments = (limits: Limits) => {
         retry,
         remove,
         describe,
+        setFocus,
         editsFor,
         edit,
         reset,

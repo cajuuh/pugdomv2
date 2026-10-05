@@ -129,3 +129,27 @@ export const cropPixels = (crop: Rect, size: Size) => {
         height: clamp(Math.round(crop.height * size.height), 1, size.height - originY),
     };
 };
+
+// A point on an image, in 0–1 from its top left
+export interface Point {
+    x: number;
+    y: number;
+}
+
+// Mastodon's focus runs -1..1 from the center, with y pointing up
+export const toMastodonFocus = ({ x, y }: Point): Point => ({ x: clamp(x * 2 - 1, -1, 1), y: clamp(1 - y * 2, -1, 1) });
+export const fromMastodonFocus = ({ x, y }: Point): Point => ({ x: clamp((x + 1) / 2, 0, 1), y: clamp((1 - y) / 2, 0, 1) });
+
+// Covers `box` with the image (like resizeMode cover), shifted so the focal point sits as close to
+// the middle as the image's edges allow. Size and offset of the image inside the box.
+export const focusedCover = (box: Size, image: Size, focus: Point) => {
+    const scale = Math.max(box.width / image.width, box.height / image.height);
+    const width = image.width * scale;
+    const height = image.height * scale;
+    return {
+        width,
+        height,
+        left: clamp(box.width / 2 - focus.x * width, box.width - width, 0),
+        top: clamp(box.height / 2 - focus.y * height, box.height - height, 0),
+    };
+};

@@ -207,6 +207,8 @@ export const ptBR: Dictionary = {
         unsupported: 'Seu servidor não suporta linha do tempo de links. Você ainda pode abrir a notícia diretamente.',
     },
     post: {
+        readDescription: 'Ler a descrição da imagem',
+        descriptionTitle: 'Descrição da imagem',
         image: 'Imagem',
         video: 'Vídeo',
         gif: 'GIF',
@@ -311,6 +313,9 @@ export const ptBR: Dictionary = {
         altLabel: 'Descrição',
         altPlaceholder: 'Descreva o que tem na imagem',
         altHint: 'Quem usa leitor de tela ouve essa descrição, e ela aparece quando a imagem não carrega.',
+        focusLabel: 'Ponto de foco',
+        focusHint: 'Toque na imagem para marcar o que importa: os recortes na timeline mantêm isso à vista.',
+        focusReset: 'Centralizar',
         reminderTitle: 'Au, au! 🐾',
         reminder_one: 'O pug reparou que {{count}} imagem está sem descrição. Quem usa leitor de tela vai adorar saber o que tem nela.',
         reminder_other: 'O pug reparou que {{count}} imagens estão sem descrição. Quem usa leitor de tela vai adorar saber o que tem nelas.',

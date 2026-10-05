@@ -13,6 +13,12 @@ export interface Attachment {
     url: string;
     preview_url: string;
     description?: string;
+    // Sizes and the focal point (-1..1, y up), when the server knows them
+    meta?: {
+        original?: { width?: number; height?: number };
+        small?: { width?: number; height?: number };
+        focus?: { x: number; y: number };
+    } | null;
 }
 
 export interface Account {
