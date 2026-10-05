@@ -126,6 +126,12 @@ Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, tes
 
 ---
 
+## 🔒 Privacy
+
+pugdom collects no data: it talks only to your Mastodon server. See the [privacy policy](PRIVACY.md) (English and Português).
+
+---
+
 ## 📜 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
