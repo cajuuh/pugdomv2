@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { Animated, BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, BackHandler, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useTheme } from '../../services/themeContext';
 import { useI18n } from '../../services/i18n/i18nContext';
 import {
@@ -25,11 +25,25 @@ interface DialogHostProps {
 const variantFor = (button: DialogButton, firstDefault: boolean) =>
     button.style === 'destructive' ? 'danger' : button.style === 'cancel' ? 'ghost' : firstDefault ? 'primary' : 'secondary';
 
+const CARD_MAX_WIDTH = 360;
+const PILL_PADDING = 18;
+// ponytail: an average glyph width for the 14pt pill label, not a measurement; measure the pills with onLayout if labels overflow
+const LABEL_CHAR_WIDTH = 7.5;
+
+// Side by side when every label fits on one row of the card at this screen width, else stacked
+export const stackButtons = (labels: string[], windowWidth: number) => {
+    if (labels.length > 2) return true;
+    const rowWidth = Math.min(windowWidth - space.xl * 2, CARD_MAX_WIDTH) - space.xl * 2;
+    const needed = labels.reduce((width, label) => width + label.length * LABEL_CHAR_WIDTH + PILL_PADDING * 2, 0) + space.sm * (labels.length - 1);
+    return needed > rowWidth;
+};
+
 // Draws pugdon's dialogs and toasts over whatever it's placed in (see services/dialog.ts). One sits at
 // the app root; compose, the image editor and every bottom sheet have their own, so dialogs show above them.
 export const DialogHost: React.FC<DialogHostProps> = ({ active = true }) => {
     const { colors, type } = useTheme();
     const { t } = useI18n();
+    const { width } = useWindowDimensions();
     // Registered from an effect (not during render), so a render that's thrown away leaves nothing behind
     const [hostId, setHostId] = useState<number | null>(null);
     const state = useSyncExternalStore(subscribeToDialogs, getDialogState, getDialogState);
@@ -72,7 +86,7 @@ export const DialogHost: React.FC<DialogHostProps> = ({ active = true }) => {
     // Cancel first (on the left, or at the bottom when stacked), like the platforms do
     const ordered = [...buttons.filter(button => button.style === 'cancel'), ...buttons.filter(button => button.style !== 'cancel')];
     const firstDefault = ordered.find(button => button.style !== 'cancel' && button.style !== 'destructive');
-    const stacked = ordered.length > 2 || ordered.reduce((length, button) => length + button.text.length, 0) > 24;
+    const stacked = stackButtons(ordered.map(button => button.text), width);
 
     return (
         <View style={StyleSheet.absoluteFill} pointerEvents={current ? 'auto' : 'box-none'}>
@@ -148,7 +162,7 @@ const styles = StyleSheet.create({
     },
     card: {
         width: '100%',
-        maxWidth: 360,
+        maxWidth: CARD_MAX_WIDTH,
         gap: space.md,
         padding: space.xl,
         borderRadius: radii.card,

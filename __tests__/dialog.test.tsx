@@ -1,7 +1,7 @@
 import React from 'react';
 import { Alert, View } from 'react-native';
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
-import { DialogHost } from '../components/Dialog/dialogHost';
+import { DialogHost, stackButtons } from '../components/Dialog/dialogHost';
 import { dialog, dismissDialog, getDialogState, TOAST_DURATION_MS } from '../services/dialog';
 
 jest.mock('../services/themeContext', () => ({
@@ -139,5 +139,15 @@ describe('Toast', () => {
         } finally {
             jest.useRealTimers();
         }
+    });
+});
+
+describe('stackButtons', () => {
+    it('keeps two buttons side by side when they fit the screen, and stacks them when they don’t', () => {
+        // pt-BR discard dialog: fits a 411dp phone, not a 360dp one
+        expect(stackButtons(['Continuar editando', 'Descartar'], 411)).toBe(false);
+        expect(stackButtons(['Continuar editando', 'Descartar'], 360)).toBe(true);
+        expect(stackButtons(['Cancel', 'Delete'], 360)).toBe(false);
+        expect(stackButtons(['One', 'Two', 'Three'], 800)).toBe(true);
     });
 });
