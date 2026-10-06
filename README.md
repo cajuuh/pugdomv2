@@ -130,6 +130,8 @@ Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, tes
 
 pugdon collects no data: it talks only to your Mastodon server. See the [privacy policy](PRIVACY.md) (English and Português).
 
+Child safety: pugdon has zero tolerance for child sexual abuse and exploitation. See the [child safety standards](CHILD_SAFETY.md) for how to report it.
+
 ---
 
 ## 📜 License
