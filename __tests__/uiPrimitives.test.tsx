@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Platform, StyleSheet, Text } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { Avatar, Card, IconButton, PillButton, PugMark, SectionLabel, SegmentedPill, ThemedSwitch, Well } from '../components/ui';
 import { initialsOf } from '../components/ui/avatar';
@@ -138,6 +138,17 @@ describe('ThemedSwitch and SectionLabel', () => {
         const toggle = screen.getByRole('switch', { name: 'Tint' });
         expect(toggle).toBeChecked();
         expect(toggle.props.onTintColor).toBe(colors.accentColor);
+    });
+
+    it('ThemedSwitch paints the Android thumb from the coat, not the system teal', async () => {
+        const os = Platform.OS;
+        Platform.OS = 'android';
+        try {
+            await render(<ThemedSwitch value onValueChange={jest.fn()} accessibilityLabel="Tint" />);
+            expect(screen.getByLabelText('Tint').props.thumbTintColor).toBe(colors.buttonTextColor);
+        } finally {
+            Platform.OS = os;
+        }
     });
 
     it('SectionLabel is a muted caps header', async () => {
