@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import * as WebBrowser from 'expo-web-browser';
 import { useAuth } from '../../services/authContext';
 import { useSettings } from '../../services/settingsContext';
 import { useTheme } from '../../services/themeContext';
@@ -19,6 +20,8 @@ import { useInstanceConfiguration } from '../../hooks/useInstanceConfiguration';
 import { QuotePolicy, quotePolicies } from '../../services/mastodon/quotes';
 import { updateDefaultQuotePolicy } from '../../services/mastodon/accounts';
 import { dialog } from '../../services/dialog';
+
+const PRIVACY_URL = 'https://github.com/cajuuh/pugdomv2/blob/main/PRIVACY.md';
 
 interface SettingsProps {
     onBack: () => void;
@@ -187,7 +190,11 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                         <Text style={[type.meta, styles.rowValue]}>{appVersionLabel()}</Text>
                     </View>
                     <View style={styles.divider} />
-                    <Pressable style={styles.row} accessibilityRole="button">
+                    <Pressable
+                        style={styles.row}
+                        onPress={() => WebBrowser.openBrowserAsync(PRIVACY_URL).catch(error => console.error('Failed to open privacy policy:', error))}
+                        accessibilityRole="link"
+                    >
                         <Ionicons name="shield-checkmark-outline" size={20} color={colors.accentText} />
                         <Text style={[labelStyle, styles.rowText]}>{t('settings.privacy')}</Text>
                         <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
