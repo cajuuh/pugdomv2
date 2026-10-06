@@ -6,7 +6,7 @@ import { FeedDescriptor } from '../services/mastodon/feedTypes';
 import { fetchFeedNewer } from '../services/mastodon/feedService';
 import { Account, Status } from '../services/mastodon/types';
 
-export const NEW_POSTS_INTERVAL_MS = 60_000;
+export const NEW_POSTS_INTERVAL_MS = 3 * 60_000;
 
 export interface NewPosts {
     count: number;
@@ -26,7 +26,7 @@ export const summarizeNewPosts = (posts: Status[]): NewPosts => {
     return { count: posts.length, more: posts.length >= NEW_POSTS_LIMIT, accounts };
 };
 
-// Checks for posts newer than the top of the list every minute while the app is in the foreground.
+// Checks for posts newer than the top of the list every three minutes while the app is in the foreground.
 // Not under ['timeline']: those queries are paged lists that useUpdateCachedStatus rewrites.
 // Only pause in the background: at launch the state can still be 'unknown'
 const isForeground = (state: AppStateStatus | null) => state !== 'background';
