@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { Alert, DeviceEventEmitter } from 'react-native';
+import { DeviceEventEmitter } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { UNAUTHORIZED_EVENT } from './api/client';
 import { getCurrentAccount } from './mastodon/accounts';
 import { Account } from './mastodon/types';
 import { getCredentials, clearCredentials, saveCredentials, getSavedAccounts, addSavedAccount, removeSavedAccount, SavedAccount } from './storage';
 import { useI18n } from './i18n/i18nContext';
+import { dialog } from './dialog';
 
 interface AuthContextType {
     user: Account | null;
@@ -17,6 +18,8 @@ interface AuthContextType {
     switchAccount: (accountId: string) => Promise<void>;
     isAddingAccount: boolean;
     setAddingAccount: (val: boolean) => void;
+    // The signed-in account changed on the server (settings like the default quote policy)
+    updateUser: (user: Account) => void;
     // True right after logging in (or adding an account), until the setup screen is done
     needsSetup: boolean;
     finishSetup: () => void;
@@ -145,7 +148,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const accounts = await getSavedAccounts();
         const expired = accounts.find(a => a.accessToken === accessToken);
-        Alert.alert(
+        dialog.alert(
             t('auth.sessionExpired'),
             expired
                 ? t('auth.logInAgainTo', { acct: expired.userInfo.acct })
@@ -177,6 +180,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setAddingAccount,
                 needsSetup,
                 finishSetup: () => setNeedsSetup(false),
+                updateUser: setUser,
             }}>
             {children}
         </AuthContext.Provider>

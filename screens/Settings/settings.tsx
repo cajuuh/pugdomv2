@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import * as WebBrowser from 'expo-web-browser';
 import { useAuth } from '../../services/authContext';
 import { useSettings } from '../../services/settingsContext';
 import { useTheme } from '../../services/themeContext';
@@ -15,13 +16,19 @@ import { makeStyles } from './styles';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { Language, LANGUAGES } from '../../services/i18n/defaults';
 import { OptionSheet } from '../../components/ComposeModal/optionSheet';
+import { useInstanceConfiguration } from '../../hooks/useInstanceConfiguration';
+import { QuotePolicy, quotePolicies } from '../../services/mastodon/quotes';
+import { updateDefaultQuotePolicy } from '../../services/mastodon/accounts';
+import { dialog } from '../../services/dialog';
+
+const PRIVACY_URL = 'https://github.com/cajuuh/pugdomv2/blob/main/PRIVACY.md';
 
 interface SettingsProps {
     onBack: () => void;
 }
 
 const Settings: React.FC<SettingsProps> = ({ onBack }) => {
-    const { user, logout, savedAccounts, switchAccount, setAddingAccount } = useAuth();
+    const { user, logout, savedAccounts, switchAccount, setAddingAccount, updateUser } = useAuth();
     const { colors, type, coat } = useTheme();
     const styles = useThemedStyles(makeStyles);
     const {
@@ -36,6 +43,21 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
     const [page, setPage] = useState<'main' | 'appearance'>('main');
     const { t, language, setLanguage, dict } = useI18n();
     const [languageSheetVisible, setLanguageSheetVisible] = useState(false);
+    const [quoteSheetVisible, setQuoteSheetVisible] = useState(false);
+    // Only servers with quote posts have a default for who can quote
+    const { supportsQuotes } = useInstanceConfiguration(!!user);
+    const i18n = useI18n();
+    const quoteOptions = quotePolicies(i18n);
+    const quotePolicy: QuotePolicy = user?.source?.quote_policy ?? 'public';
+    const quotePolicyName = quoteOptions.find(option => option.value === quotePolicy)?.label ?? '';
+    const changeQuotePolicy = async (policy: QuotePolicy) => {
+        try {
+            updateUser(await updateDefaultQuotePolicy(policy));
+        } catch (error) {
+            console.warn('Changing the default quote policy failed:', error);
+            dialog.toast(t('quotes.policyFailed'));
+        }
+    };
     const coatName = t(`coats.${getCoat(coat).key}`);
     const languageName = dict.languageNames[language];
 
@@ -134,6 +156,24 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
                         </View>
                     </Pressable>
+                    {supportsQuotes && (
+                        <>
+                            <View style={styles.divider} />
+                            <Pressable
+                                style={styles.row}
+                                onPress={() => setQuoteSheetVisible(true)}
+                                accessibilityRole="button"
+                                accessibilityLabel={t('settings.quotePolicyLabel', { value: quotePolicyName })}
+                            >
+                                <Ionicons name="chatbox-ellipses-outline" size={20} color={colors.accentText} />
+                                <Text style={[labelStyle, styles.rowText]}>{t('settings.quotePolicy')}</Text>
+                                <View style={styles.rowTrailing}>
+                                    <Text style={[type.meta, styles.rowValue]}>{quotePolicyName}</Text>
+                                    <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                                </View>
+                            </Pressable>
+                        </>
+                    )}
                     <View style={styles.divider} />
                     {switchRow('notifications-outline', t('settings.pushNotifications'), notifications, setNotifications)}
                     <View style={styles.divider} />
@@ -150,7 +190,11 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                         <Text style={[type.meta, styles.rowValue]}>{appVersionLabel()}</Text>
                     </View>
                     <View style={styles.divider} />
-                    <Pressable style={styles.row} accessibilityRole="button">
+                    <Pressable
+                        style={styles.row}
+                        onPress={() => WebBrowser.openBrowserAsync(PRIVACY_URL).catch(error => console.error('Failed to open privacy policy:', error))}
+                        accessibilityRole="link"
+                    >
                         <Ionicons name="shield-checkmark-outline" size={20} color={colors.accentText} />
                         <Text style={[labelStyle, styles.rowText]}>{t('settings.privacy')}</Text>
                         <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
@@ -163,6 +207,14 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                 </Pressable>
             </ScrollView>
 
+            <OptionSheet<QuotePolicy>
+                visible={quoteSheetVisible}
+                title={t('settings.quotePolicy')}
+                options={quoteOptions}
+                value={quotePolicy}
+                onSelect={changeQuotePolicy}
+                onClose={() => setQuoteSheetVisible(false)}
+            />
             <OptionSheet<Language>
                 visible={languageSheetVisible}
                 title={t('settings.language')}

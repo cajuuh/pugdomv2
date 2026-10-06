@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, RefreshControl, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, RefreshControl, Text, View } from 'react-native';
 import { FlashList, useRecyclingState } from '@shopify/flash-list';
 import { InfiniteData, useQueryClient } from '@tanstack/react-query';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -22,6 +22,8 @@ import { ListItem, actorsText, buildListItems, notificationTime, plainText, with
 import { useI18n } from '../../services/i18n/i18nContext';
 import { TKey, Translator } from '../../services/i18n/translate';
 import { useOpenAccount } from '../../hooks/useOpenAccount';
+import { useMarkNotificationsSeen } from '../../hooks/useUnreadNotifications';
+import { dialog } from '../../services/dialog';
 
 interface NotificationsProps {
     onStatusPress?: (id: string) => void;
@@ -36,6 +38,8 @@ const TYPE_CONFIG: Record<string, { badge: React.ComponentProps<typeof Ionicons>
     reblog: { badge: 'repeat', action: 'notifications.reblog' },
     follow: { badge: 'person-add', action: 'notifications.follow' },
     quote: { badge: 'chatbox-ellipses', action: 'notifications.quote' },
+    // The post attached is your quote; the post it quotes was edited
+    quoted_update: { badge: 'create', action: 'notifications.quotedUpdate' },
 };
 
 const nameOf = (account: Account) => account.display_name || account.username;
@@ -67,7 +71,7 @@ const MentionActions = ({ status }: { status: Status }) => {
         } catch (error) {
             if (renderedStatusId.current !== status.id) return;
             setIsFavourited(previous);
-            Alert.alert(t('common.error'), t('notifications.favouriteFailed'));
+            dialog.toast(t('notifications.favouriteFailed'));
         }
     };
 
@@ -272,13 +276,19 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
         return ids.reduce<string | null>((newest, id) => (!newest || isNewerId(id, newest) ? id : newest), null);
     }, [queryClient, data]);
 
+    // Showing them counts as seeing them: the bell's dot goes away (the server's marker stays)
+    const markSeen = useMarkNotificationsSeen();
+    useEffect(() => {
+        if (newestId) markSeen(newestId);
+    }, [newestId, markSeen]);
+
     const handleMarkRead = async () => {
         if (!newestId) return;
         try {
             await markNotificationsRead(newestId);
             setMarkedReadId(newestId);
         } catch (error) {
-            Alert.alert(t('common.error'), t('notifications.markReadFailed'));
+            dialog.toast(t('notifications.markReadFailed'));
         }
     };
     const allRead = !!newestId && markedReadId === newestId;

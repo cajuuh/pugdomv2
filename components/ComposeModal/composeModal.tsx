@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-    Alert,
     Animated,
     DeviceEventEmitter,
     Keyboard,
@@ -47,9 +46,11 @@ import { applyEdits } from '../../services/media/edit';
 import { ImageEdits, Point, sameEdits } from '../../services/media/geometry';
 import { PickedImage } from '../../services/media/prepare';
 import { QuotedPost } from '../TootCard/quotedPost';
-import { effectiveQuotePolicy, QuotePolicy } from '../../services/mastodon/quotes';
+import { effectiveQuotePolicy, QuotePolicy, quotePolicies } from '../../services/mastodon/quotes';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { Translator } from '../../services/i18n/translate';
+import { DialogHost } from '../Dialog/dialogHost';
+import { dialog } from '../../services/dialog';
 
 const stripHtml = (html: string) => {
     if (!html) return '';
@@ -102,12 +103,7 @@ export const defaultVisibility = (user: Account | null, replyToStatus: Status | 
     return quoteStatus?.visibility === 'private' && (visibility === 'public' || visibility === 'unlisted') ? 'private' : visibility;
 };
 
-type QuotePolicyOption = SheetOption<QuotePolicy> & { icon: React.ComponentProps<typeof Ionicons>['name'] };
-export const quotePolicies = ({ t }: Translator): QuotePolicyOption[] => [
-    { value: 'public', label: t('compose.quoteAnyone'), description: t('compose.quoteAnyoneDescription'), icon: 'globe-outline' },
-    { value: 'followers', label: t('compose.quoteFollowers'), description: t('compose.quoteFollowersDescription'), icon: 'people-outline' },
-    { value: 'nobody', label: t('compose.quoteNobody'), description: t('compose.quoteNobodyDescription'), icon: 'lock-closed-outline' },
-];
+
 
 // Mastodon rejects polls with fewer than two choices or repeated choices
 const pollValidationError = (options: string[], { t }: Translator) => {
@@ -236,7 +232,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
             closeCompose();
             return;
         }
-        Alert.alert(t('compose.discardTitle'), t('compose.discardMessage'), [
+        dialog.alert(t('compose.discardTitle'), t('compose.discardMessage'), [
             { text: t('compose.keepEditing'), style: 'cancel', onPress: cancel },
             { text: t('compose.discard'), style: 'destructive', onPress: closeCompose },
         ], { cancelable: true, onDismiss: cancel });
@@ -381,7 +377,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
             setImageEditing(null);
         } catch (error) {
             console.warn('Could not edit the image:', error);
-            Alert.alert(t('editor.failedTitle'), t('editor.failed'));
+            dialog.alert(t('editor.failedTitle'), t('editor.failed'));
         }
     };
 
@@ -397,7 +393,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
         try {
             const photo = await takePhoto();
             if (photo === 'denied') {
-                Alert.alert(t('compose.cameraDeniedTitle'), t('compose.cameraDenied'));
+                dialog.alert(t('compose.cameraDeniedTitle'), t('compose.cameraDenied'));
                 return;
             }
             media.add(photo);
@@ -458,7 +454,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
             closeCompose();
         } catch (error: any) {
             console.error('Failed to post status:', error);
-            Alert.alert(
+            dialog.alert(
                 editing ? t('compose.saveFailed') : t('compose.publishFailed'),
                 error.response?.data?.error || error.message || t('compose.publishFailedMessage')
             );
@@ -789,6 +785,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 }}
                 onClose={() => setReminderOpen(false)}
             />
+            <DialogHost active={isOpen} />
         </Modal>
     );
 };

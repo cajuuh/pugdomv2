@@ -109,8 +109,10 @@ describe('Hashtag screen', () => {
         await renderHashtag();
 
         await fireEvent.press(await screen.findByRole('button', { name: 'Following' }));
-        const [title, , buttons] = (Alert.alert as jest.Mock).mock.calls[0];
-        expect(title).toBe('Unfollow #PugsOfMastodon?');
+        const [title, subtitle, buttons] = (Alert.alert as jest.Mock).mock.calls[0];
+        // The hashtag goes on its own line, out of the display font (the system alert puts it in the message)
+        expect(title).toBe('Unfollow this hashtag?');
+        expect(subtitle).toBe('#PugsOfMastodon');
         await act(async () => {
             buttons.find((b: any) => b.style === 'destructive').onPress();
         });

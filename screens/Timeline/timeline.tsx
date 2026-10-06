@@ -97,7 +97,6 @@ const Timeline = ({ onStatusPress }: TimelineProps) => {
         hasNextPage,
         fetchNextPage,
         refetch,
-        isRefetching,
     } = useFeed(activeFeed);
 
     const statuses = useMemo(() => {
@@ -106,6 +105,20 @@ const Timeline = ({ onStatusPress }: TimelineProps) => {
 
     const newPosts = useNewPosts(activeFeed, statuses[0]?.id);
     const [loadingNewPosts, setLoadingNewPosts] = useState(false);
+    // The newest post the list has drawn, and a wait for the reloaded one to be drawn
+    const drawnTopId = useRef<string | undefined>(undefined);
+    const waitingForTop = useRef<{ id: string; drawn: () => void } | null>(null);
+
+    // Scrolling before the reloaded posts are drawn lands on the old top post: once they're drawn,
+    // FlashList keeps it in place and the new posts end up above
+    useEffect(() => {
+        drawnTopId.current = statuses[0]?.id;
+        const waiting = waitingForTop.current;
+        if (!waiting) return;
+        waitingForTop.current = null;
+        if (waiting.id === drawnTopId.current) scrollListToTop(listRef.current).finally(waiting.drawn);
+        else waiting.drawn();
+    }, [statuses]);
 
     // Reload only the first page (dropping the older ones, so it's one request), then go to the top.
     // Scrolling first would keep the old top post in view, with the new ones above it.
@@ -115,8 +128,14 @@ const Timeline = ({ onStatusPress }: TimelineProps) => {
             queryClient.setQueryData<InfiniteData<Status[], string | undefined>>(['timeline', activeFeed.id], current =>
                 current && { pages: current.pages.slice(0, 1), pageParams: current.pageParams.slice(0, 1) }
             );
-            await refetch();
-            await scrollListToTop(listRef.current);
+            const { data: fresh } = await refetch();
+            const topId = fresh?.pages[0]?.[0]?.id;
+            if (topId) {
+                await new Promise<void>(drawn => {
+                    if (topId === drawnTopId.current) scrollListToTop(listRef.current).finally(drawn);
+                    else waitingForTop.current = { id: topId, drawn };
+                });
+            }
         } finally {
             setLoadingNewPosts(false);
         }
@@ -137,8 +156,16 @@ const Timeline = ({ onStatusPress }: TimelineProps) => {
         };
     }, [queryClient]);
 
-    const handleRefresh = useCallback(() => {
-        refetch();
+    // The spinner is only for a pull: background reloads (switching feeds back, the new posts pill,
+    // following someone) don't show it
+    const [pulling, setPulling] = useState(false);
+    const handleRefresh = useCallback(async () => {
+        setPulling(true);
+        try {
+            await refetch();
+        } finally {
+            setPulling(false);
+        }
     }, [refetch]);
 
     const handleLoadMore = () => {
@@ -257,10 +284,11 @@ const Timeline = ({ onStatusPress }: TimelineProps) => {
                         onEndReachedThreshold={0.5}
                         refreshControl={
                             <RefreshControl
-                                refreshing={isRefetching}
+                                refreshing={pulling}
                                 onRefresh={handleRefresh}
                                 tintColor={colors.accentColor}
                                 colors={[colors.accentColor]}
+                                progressBackgroundColor={colors.cardBackground}
                             />
                         }
                         ListFooterComponent={renderFooter}

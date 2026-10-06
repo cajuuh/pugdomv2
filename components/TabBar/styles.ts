@@ -8,6 +8,18 @@ export const DOCK_BOTTOM_OFFSET = Platform.OS === 'ios' ? 28 : 20;
 export const TAB_BAR_CLEARANCE = DOCK_HEIGHT + DOCK_BOTTOM_OFFSET + 16;
 
 export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
+    // Unread notifications: a coat-coloured dot on the bell's shoulder, ringed so it reads on the glass
+    dot: {
+        position: 'absolute',
+        top: -1,
+        right: -2,
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: colors.accentColor,
+        borderWidth: 1.5,
+        borderColor: colors.cardBackground,
+    },
     dockWrapper: {
         position: 'absolute',
         bottom: DOCK_BOTTOM_OFFSET,

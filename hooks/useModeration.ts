@@ -1,9 +1,9 @@
 import { useCallback } from 'react';
-import { Alert } from 'react-native';
 import { Account, Status } from '../services/mastodon/types';
 import { useNavigator } from '../services/navigationContext';
 import { useI18n } from '../services/i18n/i18nContext';
 import { useBlockAccount, useMuteAccount, useUnblockAccount, useUnmuteAccount } from './useRelationships';
+import { dialog } from '../services/dialog';
 
 // Report, mute and block, as offered from posts and profiles. Blocking asks first; the rest
 // say when they're done (or that they failed).
@@ -18,10 +18,10 @@ export const useModeration = () => {
     const run = useCallback(async (change: () => Promise<unknown>, done?: string) => {
         try {
             await change();
-            if (done) Alert.alert(done);
+            if (done) dialog.toast(done);
         } catch (error) {
             console.warn('Moderation action failed:', error);
-            Alert.alert(t('common.error'), t('moderation.failed'));
+            dialog.toast(t('moderation.failed'));
         }
     }, [t]);
 
@@ -35,14 +35,14 @@ export const useModeration = () => {
 
     const block = useCallback(
         (account: Account) =>
-            Alert.alert(t('moderation.blockTitle', { acct: account.acct }), t('moderation.blockMessage'), [
+            dialog.alert(t('moderation.blockTitle'), t('moderation.blockMessage'), [
                 { text: t('common.cancel'), style: 'cancel' },
                 {
                     text: t('moderation.block'),
                     style: 'destructive',
                     onPress: () => run(() => blockAccount(account.id), t('moderation.blocked', { acct: account.acct })),
                 },
-            ]),
+            ], { subtitle: `@${account.acct}` }),
         [run, blockAccount, t]
     );
     const unblock = useCallback((account: Account) => run(() => unblockAccount(account.id)), [run, unblockAccount]);

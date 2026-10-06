@@ -1,6 +1,8 @@
 import React from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { createTestQueryClient } from '../testUtils/queryClient';
 import Settings from '../screens/Settings/settings';
 import { ThemeProvider } from '../services/themeContext';
 
@@ -43,9 +45,11 @@ jest.mock('../services/settingsContext', () => ({
 
 const renderAppearance = async () => {
     await render(
-        <ThemeProvider>
-            <Settings onBack={jest.fn()} />
-        </ThemeProvider>
+        <QueryClientProvider client={createTestQueryClient()}>
+            <ThemeProvider>
+                <Settings onBack={jest.fn()} />
+            </ThemeProvider>
+        </QueryClientProvider>
     );
     await fireEvent.press(await screen.findByRole('button', { name: 'Appearance, Apricot' }));
     await screen.findByRole('radio', { name: 'Apricot' });

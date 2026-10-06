@@ -7,7 +7,8 @@ import { hitSlopFor, radii } from '../../services/theme/shape';
 interface PillButtonProps {
     label: string;
     onPress: () => void;
-    variant?: 'primary' | 'secondary' | 'subtle' | 'ghost';
+    // danger: for destructive choices (delete, block)
+    variant?: 'primary' | 'secondary' | 'subtle' | 'ghost' | 'danger';
     size?: 'small' | 'medium';
     icon?: React.ComponentProps<typeof Ionicons>['name'];
     loading?: boolean;
@@ -36,6 +37,7 @@ export const PillButton: React.FC<PillButtonProps> = ({
         secondary: { background: colors.cardBackground, border: colors.borderColor, text: colors.textPrimary },
         subtle: { background: colors.inputBackground, border: colors.inputBackground, text: colors.textSecondary },
         ghost: { background: 'transparent', border: 'transparent', text: colors.accentText },
+        danger: { background: colors.dangerColor, border: colors.dangerColor, text: colors.cardBackground },
     }[variant];
 
     return (

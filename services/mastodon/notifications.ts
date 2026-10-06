@@ -100,3 +100,9 @@ export async function fetchNotificationGroups(maxId?: string, types?: Notificati
         nextMaxId: notifications.length > 0 ? notifications[notifications.length - 1].id : undefined,
     };
 }
+
+// The id of your newest notification of these types, or null when there are none
+export async function getNewestNotificationId(types: Notification['type'][]): Promise<string | null> {
+    const response = await apiClient.get<Notification[]>('/notifications', { params: { limit: 1, types } });
+    return response.data[0]?.id ?? null;
+}

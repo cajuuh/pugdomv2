@@ -1,5 +1,5 @@
 import React, { useCallback, useRef } from 'react';
-import { Alert, Image, Platform, Pressable, Share, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Image, Platform, Pressable, Share, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { BlurView } from 'expo-blur';
 import { useRecyclingState } from '@shopify/flash-list';
@@ -42,11 +42,13 @@ import { FocusedImage } from './focusedImage';
 import { QuotedPost } from './quotedPost';
 import { useNavigator } from '../../services/navigationContext';
 import { ActionSheet, BottomSheet } from '../ComposeModal/optionSheet';
-import { quotePermission } from '../../services/mastodon/quotes';
+import { currentQuotePolicy, QuotePolicy, quotePermission, quotePolicies, setQuotePolicy } from '../../services/mastodon/quotes';
+import { OptionSheet } from '../ComposeModal/optionSheet';
 import { useOptionalAuth } from '../../services/authContext';
 import { useModeration } from '../../hooks/useModeration';
 import { usePostActions } from '../../hooks/usePostActions';
 import { EditHistorySheet } from './editHistorySheet';
+import { dialog } from '../../services/dialog';
 
 const getRelativeTime = (dateString: string, { t }: Translator) => {
     const now = new Date();
@@ -172,6 +174,9 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     // The ⋯ menu: report, mute, block
     const [postMenuMounted, setPostMenuMounted] = useRecyclingState(false, recyclingDeps);
     const [postMenuOpen, setPostMenuOpen] = useRecyclingState(false, recyclingDeps);
+    // Who can quote one of your posts, changed after posting
+    const [policySheetMounted, setPolicySheetMounted] = useRecyclingState(false, recyclingDeps);
+    const [policySheetOpen, setPolicySheetOpen] = useRecyclingState(false, recyclingDeps);
     // The edit history of an edited post
     const [historyMounted, setHistoryMounted] = useRecyclingState(false, recyclingDeps);
     const [historyOpen, setHistoryOpen] = useRecyclingState(false, recyclingDeps);
@@ -198,7 +203,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             }
             setIsFavorited(previousIsFavorited);
             setFavCount(previousFavCount);
-            Alert.alert(t('common.error'), t('post.favouriteFailed'));
+            dialog.toast(t('post.favouriteFailed'));
         }
     };
 
@@ -218,7 +223,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 return;
             }
             setIsBookmarked(previousIsBookmarked);
-            Alert.alert(t('common.error'), t('post.bookmarkFailed'));
+            dialog.toast(t('post.bookmarkFailed'));
         }
     };
 
@@ -241,7 +246,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             }
             setIsreblogged(previousIsReblogged);
             setBoostCount(previousBoostCount);
-            Alert.alert(t('common.error'), t('post.boostFailed'));
+            dialog.toast(t('post.boostFailed'));
         }
     };
 
@@ -267,6 +272,18 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const showPostMenu = !remote && !!auth?.user;
     const ownPost = !!auth?.user && auth.user.id === targetStatus.account.id;
     const author = targetStatus.account;
+    const quotesCount = targetStatus.quotes_count ?? 0;
+    const viewQuotes = { key: 'quotes', icon: 'chatbox-ellipses-outline' as const, label: tn('quotes.viewQuotes', quotesCount), onPress: () => push({ name: 'quotes', status: targetStatus }) };
+    // Servers with quotes send quote_approval; followers-only and private posts can't be quoted by others anyway
+    const canChangeQuotePolicy = ownPost && !!targetStatus.quote_approval && (targetStatus.visibility === 'public' || targetStatus.visibility === 'unlisted');
+    const changeQuotePolicy = async (policy: QuotePolicy) => {
+        try {
+            updateCachedStatus(await setQuotePolicy(targetStatus.id, policy));
+        } catch (error) {
+            console.warn('Changing the quote policy failed:', error);
+            dialog.toast(t('quotes.policyFailed'));
+        }
+    };
 
     const handleShare = async () => {
         // Remote statuses may have no `url`; `uri` always points to the original post
@@ -682,6 +699,16 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     ]}
                 />
             )}
+            {policySheetMounted && canChangeQuotePolicy && (
+                <OptionSheet
+                    visible={policySheetOpen}
+                    title={t('compose.whoCanQuote')}
+                    options={quotePolicies(i18n)}
+                    value={currentQuotePolicy(targetStatus)}
+                    onSelect={changeQuotePolicy}
+                    onClose={() => setPolicySheetOpen(false)}
+                />
+            )}
             {historyMounted && !!targetStatus.edited_at && (
                 <EditHistorySheet
                     visible={historyOpen}
@@ -697,6 +724,20 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     subtitle={t('posts.yourPost')}
                     onClose={() => setPostMenuOpen(false)}
                     actions={[
+                        ...(quotesCount > 0 ? [viewQuotes] : []),
+                        ...(canChangeQuotePolicy
+                            ? [{
+                                key: 'quotePolicy',
+                                icon: 'people-outline' as const,
+                                label: t('quotes.policyMenu'),
+                                description: quotePolicies(i18n).find(option => option.value === currentQuotePolicy(targetStatus))?.label,
+                                // iOS can't present a sheet while the menu is still closing
+                                onPress: () => setTimeout(() => {
+                                    setPolicySheetMounted(true);
+                                    setPolicySheetOpen(true);
+                                }, Platform.OS === 'ios' ? 400 : 0),
+                            }]
+                            : []),
                         { key: 'edit', icon: 'create-outline', label: t('posts.edit'), onPress: () => postActions.edit(targetStatus) },
                         { key: 'redraft', icon: 'refresh', label: t('posts.redraft'), description: t('posts.redraftHint'), onPress: () => postActions.redraft(targetStatus) },
                         { key: 'delete', icon: 'trash-outline', label: t('posts.delete'), onPress: () => postActions.remove(targetStatus) },
@@ -710,6 +751,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     subtitle={t('moderation.postMenuTitle', { acct: author.acct })}
                     onClose={() => setPostMenuOpen(false)}
                     actions={[
+                        ...(quotesCount > 0 ? [viewQuotes] : []),
                         { key: 'report', icon: 'flag-outline', label: t('moderation.reportPost'), onPress: () => moderation.report(author, targetStatus) },
                         { key: 'mute', icon: 'volume-mute-outline', label: t('moderation.muteAccount', { acct: author.acct }), description: t('moderation.muteHint'), onPress: () => moderation.mute(author) },
                         { key: 'block', icon: 'hand-left-outline', label: t('moderation.blockAccount', { acct: author.acct }), description: t('moderation.blockHint'), onPress: () => moderation.block(author) },

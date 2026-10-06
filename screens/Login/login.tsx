@@ -1,5 +1,5 @@
 import React,{useState } from 'react'
-import { Alert,StyleSheet,Text,TextInput,View } from 'react-native'
+import { StyleSheet,Text,TextInput,View } from 'react-native'
 import { PillButton, PugMark} from '../../components/ui'
 import { radii,space} from '../../services/theme/shape'
 import * as WebBrowser from 'expo-web-browser'
@@ -13,6 +13,7 @@ import { getCurrentAccount } from '../../services/mastodon/accounts'
 import { useAuth } from '../../services/authContext'
 import { useTheme } from '../../services/themeContext'
 import { useI18n } from '../../services/i18n/i18nContext';
+import { dialog } from '../../services/dialog';
 
 // web browser helper to complete authorizations on Android/Web
 WebBrowser.maybeCompleteAuthSession();
@@ -31,7 +32,7 @@ const Login: React.FC<LoginProps> = ({ onCancel }) => {
 
     const handleLogin = async () => {
         if (!instance.trim()) {
-            Alert.alert(t('common.error'), t('login.enterInstance'));
+            dialog.alert(t('common.error'), t('login.enterInstance'));
             return;
         }
         setLoading(true);
@@ -72,7 +73,7 @@ const Login: React.FC<LoginProps> = ({ onCancel }) => {
             }
         } catch (error: any) {
             console.error(error);
-            Alert.alert(t('login.failed'), error.message || t('login.unexpected'))
+            dialog.alert(t('login.failed'), error.message || t('login.unexpected'))
         } finally {
             setLoading(false);
         }

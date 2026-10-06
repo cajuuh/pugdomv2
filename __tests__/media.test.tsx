@@ -274,6 +274,7 @@ describe('Compose with images', () => {
 
         await fireEvent.press(screen.getByRole('button', { name: 'Take a photo' }));
 
-        expect(Alert.alert).toHaveBeenCalledWith('Camera access', expect.stringContaining('camera'));
+        expect(await screen.findByText('Camera access')).toBeTruthy();
+        expect(screen.getByText(/in your phone's settings/)).toBeTruthy();
     });
 });

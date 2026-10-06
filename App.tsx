@@ -37,6 +37,9 @@ import FeedEditor from './screens/FeedEditor/feedEditor';
 import ListEditor from './screens/ListEditor/listEditor';
 import ServerPicker from './screens/ServerPicker/serverPicker';
 import Report from './screens/Report/report';
+import Quotes from './screens/Quotes/quotes';
+import { useUnreadNotifications } from './hooks/useUnreadNotifications';
+import { DialogHost } from './components/Dialog/dialogHost';
 
 // Keep the pug splash up until the fonts and the saved account are loaded
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -47,6 +50,7 @@ function NavigationRoot() {
   const { colors, isDark, fontsReady } = useTheme();
   const { languageReady } = useI18n();
   const [activeTab, setActiveTab] = useState<'home' | 'search' | 'notifications' | 'profile'>('home');
+  const unreadNotifications = useUnreadNotifications();
   const { stack, push, pop, reset } = useNavigator();
   // The server's stored custom emoji, ready before anyone opens the picker
   useEmojiCachePrimer(user?.id);
@@ -103,6 +107,8 @@ function NavigationRoot() {
         return <ServerPicker onBack={pop} />;
       case 'report':
         return <Report account={route.account} status={route.status} onBack={pop} />;
+      case 'quotes':
+        return <Quotes status={route.status} onBack={pop} onStatusPress={openThread} />;
     }
   };
 
@@ -183,7 +189,7 @@ function NavigationRoot() {
       ))}
 
       {/* Custom Tab Bar, last so it stays on top of the overlays on both platforms */}
-      <TabBar activeTab={activeTab} onTabPress={handleTabPress} onComposePress={openCompose} />
+      <TabBar activeTab={activeTab} onTabPress={handleTabPress} onComposePress={openCompose} unreadNotifications={unreadNotifications} />
     </View>
   );
 }
@@ -201,6 +207,8 @@ export default function App() {
                 <MediaViewerProvider>
                   <NavigationProvider>
                     <NavigationRoot />
+                    {/* Dialogs and toasts over everything (compose and sheets have their own) */}
+                    <DialogHost />
                   </NavigationProvider>
                 </MediaViewerProvider>
               </ComposeProvider>
