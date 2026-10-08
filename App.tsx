@@ -39,6 +39,7 @@ import ServerPicker from './screens/ServerPicker/serverPicker';
 import Report from './screens/Report/report';
 import Quotes from './screens/Quotes/quotes';
 import Conversations from './screens/Conversations/conversations';
+import Reactions from './screens/Reactions/reactions';
 import { useUnreadConversations } from './hooks/useUnreadConversations';
 import { useUnreadNotifications } from './hooks/useUnreadNotifications';
 import { DialogHost } from './components/Dialog/dialogHost';
@@ -115,6 +116,8 @@ function NavigationRoot() {
         return <Quotes status={route.status} onBack={pop} onStatusPress={openThread} />;
       case 'conversations':
         return <Conversations onBack={pop} onStatusPress={openThread} />;
+      case 'reactions':
+        return <Reactions statusId={route.statusId} reaction={route.reaction} onBack={pop} />;
     }
   };
 

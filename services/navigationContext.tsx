@@ -17,7 +17,9 @@ export type Route =
     // Posts quoting a post
     | { name: 'quotes'; status: Status }
     // Your direct conversations
-    | { name: 'conversations' };
+    | { name: 'conversations' }
+    // Who favourited or boosted a post
+    | { name: 'reactions'; statusId: string; reaction: 'favourites' | 'boosts' };
 
 // Each entry gets its own key, so the same screen can sit in the stack twice (thread → other → same thread)
 export interface StackEntry {

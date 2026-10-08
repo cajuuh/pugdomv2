@@ -1,5 +1,6 @@
 import apiClient from '../api/client';
-import { Status, StatusEdit, StatusSource } from './types';
+import { nextMaxIdFromLink } from './bookmarks';
+import { Account, Status, StatusEdit, StatusSource } from './types';
 
 export interface CreateStatusParams {
     status: string;
@@ -20,8 +21,11 @@ export interface CreateStatusParams {
     };
 }
 
+// Mastodon makes one post per Idempotency-Key, so a retried request can't post twice
+const idempotencyKey = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+
 export async function createStatus(params: CreateStatusParams): Promise<Status> {
-    const response = await apiClient.post('/statuses', params);
+    const response = await apiClient.post('/statuses', params, { headers: { 'Idempotency-Key': idempotencyKey() } });
     return response.data;
 }
 
@@ -58,6 +62,19 @@ export async function unbookmarkStatus(id: string): Promise<Status> {
 export async function getStatus(id: string): Promise<Status> {
     const response = await apiClient.get(`/statuses/${id}`);
     return response.data;
+}
+
+// Who favourited or boosted a post, newest first, paged with the Link header
+export type Reaction = 'favourites' | 'boosts';
+export interface ReactionsPage {
+    accounts: Account[];
+    nextMaxId?: string;
+}
+
+export async function getReactions(id: string, reaction: Reaction, maxId?: string): Promise<ReactionsPage> {
+    const path = reaction === 'favourites' ? 'favourited_by' : 'reblogged_by';
+    const response = await apiClient.get<Account[]>(`/statuses/${id}/${path}`, { params: { max_id: maxId } });
+    return { accounts: response.data, nextMaxId: nextMaxIdFromLink(response.headers?.link) };
 }
 
 export async function getStatusContext(id: string): Promise<{ ancestors: Status[], descendants: Status[] }> {

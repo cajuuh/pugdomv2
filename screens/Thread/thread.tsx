@@ -24,6 +24,7 @@ import { useI18n } from '../../services/i18n/i18nContext';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
 import { STATUS_DELETED_EVENT, STATUS_UPDATED_EVENT } from '../../hooks/useUpdateCachedStatus';
 import { useNavigator } from '../../services/navigationContext';
+import { useSettings } from '../../services/settingsContext';
 
 interface ThreadProps {
     statusId: string;
@@ -44,6 +45,7 @@ export default function Thread({
     const insets = useSafeAreaInsets();
     const { t, tn } = useI18n();
     const { push } = useNavigator();
+    const { hideCounts } = useSettings();
 
     const [statuses, setStatuses] = useState<ThreadStatus[]>([]);
     const [loading, setLoading] = useState(true);
@@ -195,17 +197,24 @@ export default function Thread({
                                         index < statuses.length - 1
                                     }
                                 />
-                                {/* The post this thread is about says how often it was quoted */}
-                                {isMain && (item.quotes_count ?? 0) > 0 && (
-                                    <Pressable
-                                        onPress={() => push({ name: 'quotes', status: item })}
-                                        accessibilityRole="button"
-                                        style={styles.quotesLink}
-                                    >
-                                        <Text style={[type.meta, { color: colors.accentText }]}>
-                                            {tn('quotes.count', item.quotes_count ?? 0)}
-                                        </Text>
-                                    </Pressable>
+                                {/* The post this thread is about links to who favourited, boosted and quoted it
+                                    (without the numbers when they're hidden) */}
+                                {isMain && (
+                                    <View style={styles.reactions}>
+                                        {[
+                                            { count: item.favourites_count, plain: 'reactions.favourites' as const, counted: 'reactions.favouritesCount' as const, open: () => push({ name: 'reactions', statusId: item.id, reaction: 'favourites' }) },
+                                            { count: item.reblogs_count, plain: 'reactions.boosts' as const, counted: 'reactions.boostsCount' as const, open: () => push({ name: 'reactions', statusId: item.id, reaction: 'boosts' }) },
+                                            { count: item.quotes_count ?? 0, plain: 'reactions.quotes' as const, counted: 'quotes.count' as const, open: () => push({ name: 'quotes', status: item }) },
+                                        ]
+                                            .filter(link => link.count > 0)
+                                            .map(link => (
+                                                <Pressable key={link.plain} onPress={link.open} accessibilityRole="button" style={styles.reactionLink}>
+                                                    <Text style={[type.meta, { color: colors.accentText }]}>
+                                                        {hideCounts ? t(link.plain) : tn(link.counted, link.count)}
+                                                    </Text>
+                                                </Pressable>
+                                            ))}
+                                    </View>
                                 )}
                             </View>
                         );
@@ -260,9 +269,13 @@ const styles = StyleSheet.create({
     postContainer: {
         borderBottomWidth: StyleSheet.hairlineWidth,
     },
-    quotesLink: {
-        alignSelf: 'flex-start',
+    reactions: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        columnGap: space.lg,
         paddingHorizontal: space.lg,
+    },
+    reactionLink: {
         paddingBottom: space.md,
         minHeight: 32,
         justifyContent: 'center',

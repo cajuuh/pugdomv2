@@ -371,6 +371,19 @@ export const en = {
         you: 'You: {{text}}',
         none: 'No messages yet. To write one, start a post and set who can see it to "Mentioned".',
     },
+    reactions: {
+        favouritesTitle: 'Favourited by',
+        boostsTitle: 'Boosted by',
+        favouritesCount_one: '{{count}} favourite',
+        favouritesCount_other: '{{count}} favourites',
+        boostsCount_one: '{{count}} boost',
+        boostsCount_other: '{{count}} boosts',
+        // The same links when numbers on posts are hidden
+        favourites: 'Favourites',
+        boosts: 'Boosts',
+        quotes: 'Quotes',
+        none: 'Nobody yet.',
+    },
     quotes: {
         openQuoted: 'Quoted post by {{name}}: {{text}}',
         pending: 'Waiting for the author to approve this quote',
