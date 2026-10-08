@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { TabBar } from '../components/TabBar/tabBar';
-import { TAB_BAR_CLEARANCE, DOCK_HEIGHT, DOCK_BOTTOM_OFFSET } from '../components/TabBar/styles';
+import { TAB_BAR_CLEARANCE, DOCK_HEIGHT, DOCK_BOTTOM_OFFSET, dockBottomOffset } from '../components/TabBar/styles';
 import { TopBar } from '../components/TopBar/topBar';
 import { mockTheme } from '../testUtils/theme';
 import { Account } from '../services/mastodon/types';
@@ -76,5 +76,17 @@ describe('TopBar', () => {
         await fireEvent.press(screen.getByRole('button', { name: 'Account menu' }));
         await fireEvent.press(screen.getByRole('button', { name: 'Log Out' }));
         expect(onLogoutPress).toHaveBeenCalled();
+    });
+});
+
+describe('dockBottomOffset', () => {
+    it('lifts the dock above a tall Android navigation bar, and keeps the usual gap otherwise', () => {
+        // 3-button navigation
+        expect(dockBottomOffset('android', 48)).toBe(56);
+        // Gestures, or no navigation bar
+        expect(dockBottomOffset('android', 0)).toBe(20);
+        expect(dockBottomOffset('android', 12)).toBe(20);
+        // iOS's home indicator fits the fixed offset
+        expect(dockBottomOffset('ios', 34)).toBe(28);
     });
 });

@@ -1,12 +1,12 @@
 import React,{useState } from 'react'
-import { StyleSheet,Text,TextInput,View } from 'react-native'
+import { ScrollView, StyleSheet,Text,TextInput,useWindowDimensions,View } from 'react-native'
 import { PillButton, PugMark} from '../../components/ui'
 import { radii,space} from '../../services/theme/shape'
 import * as WebBrowser from 'expo-web-browser'
 import * as Linking from 'expo-linking'
 
 // services
-import { registerApp } from '../../services/mastodon/apps'
+import { registerOnServer, ServerError } from '../../services/mastodon/apps'
 import { exchangeCodeForToken } from '../../services/mastodon/auth'
 import { saveCredentials } from '../../services/storage'
 import { getCurrentAccount } from '../../services/mastodon/accounts'
@@ -14,6 +14,7 @@ import { useAuth } from '../../services/authContext'
 import { useTheme } from '../../services/themeContext'
 import { useI18n } from '../../services/i18n/i18nContext';
 import { dialog } from '../../services/dialog';
+import { useKeyboard } from '../../hooks/useKeyboard';
 
 // web browser helper to complete authorizations on Android/Web
 WebBrowser.maybeCompleteAuthSession();
@@ -29,6 +30,8 @@ const Login: React.FC<LoginProps> = ({ onCancel }) => {
     const { login } = useAuth();
     const { colors,type,coat } = useTheme();
     const { t } = useI18n();
+    // The app draws edge to edge, so the window doesn't shrink for the keyboard: make room for it
+    const keyboard = useKeyboard(useWindowDimensions().height);
 
     const handleLogin = async () => {
         if (!instance.trim()) {
@@ -45,7 +48,9 @@ const Login: React.FC<LoginProps> = ({ onCancel }) => {
 
             // login proccess
             const redirectUri = Linking.createURL('redirect');
-            const appData = await registerApp(formattedInstance, redirectUri);
+            const registered = await registerOnServer(formattedInstance, redirectUri);
+            formattedInstance = registered.instanceUrl;
+            const appData = registered.app;
             const scopes = 'read write follow push';
             const authUrl = `${formattedInstance}/oauth/authorize?client_id=${appData.client_id}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scopes)}`;
 
@@ -73,18 +78,23 @@ const Login: React.FC<LoginProps> = ({ onCancel }) => {
             }
         } catch (error: any) {
             console.error(error);
-            dialog.alert(t('login.failed'), error.message || t('login.unexpected'))
+            if (error instanceof ServerError && error.reason === 'notMastodon') {
+                dialog.alert(t('login.notMastodonTitle'), t('login.notMastodon', { server: error.server }));
+            } else if (error instanceof ServerError) {
+                dialog.alert(t('login.unreachableTitle'), t('login.unreachable', { server: error.server }));
+            } else {
+                dialog.alert(t('login.failed'), error.message || t('login.unexpected'));
+            }
         } finally {
             setLoading(false);
         }
     };
 
    return (
-        <View
-            style={[
-                styles.container,
-                { backgroundColor: colors.background },
-            ]}
+        <ScrollView
+            style={{ backgroundColor: colors.background }}
+            contentContainerStyle={[styles.container, { paddingBottom: keyboard.inset }]}
+            keyboardShouldPersistTaps="handled"
         >
             <View style={styles.content}>
                 <PugMark coat={coat} size={96} />
@@ -152,12 +162,12 @@ const Login: React.FC<LoginProps> = ({ onCancel }) => {
                     )}
                 </View>
             </View>
-        </View>
+        </ScrollView>
     )
 }
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
+        flexGrow: 1,
         justifyContent: 'center',
         paddingHorizontal: space.xl,
     },
