@@ -73,7 +73,7 @@ describe('Conversations', () => {
 
         expect(onStatusPress).toHaveBeenCalledWith('s1');
         expect(mockedPost).toHaveBeenCalledWith('/conversations/c1/read');
-        expect(screen.queryByTestId('conversation-unread')).toBeNull();
+        await waitFor(() => expect(screen.queryByTestId('conversation-unread')).toBeNull());
         await waitFor(() => expect(queryClient.getQueryState(unreadConversationsKey('me'))?.isInvalidated).toBe(true));
     });
 
