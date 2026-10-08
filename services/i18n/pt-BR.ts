@@ -359,6 +359,13 @@ export const ptBR: Dictionary = {
         failedTitle: 'Não deu para editar a imagem',
         failed: 'Tente de novo, ou publique como está.',
     },
+    conversations: {
+        title: 'Mensagens',
+        openUnread: 'Mensagens, não lidas',
+        unread: 'Não lida',
+        you: 'Você: {{text}}',
+        none: 'Nenhuma mensagem ainda. Para escrever uma, comece uma publicação e escolha "Mencionados" em quem pode ver.',
+    },
     quotes: {
         openQuoted: 'Publicação citada de {{name}}: {{text}}',
         pending: 'Esperando o autor aprovar esta citação',

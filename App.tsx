@@ -38,6 +38,8 @@ import ListEditor from './screens/ListEditor/listEditor';
 import ServerPicker from './screens/ServerPicker/serverPicker';
 import Report from './screens/Report/report';
 import Quotes from './screens/Quotes/quotes';
+import Conversations from './screens/Conversations/conversations';
+import { useUnreadConversations } from './hooks/useUnreadConversations';
 import { useUnreadNotifications } from './hooks/useUnreadNotifications';
 import { DialogHost } from './components/Dialog/dialogHost';
 
@@ -51,6 +53,7 @@ function NavigationRoot() {
   const { languageReady } = useI18n();
   const [activeTab, setActiveTab] = useState<'home' | 'search' | 'notifications' | 'profile'>('home');
   const unreadNotifications = useUnreadNotifications();
+  const unreadMessages = useUnreadConversations();
   const { stack, push, pop, reset } = useNavigator();
   // The server's stored custom emoji, ready before anyone opens the picker
   useEmojiCachePrimer(user?.id);
@@ -109,6 +112,8 @@ function NavigationRoot() {
         return <Report account={route.account} status={route.status} onBack={pop} />;
       case 'quotes':
         return <Quotes status={route.status} onBack={pop} onStatusPress={openThread} />;
+      case 'conversations':
+        return <Conversations onBack={pop} onStatusPress={openThread} />;
     }
   };
 
@@ -164,6 +169,8 @@ function NavigationRoot() {
           onProfilePress={() => setActiveTab('profile')}
           onSettingsPress={openSettings}
           onLogoutPress={logout}
+          onMessagesPress={() => push({ name: 'conversations' })}
+          unreadMessages={unreadMessages}
         />
 
         {/* Screen content area */}

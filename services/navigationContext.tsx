@@ -15,7 +15,9 @@ export type Route =
     // Reporting an account to the server's moderators, about one of their posts when given
     | { name: 'report'; account: Account; status?: Status }
     // Posts quoting a post
-    | { name: 'quotes'; status: Status };
+    | { name: 'quotes'; status: Status }
+    // Your direct conversations
+    | { name: 'conversations' };
 
 // Each entry gets its own key, so the same screen can sit in the stack twice (thread → other → same thread)
 export interface StackEntry {

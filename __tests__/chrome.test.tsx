@@ -52,11 +52,22 @@ describe('TabBar', () => {
 describe('TopBar', () => {
     const user = { id: '1', username: 'pug', acct: 'pug', display_name: 'Pug Dom', avatar: '', emojis: [] } as Account;
 
-    const renderHeader = async () => {
-        const handlers = { onProfilePress: jest.fn(), onSettingsPress: jest.fn(), onLogoutPress: jest.fn() };
-        await render(<TopBar user={user} {...handlers} />);
+    const renderHeader = async (unreadMessages = false) => {
+        const handlers = { onProfilePress: jest.fn(), onSettingsPress: jest.fn(), onLogoutPress: jest.fn(), onMessagesPress: jest.fn() };
+        await render(<TopBar user={user} unreadMessages={unreadMessages} {...handlers} />);
         return handlers;
     };
+
+    it('opens messages from the envelope, with a dot when some are unread', async () => {
+        const { onMessagesPress } = await renderHeader();
+        expect(screen.queryByTestId('messages-dot')).toBeNull();
+        await fireEvent.press(screen.getByRole('button', { name: 'Messages' }));
+        expect(onMessagesPress).toHaveBeenCalled();
+
+        await renderHeader(true);
+        expect(screen.getByTestId('messages-dot')).toBeTruthy();
+        expect(screen.getByRole('button', { name: 'Messages, unread' })).toBeTruthy();
+    });
 
     it('shows the wordmark and opens settings from its own button', async () => {
         const { onSettingsPress } = await renderHeader();

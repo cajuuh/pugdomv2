@@ -50,7 +50,7 @@ import { usePostActions } from '../../hooks/usePostActions';
 import { EditHistorySheet } from './editHistorySheet';
 import { dialog } from '../../services/dialog';
 
-const getRelativeTime = (dateString: string, { t }: Translator) => {
+export const getRelativeTime = (dateString: string, { t }: Translator) => {
     const now = new Date();
     const created = new Date(dateString);
     const diffMs = now.getTime() - created.getTime();
