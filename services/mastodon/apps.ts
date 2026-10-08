@@ -21,8 +21,9 @@ export async function registerApp(instanceUrl: string, redirectUri: string): Pro
 
 // The address typed at sign-in isn't a Mastodon server, or can't be reached at all
 export class ServerError extends Error {
-    constructor(public reason: 'notMastodon' | 'unreachable', public server: string) {
-        super(reason);
+    // `detail` keeps what actually went wrong (DNS, timeout, TLS...) for the logs
+    constructor(public reason: 'notMastodon' | 'unreachable', public server: string, detail?: string) {
+        super(detail ? `${reason} (${server}): ${detail}` : `${reason} (${server})`);
     }
 }
 
@@ -35,7 +36,7 @@ const tryRegister = async (instanceUrl: string, redirectUri: string): Promise<Ap
         return app?.client_id ? app : null;
     } catch (error) {
         if (axios.isAxiosError(error)) {
-            if (!error.response) throw new ServerError('unreachable', hostOf(instanceUrl));
+            if (!error.response) throw new ServerError('unreachable', hostOf(instanceUrl), `${error.code ?? ''} ${error.message}`.trim());
             if (error.response.status === 404 || error.response.status === 405) return null;
         }
         throw error;
@@ -54,10 +55,24 @@ export async function findServerFromHostMeta(instanceUrl: string): Promise<strin
     }
 }
 
+// The first request after the app opens sometimes gets no answer (a cold connection) while the
+// next one works, so a request with no answer at all is tried once more before giving up
+const tryRegisterTwice = async (instanceUrl: string, redirectUri: string) => {
+    try {
+        return await tryRegister(instanceUrl, redirectUri);
+    } catch (error) {
+        if (error instanceof ServerError && error.reason === 'unreachable') {
+            console.warn(error.message);
+            return tryRegister(instanceUrl, redirectUri);
+        }
+        throw error;
+    }
+};
+
 // Registers pugdon on the server at this address, or on the one its host-meta points to.
 // Returns the server's address too, since that's where sign-in continues.
 export async function registerOnServer(instanceUrl: string, redirectUri: string): Promise<{ instanceUrl: string; app: AppRegistrationData }> {
-    const app = await tryRegister(instanceUrl, redirectUri);
+    const app = await tryRegisterTwice(instanceUrl, redirectUri);
     if (app) return { instanceUrl, app };
     const server = await findServerFromHostMeta(instanceUrl);
     const serverApp = server ? await tryRegister(server, redirectUri) : null;
