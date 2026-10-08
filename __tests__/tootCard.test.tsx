@@ -27,7 +27,7 @@ jest.mock('../services/mastodon/polls', () => ({
 }));
 
 // Mutable so the Compact Mode tests can turn it on
-const mockSettings = { compactMode: false, mediaAutoplay: false };
+const mockSettings = { compactMode: false, mediaAutoplay: false, hideCounts: false };
 jest.mock('../services/settingsContext', () => ({
     useSettings: () => mockSettings,
 }));
@@ -346,6 +346,19 @@ describe('TootCard content', () => {
         expect(screen.getByRole('button', { name: 'Favourited, 33 favourites' })).toBeSelected();
         expect(screen.getByRole('button', { name: 'Boost, 22 boosts' })).not.toBeSelected();
         expect(screen.getByRole('button', { name: 'Reply, 11 replies' })).toBeTruthy();
+    });
+
+    it('hides the numbers under the post when asked, keeping them for screen readers', async () => {
+        mockSettings.hideCounts = true;
+        try {
+            await renderCard(statusA);
+
+            for (const count of ['11', '22', '33']) expect(screen.queryByText(count)).toBeNull();
+            expect(screen.getByRole('button', { name: 'Favourite, 33 favourites' })).toBeTruthy();
+            expect(screen.getByRole('button', { name: 'Reply, 11 replies' })).toBeTruthy();
+        } finally {
+            mockSettings.hideCounts = false;
+        }
     });
 });
 

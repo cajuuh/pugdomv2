@@ -38,6 +38,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
         setMediaAutoplay,
         compactMode,
         setCompactMode,
+        hideCounts,
+        setHideCounts,
     } = useSettings();
     // Appearance is a second level inside Settings
     const [page, setPage] = useState<'main' | 'appearance'>('main');
@@ -180,6 +182,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                     {switchRow('play-circle-outline', t('settings.autoplay'), mediaAutoplay, setMediaAutoplay)}
                     <View style={styles.divider} />
                     {switchRow('list-outline', t('settings.compactMode'), compactMode, setCompactMode)}
+                    <View style={styles.divider} />
+                    {switchRow('stats-chart-outline', t('settings.hideCounts'), hideCounts, setHideCounts)}
                 </Card>
 
                 <SectionLabel style={styles.sectionLabel}>{t('settings.about')}</SectionLabel>
