@@ -6,7 +6,7 @@ import * as WebBrowser from 'expo-web-browser'
 import * as Linking from 'expo-linking'
 
 // services
-import { registerApp } from '../../services/mastodon/apps'
+import { registerOnServer, ServerError } from '../../services/mastodon/apps'
 import { exchangeCodeForToken } from '../../services/mastodon/auth'
 import { saveCredentials } from '../../services/storage'
 import { getCurrentAccount } from '../../services/mastodon/accounts'
@@ -45,7 +45,9 @@ const Login: React.FC<LoginProps> = ({ onCancel }) => {
 
             // login proccess
             const redirectUri = Linking.createURL('redirect');
-            const appData = await registerApp(formattedInstance, redirectUri);
+            const registered = await registerOnServer(formattedInstance, redirectUri);
+            formattedInstance = registered.instanceUrl;
+            const appData = registered.app;
             const scopes = 'read write follow push';
             const authUrl = `${formattedInstance}/oauth/authorize?client_id=${appData.client_id}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scopes)}`;
 
@@ -73,7 +75,13 @@ const Login: React.FC<LoginProps> = ({ onCancel }) => {
             }
         } catch (error: any) {
             console.error(error);
-            dialog.alert(t('login.failed'), error.message || t('login.unexpected'))
+            if (error instanceof ServerError && error.reason === 'notMastodon') {
+                dialog.alert(t('login.notMastodonTitle'), t('login.notMastodon', { server: error.server }));
+            } else if (error instanceof ServerError) {
+                dialog.alert(t('login.unreachableTitle'), t('login.unreachable', { server: error.server }));
+            } else {
+                dialog.alert(t('login.failed'), error.message || t('login.unexpected'));
+            }
         } finally {
             setLoading(false);
         }

@@ -50,6 +50,10 @@ export const en = {
         enterInstance: 'Please enter a Mastodon instance URL',
         failed: 'Authentication failed',
         unexpected: 'An unexpected error occurred.',
+        notMastodonTitle: "That's not a Mastodon server",
+        notMastodon: "{{server}} didn't answer like a Mastodon server. Check the address: it's the server where you made your account, like mastodon.social.",
+        unreachableTitle: "Couldn't reach the server",
+        unreachable: "Couldn't reach {{server}}. Check the address and your connection, then try again.",
     },
     setup: {
         title: 'Setting things up',
