@@ -27,7 +27,7 @@ jest.mock('../services/mastodon/polls', () => ({
 }));
 
 // Mutable so the Compact Mode tests can turn it on
-const mockSettings = { compactMode: false, mediaAutoplay: false, hideCounts: false };
+const mockSettings: { compactMode: boolean; mediaAutoplay: boolean; hideCounts: boolean; expandSpoilers: boolean | null } = { compactMode: false, mediaAutoplay: false, hideCounts: false, expandSpoilers: null };
 jest.mock('../services/settingsContext', () => ({
     useSettings: () => mockSettings,
 }));
@@ -312,6 +312,19 @@ describe('TootCard content', () => {
         await fireEvent.press(screen.getByRole('button', { name: 'Hide' }));
         expect(screen.queryByText(/status A/)).toBeNull();
         expect(screen.getByText('Text and 1 photo hidden')).toBeTruthy();
+    });
+
+    it('opens posts with a CW expanded when content warnings are set to always expand, and can still hide them', async () => {
+        mockSettings.expandSpoilers = true;
+        try {
+            await renderCard({ ...statusA, sensitive: false, spoiler_text: 'Politics' });
+
+            expect(screen.getByText(/status A/)).toBeTruthy();
+            await fireEvent.press(screen.getByRole('button', { name: 'Hide' }));
+            expect(screen.queryByText(/status A/)).toBeNull();
+        } finally {
+            mockSettings.expandSpoilers = null;
+        }
     });
 
     it('treats a CW as collapsible even when the post is not marked sensitive', async () => {

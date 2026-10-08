@@ -20,6 +20,7 @@ import { useInstanceConfiguration } from '../../hooks/useInstanceConfiguration';
 import { QuotePolicy, quotePolicies } from '../../services/mastodon/quotes';
 import { updateDefaultQuotePolicy } from '../../services/mastodon/accounts';
 import { dialog } from '../../services/dialog';
+import { useExpandSpoilers } from '../../hooks/useExpandSpoilers';
 
 const PRIVACY_URL = 'https://github.com/cajuuh/pugdomv2/blob/main/PRIVACY.md';
 
@@ -40,7 +41,10 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
         setCompactMode,
         hideCounts,
         setHideCounts,
+        setExpandSpoilers,
     } = useSettings();
+    // What posts do now: your switch, or the account's web preference until you use it
+    const expandSpoilers = useExpandSpoilers();
     // Appearance is a second level inside Settings
     const [page, setPage] = useState<'main' | 'appearance'>('main');
     const { t, language, setLanguage, dict } = useI18n();
@@ -184,6 +188,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                     {switchRow('list-outline', t('settings.compactMode'), compactMode, setCompactMode)}
                     <View style={styles.divider} />
                     {switchRow('stats-chart-outline', t('settings.hideCounts'), hideCounts, setHideCounts)}
+                    <View style={styles.divider} />
+                    {switchRow('warning-outline', t('settings.expandSpoilers'), expandSpoilers, setExpandSpoilers)}
                 </Card>
 
                 <SectionLabel style={styles.sectionLabel}>{t('settings.about')}</SectionLabel>

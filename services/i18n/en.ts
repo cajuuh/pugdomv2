@@ -601,6 +601,7 @@ export const en = {
         autoplay: 'Autoplay Media',
         compactMode: 'Compact Mode',
         hideCounts: 'Hide numbers on posts',
+        expandSpoilers: 'Always expand content warnings',
         about: 'About',
         version: 'App Version',
         privacy: 'Privacy Policy',

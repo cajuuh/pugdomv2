@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getSetting, saveSetting } from './storage';
+import { getSetting, getStringSetting, saveSetting, saveStringSetting } from './storage';
 
 interface SettingsContextType {
     notifications: boolean;
@@ -7,10 +7,13 @@ interface SettingsContextType {
     compactMode: boolean;
     // Hides the reply, boost and favourite numbers under posts (the buttons stay)
     hideCounts: boolean;
+    // Posts with a content warning open expanded; null until you set it here (then the account's web preference applies)
+    expandSpoilers: boolean | null;
     setNotifications: (value: boolean) => Promise<void>;
     setMediaAutoplay: (value: boolean) => Promise<void>;
     setCompactMode: (value: boolean) => Promise<void>;
     setHideCounts: (value: boolean) => Promise<void>;
+    setExpandSpoilers: (value: boolean) => Promise<void>;
     loadingSettings: boolean;
 }
 
@@ -20,12 +23,14 @@ export const NOTIFICATIONS_KEY = 'pugdom_settings_notifications';
 export const AUTOPLAY_KEY = 'pugdom_settings_autoplay';
 export const COMPACT_KEY = 'pugdom_settings_compact';
 export const HIDE_COUNTS_KEY = 'pugdom_settings_hide_counts';
+export const EXPAND_SPOILERS_KEY = 'pugdom_settings_expand_spoilers';
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [notifications, setNotificationsState] = useState(true);
     const [mediaAutoplay, setMediaAutoplayState] = useState(false);
     const [compactMode, setCompactModeState] = useState(false);
     const [hideCounts, setHideCountsState] = useState(false);
+    const [expandSpoilers, setExpandSpoilersState] = useState<boolean | null>(null);
     const [loadingSettings, setLoadingSettings] = useState(true);
 
     useEffect(() => {
@@ -35,10 +40,12 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 const autoplay = await getSetting(AUTOPLAY_KEY, false);
                 const compact = await getSetting(COMPACT_KEY, false);
                 const counts = await getSetting(HIDE_COUNTS_KEY, false);
+                const spoilers = await getStringSetting(EXPAND_SPOILERS_KEY, '');
                 setNotificationsState(notify);
                 setMediaAutoplayState(autoplay);
                 setCompactModeState(compact);
                 setHideCountsState(counts);
+                setExpandSpoilersState(spoilers === '' ? null : spoilers === 'true');
             } catch (error) {
                 console.error('Failed to load settings:', error);
             } finally {
@@ -68,6 +75,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         await saveSetting(HIDE_COUNTS_KEY, value);
     };
 
+    const setExpandSpoilers = async (value: boolean) => {
+        setExpandSpoilersState(value);
+        await saveStringSetting(EXPAND_SPOILERS_KEY, String(value));
+    };
+
     return (
         <SettingsContext.Provider
             value={{
@@ -75,10 +87,12 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 mediaAutoplay,
                 compactMode,
                 hideCounts,
+                expandSpoilers,
                 setNotifications,
                 setMediaAutoplay,
                 setCompactMode,
                 setHideCounts,
+                setExpandSpoilers,
                 loadingSettings,
             }}
         >
