@@ -366,6 +366,18 @@ export const ptBR: Dictionary = {
         you: 'Você: {{text}}',
         none: 'Nenhuma mensagem ainda. Para escrever uma, comece uma publicação e escolha "Mencionados" em quem pode ver.',
     },
+    reactions: {
+        favouritesTitle: 'Favoritado por',
+        boostsTitle: 'Boosts de',
+        favouritesCount_one: '{{count}} favorito',
+        favouritesCount_other: '{{count}} favoritos',
+        boostsCount_one: '{{count}} boost',
+        boostsCount_other: '{{count}} boosts',
+        favourites: 'Favoritos',
+        boosts: 'Boosts',
+        quotes: 'Citações',
+        none: 'Ninguém ainda.',
+    },
     quotes: {
         openQuoted: 'Publicação citada de {{name}}: {{text}}',
         pending: 'Esperando o autor aprovar esta citação',
