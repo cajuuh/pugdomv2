@@ -171,7 +171,7 @@ function NavigationRoot() {
           {activeTab === 'home' && <Timeline onStatusPress={openThread} />}
           {activeTab === 'search' && <Search onStatusPress={openThread} />}
           {activeTab === 'notifications' && <Notifications onStatusPress={openThread} />}
-          {activeTab === 'profile' && <Profile onStatusPress={openThread} onSettingsPress={openSettings} />}
+          {activeTab === 'profile' && <Profile onStatusPress={openThread} />}
         </View>
       </View>
 

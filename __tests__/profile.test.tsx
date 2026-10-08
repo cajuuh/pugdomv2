@@ -148,13 +148,11 @@ describe('Profile', () => {
         await waitFor(() => expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith('https://mastodon.social/settings/profile'));
     });
 
-    it('opens Settings from the banner', async () => {
-        const onSettingsPress = jest.fn();
-        await renderProfile({ onSettingsPress });
+    it('has no Settings button on the banner, since the top bar above the tab has one', async () => {
+        await renderProfile();
+        await screen.findByRole('button', { name: 'Edit profile' });
 
-        await fireEvent.press(await screen.findByRole('button', { name: 'Settings' }));
-
-        expect(onSettingsPress).toHaveBeenCalled();
+        expect(screen.queryByRole('button', { name: 'Settings' })).toBeNull();
     });
 
     it.each([
