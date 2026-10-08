@@ -14,9 +14,12 @@ interface TopBarProps {
     onProfilePress: () => void;
     onSettingsPress: () => void;
     onLogoutPress: () => void;
+    onMessagesPress: () => void;
+    // A dot on the envelope
+    unreadMessages?: boolean;
 }
 
-export const TopBar: React.FC<TopBarProps> = ({ user, onProfilePress, onSettingsPress, onLogoutPress }) => {
+export const TopBar: React.FC<TopBarProps> = ({ user, onProfilePress, onSettingsPress, onLogoutPress, onMessagesPress, unreadMessages }) => {
     const [menuVisible, setMenuVisible] = useState(false);
     const { colors, type, coat } = useTheme();
     const styles = useThemedStyles(makeStyles);
@@ -45,7 +48,19 @@ export const TopBar: React.FC<TopBarProps> = ({ user, onProfilePress, onSettings
                     <Text style={[type.title, styles.wordmarkText]}>pugdon</Text>
                 </View>
 
-                <IconButton icon="options-outline" accessibilityLabel={t('common.settings')} onPress={onSettingsPress} color={colors.textSecondary} size={24} style={styles.settingsButton} />
+                <View style={styles.actions}>
+                    <View>
+                        <IconButton
+                            icon="mail-outline"
+                            accessibilityLabel={unreadMessages ? t('conversations.openUnread') : t('conversations.title')}
+                            onPress={onMessagesPress}
+                            color={colors.textSecondary}
+                            size={24}
+                        />
+                        {unreadMessages && <View testID="messages-dot" style={styles.dot} pointerEvents="none" />}
+                    </View>
+                    <IconButton icon="options-outline" accessibilityLabel={t('common.settings')} onPress={onSettingsPress} color={colors.textSecondary} size={24} style={styles.settingsButton} />
+                </View>
             </View>
 
             <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>

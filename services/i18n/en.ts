@@ -363,6 +363,14 @@ export const en = {
         failedTitle: "Couldn't edit the image",
         failed: 'Try again, or post it as it is.',
     },
+    conversations: {
+        title: 'Messages',
+        openUnread: 'Messages, unread',
+        unread: 'Unread',
+        // The last message in a conversation, when you sent it
+        you: 'You: {{text}}',
+        none: 'No messages yet. To write one, start a post and set who can see it to "Mentioned".',
+    },
     quotes: {
         openQuoted: 'Quoted post by {{name}}: {{text}}',
         pending: 'Waiting for the author to approve this quote',
