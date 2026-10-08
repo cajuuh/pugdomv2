@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
     Animated,
     DeviceEventEmitter,
-    Keyboard,
     KeyboardAvoidingView,
     Modal,
     Platform,
@@ -34,6 +33,7 @@ import { CharacterCounter } from './characterCounter';
 import { EmojiPicker } from './emojiPicker';
 import { OptionSheet, SheetOption } from './optionSheet';
 import { DEFAULT_POLL_DURATION, PollEditor } from './pollEditor';
+import { useKeyboard } from '../../hooks/useKeyboard';
 import { useDragToDismiss, useSheetTransition } from './sheetTransition';
 import { PILL_HEIGHT, makeStyles } from './styles';
 import { AttachmentStrip } from './attachmentStrip';
@@ -125,27 +125,6 @@ const insertAt = (text: string, cursor: number, insert: string) => {
     const trail = /^\s/.test(after) ? '' : ' ';
     const piece = `${lead}${insert}${trail}`;
     return { text: before + piece + after, cursor: cursor + piece.length };
-};
-
-// How much of the window the keyboard covers, measured up from the bottom edge
-export const keyboardInset = (windowHeight: number, keyboardTop: number) => Math.max(windowHeight - keyboardTop, 0);
-
-// iOS reports the keyboard before it moves, Android only after
-const useKeyboard = (windowHeight: number) => {
-    const [keyboard, setKeyboard] = useState({ visible: false, inset: 0 });
-    useEffect(() => {
-        const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', event =>
-            setKeyboard({ visible: true, inset: keyboardInset(windowHeight, event.endCoordinates.screenY) })
-        );
-        const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () =>
-            setKeyboard({ visible: false, inset: 0 })
-        );
-        return () => {
-            show.remove();
-            hide.remove();
-        };
-    }, [windowHeight]);
-    return keyboard;
 };
 
 // Anything typed beyond the reply mentions the sheet opened with, a poll, a content warning or images

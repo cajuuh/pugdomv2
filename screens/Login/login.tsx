@@ -1,5 +1,5 @@
 import React,{useState } from 'react'
-import { StyleSheet,Text,TextInput,View } from 'react-native'
+import { ScrollView, StyleSheet,Text,TextInput,useWindowDimensions,View } from 'react-native'
 import { PillButton, PugMark} from '../../components/ui'
 import { radii,space} from '../../services/theme/shape'
 import * as WebBrowser from 'expo-web-browser'
@@ -14,6 +14,7 @@ import { useAuth } from '../../services/authContext'
 import { useTheme } from '../../services/themeContext'
 import { useI18n } from '../../services/i18n/i18nContext';
 import { dialog } from '../../services/dialog';
+import { useKeyboard } from '../../hooks/useKeyboard';
 
 // web browser helper to complete authorizations on Android/Web
 WebBrowser.maybeCompleteAuthSession();
@@ -29,6 +30,8 @@ const Login: React.FC<LoginProps> = ({ onCancel }) => {
     const { login } = useAuth();
     const { colors,type,coat } = useTheme();
     const { t } = useI18n();
+    // The app draws edge to edge, so the window doesn't shrink for the keyboard: make room for it
+    const keyboard = useKeyboard(useWindowDimensions().height);
 
     const handleLogin = async () => {
         if (!instance.trim()) {
@@ -88,11 +91,10 @@ const Login: React.FC<LoginProps> = ({ onCancel }) => {
     };
 
    return (
-        <View
-            style={[
-                styles.container,
-                { backgroundColor: colors.background },
-            ]}
+        <ScrollView
+            style={{ backgroundColor: colors.background }}
+            contentContainerStyle={[styles.container, { paddingBottom: keyboard.inset }]}
+            keyboardShouldPersistTaps="handled"
         >
             <View style={styles.content}>
                 <PugMark coat={coat} size={96} />
@@ -160,12 +162,12 @@ const Login: React.FC<LoginProps> = ({ onCancel }) => {
                     )}
                 </View>
             </View>
-        </View>
+        </ScrollView>
     )
 }
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
+        flexGrow: 1,
         justifyContent: 'center',
         paddingHorizontal: space.xl,
     },
