@@ -31,6 +31,12 @@ jest.mock('../services/authContext', () => {
     };
 });
 
+// The app's client retries failed requests and keeps finished queries for five minutes, and those timers
+// outlive queryClient.clear(), so the file never exits. Use a test client: no retries, no gc timers.
+jest.mock('../services/queryClient', () => ({
+    queryClient: require('../testUtils/queryClient').createTestQueryClient(),
+}));
+
 jest.mock('../services/storage', () => ({
     getCredentials: jest.fn(async () => ({ accessToken: 'token', instanceUrl: 'https://pug.social' })),
     getSetting: jest.fn(async (_key: string, fallback: boolean) => fallback),
