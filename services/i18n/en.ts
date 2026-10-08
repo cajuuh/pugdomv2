@@ -579,6 +579,7 @@ export const en = {
         pushNotifications: 'Push Notifications',
         autoplay: 'Autoplay Media',
         compactMode: 'Compact Mode',
+        hideCounts: 'Hide numbers on posts',
         about: 'About',
         version: 'App Version',
         privacy: 'Privacy Policy',

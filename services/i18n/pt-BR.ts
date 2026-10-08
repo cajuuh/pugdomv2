@@ -574,6 +574,7 @@ export const ptBR: Dictionary = {
         pushNotifications: 'Notificações push',
         autoplay: 'Reproduzir mídia automaticamente',
         compactMode: 'Modo compacto',
+        hideCounts: 'Esconder os números nas publicações',
         about: 'Sobre',
         version: 'Versão do app',
         privacy: 'Política de privacidade',

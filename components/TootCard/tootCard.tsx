@@ -124,7 +124,7 @@ interface TootCardProps {
 }
 
 export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPressHashtag, onPress, threadMode, hasThreadLineTop, hasThreadLineBottom, remote }) => {
-    const { compactMode } = useSettings();
+    const { compactMode, hideCounts } = useSettings();
     const { colors, type } = useTheme();
     const styles = useThemedStyles(makeStyles);
     const { openCompose } = useCompose();
@@ -580,7 +580,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 accessibilityLabel={tn('post.replies', targetStatus.replies_count || 0)}
             >
                 <Ionicons name="arrow-undo-outline" size={actionIcon} color={colors.textMuted} />
-                <Text style={[type.meta, styles.actionCount]}>{targetStatus.replies_count || 0}</Text>
+                {!hideCounts && <Text style={[type.meta, styles.actionCount]}>{targetStatus.replies_count || 0}</Text>}
             </Pressable>
             <Pressable
                 style={actionButtonStyle}
@@ -591,7 +591,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 accessibilityState={{ selected: isReblogged }}
             >
                 <Ionicons name="repeat" size={actionIcon} color={isReblogged ? colors.accentText : colors.textMuted} />
-                <Text style={[type.meta, styles.actionCount, isReblogged && styles.actionCountActive]}>{boostCount || 0}</Text>
+                {!hideCounts && <Text style={[type.meta, styles.actionCount, isReblogged && styles.actionCountActive]}>{boostCount || 0}</Text>}
             </Pressable>
             <Pressable
                 style={actionButtonStyle}
@@ -602,7 +602,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 accessibilityState={{ selected: isFavorited }}
             >
                 <Ionicons name={isFavorited ? 'star' : 'star-outline'} size={actionIcon} color={isFavorited ? colors.accentText : colors.textMuted} />
-                <Text style={[type.meta, styles.actionCount, isFavorited && styles.actionCountActive]}>{favCount || 0}</Text>
+                {!hideCounts && <Text style={[type.meta, styles.actionCount, isFavorited && styles.actionCountActive]}>{favCount || 0}</Text>}
             </Pressable>
             <Pressable
                 style={actionButtonStyle}
