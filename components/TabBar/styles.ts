@@ -1,8 +1,15 @@
 import { StyleSheet, Platform } from 'react-native';
+import { initialWindowMetrics } from 'react-native-safe-area-context';
 import { ThemeColors } from '../../services/themeContext';
 
 export const DOCK_HEIGHT = 68;
-export const DOCK_BOTTOM_OFFSET = Platform.OS === 'ios' ? 28 : 20;
+
+// The app draws edge to edge, so on Android the dock has to clear the system navigation bar:
+// tall with 3-button navigation, thin (or none) with gestures. iOS's home indicator fits the fixed offset.
+export const dockBottomOffset = (os: string, bottomInset: number) => (os === 'ios' ? 28 : Math.max(20, bottomInset + 8));
+// ponytail: the inset at launch, so switching navigation mode while the app is open needs a restart;
+// read useSafeAreaInsets in the dock and every TAB_BAR_CLEARANCE user if that ever matters
+export const DOCK_BOTTOM_OFFSET = dockBottomOffset(Platform.OS, initialWindowMetrics?.insets.bottom ?? 0);
 
 // Bottom padding for scrollable tab screens so their last item can scroll above the floating dock
 export const TAB_BAR_CLEARANCE = DOCK_HEIGHT + DOCK_BOTTOM_OFFSET + 16;
