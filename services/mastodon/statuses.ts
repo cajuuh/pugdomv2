@@ -21,8 +21,11 @@ export interface CreateStatusParams {
     };
 }
 
+// Mastodon makes one post per Idempotency-Key, so a retried request can't post twice
+const idempotencyKey = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+
 export async function createStatus(params: CreateStatusParams): Promise<Status> {
-    const response = await apiClient.post('/statuses', params);
+    const response = await apiClient.post('/statuses', params, { headers: { 'Idempotency-Key': idempotencyKey() } });
     return response.data;
 }
 

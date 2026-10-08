@@ -1,4 +1,4 @@
-import axios, { InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { DeviceEventEmitter } from 'react-native';
 import { getCredentials } from '../storage';
 
@@ -26,6 +26,21 @@ export const publicClient = axios.create({
         'Content-Type': 'application/json',
     }
 });
+
+// Android keeps idle connections for reuse, but the server may have closed one already: a request sent
+// on it fails with no answer ("Network Error"), and Android only retries GETs by itself. So such a
+// failure is sent once more. Timeouts aren't, since those may have reached the server; posting also
+// carries an Idempotency-Key, so a post that did arrive isn't made twice.
+type RetriedRequestConfig = InternalAxiosRequestConfig & { pugdomRetried?: boolean };
+export const retryDroppedConnection = (client: AxiosInstance) => (error: unknown) => {
+    const config = axios.isAxiosError(error) ? (error.config as RetriedRequestConfig | undefined) : undefined;
+    if (axios.isAxiosError(error) && !error.response && error.code === 'ERR_NETWORK' && config && !config.pugdomRetried) {
+        config.pugdomRetried = true;
+        return client.request(config);
+    }
+    return Promise.reject(error);
+};
+publicClient.interceptors.response.use(undefined, retryDroppedConnection(publicClient));
 
 // Request interceptor added to dynamically inject instance and auth token
 apiClient.interceptors.request.use(
@@ -64,5 +79,7 @@ apiClient.interceptors.response.use(
         return Promise.reject(error);
     }
 )
+
+apiClient.interceptors.response.use(undefined, retryDroppedConnection(apiClient));
 
 export default apiClient;

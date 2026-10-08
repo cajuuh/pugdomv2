@@ -2,6 +2,7 @@ import { AxiosError, AxiosHeaders, InternalAxiosRequestConfig } from 'axios';
 import { DeviceEventEmitter } from 'react-native';
 import apiClient, { publicClient, UNAUTHORIZED_EVENT } from '../services/api/client';
 import { getCredentials } from '../services/storage';
+import { createStatus, CreateStatusParams } from '../services/mastodon/statuses';
 
 jest.mock('../services/storage', () => ({
     getCredentials: jest.fn(),
@@ -94,6 +95,52 @@ describe('apiClient', () => {
         it('ignores 401s from other servers', async () => {
             await expect(apiClient.get('https://other.instance/api/v1/statuses/1')).rejects.toThrow('Unauthorized');
             expect(listener).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('dropped connections', () => {
+        // Fails the first call the given way, then answers
+        const flakyAdapter = (code: string) => {
+            const calls: InternalAxiosRequestConfig[] = [];
+            const adapter = async (config: InternalAxiosRequestConfig) => {
+                calls.push(config);
+                if (calls.length === 1) throw new AxiosError(code === 'ERR_NETWORK' ? 'Network Error' : 'timeout', code, config, {});
+                return echoAdapter(config);
+            };
+            return { adapter, calls };
+        };
+
+        it('sends a request once more when it got no answer at all, on both clients', async () => {
+            for (const client of [apiClient, publicClient]) {
+                const { adapter, calls } = flakyAdapter('ERR_NETWORK');
+                client.defaults.adapter = adapter;
+
+                await expect(client.post('https://mastodon.social/api/v1/statuses', {})).resolves.toMatchObject({ status: 200 });
+                expect(calls).toHaveLength(2);
+            }
+        });
+
+        it("doesn't retry twice, or retry a timeout that may have reached the server", async () => {
+            apiClient.defaults.adapter = async config => {
+                throw new AxiosError('Network Error', 'ERR_NETWORK', config, {});
+            };
+            await expect(apiClient.get('/timelines/home')).rejects.toThrow('Network Error');
+
+            const { adapter, calls } = flakyAdapter('ECONNABORTED');
+            apiClient.defaults.adapter = adapter;
+            await expect(apiClient.post('/statuses', {})).rejects.toThrow('timeout');
+            expect(calls).toHaveLength(1);
+        });
+
+        it("posts with an Idempotency-Key, so a retry can't post twice", async () => {
+            const { adapter, calls } = flakyAdapter('ERR_NETWORK');
+            apiClient.defaults.adapter = adapter;
+
+            await createStatus({ status: 'hi' } as CreateStatusParams);
+
+            const keys = calls.map(config => config.headers['Idempotency-Key']);
+            expect(keys[0]).toBeTruthy();
+            expect(keys[1]).toBe(keys[0]);
         });
     });
 });

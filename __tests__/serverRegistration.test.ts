@@ -51,19 +51,10 @@ describe('registerOnServer', () => {
         expect(await reason(registerOnServer('https://example.com', 'pugdom://redirect'))).toBe('notMastodon example.com');
     });
 
-    it("says it can't reach the server when there's no answer at all, after one more try", async () => {
-        jest.spyOn(console, 'warn').mockImplementation(() => {});
+    it("says it can't reach the server when there's no answer at all", async () => {
         mockedPost.mockRejectedValue(httpError());
 
         expect(await reason(registerOnServer('https://mastodon.socail', 'pugdom://redirect'))).toBe('unreachable mastodon.socail');
-        expect(mockedPost).toHaveBeenCalledTimes(2);
-    });
-
-    it('tries once more when the first request gets no answer', async () => {
-        jest.spyOn(console, 'warn').mockImplementation(() => {});
-        mockedPost.mockRejectedValueOnce(httpError()).mockResolvedValueOnce({ data: app });
-
-        await expect(registerOnServer('https://bolha.one', 'pugdom://redirect')).resolves.toEqual({ instanceUrl: 'https://bolha.one', app });
     });
 
     it('passes other server errors on unchanged', async () => {
