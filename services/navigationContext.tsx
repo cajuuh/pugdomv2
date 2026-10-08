@@ -44,15 +44,24 @@ export const pushRoute = (stack: StackEntry[], route: Route, key: string): Stack
     return [...stack, { key, route }].slice(-MAX_STACK_DEPTH);
 };
 
+// Closes the posts opened one from another on top, back to the screen they started from
+// (Messages, a profile, a hashtag...) or the tabs
+export const withoutTopThreads = (stack: StackEntry[]): StackEntry[] => {
+    let end = stack.length;
+    while (end > 0 && stack[end - 1].route.name === 'thread') end--;
+    return end === stack.length ? stack : stack.slice(0, end);
+};
+
 interface Navigator {
     stack: StackEntry[];
     push: (route: Route) => void;
     pop: () => void;
     reset: () => void;
+    closeThreads: () => void;
 }
 
 // Without a provider (component tests) navigation does nothing
-const NavigationContext = createContext<Navigator>({ stack: [], push: () => {}, pop: () => {}, reset: () => {} });
+const NavigationContext = createContext<Navigator>({ stack: [], push: () => {}, pop: () => {}, reset: () => {}, closeThreads: () => {} });
 
 export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [stack, setStack] = useState<StackEntry[]>([]);
@@ -63,8 +72,9 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }, []);
     const pop = useCallback(() => setStack(current => current.slice(0, -1)), []);
     const reset = useCallback(() => setStack(current => (current.length ? [] : current)), []);
+    const closeThreads = useCallback(() => setStack(withoutTopThreads), []);
 
-    const value = useMemo(() => ({ stack, push, pop, reset }), [stack, push, pop, reset]);
+    const value = useMemo(() => ({ stack, push, pop, reset, closeThreads }), [stack, push, pop, reset, closeThreads]);
     return <NavigationContext.Provider value={value}>{children}</NavigationContext.Provider>;
 };
 

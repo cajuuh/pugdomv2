@@ -54,7 +54,7 @@ function NavigationRoot() {
   const [activeTab, setActiveTab] = useState<'home' | 'search' | 'notifications' | 'profile'>('home');
   const unreadNotifications = useUnreadNotifications();
   const unreadMessages = useUnreadConversations();
-  const { stack, push, pop, reset } = useNavigator();
+  const { stack, push, pop, reset, closeThreads } = useNavigator();
   // The server's stored custom emoji, ready before anyone opens the picker
   useEmojiCachePrimer(user?.id);
 
@@ -91,8 +91,9 @@ function NavigationRoot() {
   const renderScreen = ({ route }: StackEntry) => {
     switch (route.name) {
       case 'thread':
-        // The header's ← goes back to the tabs; Android's back button steps through the posts one by one
-        return <Thread statusId={route.statusId} onBack={reset} onStatusPress={openThread} />;
+        // The header's ← closes every post opened from this one, back to where the first was opened
+        // (Messages, a profile, the tabs...); Android's back button steps through the posts one by one
+        return <Thread statusId={route.statusId} onBack={closeThreads} onStatusPress={openThread} />;
       case 'settings':
         return <Settings onBack={pop} />;
       // Back from a profile returns to the post or notification it was opened from
