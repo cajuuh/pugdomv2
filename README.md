@@ -14,13 +14,10 @@ With its modern visual language, dynamic dark mode, and smooth interface, Pugdon
 
 ## 📸 Screenshots
 
-| 🧵 Thread | 🔎 Explore | ✍️ Compose |
-| :-: | :-: | :-: |
-| <img src="./assets/screenshots/thread.png" width="240" alt="A thread: a post and a reply below it, joined by a line"/> | <img src="./assets/screenshots/explore.png" width="240" alt="Explore: the search field and this week's trending hashtags with their post counts"/> | <img src="./assets/screenshots/compose.png" width="240" alt="Writing a post with a photo of a pug attached and described, with visibility, language and quote options"/> |
-
-| 🔔 Notifications | 🎨 Appearance |
-| :-: | :-: |
-| <img src="./assets/screenshots/notifications.png" width="240" alt="Notifications under Today: a mention with reply and favourite buttons, favourites, a boost and a new follower"/> | <img src="./assets/screenshots/appearance.png" width="240" alt="Appearance: a preview post, light, dark or system mode, and the nine pug coats"/> |
+| | 🧵 Thread | 🔎 Explore | ✍️ Compose | 🔔 Notifications | 🎨 Appearance |
+| :-: | :-: | :-: | :-: | :-: | :-: |
+| **Light** | <img src="./assets/screenshots/thread-light.png" width="160" alt="A thread: a post and a reply joined by a line, with who favourited it (light mode)"/> | <img src="./assets/screenshots/explore-light.png" width="160" alt="Explore: the search field and this week's trending hashtags (light mode)"/> | <img src="./assets/screenshots/compose-light.png" width="160" alt="Writing a post with a described photo of a pug attached (light mode)"/> | <img src="./assets/screenshots/notifications-light.png" width="160" alt="Notifications: a mention with reply and favourite buttons, favourites, a boost and a new follower (light mode)"/> | <img src="./assets/screenshots/appearance-light.png" width="160" alt="Appearance: a preview post, light, dark or system mode, and the nine pug coats (light mode)"/> |
+| **Dark** | <img src="./assets/screenshots/thread-dark.png" width="160" alt="A thread: a post and a reply joined by a line, with who favourited it (dark mode)"/> | <img src="./assets/screenshots/explore-dark.png" width="160" alt="Explore: the search field and this week's trending hashtags (dark mode)"/> | <img src="./assets/screenshots/compose-dark.png" width="160" alt="Writing a post with a described photo of a pug attached (dark mode)"/> | <img src="./assets/screenshots/notifications-dark.png" width="160" alt="Notifications: a mention with reply and favourite buttons, favourites, a boost and a new follower (dark mode)"/> | <img src="./assets/screenshots/appearance-dark.png" width="160" alt="Appearance: a preview post, light, dark or system mode, and the nine pug coats (dark mode)"/> |
 
 ---
 
