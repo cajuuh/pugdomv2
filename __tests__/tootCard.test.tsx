@@ -277,6 +277,21 @@ describe('TootCard content', () => {
         media_attachments: [{ id: 'm1', type: 'image', url: 'https://example.social/m1.png', preview_url: 'https://example.social/m1-small.png' }],
     });
 
+    it('shows several images as a carousel, one page at a time', async () => {
+        const image = (id: string) => ({ id, type: 'image', url: `https://example.social/${id}.png`, preview_url: `https://example.social/${id}-small.png` });
+        await renderCard({ ...statusA, media_attachments: [image('m1'), image('m2'), image('m3')] } as Status);
+
+        expect(screen.getByRole('imagebutton', { name: 'Image 1 of 3' })).toBeTruthy();
+        expect(screen.getByRole('imagebutton', { name: 'Image 3 of 3' })).toBeTruthy();
+        const dots = () => screen.getAllByTestId(/^carousel-dot/, { includeHiddenElements: true }).map(dot => dot.props.testID);
+        expect(dots()).toEqual(['carousel-dot-active', 'carousel-dot', 'carousel-dot']);
+
+        const carousel = screen.getByTestId('media-carousel');
+        await fireEvent(carousel, 'layout', { nativeEvent: { layout: { width: 300, height: 200 } } });
+        await fireEvent(carousel, 'momentumScrollEnd', { nativeEvent: { contentOffset: { x: 300, y: 0 } } });
+        expect(dots()).toEqual(['carousel-dot', 'carousel-dot-active', 'carousel-dot']);
+    });
+
     it('shows sensitive posts without a CW, veiling only the media', async () => {
         await renderCard(withMedia({ ...statusA, sensitive: true, spoiler_text: '' }));
 
