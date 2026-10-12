@@ -9,11 +9,14 @@ interface SettingsContextType {
     hideCounts: boolean;
     // Posts with a content warning open expanded; null until you set it here (then the account's web preference applies)
     expandSpoilers: boolean | null;
+    // Hidden sensitive media gets a cover over the blur; off, it's only blurred
+    coverSensitiveMedia: boolean;
     setNotifications: (value: boolean) => Promise<void>;
     setMediaAutoplay: (value: boolean) => Promise<void>;
     setCompactMode: (value: boolean) => Promise<void>;
     setHideCounts: (value: boolean) => Promise<void>;
     setExpandSpoilers: (value: boolean) => Promise<void>;
+    setCoverSensitiveMedia: (value: boolean) => Promise<void>;
     loadingSettings: boolean;
 }
 
@@ -24,6 +27,7 @@ export const AUTOPLAY_KEY = 'pugdom_settings_autoplay';
 export const COMPACT_KEY = 'pugdom_settings_compact';
 export const HIDE_COUNTS_KEY = 'pugdom_settings_hide_counts';
 export const EXPAND_SPOILERS_KEY = 'pugdom_settings_expand_spoilers';
+export const COVER_SENSITIVE_KEY = 'pugdom_settings_cover_sensitive';
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [notifications, setNotificationsState] = useState(true);
@@ -31,6 +35,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const [compactMode, setCompactModeState] = useState(false);
     const [hideCounts, setHideCountsState] = useState(false);
     const [expandSpoilers, setExpandSpoilersState] = useState<boolean | null>(null);
+    const [coverSensitiveMedia, setCoverSensitiveMediaState] = useState(true);
     const [loadingSettings, setLoadingSettings] = useState(true);
 
     useEffect(() => {
@@ -41,11 +46,13 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 const compact = await getSetting(COMPACT_KEY, false);
                 const counts = await getSetting(HIDE_COUNTS_KEY, false);
                 const spoilers = await getStringSetting(EXPAND_SPOILERS_KEY, '');
+                const cover = await getSetting(COVER_SENSITIVE_KEY, true);
                 setNotificationsState(notify);
                 setMediaAutoplayState(autoplay);
                 setCompactModeState(compact);
                 setHideCountsState(counts);
                 setExpandSpoilersState(spoilers === '' ? null : spoilers === 'true');
+                setCoverSensitiveMediaState(cover);
             } catch (error) {
                 console.error('Failed to load settings:', error);
             } finally {
@@ -80,6 +87,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         await saveStringSetting(EXPAND_SPOILERS_KEY, String(value));
     };
 
+    const setCoverSensitiveMedia = async (value: boolean) => {
+        setCoverSensitiveMediaState(value);
+        await saveSetting(COVER_SENSITIVE_KEY, value);
+    };
+
     return (
         <SettingsContext.Provider
             value={{
@@ -88,11 +100,13 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 compactMode,
                 hideCounts,
                 expandSpoilers,
+                coverSensitiveMedia,
                 setNotifications,
                 setMediaAutoplay,
                 setCompactMode,
                 setHideCounts,
                 setExpandSpoilers,
+                setCoverSensitiveMedia,
                 loadingSettings,
             }}
         >

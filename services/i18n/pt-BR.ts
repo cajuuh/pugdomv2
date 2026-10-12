@@ -595,6 +595,7 @@ export const ptBR: Dictionary = {
         compactMode: 'Modo compacto',
         hideCounts: 'Esconder os números nas publicações',
         expandSpoilers: 'Sempre expandir avisos de conteúdo',
+        coverSensitiveMedia: 'Cobrir mídia sensível, além de desfocar',
         about: 'Sobre',
         version: 'Versão do app',
         privacy: 'Política de privacidade',
