@@ -138,8 +138,13 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         backgroundColor: colors.accentSoft,
     },
     cwText: {
-        flex: 1,
+        flexGrow: 1,
+        flexShrink: 1,
         gap: 1,
+    },
+    // Keeps its width; the text beside it wraps instead
+    cwButton: {
+        flexShrink: 0,
     },
     cwLabel: {
         fontSize: 11,

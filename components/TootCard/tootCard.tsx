@@ -471,7 +471,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                         <Text style={[type.name, styles.cwSpoiler]}>{targetStatus.spoiler_text}</Text>
                         {hidden && <Text style={[type.meta, styles.cwHidden]}>{hidden}</Text>}
                     </View>
-                    <PillButton label={t('common.show')} variant="secondary" onPress={() => setIsSpoilerCollapsed(false)} />
+                    <PillButton label={t('common.show')} variant="secondary" onPress={() => setIsSpoilerCollapsed(false)} style={styles.cwButton} />
                 </View>
             );
         }
