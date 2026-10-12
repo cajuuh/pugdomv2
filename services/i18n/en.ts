@@ -601,6 +601,9 @@ export const en = {
         autoplay: 'Autoplay Media',
         compactMode: 'Compact Mode',
         hideCounts: 'Hide numbers on posts',
+        uncroppedMedia: 'Show images uncropped',
+        posts: 'Posts',
+        media: 'Media',
         groupNotifications: 'Group favourites and boosts in notifications',
         expandSpoilers: 'Always expand content warnings',
         coverSensitiveMedia: 'Cover sensitive media, not only blur it',
@@ -628,8 +631,6 @@ export const en = {
         coatHint: 'Pug coats and a few friends',
         tint: 'Tint surfaces with coat',
         tintHint: 'Warms the background and cards, not only buttons',
-        uncropped: 'Show images uncropped',
-        uncroppedHint: 'Whole pictures in timelines, at their own shape',
     },
     coats: {
         apricot: 'Apricot',

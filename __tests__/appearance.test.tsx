@@ -38,8 +38,6 @@ jest.mock('../services/settingsContext', () => ({
         notifications: true,
         setNotifications: jest.fn(),
         mediaAutoplay: false,
-        uncroppedMedia: false,
-        setUncroppedMedia: jest.fn(),
         setMediaAutoplay: jest.fn(),
         compactMode: false,
         setCompactMode: jest.fn(),

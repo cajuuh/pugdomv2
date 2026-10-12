@@ -594,6 +594,9 @@ export const ptBR: Dictionary = {
         autoplay: 'Reproduzir mídia automaticamente',
         compactMode: 'Modo compacto',
         hideCounts: 'Esconder os números nas publicações',
+        uncroppedMedia: 'Mostrar imagens sem recorte',
+        posts: 'Publicações',
+        media: 'Mídia',
         groupNotifications: 'Agrupar favoritos e boosts nas notificações',
         expandSpoilers: 'Sempre expandir avisos de conteúdo',
         coverSensitiveMedia: 'Cobrir mídia sensível, além de desfocar',
@@ -620,8 +623,6 @@ export const ptBR: Dictionary = {
         coatHint: 'Pelagens de pug e alguns amigos',
         tint: 'Colorir superfícies com a pelagem',
         tintHint: 'Aquece o fundo e os cartões, não só os botões',
-        uncropped: 'Mostrar imagens sem recorte',
-        uncroppedHint: 'Imagens inteiras nas timelines, no formato original',
     },
     coats: {
         apricot: 'Damasco',

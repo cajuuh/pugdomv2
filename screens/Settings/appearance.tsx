@@ -7,7 +7,6 @@ import { COATS, getCoat } from '../../services/theme/coats';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { SettingsHeader } from './header';
 import { makeAppearanceStyles } from './styles';
-import { useSettings } from '../../services/settingsContext';
 import { useI18n } from '../../services/i18n/i18nContext';
 
 const MODES: ThemeType[] = ['light', 'dark', 'system'];
@@ -18,7 +17,6 @@ interface AppearanceProps {
 
 const Appearance: React.FC<AppearanceProps> = ({ onBack }) => {
     const { colors, type, theme, setTheme, coat, setCoat, tint, setTint } = useTheme();
-    const { uncroppedMedia, setUncroppedMedia } = useSettings();
     const styles = useThemedStyles(makeAppearanceStyles);
     const { t } = useI18n();
     const coatName = t(`coats.${getCoat(coat).key}`);
@@ -97,14 +95,6 @@ const Appearance: React.FC<AppearanceProps> = ({ onBack }) => {
                         <Text style={[type.meta, styles.tintDetail]}>{t('appearance.tintHint')}</Text>
                     </View>
                     <ThemedSwitch value={tint} onValueChange={setTint} accessibilityLabel={t('appearance.tint')} />
-                </Card>
-
-                <Card style={styles.tintRow}>
-                    <View style={styles.tintText}>
-                        <Text style={[type.name, styles.tintLabel]}>{t('appearance.uncropped')}</Text>
-                        <Text style={[type.meta, styles.tintDetail]}>{t('appearance.uncroppedHint')}</Text>
-                    </View>
-                    <ThemedSwitch value={uncroppedMedia} onValueChange={setUncroppedMedia} accessibilityLabel={t('appearance.uncropped')} />
                 </Card>
             </ScrollView>
         </>
