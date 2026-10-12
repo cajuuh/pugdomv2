@@ -502,6 +502,7 @@ export const en = {
     },
     media: {
         closeVideo: 'Close video',
+        close: 'Close',
     },
     notifications: {
         title: 'Notifications',
