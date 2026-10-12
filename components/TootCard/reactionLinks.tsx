@@ -1,9 +1,13 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { Avatar } from '../../components/ui';
+import { Avatar } from '../ui';
 import { getReactions, Reaction } from '../../services/mastodon/statuses';
+import { Status } from '../../services/mastodon/types';
 import { useTheme } from '../../services/themeContext';
+import { useI18n } from '../../services/i18n/i18nContext';
+import { useSettings } from '../../services/settingsContext';
+import { useNavigator } from '../../services/navigationContext';
 import { radii, space } from '../../services/theme/shape';
 
 export const REACTION_AVATARS = 3;
@@ -16,7 +20,7 @@ interface ReactionLinkProps {
     reaction?: Reaction;
 }
 
-// One of the links under a thread's post ("12 favourites"), opening who did it
+// One of the links under a post ("12 favourites"), opening who did it
 export const ReactionLink: React.FC<ReactionLinkProps> = ({ label, onPress, statusId, reaction }) => {
     const { colors, type } = useTheme();
     const { data } = useQuery({
@@ -45,12 +49,45 @@ export const ReactionLink: React.FC<ReactionLinkProps> = ({ label, onPress, stat
     );
 };
 
+// Who favourited, boosted and quoted a post (without the numbers when they're hidden); only the
+// links with someone behind them show
+export const ReactionLinks: React.FC<{ status: Status }> = ({ status }) => {
+    const { t, tn } = useI18n();
+    const { hideCounts } = useSettings();
+    const { push } = useNavigator();
+    const links = [
+        { reaction: 'favourites' as const, count: status.favourites_count, plain: 'reactions.favourites' as const, counted: 'reactions.favouritesCount' as const, open: () => push({ name: 'reactions', statusId: status.id, reaction: 'favourites' }) },
+        { reaction: 'boosts' as const, count: status.reblogs_count, plain: 'reactions.boosts' as const, counted: 'reactions.boostsCount' as const, open: () => push({ name: 'reactions', statusId: status.id, reaction: 'boosts' }) },
+        { reaction: undefined, count: status.quotes_count ?? 0, plain: 'reactions.quotes' as const, counted: 'quotes.count' as const, open: () => push({ name: 'quotes', status }) },
+    ].filter(link => link.count > 0);
+    if (links.length === 0) return null;
+
+    return (
+        <View style={styles.links}>
+            {links.map(link => (
+                <ReactionLink
+                    key={link.plain}
+                    label={hideCounts ? t(link.plain) : tn(link.counted, link.count)}
+                    onPress={link.open}
+                    statusId={link.reaction && status.id}
+                    reaction={link.reaction}
+                />
+            ))}
+        </View>
+    );
+};
+
 const styles = StyleSheet.create({
+    links: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        columnGap: space.lg,
+        marginTop: space.xs,
+    },
     link: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: space.xs,
-        paddingBottom: space.md,
         minHeight: 32,
     },
     avatars: {
