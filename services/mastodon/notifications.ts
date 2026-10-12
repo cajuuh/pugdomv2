@@ -22,10 +22,10 @@ export async function fetchNotifications(maxId?: string, types?: Notification['t
 // Snowflake ids: a longer id is newer, and equal lengths compare as strings
 export const isNewerId = (a: string, b: string) => (a.length !== b.length ? a.length > b.length : a > b);
 
-// v1 notifications as rows, grouping favourites and boosts by post
-export const groupsFromNotifications = (notifications: Notification[]): NotificationGroup[] =>
+// v1 notifications as rows, grouping favourites and boosts by post unless `grouped` is off
+export const groupsFromNotifications = (notifications: Notification[], grouped = true): NotificationGroup[] =>
     mergeGroups(notifications.map(notification => ({
-        key: notification.status && GROUPED_TYPES.includes(notification.type)
+        key: grouped && notification.status && GROUPED_TYPES.includes(notification.type)
             ? `${notification.type}-${notification.status.id}`
             : `ungrouped-${notification.id}`,
         type: notification.type,
@@ -73,9 +73,10 @@ const V2_UNSUPPORTED = [400, 404, 405, 501];
 // Instances known to lack v2, so each page after the first goes straight to v1
 const v1Instances = new Set<string>();
 
-export async function fetchNotificationGroups(maxId?: string, types?: Notification['type'][]): Promise<NotificationGroupsPage> {
+// With `grouped` off every notification is its own row, which v1 gives on any server
+export async function fetchNotificationGroups(maxId?: string, types?: Notification['type'][], grouped = true): Promise<NotificationGroupsPage> {
     const { instanceUrl } = await getCredentials();
-    if (instanceUrl && !v1Instances.has(instanceUrl)) {
+    if (grouped && instanceUrl && !v1Instances.has(instanceUrl)) {
         try {
             // apiClient's base URL is /api/v1, so the v2 endpoint needs the full URL
             const response = await apiClient.get<GroupedNotificationsResponse>(`${instanceUrl}/api/v2/notifications`, {
@@ -96,7 +97,7 @@ export async function fetchNotificationGroups(maxId?: string, types?: Notificati
 
     const notifications = await fetchNotifications(maxId, types);
     return {
-        groups: groupsFromNotifications(notifications),
+        groups: groupsFromNotifications(notifications, grouped),
         nextMaxId: notifications.length > 0 ? notifications[notifications.length - 1].id : undefined,
     };
 }

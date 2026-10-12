@@ -42,6 +42,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
         setCompactMode,
         hideCounts,
         setHideCounts,
+        groupNotifications,
+        setGroupNotifications,
         setExpandSpoilers,
         coverSensitiveMedia,
         setCoverSensitiveMedia,
@@ -188,6 +190,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                     )}
                     <View style={styles.divider} />
                     {switchRow('notifications-outline', t('settings.pushNotifications'), notifications, setNotifications)}
+                    <View style={styles.divider} />
+                    {switchRow('layers-outline', t('settings.groupNotifications'), groupNotifications, setGroupNotifications)}
                     <View style={styles.divider} />
                     {switchRow('play-circle-outline', t('settings.autoplay'), mediaAutoplay, setMediaAutoplay)}
                     <View style={styles.divider} />
