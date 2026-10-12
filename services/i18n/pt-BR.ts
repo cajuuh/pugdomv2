@@ -497,6 +497,8 @@ export const ptBR: Dictionary = {
         days7: '7 dias',
     },
     emoji: {
+        search: 'Buscar emoji',
+        noMatches: 'Nenhum emoji com “{{query}}”',
         title: 'Emoji personalizado',
         all: 'Todos',
         other: 'Outros',

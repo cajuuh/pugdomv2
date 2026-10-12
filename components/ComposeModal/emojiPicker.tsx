@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, SectionList, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Image, Pressable, ScrollView, SectionList, Text, TextInput, View } from 'react-native';
 import { useCustomEmojis } from '../../hooks/useCustomEmojis';
 import { CustomEmoji } from '../../services/mastodon/types';
 import { useTheme } from '../../services/themeContext';
@@ -35,6 +35,14 @@ export const groupByCategory = (emojis: CustomEmoji[]): EmojiGroup[] => {
         });
 };
 
+// Emoji whose shortcode contains the query (colons and case ignored), those starting with it first
+export const searchEmojis = (emojis: CustomEmoji[], query: string): CustomEmoji[] => {
+    const q = query.trim().replace(/:/g, '').toLowerCase();
+    if (!q) return [];
+    const matches = emojis.filter(emoji => emoji.shortcode.toLowerCase().includes(q));
+    return [...matches.filter(emoji => emoji.shortcode.toLowerCase().startsWith(q)), ...matches.filter(emoji => !emoji.shortcode.toLowerCase().startsWith(q))];
+};
+
 // SectionList has no columns, so each item is a row of up to COLUMNS emoji
 const toRows = (emojis: CustomEmoji[]) => {
     const rows: CustomEmoji[][] = [];
@@ -58,8 +66,17 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ visible, onPick, onClo
         value === ALL_CATEGORIES ? t('emoji.all') : value === UNCATEGORIZED ? t('emoji.other') : value;
     const styles = useThemedStyles(makeStyles);
     const [category, setCategory] = useState(ALL_CATEGORIES);
+    const [query, setQuery] = useState('');
     const { data, isLoading, isError } = useCustomEmojis(visible);
-    const groups = useMemo(() => groupByCategory((data ?? []).filter(emoji => emoji.visible_in_picker)), [data]);
+    const pickable = useMemo(() => (data ?? []).filter(emoji => emoji.visible_in_picker), [data]);
+    const groups = useMemo(() => groupByCategory(pickable), [pickable]);
+    const searching = query.trim().length > 0;
+    const matches = useMemo(() => searchEmojis(pickable, query), [pickable, query]);
+
+    // Each opening starts with no search
+    useEffect(() => {
+        if (!visible) setQuery('');
+    }, [visible]);
     // Servers without categories keep the plain grid: no chips, no headers
     const categorized = groups.length > 1;
 
@@ -71,9 +88,10 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ visible, onPick, onClo
         [groups, t]
     );
     const sections = useMemo(() => {
+        if (searching) return matches.length ? [{ title: '', data: toRows(matches) }] : [];
         const shown = activeCategory === ALL_CATEGORIES ? groups : groups.filter(group => group.category === activeCategory);
         return shown.map(group => ({ title: group.category, data: toRows(group.emojis) }));
-    }, [groups, activeCategory]);
+    }, [groups, activeCategory, searching, matches]);
 
     const status = isLoading
         ? <ActivityIndicator color={colors.accentColor} />
@@ -104,7 +122,19 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ visible, onPick, onClo
                 <View style={styles.emojiStatus}>{status}</View>
             ) : (
                 <>
-                    {categorized && (
+                    <TextInput
+                        value={query}
+                        onChangeText={setQuery}
+                        placeholder={t('emoji.search')}
+                        placeholderTextColor={colors.textMuted}
+                        accessibilityLabel={t('emoji.search')}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        returnKeyType="search"
+                        clearButtonMode="while-editing"
+                        style={[type.body, styles.emojiSearch]}
+                    />
+                    {categorized && !searching && (
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.emojiChips}>
                             <SegmentedPill variant="chips" options={chips} value={activeCategory} onChange={setCategory} />
                         </ScrollView>
@@ -114,8 +144,12 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ visible, onPick, onClo
                         keyExtractor={row => row[0].shortcode}
                         style={styles.emojiGrid}
                         stickySectionHeadersEnabled
+                        keyboardShouldPersistTaps="handled"
+                        ListEmptyComponent={
+                            searching ? <Text style={[type.meta, styles.emojiStatusText]}>{t('emoji.noMatches', { query: query.trim() })}</Text> : null
+                        }
                         renderSectionHeader={({ section }) =>
-                            categorized && activeCategory === ALL_CATEGORIES ? (
+                            categorized && activeCategory === ALL_CATEGORIES && !searching ? (
                                 <Text accessibilityRole="header" style={[type.label, styles.emojiSectionTitle]}>{categoryLabel(section.title)}</Text>
                             ) : null
                         }

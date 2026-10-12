@@ -8,6 +8,7 @@ import { space } from '../../services/theme/shape';
 import { makeStyles } from './styles';
 import { useDragToDismiss, useSheetTransition } from './sheetTransition';
 import { useI18n } from '../../services/i18n/i18nContext';
+import { useKeyboard } from '../../hooks/useKeyboard';
 import { DialogHost } from '../Dialog/dialogHost';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -31,6 +32,9 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({ visible, title, subtit
     // The backdrop fades while only the sheet slides; a sliding Modal would carry the backdrop up like a curtain
     const { mounted, progress } = useSheetTransition(visible);
     const { drag, panHandlers } = useDragToDismiss(onClose);
+    // A sheet with a text field (emoji search) rides above the keyboard; on Android padding works where
+    // KeyboardAvoidingView leaves a gap in an edge-to-edge Modal
+    const keyboard = useKeyboard(height);
 
     useEffect(() => {
         if (visible) drag.setValue(0);
@@ -48,7 +52,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({ visible, title, subtit
                     accessibilityRole="button"
                     accessibilityLabel={t('common.close')}
                 />
-                <Animated.View style={[styles.pickerSheet, { paddingBottom: insets.bottom + space.lg, transform: [{ translateY }] }]}>
+                <Animated.View testID="bottom-sheet" style={[styles.pickerSheet, { paddingBottom: keyboard.visible ? keyboard.inset + space.sm : insets.bottom + space.lg, transform: [{ translateY }] }]}>
                     <View collapsable={false} {...panHandlers}>
                         <View style={styles.grabberRow}>
                             <View style={styles.grabber} />
