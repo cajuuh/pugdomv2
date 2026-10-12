@@ -8,6 +8,7 @@ import { plainText } from '../../services/htmlText';
 import { space } from '../../services/theme/shape';
 import { Well } from '../ui';
 import { BottomSheet } from '../ComposeModal/optionSheet';
+import { renderTextWithEmojis } from '../../services/emojiHelper';
 
 interface EditHistorySheetProps {
     visible: boolean;
@@ -35,9 +36,9 @@ export const EditHistorySheet: React.FC<EditHistorySheetProps> = ({ visible, sta
                             {index === versions.length - 1 ? t('posts.original') : t('posts.editedAt', { time: timeOf(version.created_at) })}
                         </Text>
                         {!!version.spoiler_text && (
-                            <Text style={[type.name, { color: colors.textSecondary }]}>{t('notifications.cw', { text: version.spoiler_text })}</Text>
+                            renderTextWithEmojis(t('notifications.cw', { text: version.spoiler_text }), version.emojis ?? [], [type.name, { color: colors.textSecondary }])
                         )}
-                        <Text style={[type.body, { color: colors.textPrimary }]}>{plainText(version.content)}</Text>
+                        {renderTextWithEmojis(plainText(version.content), version.emojis ?? [], [type.body, { color: colors.textPrimary }])}
                         {version.media_attachments.length > 0 && (
                             <Text style={[type.meta, { color: colors.textMuted }]}>{tn('posts.historyMedia', version.media_attachments.length)}</Text>
                         )}

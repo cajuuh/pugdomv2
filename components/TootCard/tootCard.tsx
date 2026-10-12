@@ -468,7 +468,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     <Ionicons name="warning-outline" size={22} color={colors.accentText} />
                     <View style={styles.cwText}>
                         <Text style={[type.label, styles.cwLabel]}>{t('post.contentWarning')}</Text>
-                        <Text style={[type.name, styles.cwSpoiler]}>{targetStatus.spoiler_text}</Text>
+                        {renderTextWithEmojis(targetStatus.spoiler_text, targetStatus.emojis, [type.name, styles.cwSpoiler], 15)}
                         {hidden && <Text style={[type.meta, styles.cwHidden]}>{hidden}</Text>}
                     </View>
                     <PillButton label={t('common.show')} variant="secondary" onPress={() => setIsSpoilerCollapsed(false)} style={styles.cwButton} />
@@ -478,7 +478,9 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         return (
             <View style={styles.cwFrame}>
                 <View style={styles.cwFrameHeader}>
-                    <Text style={[type.name, styles.cwFrameTitle]} numberOfLines={2}>{t('post.cwTitle', { text: targetStatus.spoiler_text })}</Text>
+                    <Text style={[type.name, styles.cwFrameTitle]} numberOfLines={2}>
+                        {renderTextWithEmojis(t('post.cwTitle', { text: targetStatus.spoiler_text }), targetStatus.emojis, [type.name, styles.cwFrameTitle], 13)}
+                    </Text>
                     <PillButton label={t('common.hide')} size="small" variant="subtle" onPress={() => setIsSpoilerCollapsed(true)} />
                 </View>
                 <View style={styles.cwFrameContent}>{body}</View>

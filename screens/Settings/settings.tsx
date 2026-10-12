@@ -21,6 +21,7 @@ import { QuotePolicy, quotePolicies } from '../../services/mastodon/quotes';
 import { updateDefaultQuotePolicy } from '../../services/mastodon/accounts';
 import { dialog } from '../../services/dialog';
 import { useExpandSpoilers } from '../../hooks/useExpandSpoilers';
+import { renderTextWithEmojis } from '../../services/emojiHelper';
 
 const PRIVACY_URL = 'https://github.com/cajuuh/pugdomv2/blob/main/PRIVACY.md';
 
@@ -97,6 +98,9 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                     {savedAccounts.map(account => {
                         const isActive = user?.id === account.userInfo.id;
                         const name = account.userInfo.display_name || account.userInfo.username;
+                        // Accounts saved before their emoji were kept drop the unknown :shortcodes:
+                        const emojis = (isActive ? user?.emojis : account.userInfo.emojis) ?? [];
+                        const shownName = emojis.length ? name : name.replace(/:\w+:/g, '').trim() || account.userInfo.username;
                         return (
                             <React.Fragment key={account.id}>
                                 <Pressable
@@ -107,7 +111,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                                 >
                                     <Avatar name={name} uri={account.userInfo.avatar} size={40} />
                                     <View style={styles.rowText}>
-                                        <Text style={labelStyle} numberOfLines={1}>{name}</Text>
+                                        <Text style={labelStyle} numberOfLines={1}>{renderTextWithEmojis(shownName, emojis, labelStyle)}</Text>
                                         <Text style={[type.meta, styles.rowDetail]} numberOfLines={1}>
                                             @{account.userInfo.acct} • {account.instanceUrl.replace(/^https?:\/\//, '')}
                                         </Text>
