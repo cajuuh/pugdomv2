@@ -134,7 +134,8 @@ export function hslToHex(h: number, s: number, l: number): string {
     return ('#' + channel(0) + channel(8) + channel(4)).toUpperCase();
 }
 
-export function buildColors(coatKey: string, dark: boolean, tint: boolean): ThemeColors {
+// trueBlack: dark mode's background is pure black (OLED pixels off); cards keep their dark surface
+export function buildColors(coatKey: string, dark: boolean, tint: boolean, trueBlack = false): ThemeColors {
     const coat = getCoat(coatKey);
     const { hue } = coat;
     const neutralTint = tint ? coat.neutralTint : UNTINTED_NEUTRAL_TINT;
@@ -166,7 +167,7 @@ export function buildColors(coatKey: string, dark: boolean, tint: boolean): Them
         };
 
     return {
-        background: neutrals.ground,
+        background: dark && trueBlack ? '#000000' : neutrals.ground,
         cardBackground: neutrals.surface,
         inputBackground: neutrals.sunken,
         borderColor: neutrals.line,
