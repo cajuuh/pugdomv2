@@ -17,10 +17,11 @@ export async function pickImages(limit: number, allowVideo = false): Promise<Pic
     return result.canceled ? [] : result.assets.slice(0, limit);
 }
 
-// A new photo, or 'denied' when the camera permission isn't given
-export async function takePhoto(): Promise<PickedImage[] | 'denied'> {
+// A new photo (or video), or 'denied' when the camera permission isn't given. On Android the system camera
+// records a video's sound itself; on iOS the picker asks for the microphone when recording starts.
+export async function takePhoto(video = false): Promise<PickedImage[] | 'denied'> {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) return 'denied';
-    const result = await ImagePicker.launchCameraAsync(IMAGE_OPTIONS);
+    const result = await ImagePicker.launchCameraAsync({ ...IMAGE_OPTIONS, mediaTypes: video ? ['videos'] : ['images'] });
     return result.canceled ? [] : result.assets.slice(0, 1);
 }

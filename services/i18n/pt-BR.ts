@@ -290,6 +290,8 @@ export const ptBR: Dictionary = {
         cwHint: 'Quem lê vê isto antes de abrir sua publicação',
         addMedia: 'Adicionar imagens ou um vídeo',
         takePhoto: 'Tirar foto',
+        camera: 'Câmera',
+        recordVideo: 'Gravar um vídeo',
         videoNotAlone: 'Um vídeo vai sozinho na publicação, então ele ficou de fora',
         videoTooBig: 'Este vídeo passa do limite de {{size}} MB do seu servidor',
         cameraDeniedTitle: 'Acesso à câmera',

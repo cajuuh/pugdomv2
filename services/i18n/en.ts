@@ -294,6 +294,8 @@ export const en = {
         cwHint: 'Readers see this before they open your post',
         addMedia: 'Add images or a video',
         takePhoto: 'Take a photo',
+        camera: 'Camera',
+        recordVideo: 'Record a video',
         videoNotAlone: 'A video goes on its own in a post, so it was left out',
         videoTooBig: "This video is over your server's {{size}} MB limit",
         cameraDeniedTitle: 'Camera access',
