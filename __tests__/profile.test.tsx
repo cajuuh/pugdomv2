@@ -1,5 +1,5 @@
 import React from 'react';
-import { DeviceEventEmitter } from 'react-native';
+import { DeviceEventEmitter, Text } from 'react-native';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as WebBrowser from 'expo-web-browser';
@@ -8,6 +8,7 @@ import Profile, { fullHandle } from '../screens/Profile/profile';
 import { getAccountStatuses } from '../services/mastodon/accounts';
 import { getBookmarks } from '../services/mastodon/bookmarks';
 import { MediaViewerProvider } from '../components/MediaViewer/mediaViewer';
+import { NavigationProvider, useNavigator } from '../services/navigationContext';
 import { Account, Status } from '../services/mastodon/types';
 
 const me: Account = {
@@ -165,12 +166,24 @@ describe('Profile', () => {
         expect(screen.queryByText(/log out/i)).toBeNull();
     });
 
-    it("opens the instance's profile settings from Edit profile", async () => {
-        await renderProfile();
+    it('opens the in-app profile editor from Edit profile', async () => {
+        const StackProbe = () => <Text testID="stack">{JSON.stringify(useNavigator().stack.map(entry => entry.route))}</Text>;
+        queryClient = createTestQueryClient();
+        await render(
+            <QueryClientProvider client={queryClient}>
+                <NavigationProvider>
+                    <MediaViewerProvider>
+                        <Profile />
+                        <StackProbe />
+                    </MediaViewerProvider>
+                </NavigationProvider>
+            </QueryClientProvider>
+        );
 
         await fireEvent.press(await screen.findByRole('button', { name: 'Edit profile' }));
 
-        await waitFor(() => expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith('https://mastodon.social/settings/profile'));
+        expect(JSON.parse(String(screen.getByTestId('stack').props.children))).toEqual([{ name: 'editProfile' }]);
+        expect(WebBrowser.openBrowserAsync).not.toHaveBeenCalled();
     });
 
     it('has no Settings button on the banner, since the top bar above the tab has one', async () => {

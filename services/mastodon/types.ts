@@ -34,8 +34,17 @@ export interface Account {
     statuses_count?: number;
     url?: string;
     emojis: CustomEmoji[];
+    // Follows need approval
+    locked?: boolean;
+    bot?: boolean;
+    discoverable?: boolean | null;
+    // Profile fields, with HTML values
+    fields?: { name: string; value: string; verified_at?: string | null }[];
     // Only present on the logged-in user's own account (verify_credentials)
     source?: {
+        // The bio and fields as typed, without HTML
+        note?: string;
+        fields?: { name: string; value: string }[];
         language?: string | null;
         // Default visibility for new posts
         privacy?: Status['visibility'];

@@ -40,6 +40,7 @@ import Report from './screens/Report/report';
 import Quotes from './screens/Quotes/quotes';
 import Conversations from './screens/Conversations/conversations';
 import Reactions from './screens/Reactions/reactions';
+import EditProfile from './screens/EditProfile/editProfile';
 import { useUnreadConversations } from './hooks/useUnreadConversations';
 import { useServerPreferences } from './hooks/useExpandSpoilers';
 import { useUnreadNotifications } from './hooks/useUnreadNotifications';
@@ -121,6 +122,8 @@ function NavigationRoot() {
         return <Conversations onBack={pop} onStatusPress={openThread} />;
       case 'reactions':
         return <Reactions statusId={route.statusId} reaction={route.reaction} onBack={pop} />;
+      case 'editProfile':
+        return <EditProfile onBack={pop} />;
     }
   };
 

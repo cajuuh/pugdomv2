@@ -73,3 +73,12 @@ export async function prepareImage(image: PickedImage, limits: MediaLimits): Pro
     const saved = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: JPEG_QUALITY });
     return { uri: saved.uri, name: `${baseName(image)}.jpg`, type: 'image/jpeg' };
 }
+
+// An avatar or header for the profile: scaled down to what the server keeps (it's already cropped to shape), as JPEG
+export async function prepareProfileImage(image: PickedImage, size: { width: number; height: number }): Promise<UploadFile> {
+    const context = ImageManipulator.manipulate(image.uri);
+    if (image.width > size.width || image.height > size.height) context.resize(size);
+    const rendered = await context.renderAsync();
+    const saved = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: JPEG_QUALITY });
+    return { uri: saved.uri, name: `${baseName(image)}.jpg`, type: 'image/jpeg' };
+}
