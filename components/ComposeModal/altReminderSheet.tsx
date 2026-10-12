@@ -10,13 +10,15 @@ interface AltReminderSheetProps {
     visible: boolean;
     // How many images have no description
     count: number;
+    // The post's media is a video (which goes alone)
+    video?: boolean;
     onDescribe: () => void;
     onPostAnyway: () => void;
     onClose: () => void;
 }
 
 // The pug's gentle nudge to describe images before posting, once per post
-export const AltReminderSheet: React.FC<AltReminderSheetProps> = ({ visible, count, onDescribe, onPostAnyway, onClose }) => {
+export const AltReminderSheet: React.FC<AltReminderSheetProps> = ({ visible, count, video, onDescribe, onPostAnyway, onClose }) => {
     const { colors, type, coat } = useTheme();
     const { t, tn } = useI18n();
 
@@ -26,7 +28,7 @@ export const AltReminderSheet: React.FC<AltReminderSheetProps> = ({ visible, cou
                 <PugMark coat={coat} size={64} />
                 <View style={[styles.bubble, { backgroundColor: colors.accentSoft }]}>
                     <View style={[styles.tail, { borderRightColor: colors.accentSoft }]} />
-                    <Text style={[type.body, { color: colors.textPrimary }]}>{tn('attachments.reminder', count)}</Text>
+                    <Text style={[type.body, { color: colors.textPrimary }]}>{video ? t('attachments.reminderVideo') : tn('attachments.reminder', count)}</Text>
                 </View>
             </View>
             <View style={styles.buttons}>

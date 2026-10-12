@@ -21,11 +21,13 @@ interface AltTextEditorProps {
     // The focal point, 0–1 from the top left; none means the middle
     focus?: Point;
     onFocusChange: (focus: Point | undefined) => void;
+    // A video: just the description (no picture to show or focal point to pick)
+    video?: boolean;
 }
 
 // Shown in place of the post while describing an image, so the compose sheet's keyboard handling
 // carries over (a sheet on top of it would need its own). Tapping the image picks its focal point.
-export const AltTextEditor: React.FC<AltTextEditorProps> = ({ uri, width, height, value, onChange, maxLength, focus, onFocusChange }) => {
+export const AltTextEditor: React.FC<AltTextEditorProps> = ({ uri, width, height, value, onChange, maxLength, focus, onFocusChange, video }) => {
     const { colors, type } = useTheme();
     const { t } = useI18n();
     const [boxWidth, setBoxWidth] = useState(0);
@@ -33,47 +35,51 @@ export const AltTextEditor: React.FC<AltTextEditorProps> = ({ uri, width, height
 
     return (
         <View style={styles.container} testID="alt-text-editor">
-            <View onLayout={event => setBoxWidth(event.nativeEvent.layout.width)} style={styles.imageRow} testID="focus-image-box">
-                {shown.width > 0 && (
-                    <Pressable
-                        onPress={event => {
-                            const { locationX, locationY } = event.nativeEvent;
-                            onFocusChange({
-                                x: Math.min(Math.max(locationX / shown.width, 0), 1),
-                                y: Math.min(Math.max(locationY / shown.height, 0), 1),
-                            });
-                        }}
-                        accessibilityRole="button"
-                        accessibilityLabel={t('attachments.focusLabel')}
-                        accessibilityHint={t('attachments.focusHint')}
-                        style={{ width: shown.width, height: shown.height }}
-                    >
-                        <Image
-                            source={{ uri }}
-                            style={[styles.image, { backgroundColor: colors.inputBackground }]}
-                            resizeMode="contain"
-                            accessibilityIgnoresInvertColors
-                        />
-                        {focus && (
-                            <View
-                                pointerEvents="none"
-                                testID="focus-crosshair"
-                                style={[styles.crosshair, { left: focus.x * shown.width - CROSSHAIR / 2, top: focus.y * shown.height - CROSSHAIR / 2 }]}
+            {!video && (
+                <>
+                    <View onLayout={event => setBoxWidth(event.nativeEvent.layout.width)} style={styles.imageRow} testID="focus-image-box">
+                        {shown.width > 0 && (
+                            <Pressable
+                                onPress={event => {
+                                    const { locationX, locationY } = event.nativeEvent;
+                                    onFocusChange({
+                                        x: Math.min(Math.max(locationX / shown.width, 0), 1),
+                                        y: Math.min(Math.max(locationY / shown.height, 0), 1),
+                                    });
+                                }}
+                                accessibilityRole="button"
+                                accessibilityLabel={t('attachments.focusLabel')}
+                                accessibilityHint={t('attachments.focusHint')}
+                                style={{ width: shown.width, height: shown.height }}
                             >
-                                <View style={styles.crosshairDot} />
-                            </View>
+                                <Image
+                                    source={{ uri }}
+                                    style={[styles.image, { backgroundColor: colors.inputBackground }]}
+                                    resizeMode="contain"
+                                    accessibilityIgnoresInvertColors
+                                />
+                                {focus && (
+                                    <View
+                                        pointerEvents="none"
+                                        testID="focus-crosshair"
+                                        style={[styles.crosshair, { left: focus.x * shown.width - CROSSHAIR / 2, top: focus.y * shown.height - CROSSHAIR / 2 }]}
+                                    >
+                                        <View style={styles.crosshairDot} />
+                                    </View>
+                                )}
+                            </Pressable>
                         )}
-                    </Pressable>
-                )}
-            </View>
-            <View style={styles.focusRow}>
-                <Text style={[type.meta, styles.hint, { color: colors.textMuted }]}>{t('attachments.focusHint')}</Text>
-                {focus && <PillButton label={t('attachments.focusReset')} size="small" variant="subtle" onPress={() => onFocusChange(undefined)} />}
-            </View>
+                    </View>
+                    <View style={styles.focusRow}>
+                        <Text style={[type.meta, styles.hint, { color: colors.textMuted }]}>{t('attachments.focusHint')}</Text>
+                        {focus && <PillButton label={t('attachments.focusReset')} size="small" variant="subtle" onPress={() => onFocusChange(undefined)} />}
+                    </View>
+                </>
+            )}
             <TextInput
                 value={value}
                 onChangeText={onChange}
-                placeholder={t('attachments.altPlaceholder')}
+                placeholder={t(video ? 'attachments.altPlaceholderVideo' : 'attachments.altPlaceholder')}
                 placeholderTextColor={colors.textMuted}
                 accessibilityLabel={t('attachments.altLabel')}
                 accessibilityHint={t('attachments.altHint')}
