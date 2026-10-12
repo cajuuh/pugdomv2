@@ -1,5 +1,5 @@
-import React, { useCallback, useRef } from 'react';
-import { Image, Platform, Pressable, Share, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import React, { useCallback, useRef, useState } from 'react';
+import { Image, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRecyclingState } from '@shopify/flash-list';
 import { Status, Attachment, PreviewCard } from '../../services/mastodon/types';
@@ -167,6 +167,9 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const [boostCount, setBoostCount] = useRecyclingState(targetStatus.reblogs_count, recyclingDeps);
     const [isBookmarked, setIsBookmarked] = useRecyclingState(!!targetStatus.bookmarked, recyclingDeps);
     const [isMediaRevealed, setIsMediaRevealed] = useRecyclingState(false, recyclingDeps);
+    // The carousel's page; its width is layout, not per-post state
+    const [mediaPage, setMediaPage] = useRecyclingState(0, recyclingDeps);
+    const [carouselWidth, setCarouselWidth] = useState(0);
     // The image description opened from an ALT chip; kept while its sheet slides away
     const [shownDescription, setShownDescription] = useRecyclingState<string | null>(null, recyclingDeps);
     const [descriptionOpen, setDescriptionOpen] = useRecyclingState(false, recyclingDeps);
@@ -309,6 +312,9 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     // The opened CW frame adds its own padding and border
     const contentWidth = hasContentWarning ? bodyWidth - 28 : bodyWidth;
 
+    // The carousel's own width, once laid out; until then the width the body should have
+    const slideWidth = carouselWidth || contentWidth;
+
     const renderMedia = (attachments: Attachment[]) => {
         if (!attachments || attachments.length === 0) {
             return null;
@@ -343,19 +349,36 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 {altChip(attachments[0])}
             </Pressable>
         ) : (
-            <View style={styles.mediaGrid}>
-                {attachments.map((item, idx) => (
-                    <Pressable
-                        key={item.id || idx}
-                        style={[styles.gridMedia, compactMode && styles.gridMediaCompact, { width: count === 2 ? '48%' : '31%' }]}
-                        onPress={() => openMedia(attachments, idx)}
-                        accessibilityRole="imagebutton"
-                        accessibilityLabel={mediaLabel(item, idx, count, i18n)}
-                    >
-                        <FocusedImage attachment={item} style={styles.mediaImage} blurred={veiled} />
-                        {altChip(item)}
-                    </Pressable>
-                ))}
+            // Several images: one at a time, swiped sideways, with a dot for each
+            <View>
+                <ScrollView
+                    key={targetStatus.id}
+                    testID="media-carousel"
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    onLayout={event => setCarouselWidth(event.nativeEvent.layout.width)}
+                    onMomentumScrollEnd={event => setMediaPage(Math.round(event.nativeEvent.contentOffset.x / slideWidth))}
+                    style={styles.carousel}
+                >
+                    {attachments.map((item, idx) => (
+                        <Pressable
+                            key={item.id || idx}
+                            style={[styles.carouselSlide, compactMode && styles.singleMediaCompact, { width: slideWidth }]}
+                            onPress={() => openMedia(attachments, idx)}
+                            accessibilityRole="imagebutton"
+                            accessibilityLabel={mediaLabel(item, idx, count, i18n)}
+                        >
+                            <FocusedImage attachment={item} style={styles.mediaImage} blurred={veiled} />
+                            {altChip(item)}
+                        </Pressable>
+                    ))}
+                </ScrollView>
+                <View style={styles.carouselDots} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+                    {attachments.map((item, idx) => (
+                        <View key={item.id || idx} testID={idx === mediaPage ? 'carousel-dot-active' : 'carousel-dot'} style={[styles.carouselDot, idx === mediaPage && styles.carouselDotActive]} />
+                    ))}
+                </View>
             </View>
         );
 
