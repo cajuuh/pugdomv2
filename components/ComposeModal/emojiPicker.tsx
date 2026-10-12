@@ -135,7 +135,7 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ visible, onPick, onClo
                         style={[type.body, styles.emojiSearch]}
                     />
                     {categorized && !searching && (
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.emojiChips}>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.emojiChipsRow} contentContainerStyle={styles.emojiChips}>
                             <SegmentedPill variant="chips" options={chips} value={activeCategory} onChange={setCategory} />
                         </ScrollView>
                     )}

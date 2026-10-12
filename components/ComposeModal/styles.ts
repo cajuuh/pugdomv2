@@ -368,6 +368,11 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         color: colors.textPrimary,
         backgroundColor: colors.inputBackground,
     },
+    // A ScrollView shrinks by default: with the keyboard up only the grid gives way, never the chips
+    emojiChipsRow: {
+        flexGrow: 0,
+        flexShrink: 0,
+    },
     emojiChips: {
         paddingBottom: space.sm,
         paddingHorizontal: space.xs,
