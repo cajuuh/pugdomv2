@@ -496,6 +496,7 @@ export const ptBR: Dictionary = {
     },
     media: {
         closeVideo: 'Fechar vídeo',
+        viewPost: 'Ver publicação',
         close: 'Fechar',
     },
     notifications: {
