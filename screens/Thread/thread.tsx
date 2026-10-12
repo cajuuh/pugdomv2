@@ -25,6 +25,7 @@ import { renderTextWithEmojis } from '../../services/emojiHelper';
 import { STATUS_DELETED_EVENT, STATUS_UPDATED_EVENT } from '../../hooks/useUpdateCachedStatus';
 import { useNavigator } from '../../services/navigationContext';
 import { useSettings } from '../../services/settingsContext';
+import { ReactionLink } from './reactionLink';
 
 interface ThreadProps {
     statusId: string;
@@ -202,17 +203,19 @@ export default function Thread({
                                 {isMain && (
                                     <View style={styles.reactions}>
                                         {[
-                                            { count: item.favourites_count, plain: 'reactions.favourites' as const, counted: 'reactions.favouritesCount' as const, open: () => push({ name: 'reactions', statusId: item.id, reaction: 'favourites' }) },
-                                            { count: item.reblogs_count, plain: 'reactions.boosts' as const, counted: 'reactions.boostsCount' as const, open: () => push({ name: 'reactions', statusId: item.id, reaction: 'boosts' }) },
-                                            { count: item.quotes_count ?? 0, plain: 'reactions.quotes' as const, counted: 'quotes.count' as const, open: () => push({ name: 'quotes', status: item }) },
+                                            { reaction: 'favourites' as const, count: item.favourites_count, plain: 'reactions.favourites' as const, counted: 'reactions.favouritesCount' as const, open: () => push({ name: 'reactions', statusId: item.id, reaction: 'favourites' }) },
+                                            { reaction: 'boosts' as const, count: item.reblogs_count, plain: 'reactions.boosts' as const, counted: 'reactions.boostsCount' as const, open: () => push({ name: 'reactions', statusId: item.id, reaction: 'boosts' }) },
+                                            { reaction: undefined, count: item.quotes_count ?? 0, plain: 'reactions.quotes' as const, counted: 'quotes.count' as const, open: () => push({ name: 'quotes', status: item }) },
                                         ]
                                             .filter(link => link.count > 0)
                                             .map(link => (
-                                                <Pressable key={link.plain} onPress={link.open} accessibilityRole="button" style={styles.reactionLink}>
-                                                    <Text style={[type.meta, { color: colors.accentText }]}>
-                                                        {hideCounts ? t(link.plain) : tn(link.counted, link.count)}
-                                                    </Text>
-                                                </Pressable>
+                                                <ReactionLink
+                                                    key={link.plain}
+                                                    label={hideCounts ? t(link.plain) : tn(link.counted, link.count)}
+                                                    onPress={link.open}
+                                                    statusId={link.reaction && item.id}
+                                                    reaction={link.reaction}
+                                                />
                                             ))}
                                     </View>
                                 )}
@@ -274,10 +277,5 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
         columnGap: space.lg,
         paddingHorizontal: space.lg,
-    },
-    reactionLink: {
-        paddingBottom: space.md,
-        minHeight: 32,
-        justifyContent: 'center',
     },
 });

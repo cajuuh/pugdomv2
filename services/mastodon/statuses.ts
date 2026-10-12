@@ -71,9 +71,9 @@ export interface ReactionsPage {
     nextMaxId?: string;
 }
 
-export async function getReactions(id: string, reaction: Reaction, maxId?: string): Promise<ReactionsPage> {
+export async function getReactions(id: string, reaction: Reaction, maxId?: string, limit?: number): Promise<ReactionsPage> {
     const path = reaction === 'favourites' ? 'favourited_by' : 'reblogged_by';
-    const response = await apiClient.get<Account[]>(`/statuses/${id}/${path}`, { params: { max_id: maxId } });
+    const response = await apiClient.get<Account[]>(`/statuses/${id}/${path}`, { params: { max_id: maxId, limit } });
     return { accounts: response.data, nextMaxId: nextMaxIdFromLink(response.headers?.link) };
 }
 

@@ -90,6 +90,24 @@ describe('Thread', () => {
         expect(screen.queryByRole('button', { name: /quote/ })).toBeNull();
     });
 
+    it('shows the first three who favourited as small avatars on the link', async () => {
+        const people = ['a', 'b', 'c', 'd'].map(id => ({ ...ana, id, display_name: `Person ${id}` }));
+        api.get.mockImplementation(async (url: string, config?: { params?: { limit?: number } }) => {
+            if (url === '/statuses/p1') return { data: post({ favourites_count: 12, reblogs_count: 0 }) };
+            if (url === '/statuses/p1/context') return { data: { ancestors: [], descendants: [] } };
+            if (url === '/statuses/p1/favourited_by') return { data: people.slice(0, config?.params?.limit), headers: {} };
+            return { data: [], headers: {} };
+        });
+        await render(wrap(<Thread statusId="p1" onBack={jest.fn()} onStatusPress={jest.fn()} />));
+
+        expect(await screen.findByRole('button', { name: '12 favourites' })).toBeTruthy();
+        expect(api.get).toHaveBeenCalledWith('/statuses/p1/favourited_by', { params: { max_id: undefined, limit: 3 } });
+        // Nobody boosted, so nobody is asked for
+        expect(api.get).not.toHaveBeenCalledWith('/statuses/p1/reblogged_by', expect.anything());
+        expect(await screen.findByLabelText('Person c', { includeHiddenElements: true })).toBeTruthy();
+        expect(screen.queryByLabelText('Person d', { includeHiddenElements: true })).toBeNull();
+    });
+
     it('keeps the links without numbers when numbers are hidden', async () => {
         mockSettings.hideCounts = true;
         await renderThread(post({ favourites_count: 3, reblogs_count: 1, quotes_count: 2 }));

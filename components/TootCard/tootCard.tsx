@@ -6,6 +6,7 @@ import { useRecyclingState } from '@shopify/flash-list';
 import { Status, Attachment, PreviewCard } from '../../services/mastodon/types';
 import { StatusHtmlContent } from './htmlContent';
 import { useSettings } from '../../services/settingsContext';
+import { useExpandSpoilers } from '../../hooks/useExpandSpoilers';
 import { useTheme } from '../../services/themeContext';
 import { useCompose } from '../../services/composeContext';
 import {
@@ -158,7 +159,9 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const recyclingDeps = [targetStatus.id];
     // Only a content warning hides the text; `sensitive` alone just veils the media
     const hasContentWarning = !!targetStatus.spoiler_text;
-    const [isSpoilerCollapsed, setIsSpoilerCollapsed] = useRecyclingState(hasContentWarning, recyclingDeps);
+    // Starts over when the preference arrives or changes, so cards drawn before it know it too
+    const expandSpoilers = useExpandSpoilers();
+    const [isSpoilerCollapsed, setIsSpoilerCollapsed] = useRecyclingState(hasContentWarning && !expandSpoilers, [targetStatus.id, expandSpoilers]);
     const [isFavorited, setIsFavorited] = useRecyclingState(targetStatus.favourited, recyclingDeps);
     const [isReblogged, setIsreblogged] = useRecyclingState(targetStatus.reblogged, recyclingDeps);
     const [favCount, setFavCount] = useRecyclingState(targetStatus.favourites_count, recyclingDeps);

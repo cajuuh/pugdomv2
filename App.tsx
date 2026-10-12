@@ -41,6 +41,7 @@ import Quotes from './screens/Quotes/quotes';
 import Conversations from './screens/Conversations/conversations';
 import Reactions from './screens/Reactions/reactions';
 import { useUnreadConversations } from './hooks/useUnreadConversations';
+import { useServerPreferences } from './hooks/useExpandSpoilers';
 import { useUnreadNotifications } from './hooks/useUnreadNotifications';
 import { DialogHost } from './components/Dialog/dialogHost';
 
@@ -55,6 +56,8 @@ function NavigationRoot() {
   const [activeTab, setActiveTab] = useState<'home' | 'search' | 'notifications' | 'profile'>('home');
   const unreadNotifications = useUnreadNotifications();
   const unreadMessages = useUnreadConversations();
+  // Fetched at sign-in, so posts know whether to open content warnings before they're drawn
+  useServerPreferences();
   const { stack, push, pop, reset, closeThreads } = useNavigator();
   // The server's stored custom emoji, ready before anyone opens the picker
   useEmojiCachePrimer(user?.id);
