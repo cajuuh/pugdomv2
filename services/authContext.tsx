@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { DeviceEventEmitter } from 'react-native';
+import { AppState, DeviceEventEmitter } from 'react-native';
+import axios from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
 import { UNAUTHORIZED_EVENT } from './api/client';
 import { getCurrentAccount } from './mastodon/accounts';
@@ -37,27 +38,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { t } = useI18n();
     // Tokens already handled, so a burst of 401s from one token only logs out once
     const handledUnauthorizedTokens = useRef(new Set<string>());
+    // The server couldn't be reached, so `user` may be the saved copy and is checked again later
+    const unverified = useRef(false);
 
     const checkLoginStatus = async () => {
+        let accounts: SavedAccount[] = [];
+        let accessToken: string | null = null;
         try {
-            const accounts = await getSavedAccounts();
+            accounts = await getSavedAccounts();
             setSavedAccounts(accounts);
-            
+
             const credentials = await getCredentials();
+            accessToken = credentials.accessToken;
             if (credentials.accessToken && credentials.instanceUrl) {
                 const account = await getCurrentAccount();
+                unverified.current = false;
                 setUser(account);
             }
         } catch (error) {
             console.error('Failed to login, status: ', error);
-            setUser(null);
+            if (axios.isAxiosError(error) && error.response?.status === 401) {
+                // The 401 handler drops the account
+                setUser(null);
+            } else {
+                // No signal or a server hiccup isn't a sign-out: keep the account and check again later
+                unverified.current = true;
+                const saved = accounts.find(a => a.accessToken === accessToken)?.userInfo;
+                setUser(current => current ?? (saved ? { ...saved, emojis: [] } as unknown as Account : null));
+            }
         } finally {
             setLoading(false);
         }
     };
 
+    const checkLoginStatusRef = useRef(checkLoginStatus);
+    checkLoginStatusRef.current = checkLoginStatus;
+
     useEffect(() => {
         checkLoginStatus();
+        // ponytail: retries on returning to the app, not the moment the connection comes back
+        const subscription = AppState.addEventListener('change', state => {
+            if (state === 'active' && unverified.current) {
+                checkLoginStatusRef.current();
+            }
+        });
+        return () => subscription.remove();
     }, []);
 
     // Cached timelines etc. belong to the previous account, so drop them (and any in-flight
