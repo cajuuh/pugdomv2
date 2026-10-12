@@ -17,6 +17,9 @@ interface SettingsContextType {
     setHideCounts: (value: boolean) => Promise<void>;
     // Favourites and boosts of the same post share one notification row; off, each has its own
     groupNotifications: boolean;
+    // Post images at their own shape instead of cropped to the card
+    uncroppedMedia: boolean;
+    setUncroppedMedia: (value: boolean) => Promise<void>;
     setGroupNotifications: (value: boolean) => Promise<void>;
     setExpandSpoilers: (value: boolean) => Promise<void>;
     setCoverSensitiveMedia: (value: boolean) => Promise<void>;
@@ -30,6 +33,7 @@ export const AUTOPLAY_KEY = 'pugdom_settings_autoplay';
 export const COMPACT_KEY = 'pugdom_settings_compact';
 export const HIDE_COUNTS_KEY = 'pugdom_settings_hide_counts';
 export const GROUP_NOTIFICATIONS_KEY = 'pugdom_settings_group_notifications';
+export const UNCROPPED_MEDIA_KEY = 'pugdom_settings_uncropped_media';
 export const EXPAND_SPOILERS_KEY = 'pugdom_settings_expand_spoilers';
 export const COVER_SENSITIVE_KEY = 'pugdom_settings_cover_sensitive';
 
@@ -39,6 +43,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const [compactMode, setCompactModeState] = useState(false);
     const [hideCounts, setHideCountsState] = useState(false);
     const [groupNotifications, setGroupNotificationsState] = useState(true);
+    const [uncroppedMedia, setUncroppedMediaState] = useState(false);
     const [expandSpoilers, setExpandSpoilersState] = useState<boolean | null>(null);
     const [coverSensitiveMedia, setCoverSensitiveMediaState] = useState(true);
     const [loadingSettings, setLoadingSettings] = useState(true);
@@ -51,6 +56,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 const compact = await getSetting(COMPACT_KEY, false);
                 const counts = await getSetting(HIDE_COUNTS_KEY, false);
                 const grouped = await getSetting(GROUP_NOTIFICATIONS_KEY, true);
+                const uncropped = await getSetting(UNCROPPED_MEDIA_KEY, false);
                 const spoilers = await getStringSetting(EXPAND_SPOILERS_KEY, '');
                 const cover = await getSetting(COVER_SENSITIVE_KEY, true);
                 setNotificationsState(notify);
@@ -58,6 +64,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 setCompactModeState(compact);
                 setHideCountsState(counts);
                 setGroupNotificationsState(grouped);
+                setUncroppedMediaState(uncropped);
                 setExpandSpoilersState(spoilers === '' ? null : spoilers === 'true');
                 setCoverSensitiveMediaState(cover);
             } catch (error) {
@@ -94,6 +101,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         await saveSetting(GROUP_NOTIFICATIONS_KEY, value);
     };
 
+    const setUncroppedMedia = async (value: boolean) => {
+        setUncroppedMediaState(value);
+        await saveSetting(UNCROPPED_MEDIA_KEY, value);
+    };
+
     const setExpandSpoilers = async (value: boolean) => {
         setExpandSpoilersState(value);
         await saveStringSetting(EXPAND_SPOILERS_KEY, String(value));
@@ -119,6 +131,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 setHideCounts,
                 groupNotifications,
                 setGroupNotifications,
+                uncroppedMedia,
+                setUncroppedMedia,
                 setExpandSpoilers,
                 setCoverSensitiveMedia,
                 loadingSettings,

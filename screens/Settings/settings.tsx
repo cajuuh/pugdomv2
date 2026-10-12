@@ -44,6 +44,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
         setHideCounts,
         groupNotifications,
         setGroupNotifications,
+        uncroppedMedia,
+        setUncroppedMedia,
         setExpandSpoilers,
         coverSensitiveMedia,
         setCoverSensitiveMedia,
@@ -192,14 +194,22 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                     {switchRow('notifications-outline', t('settings.pushNotifications'), notifications, setNotifications)}
                     <View style={styles.divider} />
                     {switchRow('layers-outline', t('settings.groupNotifications'), groupNotifications, setGroupNotifications)}
-                    <View style={styles.divider} />
-                    {switchRow('play-circle-outline', t('settings.autoplay'), mediaAutoplay, setMediaAutoplay)}
-                    <View style={styles.divider} />
+                </Card>
+
+                <SectionLabel style={styles.sectionLabel}>{t('settings.posts')}</SectionLabel>
+                <Card style={styles.group}>
                     {switchRow('list-outline', t('settings.compactMode'), compactMode, setCompactMode)}
                     <View style={styles.divider} />
                     {switchRow('stats-chart-outline', t('settings.hideCounts'), hideCounts, setHideCounts)}
                     <View style={styles.divider} />
                     {switchRow('warning-outline', t('settings.expandSpoilers'), expandSpoilers, setExpandSpoilers)}
+                </Card>
+
+                <SectionLabel style={styles.sectionLabel}>{t('settings.media')}</SectionLabel>
+                <Card style={styles.group}>
+                    {switchRow('play-circle-outline', t('settings.autoplay'), mediaAutoplay, setMediaAutoplay)}
+                    <View style={styles.divider} />
+                    {switchRow('expand-outline', t('settings.uncroppedMedia'), uncroppedMedia, setUncroppedMedia)}
                     <View style={styles.divider} />
                     {switchRow('eye-off-outline', t('settings.coverSensitiveMedia'), coverSensitiveMedia, setCoverSensitiveMedia)}
                 </Card>

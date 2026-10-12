@@ -148,7 +148,8 @@ describe('Reactions', () => {
         expect(screen.getByRole('header', { name: 'Favourited by' })).toBeTruthy();
         expect(await screen.findByText('@ana@art.social')).toBeTruthy();
         expect(screen.getByText('@me')).toBeTruthy();
-        expect(screen.getAllByRole('button', { name: /Follow/ })).toHaveLength(1);
+        // The follow state comes from a second request, after the list
+        expect(await screen.findAllByRole('button', { name: /Follow/ })).toHaveLength(1);
     });
 
     it('says when nobody has yet', async () => {
