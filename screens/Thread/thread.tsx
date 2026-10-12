@@ -23,9 +23,6 @@ import { useTheme } from '../../services/themeContext';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
 import { STATUS_DELETED_EVENT, STATUS_UPDATED_EVENT } from '../../hooks/useUpdateCachedStatus';
-import { useNavigator } from '../../services/navigationContext';
-import { useSettings } from '../../services/settingsContext';
-import { ReactionLink } from './reactionLink';
 
 interface ThreadProps {
     statusId: string;
@@ -44,9 +41,7 @@ export default function Thread({
 }: ThreadProps) {
     const { colors, type } = useTheme();
     const insets = useSafeAreaInsets();
-    const { t, tn } = useI18n();
-    const { push } = useNavigator();
-    const { hideCounts } = useSettings();
+    const { t } = useI18n();
 
     const [statuses, setStatuses] = useState<ThreadStatus[]>([]);
     const [loading, setLoading] = useState(true);
@@ -193,32 +188,12 @@ export default function Thread({
                                     status={item}
                                     onPress={onStatusPress}
                                     threadMode={true}
+                                    showReactions={isMain}
                                     hasThreadLineTop={index > 0}
                                     hasThreadLineBottom={
                                         index < statuses.length - 1
                                     }
                                 />
-                                {/* The post this thread is about links to who favourited, boosted and quoted it
-                                    (without the numbers when they're hidden) */}
-                                {isMain && (
-                                    <View style={styles.reactions}>
-                                        {[
-                                            { reaction: 'favourites' as const, count: item.favourites_count, plain: 'reactions.favourites' as const, counted: 'reactions.favouritesCount' as const, open: () => push({ name: 'reactions', statusId: item.id, reaction: 'favourites' }) },
-                                            { reaction: 'boosts' as const, count: item.reblogs_count, plain: 'reactions.boosts' as const, counted: 'reactions.boostsCount' as const, open: () => push({ name: 'reactions', statusId: item.id, reaction: 'boosts' }) },
-                                            { reaction: undefined, count: item.quotes_count ?? 0, plain: 'reactions.quotes' as const, counted: 'quotes.count' as const, open: () => push({ name: 'quotes', status: item }) },
-                                        ]
-                                            .filter(link => link.count > 0)
-                                            .map(link => (
-                                                <ReactionLink
-                                                    key={link.plain}
-                                                    label={hideCounts ? t(link.plain) : tn(link.counted, link.count)}
-                                                    onPress={link.open}
-                                                    statusId={link.reaction && item.id}
-                                                    reaction={link.reaction}
-                                                />
-                                            ))}
-                                    </View>
-                                )}
                             </View>
                         );
                     }}
@@ -271,11 +246,5 @@ const styles = StyleSheet.create({
 
     postContainer: {
         borderBottomWidth: StyleSheet.hairlineWidth,
-    },
-    reactions: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        columnGap: space.lg,
-        paddingHorizontal: space.lg,
     },
 });

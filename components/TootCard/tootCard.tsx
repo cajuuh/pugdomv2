@@ -45,6 +45,7 @@ import { ActionSheet, BottomSheet } from '../ComposeModal/optionSheet';
 import { currentQuotePolicy, QuotePolicy, quotePermission, quotePolicies, setQuotePolicy } from '../../services/mastodon/quotes';
 import { OptionSheet } from '../ComposeModal/optionSheet';
 import { useOptionalAuth } from '../../services/authContext';
+import { ReactionLinks } from './reactionLinks';
 import { useModeration } from '../../hooks/useModeration';
 import { usePostActions } from '../../hooks/usePostActions';
 import { EditHistorySheet } from './editHistorySheet';
@@ -116,6 +117,8 @@ interface TootCardProps {
     // Receives the id of the status to open; for boosts that's the original, since a boost has no thread of its own
     onPress?: (statusId: string) => void;
     threadMode?: boolean;
+    // Who favourited, boosted and quoted it, under the post (a thread's main post); your own posts always show it
+    showReactions?: boolean;
     hasThreadLineTop?: boolean;
     hasThreadLineBottom?: boolean;
     // A post read from another server (its ids aren't ours): no buttons that act on it here; tapping it,
@@ -123,7 +126,7 @@ interface TootCardProps {
     remote?: boolean;
 }
 
-export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPressHashtag, onPress, threadMode, hasThreadLineTop, hasThreadLineBottom, remote }) => {
+export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPressHashtag, onPress, threadMode, showReactions, hasThreadLineTop, hasThreadLineBottom, remote }) => {
     const { compactMode, hideCounts, coverSensitiveMedia } = useSettings();
     const { colors, type } = useTheme();
     const styles = useThemedStyles(makeStyles);
@@ -620,6 +623,9 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         </View>
     );
 
+    // Not for posts from another server: their ids aren't ours
+    const reactions = (showReactions || ownPost) && !remote && <ReactionLinks status={targetStatus} />;
+
     const card = (
         <Card style={[styles.card, compactMode && styles.cardCompact, threadMode && styles.cardThread]}>
             {isReblog && (
@@ -658,6 +664,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                         </View>
                         {renderContent()}
                         {actions}
+                        {reactions}
                     </View>
                 </View>
             ) : (
@@ -669,6 +676,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     </View>
                     {renderContent()}
                     {actions}
+                    {reactions}
                 </>
             )}
         </Card>

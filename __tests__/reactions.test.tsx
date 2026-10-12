@@ -8,6 +8,7 @@ import { getReactions } from '../services/mastodon/statuses';
 import { MediaViewerProvider } from '../components/MediaViewer/mediaViewer';
 import Reactions from '../screens/Reactions/reactions';
 import Thread from '../screens/Thread/thread';
+import { TootCard } from '../components/TootCard/tootCard';
 import { NavigationProvider, useNavigator } from '../services/navigationContext';
 import { Account, Status } from '../services/mastodon/types';
 
@@ -116,6 +117,22 @@ describe('Thread', () => {
         expect(screen.getByRole('button', { name: 'Boosts' })).toBeTruthy();
         expect(screen.getByRole('button', { name: 'Quotes' })).toBeTruthy();
         expect(screen.queryByText('3 favourites')).toBeNull();
+    });
+});
+
+describe('TootCard reactions', () => {
+    it('shows who favourited and boosted your own posts in timelines', async () => {
+        await render(wrap(<TootCard status={post({ favourites_count: 2, reblogs_count: 1 })} />));
+
+        expect(await screen.findByRole('button', { name: '2 favourites' })).toBeTruthy();
+        expect(screen.getByRole('button', { name: '1 boost' })).toBeTruthy();
+    });
+
+    it("leaves them off other people's posts, without asking the server", async () => {
+        await render(wrap(<TootCard status={post({ account: ana, favourites_count: 2, reblogs_count: 1 })} />));
+
+        expect(screen.queryByRole('button', { name: '2 favourites' })).toBeNull();
+        expect(api.get).not.toHaveBeenCalledWith('/statuses/p1/favourited_by', expect.anything());
     });
 });
 
