@@ -173,11 +173,15 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         gap: 2,
     },
+    // Stops short of the remove button, wrapping onto a second line when the badges don't fit
     badges: {
         position: 'absolute',
         left: space.xs,
         top: space.xs,
+        right: 24 + space.xs * 2,
         flexDirection: 'row',
+        flexWrap: 'wrap',
+        alignItems: 'flex-start',
         gap: space.xs,
     },
     badge: {
