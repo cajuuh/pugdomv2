@@ -7,6 +7,7 @@ import { createTestQueryClient } from '../testUtils/queryClient';
 import Profile, { fullHandle } from '../screens/Profile/profile';
 import { getAccountStatuses } from '../services/mastodon/accounts';
 import { getBookmarks } from '../services/mastodon/bookmarks';
+import { MediaViewerProvider } from '../components/MediaViewer/mediaViewer';
 import { Account, Status } from '../services/mastodon/types';
 
 const me: Account = {
@@ -42,11 +43,12 @@ jest.mock('../components/TootCard/tootCard', () => ({
         const { Text: MockText } = jest.requireActual('react-native');
         return <MockText>{status.content}</MockText>;
     },
+    mediaLabel: jest.requireActual('../components/TootCard/tootCard').mediaLabel,
 }));
 
 const mockedStatuses = getAccountStatuses as jest.MockedFunction<typeof getAccountStatuses>;
 const mockedBookmarks = getBookmarks as jest.MockedFunction<typeof getBookmarks>;
-const status = (id: string) => ({ id, content: `post ${id}` } as Status);
+const status = (id: string, extra: Partial<Status> = {}) => ({ id, content: `post ${id}`, media_attachments: [], ...extra } as Status);
 
 describe('Profile', () => {
     let queryClient: QueryClient;
@@ -55,7 +57,9 @@ describe('Profile', () => {
         queryClient = createTestQueryClient();
         return render(
             <QueryClientProvider client={queryClient}>
-                <Profile {...props} />
+                <MediaViewerProvider>
+                    <Profile {...props} />
+                </MediaViewerProvider>
             </QueryClientProvider>
         );
     };
@@ -64,6 +68,25 @@ describe('Profile', () => {
         jest.clearAllMocks();
         mockUser = me;
         mockedStatuses.mockResolvedValue([status('1')]);
+    });
+
+    it('shows the Media tab as a grid of thumbnails that open the viewer, or the post on a long press', async () => {
+        const image = (id: string) => ({ id, type: 'image', url: `https://x/${id}.png`, preview_url: `https://x/${id}-small.png` });
+        const onStatusPress = jest.fn();
+        mockedStatuses.mockResolvedValue([status('1', { media_attachments: [image('a'), image('b')] as any }), status('2', { media_attachments: [image('c')] as any, sensitive: true })]);
+        await renderProfile({ onStatusPress });
+        await screen.findByText('post 1');
+
+        await fireEvent.press(screen.getByRole('tab', { name: 'Media' }));
+
+        expect(await screen.findByRole('imagebutton', { name: 'Image 2 of 2' })).toBeTruthy();
+        expect(screen.getAllByRole('imagebutton')).toHaveLength(3);
+        expect(screen.queryByText('post 1')).toBeNull();
+        // Sensitive pictures stay blurred in the grid
+        expect(screen.getByTestId('focused-image-blurred', { includeHiddenElements: true })).toBeTruthy();
+
+        await fireEvent(screen.getByRole('imagebutton', { name: 'Image 1 of 1' }), 'longPress');
+        expect(onStatusPress).toHaveBeenCalledWith('2');
     });
 
     it("lists the account's posts without replies first", async () => {

@@ -496,6 +496,7 @@ export const ptBR: Dictionary = {
     },
     media: {
         closeVideo: 'Fechar vídeo',
+        close: 'Fechar',
     },
     notifications: {
         title: 'Notificações',
@@ -566,6 +567,7 @@ export const ptBR: Dictionary = {
         emptyPosts: 'Nenhuma publicação ainda',
         emptyReplies: 'Nenhuma publicação ou resposta ainda',
         emptyMedia: 'Nenhuma mídia ainda',
+        openPost: 'Abrir publicação',
         emptyBookmarks: 'Nada salvo ainda',
         statPosts: 'publicações',
         statFollowing: 'seguindo',

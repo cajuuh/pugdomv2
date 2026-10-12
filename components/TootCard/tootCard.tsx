@@ -73,7 +73,7 @@ export const getRelativeTime = (dateString: string, { t }: Translator) => {
 
 // Alt text when the author wrote one, otherwise the media's position in the post
 const MEDIA_KIND = { image: 'post.image', video: 'post.video', gifv: 'post.gif', unknown: 'post.attachment' } as const;
-const mediaLabel = (attachment: Attachment, index: number, count: number, { t }: Translator) =>
+export const mediaLabel = (attachment: Attachment, index: number, count: number, { t }: Translator) =>
     attachment.description ||
     t('post.mediaPosition', { kind: t(MEDIA_KIND[attachment.type] ?? 'post.attachment'), index: index + 1, count });
 

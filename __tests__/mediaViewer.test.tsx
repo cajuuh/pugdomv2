@@ -12,9 +12,14 @@ import { createTestQueryClient } from '../testUtils/queryClient';
 
 // Observable stand-ins for the native viewers
 jest.mock('react-native-image-viewing', () => {
-    const { Text } = require('react-native');
-    return ({ visible, images, imageIndex }: any) =>
-        visible ? <Text>{`gallery ${imageIndex}: ${images.map((image: any) => image.uri).join(', ')}`}</Text> : null;
+    const { Text, View } = require('react-native');
+    return ({ visible, images, imageIndex, HeaderComponent }: any) =>
+        visible ? (
+            <View>
+                {HeaderComponent && <HeaderComponent imageIndex={imageIndex} />}
+                <Text>{`gallery ${imageIndex}: ${images.map((image: any) => image.uri).join(', ')}`}</Text>
+            </View>
+        ) : null;
 });
 
 jest.mock('expo-video', () => {
@@ -121,6 +126,15 @@ describe('shared media viewer', () => {
         await fireEvent.press(screen.getByLabelText('Image 3 of 3'));
 
         expect(screen.getByText('gallery 1: https://files.example.social/i1, https://files.example.social/i2')).toBeTruthy();
+    });
+
+    it("closes the gallery from its own close button, below the status bar", async () => {
+        await renderCards(makeStatus('1', [attachment('i1', 'image')]));
+        await fireEvent.press(screen.getByLabelText('Image 1 of 1'));
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Close' }));
+
+        expect(screen.queryByText(/^gallery/)).toBeNull();
     });
 
     it('plays a video in the shared player and closes it', async () => {

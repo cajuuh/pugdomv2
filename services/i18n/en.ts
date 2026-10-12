@@ -502,6 +502,7 @@ export const en = {
     },
     media: {
         closeVideo: 'Close video',
+        close: 'Close',
     },
     notifications: {
         title: 'Notifications',
@@ -573,6 +574,7 @@ export const en = {
         emptyPosts: 'No posts yet',
         emptyReplies: 'No posts or replies yet',
         emptyMedia: 'No media yet',
+        openPost: 'Open post',
         emptyBookmarks: 'No bookmarks yet',
         statPosts: 'posts',
         statFollowing: 'following',
