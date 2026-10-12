@@ -633,6 +633,8 @@ export const en = {
         coatHint: 'Pug coats and a few friends',
         tint: 'Tint surfaces with coat',
         tintHint: 'Warms the background and cards, not only buttons',
+        trueBlack: 'True black',
+        trueBlackHint: 'Dark mode on a pure black background, for OLED screens',
     },
     coats: {
         apricot: 'Apricot',

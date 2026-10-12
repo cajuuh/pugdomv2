@@ -625,6 +625,8 @@ export const ptBR: Dictionary = {
         coatHint: 'Pelagens de pug e alguns amigos',
         tint: 'Colorir superfícies com a pelagem',
         tintHint: 'Aquece o fundo e os cartões, não só os botões',
+        trueBlack: 'Preto puro',
+        trueBlackHint: 'Modo escuro com fundo totalmente preto, para telas OLED',
     },
     coats: {
         apricot: 'Damasco',

@@ -16,7 +16,7 @@ interface AppearanceProps {
 }
 
 const Appearance: React.FC<AppearanceProps> = ({ onBack }) => {
-    const { colors, type, theme, setTheme, coat, setCoat, tint, setTint } = useTheme();
+    const { colors, type, theme, setTheme, coat, setCoat, tint, setTint, trueBlack, setTrueBlack } = useTheme();
     const styles = useThemedStyles(makeAppearanceStyles);
     const { t } = useI18n();
     const coatName = t(`coats.${getCoat(coat).key}`);
@@ -95,6 +95,14 @@ const Appearance: React.FC<AppearanceProps> = ({ onBack }) => {
                         <Text style={[type.meta, styles.tintDetail]}>{t('appearance.tintHint')}</Text>
                     </View>
                     <ThemedSwitch value={tint} onValueChange={setTint} accessibilityLabel={t('appearance.tint')} />
+                </Card>
+
+                <Card style={styles.tintRow}>
+                    <View style={styles.tintText}>
+                        <Text style={[type.name, styles.tintLabel]}>{t('appearance.trueBlack')}</Text>
+                        <Text style={[type.meta, styles.tintDetail]}>{t('appearance.trueBlackHint')}</Text>
+                    </View>
+                    <ThemedSwitch value={trueBlack} onValueChange={setTrueBlack} accessibilityLabel={t('appearance.trueBlack')} />
                 </Card>
             </ScrollView>
         </>
