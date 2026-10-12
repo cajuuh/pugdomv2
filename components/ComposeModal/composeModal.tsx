@@ -362,7 +362,12 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
 
     const addFromLibrary = async () => {
         try {
-            media.add(await pickImages(media.room));
+            const { videoNotAlone, videoTooBig } = media.add(await pickImages(media.room, media.canAddVideo));
+            if (videoTooBig) {
+                dialog.toast(t('compose.videoTooBig', { size: Math.round(instanceConfiguration.videoSizeLimit / (1024 * 1024)) }));
+            } else if (videoNotAlone) {
+                dialog.toast(t('compose.videoNotAlone'));
+            }
         } catch (error) {
             console.warn('Could not open the gallery:', error);
         }
@@ -514,6 +519,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                         maxLength={instanceConfiguration.descriptionLimit}
                         focus={altEditing.focus}
                         onFocusChange={focus => setAltEditing({ ...altEditing, focus })}
+                        video={editingAttachment.isVideo}
                     />
                 </ScrollView>
             )}
@@ -753,6 +759,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
             <AltReminderSheet
                 visible={reminderOpen}
                 count={media.missingDescription.length}
+                video={media.missingDescription.some(attachment => attachment.isVideo)}
                 onDescribe={() => {
                     setReminderOpen(false);
                     const first = media.missingDescription[0];

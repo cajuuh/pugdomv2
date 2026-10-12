@@ -10,6 +10,7 @@ export interface InstanceConfiguration {
     // Bytes, and width × height in pixels
     imageSizeLimit: number;
     imageMatrixLimit: number;
+    videoSizeLimit: number;
     // Longest alt text the server accepts
     descriptionLimit: number;
     // MIME types the server takes; empty when it doesn't say
@@ -26,6 +27,7 @@ export const DEFAULT_INSTANCE_CONFIGURATION: InstanceConfiguration = {
     maxMediaAttachments: 4,
     imageSizeLimit: 16 * 1024 * 1024,
     imageMatrixLimit: 33177600,
+    videoSizeLimit: 99 * 1024 * 1024,
     descriptionLimit: 1500,
     supportedMimeTypes: [],
     supportsQuotes: false,
@@ -43,6 +45,7 @@ interface InstanceV2 {
             supported_mime_types?: string[];
             image_size_limit?: number;
             image_matrix_limit?: number;
+            video_size_limit?: number;
             description_limit?: number;
         };
     };
@@ -64,6 +67,7 @@ export async function fetchInstanceConfiguration(): Promise<InstanceConfiguratio
         maxMediaAttachments: statuses?.max_media_attachments ?? defaults.maxMediaAttachments,
         imageSizeLimit: media?.image_size_limit ?? defaults.imageSizeLimit,
         imageMatrixLimit: media?.image_matrix_limit ?? defaults.imageMatrixLimit,
+        videoSizeLimit: media?.video_size_limit ?? defaults.videoSizeLimit,
         descriptionLimit: media?.description_limit ?? defaults.descriptionLimit,
         supportedMimeTypes: media?.supported_mime_types ?? defaults.supportedMimeTypes,
         supportsQuotes: (response.data.api_versions?.mastodon ?? 0) >= QUOTES_API_VERSION,

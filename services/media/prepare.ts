@@ -10,7 +10,12 @@ export interface PickedImage {
     mimeType?: string | null;
     fileName?: string | null;
     fileSize?: number | null;
+    // The picker says what it is; a video also has its length, in milliseconds
+    type?: string | null;
+    duration?: number | null;
 }
+
+export const isVideoPick = (image: Pick<PickedImage, 'type' | 'mimeType'>) => image.type === 'video' || !!image.mimeType?.startsWith('video/');
 
 type MediaLimits = Pick<InstanceConfiguration, 'imageSizeLimit' | 'imageMatrixLimit' | 'supportedMimeTypes'>;
 

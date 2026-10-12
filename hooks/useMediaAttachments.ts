@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { InstanceConfiguration } from '../services/mastodon/instance';
 import { updateMedia, uploadMedia } from '../services/mastodon/media';
-import { imageType, PickedImage, prepareImage } from '../services/media/prepare';
+import { imageType, isVideoPick, PickedImage, prepareImage } from '../services/media/prepare';
 import { fromMastodonFocus, ImageEdits, NO_EDITS, Point, toMastodonFocus } from '../services/media/geometry';
 import { Attachment } from '../services/mastodon/types';
 
@@ -12,6 +12,9 @@ export interface ComposeAttachment {
     width: number;
     height: number;
     isGif: boolean;
+    // A video goes alone in a post; it has a length (seconds) and no crop
+    isVideo: boolean;
+    duration?: number;
     status: 'uploading' | 'ready' | 'failed';
     // 0–1, while uploading
     progress: number;
@@ -28,9 +31,15 @@ export interface ComposeAttachment {
 
 const sameFocus = (a?: Point, b?: Point) => a?.x === b?.x && a?.y === b?.y;
 
-type Limits = Pick<InstanceConfiguration, 'maxMediaAttachments' | 'imageSizeLimit' | 'imageMatrixLimit' | 'supportedMimeTypes'>;
+type Limits = Pick<InstanceConfiguration, 'maxMediaAttachments' | 'imageSizeLimit' | 'imageMatrixLimit' | 'supportedMimeTypes' | 'videoSizeLimit'>;
 
-// Images attached to the post being written. Each one uploads as soon as it's picked, so it's ready
+// What `add` left out: a video with other media (Mastodon takes one video, alone), or one over the size limit
+export interface AddResult {
+    videoNotAlone: boolean;
+    videoTooBig: boolean;
+}
+
+// Images (or one video) attached to the post being written. Each one uploads as soon as it's picked, so it's ready
 // by the time you post; removing one cancels its upload.
 export const useMediaAttachments = (limits: Limits) => {
     const [attachments, setAttachments] = useState<ComposeAttachment[]>([]);
@@ -52,10 +61,15 @@ export const useMediaAttachments = (limits: Limits) => {
         const controller = new AbortController();
         uploads.current.set(key, { image, original: history?.original ?? image, edits: history?.edits ?? NO_EDITS, controller });
         try {
-            const file = await prepareImage(image, limitsRef.current);
+            const video = isVideoPick(image);
+            // Videos go as they are: re-encoding them needs a native module
+            const file = video
+                ? { uri: image.uri, name: image.fileName ?? 'video.mp4', type: image.mimeType ?? 'video/mp4' }
+                : await prepareImage(image, limitsRef.current);
             if (controller.signal.aborted) return;
             const media = await uploadMedia(file, {
                 signal: controller.signal,
+                video,
                 onProgress: progress => update(key, { progress }),
             });
             if (!controller.signal.aborted) update(key, { status: 'ready', progress: 1, mediaId: media.id });
@@ -68,16 +82,24 @@ export const useMediaAttachments = (limits: Limits) => {
         }
     }, [update]);
 
-    // Adds what fits in the remaining slots
-    const add = useCallback((images: PickedImage[]) => {
+    // Adds what fits in the remaining slots. A video only goes on its own, into an empty post.
+    const add = useCallback((images: PickedImage[]): AddResult => {
+        const videos = images.filter(isVideoPick);
+        const video = videos[0];
+        const videoNotAlone = videos.length > 0 && (count.current > 0 || images.length > 1);
+        const videoTooBig = !!video && !!video.fileSize && video.fileSize > limitsRef.current.videoSizeLimit;
         const room = Math.max(limitsRef.current.maxMediaAttachments - count.current, 0);
-        const picked = images.slice(0, room);
+        // A video alone in an empty post; otherwise only the pictures
+        const onlyVideo = !!video && count.current === 0 && images.length === 1;
+        const picked = onlyVideo ? (videoTooBig ? [] : [video]) : images.filter(image => !isVideoPick(image)).slice(0, room);
         const added: ComposeAttachment[] = picked.map(image => ({
             key: `media-${nextKey.current++}`,
             uri: image.uri,
             width: image.width,
             height: image.height,
             isGif: imageType(image) === 'image/gif',
+            isVideo: isVideoPick(image),
+            duration: image.duration ? image.duration / 1000 : undefined,
             status: 'uploading',
             progress: 0,
             description: '',
@@ -86,6 +108,7 @@ export const useMediaAttachments = (limits: Limits) => {
         count.current += added.length;
         setAttachments(list => [...list, ...added]);
         added.forEach((attachment, index) => start(attachment.key, picked[index]));
+        return { videoNotAlone, videoTooBig };
     }, [start]);
 
     const retry = useCallback((key: string) => {
@@ -95,10 +118,10 @@ export const useMediaAttachments = (limits: Limits) => {
         start(key, upload.image, upload);
     }, [start, update]);
 
-    // A post's images, already uploaded: ready, with their descriptions and focal points
+    // A post's media, already uploaded: ready, with their descriptions and focal points
     const addExisting = useCallback((existing: Attachment[]) => {
         const added: ComposeAttachment[] = existing
-            .filter(item => item.type === 'image' || item.type === 'gifv')
+            .filter(item => item.type === 'image' || item.type === 'gifv' || item.type === 'video')
             .map(item => {
                 const size = item.meta?.original ?? item.meta?.small;
                 const focus = item.meta?.focus ? fromMastodonFocus(item.meta.focus) : undefined;
@@ -108,6 +131,7 @@ export const useMediaAttachments = (limits: Limits) => {
                     width: size?.width ?? 0,
                     height: size?.height ?? 0,
                     isGif: item.type === 'gifv',
+                    isVideo: item.type === 'video',
                     status: 'ready',
                     progress: 1,
                     mediaId: item.id,
@@ -219,7 +243,9 @@ export const useMediaAttachments = (limits: Limits) => {
         reset,
         cancel,
         finish,
-        room: Math.max(limits.maxMediaAttachments - attachments.length, 0),
+        // A video fills the post
+        room: attachments.some(attachment => attachment.isVideo) ? 0 : Math.max(limits.maxMediaAttachments - attachments.length, 0),
+        canAddVideo: attachments.length === 0,
         // Post waits until every upload is done (a failed one has to be retried or removed)
         pending: attachments.some(attachment => attachment.status !== 'ready'),
         missingDescription: attachments.filter(attachment => attachment.description.trim().length === 0),

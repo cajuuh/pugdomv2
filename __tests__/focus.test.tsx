@@ -91,7 +91,7 @@ describe('Picking the focal point in compose', () => {
             canceled: false,
             assets: [{ uri: 'file:///photos/a.jpg', width: 1000, height: 500, mimeType: 'image/jpeg', fileName: 'a.jpg' }],
         });
-        await fireEvent.press(screen.getByRole('button', { name: 'Add images' }));
+        await fireEvent.press(screen.getByRole('button', { name: 'Add images or a video' }));
         await waitFor(() => expect(screen.getByRole('button', { name: 'Post' })).toBeEnabled());
     };
 
@@ -142,7 +142,7 @@ describe('Editing an image with a focal point', () => {
             canceled: false,
             assets: [{ uri: 'file:///photos/a.jpg', width: 1000, height: 500, mimeType: 'image/jpeg', fileName: 'a.jpg' }],
         });
-        await fireEvent.press(screen.getByRole('button', { name: 'Add images' }));
+        await fireEvent.press(screen.getByRole('button', { name: 'Add images or a video' }));
         await waitFor(() => expect(screen.getByRole('button', { name: 'Post' })).toBeEnabled());
         await fireEvent.press(screen.getByRole('button', { name: 'Describe image 1' }));
         await fireEvent(screen.getByTestId('focus-image-box'), 'layout', layout(400, 300));
@@ -234,7 +234,7 @@ describe('Compose margins', () => {
             canceled: false,
             assets: [{ uri: 'file:///photos/a.jpg', width: 1000, height: 500, mimeType: 'image/jpeg', fileName: 'a.jpg' }],
         });
-        await fireEvent.press(screen.getByRole('button', { name: 'Add images' }));
+        await fireEvent.press(screen.getByRole('button', { name: 'Add images or a video' }));
         await waitFor(() => expect(screen.getByRole('button', { name: 'Post' })).toBeEnabled());
 
         // space.lg, like the poll and content warning boxes

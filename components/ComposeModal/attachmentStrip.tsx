@@ -6,20 +6,31 @@ import { useI18n } from '../../services/i18n/i18nContext';
 import { mediaColors } from '../../services/theme/media';
 import { radii, space } from '../../services/theme/shape';
 import { ComposeAttachment } from '../../hooks/useMediaAttachments';
+import { useVideoPlayer, VideoView } from 'expo-video';
 
 const THUMB_SIZE = 104;
+
+const duration = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.round(seconds % 60)).padStart(2, '0')}`;
+
+// The picked video's first frame, still and muted (one at most: a video goes alone in a post)
+const VideoThumb = ({ uri }: { uri: string }) => {
+    const player = useVideoPlayer(uri, player => {
+        player.muted = true;
+    });
+    return <VideoView player={player} style={styles.image} contentFit="cover" nativeControls={false} pointerEvents="none" />;
+};
 
 interface AttachmentStripProps {
     attachments: ComposeAttachment[];
     // Opens the description editor
     onDescribe: (key: string) => void;
-    // Opens the image editor (not for GIFs: editing would flatten them)
+    // Opens the image editor (not for GIFs, which editing would flatten, nor videos)
     onEdit: (key: string) => void;
     onRemove: (key: string) => void;
     onRetry: (key: string) => void;
 }
 
-// The images attached to a post: each shows its upload progress, an ALT badge once described,
+// The images (or video) attached to a post: each shows its upload progress, an ALT badge once described,
 // and buttons to edit or remove it, or retry a failed upload. Tapping one edits its description.
 export const AttachmentStrip: React.FC<AttachmentStripProps> = ({ attachments, onDescribe, onEdit, onRemove, onRetry }) => {
     const { colors, type } = useTheme();
@@ -31,24 +42,31 @@ export const AttachmentStrip: React.FC<AttachmentStripProps> = ({ attachments, o
             {attachments.map((attachment, position) => {
                 const index = position + 1;
                 const described = attachment.description.trim().length > 0;
+                // Labels say "video" for a video
+                const label = (key: 'describe' | 'edit' | 'remove' | 'retry' | 'uploading') =>
+                    t(attachment.isVideo ? (`attachments.${key}Video` as 'attachments.describeVideo') : `attachments.${key}`, { index });
                 return (
                     <View key={attachment.key} style={[styles.thumb, { backgroundColor: colors.inputBackground }]}>
                         <Pressable
                             onPress={() => onDescribe(attachment.key)}
                             accessibilityRole="button"
-                            accessibilityLabel={t('attachments.describe', { index })}
+                            accessibilityLabel={label('describe')}
                             accessibilityValue={described ? { text: attachment.description } : undefined}
                             style={StyleSheet.absoluteFill}
                         >
-                            <Image source={{ uri: attachment.uri }} style={styles.image} resizeMode="cover" />
+                            {attachment.isVideo && !attachment.existing ? (
+                                <VideoThumb uri={attachment.uri} />
+                            ) : (
+                                <Image source={{ uri: attachment.uri }} style={styles.image} resizeMode="cover" />
+                            )}
                         </Pressable>
 
                         {attachment.status === 'uploading' && (
                             <View
-                                style={[styles.progressTrack, !attachment.isGif && !attachment.existing && styles.progressTrackBesideEdit, { backgroundColor: mediaColors.scrim }]}
+                                style={[styles.progressTrack, !attachment.isGif && !attachment.isVideo && !attachment.existing && styles.progressTrackBesideEdit, { backgroundColor: mediaColors.scrim }]}
                                 accessible
                                 accessibilityRole="progressbar"
-                                accessibilityLabel={t('attachments.uploading', { index })}
+                                accessibilityLabel={label('uploading')}
                                 accessibilityValue={{ min: 0, max: 100, now: Math.round(attachment.progress * 100) }}
                             >
                                 <View style={[styles.progressBar, { width: `${Math.round(attachment.progress * 100)}%`, backgroundColor: colors.accentColor }]} />
@@ -59,7 +77,7 @@ export const AttachmentStrip: React.FC<AttachmentStripProps> = ({ attachments, o
                             <Pressable
                                 onPress={() => onRetry(attachment.key)}
                                 accessibilityRole="button"
-                                accessibilityLabel={t('attachments.retry', { index })}
+                                accessibilityLabel={label('retry')}
                                 style={[StyleSheet.absoluteFill, styles.failed, { backgroundColor: mediaColors.scrim }]}
                             >
                                 <Ionicons name="refresh" size={22} color={mediaColors.ink} />
@@ -68,6 +86,11 @@ export const AttachmentStrip: React.FC<AttachmentStripProps> = ({ attachments, o
                         )}
 
                         <View style={styles.badges} pointerEvents="none">
+                            {attachment.isVideo && (
+                                <Text style={[type.label, styles.badge, { color: mediaColors.ink, backgroundColor: mediaColors.scrimStrong }]}>
+                                    {attachment.duration ? `▶ ${duration(attachment.duration)}` : '▶'}
+                                </Text>
+                            )}
                             {attachment.isGif && (
                                 <Text style={[type.label, styles.badge, { color: mediaColors.ink, backgroundColor: mediaColors.scrimStrong }]}>GIF</Text>
                             )}
@@ -84,11 +107,11 @@ export const AttachmentStrip: React.FC<AttachmentStripProps> = ({ attachments, o
                             </Text>
                         </View>
 
-                        {!attachment.isGif && !attachment.existing && attachment.status !== 'failed' && (
+                        {!attachment.isGif && !attachment.isVideo && !attachment.existing && attachment.status !== 'failed' && (
                             <Pressable
                                 onPress={() => onEdit(attachment.key)}
                                 accessibilityRole="button"
-                                accessibilityLabel={t('attachments.edit', { index })}
+                                accessibilityLabel={label('edit')}
                                 hitSlop={8}
                                 style={[styles.corner, styles.edit, { backgroundColor: mediaColors.scrimStrong }]}
                             >
@@ -99,7 +122,7 @@ export const AttachmentStrip: React.FC<AttachmentStripProps> = ({ attachments, o
                         <Pressable
                             onPress={() => onRemove(attachment.key)}
                             accessibilityRole="button"
-                            accessibilityLabel={t('attachments.remove', { index })}
+                            accessibilityLabel={label('remove')}
                             hitSlop={8}
                             style={[styles.corner, styles.remove, { backgroundColor: mediaColors.scrimStrong }]}
                         >

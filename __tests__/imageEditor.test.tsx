@@ -222,7 +222,7 @@ describe('Editing in compose', () => {
             </QueryClientProvider>
         );
         library.mockResolvedValueOnce({ canceled: false, assets: images });
-        await fireEvent.press(screen.getByRole('button', { name: 'Add images' }));
+        await fireEvent.press(screen.getByRole('button', { name: 'Add images or a video' }));
         await waitFor(() => expect(screen.getByRole('button', { name: 'Post' })).toBeEnabled());
     };
 
