@@ -503,6 +503,8 @@ export const en = {
         days7: '7 days',
     },
     emoji: {
+        search: 'Search emoji',
+        noMatches: 'No emoji match “{{query}}”',
         title: 'Custom emoji',
         all: 'All',
         other: 'Other',
