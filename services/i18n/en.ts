@@ -577,6 +577,7 @@ export const en = {
         followHint: 'Posts with this hashtag also show up in your home timeline',
     },
     profile: {
+        role: 'Role: {{name}}',
         posts: 'Posts',
         replies: 'Replies',
         media: 'Media',

@@ -3,6 +3,7 @@ export { Card } from './card';
 export { IconButton } from './iconButton';
 export { PillButton } from './pillButton';
 export { PugMark } from './pugMark';
+export { RoleBadge } from './roleBadge';
 export { SectionLabel } from './sectionLabel';
 export { SegmentedPill } from './segmentedPill';
 export type { SegmentOption } from './segmentedPill';

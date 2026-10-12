@@ -21,6 +21,13 @@ export interface Attachment {
     } | null;
 }
 
+// A role the server highlights on an account (Mastodon 4.1+); color is #RRGGBB or empty
+export interface AccountRole {
+    id: string;
+    name: string;
+    color?: string;
+}
+
 export interface Account {
     id: string;
     username: string;
@@ -38,6 +45,8 @@ export interface Account {
     locked?: boolean;
     bot?: boolean;
     discoverable?: boolean | null;
+    // Highlighted roles; only for accounts on your own server (null or missing for others)
+    roles?: AccountRole[] | null;
     // Profile fields, with HTML values
     fields?: { name: string; value: string; verified_at?: string | null }[];
     // Only present on the logged-in user's own account (verify_credentials)

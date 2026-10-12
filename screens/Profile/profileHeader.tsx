@@ -6,7 +6,7 @@ import { useNavigator } from '../../services/navigationContext';
 import { Account, Relationship } from '../../services/mastodon/types';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
 import { StatusHtmlContent, openLink } from '../../components/TootCard/htmlContent';
-import { Avatar, IconButton, PillButton, PugMark, SegmentOption, SegmentedPill } from '../../components/ui';
+import { Avatar, IconButton, PillButton, PugMark, RoleBadge, SegmentOption, SegmentedPill } from '../../components/ui';
 import { FollowButton } from '../../components/FollowButton/followButton';
 import { useOpenAccount } from '../../hooks/useOpenAccount';
 import { hitSlopFor, space } from '../../services/theme/shape';
@@ -153,6 +153,12 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
                     </Text>
                     <Text style={[type.meta, styles.handle]} numberOfLines={1}>{fullHandle(user)}</Text>
                 </View>
+
+                {!!user.roles?.length && (
+                    <View style={styles.roles}>
+                        {user.roles.map(role => <RoleBadge key={role.id} role={role} />)}
+                    </View>
+                )}
 
                 {mode === 'other' && (relationship?.followed_by || remoteServer) && (
                     <View style={styles.otherInfo}>

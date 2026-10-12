@@ -570,6 +570,7 @@ export const ptBR: Dictionary = {
         followHint: 'As publicações com esta hashtag também aparecem na sua página inicial',
     },
     profile: {
+        role: 'Função: {{name}}',
         posts: 'Publicações',
         replies: 'Respostas',
         media: 'Mídia',
