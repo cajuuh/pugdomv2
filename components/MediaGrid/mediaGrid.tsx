@@ -41,7 +41,8 @@ interface MediaGridRowProps {
     onStatusPress?: (statusId: string) => void;
 }
 
-// Tapping a thumbnail opens the viewer at the post's first picture; a long press opens the post.
+// Tapping a thumbnail opens the viewer at the post's first picture, which also offers to open the post;
+// a long press opens the post straight away.
 // Several pictures get a stacked badge with their number; sensitive ones stay blurred.
 export const MediaGridRow: React.FC<MediaGridRowProps> = ({ row, onStatusPress }) => {
     const { colors, type } = useTheme();
@@ -59,7 +60,7 @@ export const MediaGridRow: React.FC<MediaGridRowProps> = ({ row, onStatusPress }
                     <Pressable
                         key={`${status.id}-${index}`}
                         style={[styles.tile, { backgroundColor: colors.inputBackground }]}
-                        onPress={() => openMedia(attachments, index)}
+                        onPress={() => openMedia(attachments, index, () => openPost(status.id))}
                         onLongPress={() => openPost(status.id)}
                         accessibilityRole="imagebutton"
                         accessibilityLabel={mediaLabel(attachment, index, attachments.length, i18n)}
