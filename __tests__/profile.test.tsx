@@ -70,7 +70,7 @@ describe('Profile', () => {
         mockedStatuses.mockResolvedValue([status('1')]);
     });
 
-    it('shows the Media tab as a grid of thumbnails that open the viewer, or the post on a long press', async () => {
+    it('shows the Media tab as a grid with a thumbnail per post that opens the viewer, or the post on a long press', async () => {
         const image = (id: string) => ({ id, type: 'image', url: `https://x/${id}.png`, preview_url: `https://x/${id}-small.png` });
         const onStatusPress = jest.fn();
         mockedStatuses.mockResolvedValue([status('1', { media_attachments: [image('a'), image('b')] as any }), status('2', { media_attachments: [image('c')] as any, sensitive: true })]);
@@ -79,8 +79,10 @@ describe('Profile', () => {
 
         await fireEvent.press(screen.getByRole('tab', { name: 'Media' }));
 
-        expect(await screen.findByRole('imagebutton', { name: 'Image 2 of 2' })).toBeTruthy();
-        expect(screen.getAllByRole('imagebutton')).toHaveLength(3);
+        // One thumbnail per post: its first picture, saying how many there are
+        expect(await screen.findByRole('imagebutton', { name: 'Image 1 of 2' })).toBeTruthy();
+        expect(screen.getAllByRole('imagebutton')).toHaveLength(2);
+        expect(screen.getByText('2')).toBeTruthy();
         expect(screen.queryByText('post 1')).toBeNull();
         // Sensitive pictures stay blurred in the grid
         expect(screen.getByTestId('focused-image-blurred', { includeHiddenElements: true })).toBeTruthy();
