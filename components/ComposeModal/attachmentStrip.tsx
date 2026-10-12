@@ -86,11 +86,6 @@ export const AttachmentStrip: React.FC<AttachmentStripProps> = ({ attachments, o
                         )}
 
                         <View style={styles.badges} pointerEvents="none">
-                            {attachment.isVideo && (
-                                <Text style={[type.label, styles.badge, { color: mediaColors.ink, backgroundColor: mediaColors.scrimStrong }]}>
-                                    {attachment.duration ? `▶ ${duration(attachment.duration)}` : '▶'}
-                                </Text>
-                            )}
                             {attachment.isGif && (
                                 <Text style={[type.label, styles.badge, { color: mediaColors.ink, backgroundColor: mediaColors.scrimStrong }]}>GIF</Text>
                             )}
@@ -106,6 +101,22 @@ export const AttachmentStrip: React.FC<AttachmentStripProps> = ({ attachments, o
                                 {described ? '✓ ALT' : '+ ALT'}
                             </Text>
                         </View>
+
+                        {/* A video's length, bottom left (above the progress bar while it uploads) */}
+                        {attachment.isVideo && (
+                            <Text
+                                pointerEvents="none"
+                                style={[
+                                    type.label,
+                                    styles.badge,
+                                    styles.duration,
+                                    attachment.status === 'uploading' && styles.durationAboveProgress,
+                                    { color: mediaColors.ink, backgroundColor: mediaColors.scrimStrong },
+                                ]}
+                            >
+                                {attachment.duration ? `▶ ${duration(attachment.duration)}` : '▶'}
+                            </Text>
+                        )}
 
                         {!attachment.isGif && !attachment.isVideo && !attachment.existing && attachment.status !== 'failed' && (
                             <Pressable
@@ -190,6 +201,14 @@ const styles = StyleSheet.create({
         paddingVertical: 1,
         borderRadius: radii.pill,
         overflow: 'hidden',
+    },
+    duration: {
+        position: 'absolute',
+        left: space.xs,
+        bottom: space.xs,
+    },
+    durationAboveProgress: {
+        bottom: space.sm + 4 + space.xs,
     },
     corner: {
         position: 'absolute',
