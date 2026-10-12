@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Account } from './mastodon/types';
+import { Account, CustomEmoji } from './mastodon/types';
 
 const TOKEN_KEY = 'pugdom_access_token';
 const INSTANCE_KEY = 'pugdom_instance_url';
@@ -21,6 +21,8 @@ export interface SavedAccount {
         display_name: string;
         avatar: string;
         acct: string;
+        // Custom emoji in the display name; missing for accounts saved before they were kept
+        emojis?: CustomEmoji[];
     };
 }
 
@@ -128,7 +130,8 @@ export async function addSavedAccount(accessToken: string, instanceUrl: string, 
             username: userInfo.username,
             display_name: userInfo.display_name,
             avatar: userInfo.avatar,
-            acct: userInfo.acct
+            acct: userInfo.acct,
+            emojis: userInfo.emojis,
         }
     };
 

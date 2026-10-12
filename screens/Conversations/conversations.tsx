@@ -83,7 +83,7 @@ const Conversations = ({ onBack, onStatusPress }: ConversationsProps) => {
                         {item.unread && <View testID="conversation-unread" style={[styles.dot, { backgroundColor: colors.accentColor }]} />}
                     </View>
                     <Text style={[type.body, { color: item.unread ? colors.textPrimary : colors.textSecondary }]} numberOfLines={2}>
-                        {preview}
+                        {renderTextWithEmojis(preview, last?.emojis ?? [], [type.body, { color: item.unread ? colors.textPrimary : colors.textSecondary }], 14)}
                     </Text>
                 </View>
             </Pressable>

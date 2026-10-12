@@ -315,6 +315,19 @@ describe('TootCard content', () => {
         expect(screen.queryAllByTestId('focused-image-blurred', { includeHiddenElements: true }).length).toBeGreaterThan(0);
     });
 
+    it('shows custom emoji in a content warning, collapsed and opened', async () => {
+        const blobcat = { shortcode: 'blobcat', url: 'https://example.social/blobcat.png', static_url: '', visible_in_picker: true };
+        await renderCard({ ...statusA, spoiler_text: 'cats :blobcat:', emojis: [blobcat] });
+
+        expect(screen.getByText(/^cats/)).toBeTruthy();
+        expect(screen.queryByText(/:blobcat:/)).toBeNull();
+        expect(JSON.stringify(screen.toJSON())).toContain(blobcat.url);
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Show' }));
+        expect(screen.getByText(/CW · cats/)).toBeTruthy();
+        expect(screen.queryByText(/:blobcat:/)).toBeNull();
+    });
+
     it('collapses posts with a CW into a ribbon that says what is hidden', async () => {
         await renderCard(withMedia({ ...statusA, sensitive: true, spoiler_text: 'Spoilers' }));
 

@@ -80,7 +80,7 @@ export const QuotedPost: React.FC<QuotedPostProps> = ({ quote, onOpen, timeOf })
                 <View style={styles.warning}>
                     <Ionicons name="warning-outline" size={14} color={colors.accentText} />
                     <Text style={[type.body, styles.text, { color: colors.textSecondary }]} numberOfLines={2}>
-                        {status.spoiler_text}
+                        {renderTextWithEmojis(status.spoiler_text, status.emojis ?? [], [type.body, styles.text, { color: colors.textSecondary }], 14)}
                     </Text>
                 </View>
             ) : (
