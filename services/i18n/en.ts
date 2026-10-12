@@ -602,6 +602,7 @@ export const en = {
         compactMode: 'Compact Mode',
         hideCounts: 'Hide numbers on posts',
         expandSpoilers: 'Always expand content warnings',
+        coverSensitiveMedia: 'Cover sensitive media, not only blur it',
         about: 'About',
         version: 'App Version',
         privacy: 'Privacy Policy',

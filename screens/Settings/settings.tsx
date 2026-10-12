@@ -42,6 +42,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
         hideCounts,
         setHideCounts,
         setExpandSpoilers,
+        coverSensitiveMedia,
+        setCoverSensitiveMedia,
     } = useSettings();
     // What posts do now: your switch, or the account's web preference until you use it
     const expandSpoilers = useExpandSpoilers();
@@ -190,6 +192,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                     {switchRow('stats-chart-outline', t('settings.hideCounts'), hideCounts, setHideCounts)}
                     <View style={styles.divider} />
                     {switchRow('warning-outline', t('settings.expandSpoilers'), expandSpoilers, setExpandSpoilers)}
+                    <View style={styles.divider} />
+                    {switchRow('eye-off-outline', t('settings.coverSensitiveMedia'), coverSensitiveMedia, setCoverSensitiveMedia)}
                 </Card>
 
                 <SectionLabel style={styles.sectionLabel}>{t('settings.about')}</SectionLabel>

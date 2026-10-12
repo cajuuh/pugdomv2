@@ -1,7 +1,6 @@
 import React, { useCallback, useRef } from 'react';
 import { Image, Platform, Pressable, Share, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { BlurView } from 'expo-blur';
 import { useRecyclingState } from '@shopify/flash-list';
 import { Status, Attachment, PreviewCard } from '../../services/mastodon/types';
 import { StatusHtmlContent } from './htmlContent';
@@ -125,7 +124,7 @@ interface TootCardProps {
 }
 
 export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPressHashtag, onPress, threadMode, hasThreadLineTop, hasThreadLineBottom, remote }) => {
-    const { compactMode, hideCounts } = useSettings();
+    const { compactMode, hideCounts, coverSensitiveMedia } = useSettings();
     const { colors, type } = useTheme();
     const styles = useThemedStyles(makeStyles);
     const { openCompose } = useCompose();
@@ -340,7 +339,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 accessibilityRole="imagebutton"
                 accessibilityLabel={mediaLabel(attachments[0], 0, count, i18n)}
             >
-                <FocusedImage attachment={attachments[0]} style={styles.mediaImage} />
+                <FocusedImage attachment={attachments[0]} style={styles.mediaImage} blurred={veiled} />
                 {altChip(attachments[0])}
             </Pressable>
         ) : (
@@ -353,7 +352,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                         accessibilityRole="imagebutton"
                         accessibilityLabel={mediaLabel(item, idx, count, i18n)}
                     >
-                        <FocusedImage attachment={item} style={styles.mediaImage} />
+                        <FocusedImage attachment={item} style={styles.mediaImage} blurred={veiled} />
                         {altChip(item)}
                     </Pressable>
                 ))}
@@ -372,8 +371,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 </View>
                 {veiled ? (
                     <View style={StyleSheet.absoluteFill}>
-                        <BlurView intensity={80} tint="default" style={StyleSheet.absoluteFill} />
-                        <View style={styles.veil}>
+                        <View testID="media-veil" style={[styles.veil, !coverSensitiveMedia && styles.veilBare]}>
                             <View style={styles.veilLabel}>
                                 <Ionicons name="eye-off-outline" size={16} color={colors.textPrimary} />
                                 <Text style={[type.name, styles.veilText]}>{t('post.sensitive', { media: countMedia(attachments, i18n) })}</Text>
@@ -389,7 +387,8 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                         accessibilityLabel={t('post.hideMedia')}
                         hitSlop={6}
                     >
-                        <Ionicons name="eye-off-outline" size={16} color={colors.textPrimary} />
+                        <Ionicons name="eye-off-outline" size={14} color={colors.textPrimary} />
+                        <Text style={[type.label, styles.hideMediaText]}>{t('post.hideMedia')}</Text>
                     </Pressable>
                 )}
             </View>

@@ -27,7 +27,7 @@ jest.mock('../services/mastodon/polls', () => ({
 }));
 
 // Mutable so the Compact Mode tests can turn it on
-const mockSettings: { compactMode: boolean; mediaAutoplay: boolean; hideCounts: boolean; expandSpoilers: boolean | null } = { compactMode: false, mediaAutoplay: false, hideCounts: false, expandSpoilers: null };
+const mockSettings: { compactMode: boolean; mediaAutoplay: boolean; hideCounts: boolean; expandSpoilers: boolean | null; coverSensitiveMedia: boolean } = { compactMode: false, mediaAutoplay: false, hideCounts: false, expandSpoilers: null, coverSensitiveMedia: true };
 jest.mock('../services/settingsContext', () => ({
     useSettings: () => mockSettings,
 }));
@@ -284,6 +284,22 @@ describe('TootCard content', () => {
         expect(screen.getByText('Sensitive · 1 photo')).toBeTruthy();
         // The veiled image is hidden from screen readers until it's shown
         expect(screen.queryByRole('imagebutton')).toBeNull();
+        // Only a heavily blurred copy is drawn under the cover, never the picture itself
+        const blurred = screen.getByTestId('focused-image-blurred', { includeHiddenElements: true });
+        expect(blurred.props.blurRadius).toBeGreaterThanOrEqual(50);
+    });
+
+    it('only blurs sensitive media when the cover is turned off', async () => {
+        mockSettings.coverSensitiveMedia = false;
+        try {
+            await renderCard(withMedia({ ...statusA, sensitive: true, spoiler_text: '' }));
+
+            expect(screen.getByText('Sensitive · 1 photo')).toBeTruthy();
+            expect(screen.getByTestId('focused-image-blurred', { includeHiddenElements: true })).toBeTruthy();
+            expect(StyleSheet.flatten(screen.getByTestId('media-veil').props.style).backgroundColor).toBe('transparent');
+        } finally {
+            mockSettings.coverSensitiveMedia = true;
+        }
     });
 
     it('shows sensitive media on request and can hide it again', async () => {
@@ -292,9 +308,11 @@ describe('TootCard content', () => {
         await fireEvent.press(screen.getByRole('button', { name: 'Show' }));
         expect(screen.queryByText('Sensitive · 1 photo')).toBeNull();
         expect(screen.getByRole('imagebutton', { name: 'Image 1 of 1' })).toBeTruthy();
+        expect(screen.queryAllByTestId('focused-image-blurred', { includeHiddenElements: true })).toHaveLength(0);
 
         await fireEvent.press(screen.getByRole('button', { name: 'Hide media' }));
         expect(screen.getByText('Sensitive · 1 photo')).toBeTruthy();
+        expect(screen.queryAllByTestId('focused-image-blurred', { includeHiddenElements: true }).length).toBeGreaterThan(0);
     });
 
     it('collapses posts with a CW into a ribbon that says what is hidden', async () => {
