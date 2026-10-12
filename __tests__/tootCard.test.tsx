@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
 import { MediaViewerProvider } from '../components/MediaViewer/mediaViewer';
 import { NavigationProvider, useNavigator } from '../services/navigationContext';
-import { TootCard, describeHidden } from '../components/TootCard/tootCard';
+import { TootCard, describeHidden, uncroppedHeight } from '../components/TootCard/tootCard';
 import { COMPACT_ACTION_HEIGHT } from '../components/TootCard/styles';
 import { MIN_TOUCH } from '../services/theme/shape';
 import { Poll } from '../components/Poll/poll';
@@ -27,7 +27,7 @@ jest.mock('../services/mastodon/polls', () => ({
 }));
 
 // Mutable so the Compact Mode tests can turn it on
-const mockSettings: { compactMode: boolean; mediaAutoplay: boolean; hideCounts: boolean; expandSpoilers: boolean | null; coverSensitiveMedia: boolean } = { compactMode: false, mediaAutoplay: false, hideCounts: false, expandSpoilers: null, coverSensitiveMedia: true };
+const mockSettings: { compactMode: boolean; mediaAutoplay: boolean; hideCounts: boolean; expandSpoilers: boolean | null; coverSensitiveMedia: boolean; uncroppedMedia: boolean } = { compactMode: false, mediaAutoplay: false, hideCounts: false, expandSpoilers: null, coverSensitiveMedia: true, uncroppedMedia: false };
 jest.mock('../services/settingsContext', () => ({
     useSettings: () => mockSettings,
 }));
@@ -277,6 +277,20 @@ describe('TootCard content', () => {
         media_attachments: [{ id: 'm1', type: 'image', url: 'https://example.social/m1.png', preview_url: 'https://example.social/m1-small.png' }],
     });
 
+    it('shows the whole picture at its own shape when uncropped', async () => {
+        mockSettings.uncroppedMedia = true;
+        try {
+            await renderCard({
+                ...statusA,
+                media_attachments: [{ id: 'm1', type: 'image', url: 'https://example.social/m1.png', preview_url: 'https://example.social/m1-small.png', meta: { small: { width: 400, height: 300 } } }],
+            } as Status);
+
+            expect(screen.getByTestId('focused-image-whole').props.resizeMode).toBe('contain');
+        } finally {
+            mockSettings.uncroppedMedia = false;
+        }
+    });
+
     it('shows several images as a carousel, one page at a time', async () => {
         const image = (id: string) => ({ id, type: 'image', url: `https://example.social/${id}.png`, preview_url: `https://example.social/${id}-small.png` });
         await renderCard({ ...statusA, media_attachments: [image('m1'), image('m2'), image('m3')] } as Status);
@@ -509,6 +523,23 @@ describe('TootCard opens profiles', () => {
         await fireEvent.press(screen.getByText('Booster boosted'));
 
         expect(pushed()[0]).toMatchObject({ name: 'account', accountId: 'booster' });
+    });
+});
+
+describe('uncroppedHeight', () => {
+    const image = (width?: number, height?: number) => ({ id: 'm', type: 'image', url: '', preview_url: '', meta: { small: { width, height } } }) as any;
+
+    it("follows the image's shape", () => {
+        expect(uncroppedHeight(300, image(400, 300))).toBe(225);
+    });
+
+    it('keeps very wide and very tall images within bounds', () => {
+        expect(uncroppedHeight(300, image(3000, 300))).toBe(120);
+        expect(uncroppedHeight(300, image(300, 3000))).toBe(375);
+    });
+
+    it('falls back to the usual height without a size', () => {
+        expect(uncroppedHeight(300, image())).toBe(200);
     });
 });
 

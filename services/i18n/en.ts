@@ -628,6 +628,8 @@ export const en = {
         coatHint: 'Pug coats and a few friends',
         tint: 'Tint surfaces with coat',
         tintHint: 'Warms the background and cards, not only buttons',
+        uncropped: 'Show images uncropped',
+        uncroppedHint: 'Whole pictures in timelines, at their own shape',
     },
     coats: {
         apricot: 'Apricot',

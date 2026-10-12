@@ -77,6 +77,13 @@ const mediaLabel = (attachment: Attachment, index: number, count: number, { t }:
     attachment.description ||
     t('post.mediaPosition', { kind: t(MEDIA_KIND[attachment.type] ?? 'post.attachment'), index: index + 1, count });
 
+// Uncropped, an image takes its own shape: from a wide strip up to a little taller than square
+export const uncroppedHeight = (width: number, attachment: Attachment) => {
+    const size = attachment.meta?.small ?? attachment.meta?.original;
+    if (!size?.width || !size?.height) return 200;
+    return Math.min(Math.max((width * size.height) / size.width, 120), width * 1.25);
+};
+
 // "1 photo", "3 videos", "2 attachments" (mixed kinds)
 export const countMedia = (attachments: Attachment[], { tn }: Translator = defaultTranslator()) => {
     const nouns = new Set(attachments.map(a => (a.type === 'image' ? 'photos' : a.type === 'video' || a.type === 'gifv' ? 'videos' : 'attachments')));
@@ -127,7 +134,7 @@ interface TootCardProps {
 }
 
 export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPressHashtag, onPress, threadMode, showReactions, hasThreadLineTop, hasThreadLineBottom, remote }) => {
-    const { compactMode, hideCounts, coverSensitiveMedia } = useSettings();
+    const { compactMode, hideCounts, coverSensitiveMedia, uncroppedMedia } = useSettings();
     const { colors, type } = useTheme();
     const styles = useThemedStyles(makeStyles);
     const { openCompose } = useCompose();
@@ -325,6 +332,11 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
 
         const count = attachments.length;
         const veiled = targetStatus.sensitive && !isMediaRevealed;
+        // Compact Mode keeps its short tiles; uncropped ones show the whole picture
+        const uncropped = uncroppedMedia && !compactMode;
+        const mediaHeight = uncropped
+            ? { height: Math.max(...attachments.map(item => uncroppedHeight(count === 1 ? contentWidth : slideWidth, item))) }
+            : undefined;
         // Images with a description say so; tapping the chip reads it, tapping the image still opens it
         const altChip = (item: Attachment) =>
             !!item.description && (
@@ -343,12 +355,12 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             );
         const tiles = count === 1 ? (
             <Pressable
-                style={[styles.singleMedia, compactMode && styles.singleMediaCompact]}
+                style={[styles.singleMedia, compactMode && styles.singleMediaCompact, mediaHeight]}
                 onPress={() => openMedia(attachments, 0)}
                 accessibilityRole="imagebutton"
                 accessibilityLabel={mediaLabel(attachments[0], 0, count, i18n)}
             >
-                <FocusedImage attachment={attachments[0]} style={styles.mediaImage} blurred={veiled} />
+                <FocusedImage attachment={attachments[0]} style={styles.mediaImage} blurred={veiled} contain={uncropped} />
                 {altChip(attachments[0])}
             </Pressable>
         ) : (
@@ -367,12 +379,12 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     {attachments.map((item, idx) => (
                         <Pressable
                             key={item.id || idx}
-                            style={[styles.carouselSlide, compactMode && styles.singleMediaCompact, { width: slideWidth }]}
+                            style={[styles.carouselSlide, compactMode && styles.singleMediaCompact, mediaHeight, { width: slideWidth }]}
                             onPress={() => openMedia(attachments, idx)}
                             accessibilityRole="imagebutton"
                             accessibilityLabel={mediaLabel(item, idx, count, i18n)}
                         >
-                            <FocusedImage attachment={item} style={styles.mediaImage} blurred={veiled} />
+                            <FocusedImage attachment={item} style={styles.mediaImage} blurred={veiled} contain={uncropped} />
                             {altChip(item)}
                         </Pressable>
                     ))}

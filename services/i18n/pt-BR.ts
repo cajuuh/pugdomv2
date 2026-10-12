@@ -620,6 +620,8 @@ export const ptBR: Dictionary = {
         coatHint: 'Pelagens de pug e alguns amigos',
         tint: 'Colorir superfícies com a pelagem',
         tintHint: 'Aquece o fundo e os cartões, não só os botões',
+        uncropped: 'Mostrar imagens sem recorte',
+        uncroppedHint: 'Imagens inteiras nas timelines, no formato original',
     },
     coats: {
         apricot: 'Damasco',
