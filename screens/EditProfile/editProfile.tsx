@@ -15,6 +15,7 @@ import { applyEdits } from '../../services/media/edit';
 import { PickedImage, prepareProfileImage } from '../../services/media/prepare';
 import { ImageEdits } from '../../services/media/geometry';
 import { radii, space } from '../../services/theme/shape';
+import { TAB_BAR_CLEARANCE } from '../../components/TabBar/styles';
 
 // ponytail: Mastodon's defaults; read the server's limits if one reports more fields or a longer bio
 const MAX_FIELDS = 4;
@@ -132,7 +133,7 @@ const EditProfile = ({ onBack }: EditProfileProps) => {
             icon="camera-outline"
             accessibilityLabel={t(kind === 'avatar' ? 'editProfile.changeAvatar' : 'editProfile.changeHeader')}
             onPress={() => pick(kind)}
-            style={[styles.changeButton, { backgroundColor: colors.veilStrong }]}
+            style={[styles.changeButton, kind === 'header' && styles.headerButton, { backgroundColor: colors.veilStrong }]}
         />
     );
 
@@ -147,7 +148,7 @@ const EditProfile = ({ onBack }: EditProfileProps) => {
             </View>
 
             <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-                <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + space.xl }]} keyboardShouldPersistTaps="handled">
+                <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
                     <View style={[styles.banner, { backgroundColor: colors.inputBackground }]}>
                         {!!headerUri && <Image source={{ uri: headerUri }} style={StyleSheet.absoluteFill} />}
                         {changeButton('header')}
@@ -156,7 +157,10 @@ const EditProfile = ({ onBack }: EditProfileProps) => {
                         <View style={[styles.avatarRing, { backgroundColor: colors.background }]}>
                             <Avatar name={name} uri={images.avatar?.uri ?? user.avatar} size={84} />
                         </View>
-                        {changeButton('avatar')}
+                        {/* Centred on the picture */}
+                        <View style={styles.avatarButton} pointerEvents="box-none">
+                            {changeButton('avatar')}
+                        </View>
                     </View>
 
                     <SectionLabel style={styles.label}>{t('editProfile.displayName')}</SectionLabel>
@@ -257,6 +261,8 @@ const styles = StyleSheet.create({
     },
     content: {
         padding: space.lg,
+        // The dock floats over this screen, above Android's navigation buttons
+        paddingBottom: TAB_BAR_CLEARANCE,
     },
     banner: {
         aspectRatio: 3,
@@ -264,10 +270,17 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
     },
     changeButton: {
+        borderRadius: radii.pill,
+    },
+    headerButton: {
         position: 'absolute',
         right: space.sm,
         bottom: space.sm,
-        borderRadius: radii.pill,
+    },
+    avatarButton: {
+        ...StyleSheet.absoluteFill,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     avatarRow: {
         marginTop: -42,
