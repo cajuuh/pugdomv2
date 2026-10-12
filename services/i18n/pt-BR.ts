@@ -594,6 +594,7 @@ export const ptBR: Dictionary = {
         autoplay: 'Reproduzir mídia automaticamente',
         compactMode: 'Modo compacto',
         hideCounts: 'Esconder os números nas publicações',
+        groupNotifications: 'Agrupar favoritos e boosts nas notificações',
         expandSpoilers: 'Sempre expandir avisos de conteúdo',
         coverSensitiveMedia: 'Cobrir mídia sensível, além de desfocar',
         about: 'Sobre',

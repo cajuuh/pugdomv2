@@ -15,6 +15,9 @@ interface SettingsContextType {
     setMediaAutoplay: (value: boolean) => Promise<void>;
     setCompactMode: (value: boolean) => Promise<void>;
     setHideCounts: (value: boolean) => Promise<void>;
+    // Favourites and boosts of the same post share one notification row; off, each has its own
+    groupNotifications: boolean;
+    setGroupNotifications: (value: boolean) => Promise<void>;
     setExpandSpoilers: (value: boolean) => Promise<void>;
     setCoverSensitiveMedia: (value: boolean) => Promise<void>;
     loadingSettings: boolean;
@@ -26,6 +29,7 @@ export const NOTIFICATIONS_KEY = 'pugdom_settings_notifications';
 export const AUTOPLAY_KEY = 'pugdom_settings_autoplay';
 export const COMPACT_KEY = 'pugdom_settings_compact';
 export const HIDE_COUNTS_KEY = 'pugdom_settings_hide_counts';
+export const GROUP_NOTIFICATIONS_KEY = 'pugdom_settings_group_notifications';
 export const EXPAND_SPOILERS_KEY = 'pugdom_settings_expand_spoilers';
 export const COVER_SENSITIVE_KEY = 'pugdom_settings_cover_sensitive';
 
@@ -34,6 +38,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const [mediaAutoplay, setMediaAutoplayState] = useState(false);
     const [compactMode, setCompactModeState] = useState(false);
     const [hideCounts, setHideCountsState] = useState(false);
+    const [groupNotifications, setGroupNotificationsState] = useState(true);
     const [expandSpoilers, setExpandSpoilersState] = useState<boolean | null>(null);
     const [coverSensitiveMedia, setCoverSensitiveMediaState] = useState(true);
     const [loadingSettings, setLoadingSettings] = useState(true);
@@ -45,12 +50,14 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 const autoplay = await getSetting(AUTOPLAY_KEY, false);
                 const compact = await getSetting(COMPACT_KEY, false);
                 const counts = await getSetting(HIDE_COUNTS_KEY, false);
+                const grouped = await getSetting(GROUP_NOTIFICATIONS_KEY, true);
                 const spoilers = await getStringSetting(EXPAND_SPOILERS_KEY, '');
                 const cover = await getSetting(COVER_SENSITIVE_KEY, true);
                 setNotificationsState(notify);
                 setMediaAutoplayState(autoplay);
                 setCompactModeState(compact);
                 setHideCountsState(counts);
+                setGroupNotificationsState(grouped);
                 setExpandSpoilersState(spoilers === '' ? null : spoilers === 'true');
                 setCoverSensitiveMediaState(cover);
             } catch (error) {
@@ -82,6 +89,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         await saveSetting(HIDE_COUNTS_KEY, value);
     };
 
+    const setGroupNotifications = async (value: boolean) => {
+        setGroupNotificationsState(value);
+        await saveSetting(GROUP_NOTIFICATIONS_KEY, value);
+    };
+
     const setExpandSpoilers = async (value: boolean) => {
         setExpandSpoilersState(value);
         await saveStringSetting(EXPAND_SPOILERS_KEY, String(value));
@@ -105,6 +117,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 setMediaAutoplay,
                 setCompactMode,
                 setHideCounts,
+                groupNotifications,
+                setGroupNotifications,
                 setExpandSpoilers,
                 setCoverSensitiveMedia,
                 loadingSettings,
