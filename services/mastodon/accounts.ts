@@ -1,5 +1,6 @@
 import apiClient from "../api/client";
 import { Account, Relationship, Status } from './types';
+import { UploadFile } from './media';
 
 export async function getCurrentAccount(): Promise<Account> {
     const response = await apiClient.get<Account>('accounts/verify_credentials');
@@ -64,5 +65,40 @@ export async function unmuteAccount(accountId: string): Promise<Relationship> {
 // Who can quote your new posts by default (Mastodon 4.5)
 export async function updateDefaultQuotePolicy(policy: 'public' | 'followers' | 'nobody'): Promise<Account> {
     const response = await apiClient.patch<Account>('/accounts/update_credentials', { source: { quote_policy: policy } });
+    return response.data;
+}
+
+export interface ProfileChanges {
+    displayName: string;
+    note: string;
+    fields: { name: string; value: string }[];
+    locked: boolean;
+    bot: boolean;
+    discoverable: boolean;
+    // New images, already cropped and sized
+    avatar?: UploadFile;
+    header?: UploadFile;
+}
+
+// Saves your profile. Multipart, since it may carry images; every field slot is sent, so emptied ones are cleared.
+export async function updateProfile(changes: ProfileChanges, maxFields: number): Promise<Account> {
+    const form = new FormData();
+    form.append('display_name', changes.displayName);
+    form.append('note', changes.note);
+    form.append('locked', String(changes.locked));
+    form.append('bot', String(changes.bot));
+    form.append('discoverable', String(changes.discoverable));
+    for (let i = 0; i < maxFields; i++) {
+        form.append(`fields_attributes[${i}][name]`, changes.fields[i]?.name ?? '');
+        form.append(`fields_attributes[${i}][value]`, changes.fields[i]?.value ?? '');
+    }
+    // React Native's FormData sends a file given its uri, name and type
+    if (changes.avatar) form.append('avatar', changes.avatar as unknown as Blob);
+    if (changes.header) form.append('header', changes.header as unknown as Blob);
+
+    const response = await apiClient.patch<Account>('/accounts/update_credentials', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 120000,
+    });
     return response.data;
 }

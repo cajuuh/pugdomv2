@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Image, Pressable, Share, Text, View, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../../services/themeContext';
-import { getCredentials } from '../../services/storage';
+import { useNavigator } from '../../services/navigationContext';
 import { Account, Relationship } from '../../services/mastodon/types';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
 import { StatusHtmlContent, openLink } from '../../components/TootCard/htmlContent';
@@ -56,13 +56,8 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
     const moderation = useModeration();
     const remoteServer = mode === 'other' && user.acct.includes('@') ? user.acct.split('@').pop() : undefined;
 
-    const handleEditProfile = async () => {
-        const { instanceUrl } = await getCredentials();
-        const base = instanceUrl ?? originOf(user.url);
-        if (base) {
-            openLink(`${base.replace(/\/$/, '')}/settings/profile`);
-        }
-    };
+    const { push } = useNavigator();
+    const handleEditProfile = () => push({ name: 'editProfile' });
 
     const handleShare = async () => {
         if (!user.url) return;
