@@ -1,5 +1,6 @@
 # 🐾 Pugdon
 
+[![Version](https://img.shields.io/github/v/release/cajuuh/pugdomv2?style=for-the-badge&label=pugdon)](https://github.com/cajuuh/pugdomv2/releases)
 [![Expo](https://img.shields.io/badge/Expo-v56-000000?style=for-the-badge&logo=expo&logoColor=white)](https://expo.dev/)
 [![React Native](https://img.shields.io/badge/React_Native-0.85-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactnative.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -13,9 +14,13 @@ With its modern visual language, dynamic dark mode, and smooth interface, Pugdon
 
 ## 📸 Screenshots
 
-| 🏠 Home Timeline | ⚙️ Profile & Settings |
+| 🧵 Thread | 🔎 Explore | ✍️ Compose |
+| :-: | :-: | :-: |
+| <img src="./assets/screenshots/thread.png" width="240" alt="A thread: a post and a reply below it, joined by a line"/> | <img src="./assets/screenshots/explore.png" width="240" alt="Explore: the search field and this week's trending hashtags with their post counts"/> | <img src="./assets/screenshots/compose.png" width="240" alt="Writing a post with a photo of a pug attached and described, with visibility, language and quote options"/> |
+
+| 🔔 Notifications | 🎨 Appearance |
 | :-: | :-: |
-| <img src="./assets/screen1.png" width="360" alt="Pugdon Home Timeline"/> | <img src="./assets/screen2.png" width="360" alt="Pugdon Settings and Profile"/> |
+| <img src="./assets/screenshots/notifications.png" width="240" alt="Notifications under Today: a mention with reply and favourite buttons, favourites, a boost and a new follower"/> | <img src="./assets/screenshots/appearance.png" width="240" alt="Appearance: a preview post, light, dark or system mode, and the nine pug coats"/> |
 
 ---
 
