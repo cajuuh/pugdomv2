@@ -92,6 +92,15 @@ describe('Profile', () => {
         expect(onStatusPress).toHaveBeenCalledWith('2');
     });
 
+    it("shows the roles the server highlights, with a happy pug for supporters", async () => {
+        mockUser = { ...me, roles: [{ id: '1', name: 'Server supporter', color: '' }, { id: '2', name: 'Moderator', color: '#7A1F1F' }] };
+        await renderProfile();
+
+        expect(await screen.findByLabelText('Role: Server supporter')).toBeTruthy();
+        expect(screen.getByLabelText('Role: Moderator')).toBeTruthy();
+        expect(screen.getAllByTestId('pug-happy-eye', { includeHiddenElements: true })).toHaveLength(1);
+    });
+
     it("lists the account's posts without replies first", async () => {
         await renderProfile();
 

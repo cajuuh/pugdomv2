@@ -57,6 +57,12 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         left: space.lg,
     },
     // "Follows you" and the link to a remote profile, under the handle
+    roles: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: space.xs,
+        marginTop: space.sm,
+    },
     otherInfo: {
         flexDirection: 'row',
         flexWrap: 'wrap',
