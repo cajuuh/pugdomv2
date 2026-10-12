@@ -1,5 +1,6 @@
 # 🐾 Pugdon
 
+[![Version](https://img.shields.io/github/v/release/cajuuh/pugdomv2?style=for-the-badge&label=pugdon)](https://github.com/cajuuh/pugdomv2/releases)
 [![Expo](https://img.shields.io/badge/Expo-v56-000000?style=for-the-badge&logo=expo&logoColor=white)](https://expo.dev/)
 [![React Native](https://img.shields.io/badge/React_Native-0.85-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactnative.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -13,9 +14,10 @@ With its modern visual language, dynamic dark mode, and smooth interface, Pugdon
 
 ## 📸 Screenshots
 
-| 🏠 Home Timeline | ⚙️ Profile & Settings |
-| :-: | :-: |
-| <img src="./assets/screen1.png" width="360" alt="Pugdon Home Timeline"/> | <img src="./assets/screen2.png" width="360" alt="Pugdon Settings and Profile"/> |
+| | 🧵 Thread | 🔎 Explore | ✍️ Compose | 🔔 Notifications | 🎨 Appearance |
+| :-: | :-: | :-: | :-: | :-: | :-: |
+| **Light** | <img src="./assets/screenshots/thread-light.png" width="160" alt="A thread: a post and a reply joined by a line, with who favourited it (light mode)"/> | <img src="./assets/screenshots/explore-light.png" width="160" alt="Explore: the search field and this week's trending hashtags (light mode)"/> | <img src="./assets/screenshots/compose-light.png" width="160" alt="Writing a post with a described photo of a pug attached (light mode)"/> | <img src="./assets/screenshots/notifications-light.png" width="160" alt="Notifications: a mention with reply and favourite buttons, favourites, a boost and a new follower (light mode)"/> | <img src="./assets/screenshots/appearance-light.png" width="160" alt="Appearance: a preview post, light, dark or system mode, and the nine pug coats (light mode)"/> |
+| **Dark** | <img src="./assets/screenshots/thread-dark.png" width="160" alt="A thread: a post and a reply joined by a line, with who favourited it (dark mode)"/> | <img src="./assets/screenshots/explore-dark.png" width="160" alt="Explore: the search field and this week's trending hashtags (dark mode)"/> | <img src="./assets/screenshots/compose-dark.png" width="160" alt="Writing a post with a described photo of a pug attached (dark mode)"/> | <img src="./assets/screenshots/notifications-dark.png" width="160" alt="Notifications: a mention with reply and favourite buttons, favourites, a boost and a new follower (dark mode)"/> | <img src="./assets/screenshots/appearance-dark.png" width="160" alt="Appearance: a preview post, light, dark or system mode, and the nine pug coats (dark mode)"/> |
 
 ---
 
@@ -129,6 +131,8 @@ Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, tes
 ## 🔒 Privacy
 
 pugdon collects no data: it talks only to your Mastodon server. See the [privacy policy](PRIVACY.md) (English and Português).
+
+Child safety: pugdon has zero tolerance for child sexual abuse and exploitation. See the [child safety standards](CHILD_SAFETY.md) for how to report it.
 
 ---
 

@@ -31,6 +31,12 @@ jest.mock('../services/authContext', () => {
     };
 });
 
+// The app's client retries failed requests and keeps finished queries for five minutes, and those timers
+// outlive queryClient.clear(), so the file never exits. Use a test client: no retries, no gc timers.
+jest.mock('../services/queryClient', () => ({
+    queryClient: require('../testUtils/queryClient').createTestQueryClient(),
+}));
+
 jest.mock('../services/storage', () => ({
     getCredentials: jest.fn(async () => ({ accessToken: 'token', instanceUrl: 'https://pug.social' })),
     getSetting: jest.fn(async (_key: string, fallback: boolean) => fallback),
@@ -234,6 +240,23 @@ describe('Settings dock clearance', () => {
         });
     });
 });
+describe('withoutTopThreads', () => {
+    const { withoutTopThreads } = jest.requireActual('../services/navigationContext');
+    const entry = (route: object, key: string) => ({ key, route });
+    const messages = entry({ name: 'conversations' }, 'm');
+    const thread = (id: string) => entry({ name: 'thread', statusId: id }, `t${id}`);
+
+    it('closes the posts on top, back to the screen they were opened from', () => {
+        expect(withoutTopThreads([messages, thread('1'), thread('2')])).toEqual([messages]);
+        expect(withoutTopThreads([thread('1'), thread('2')])).toEqual([]);
+    });
+
+    it('leaves the stack alone when no post is on top', () => {
+        const stack = [thread('1'), messages];
+        expect(withoutTopThreads(stack)).toBe(stack);
+    });
+});
+
 describe('pushRoute', () => {
     const { pushRoute, MAX_STACK_DEPTH } = jest.requireActual('../services/navigationContext');
     const thread = (statusId: string) => ({ name: 'thread', statusId });

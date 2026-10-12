@@ -1,18 +1,4 @@
-import { buildColors, COATS, hslToHex, isCoatKey, mixHex, pugMarkColors, ThemeColors } from '../services/theme/coats';
-
-// WCAG 2.x relative luminance and contrast ratio
-const luminance = (hex: string) => {
-    const [r, g, b] = [1, 3, 5].map(i => {
-        const c = parseInt(hex.slice(i, i + 2), 16) / 255;
-        return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-    });
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-};
-
-const contrast = (a: string, b: string) => {
-    const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
-    return (hi + 0.05) / (lo + 0.05);
-};
+import { buildColors, COATS, contrast, hslToHex, isCoatKey, mixHex, pugMarkColors, ThemeColors } from '../services/theme/coats';
 
 const PAIRS: [keyof ThemeColors, keyof ThemeColors][] = [
     ['textPrimary', 'background'],
@@ -23,12 +9,13 @@ const PAIRS: [keyof ThemeColors, keyof ThemeColors][] = [
 ];
 
 describe('coat palettes', () => {
-    const cases = COATS.flatMap(coat =>
-        [false, true].flatMap(dark => [true, false].map(tint => [coat.key, dark ? 'dark' : 'light', tint] as const))
-    );
+    const cases = COATS.flatMap(coat => [
+        ...[false, true].flatMap(dark => [true, false].map(tint => [coat.key, dark ? 'dark' : 'light', tint] as const)),
+        [coat.key, 'true black', true] as const,
+    ]);
 
     it.each(cases)('%s %s (tint %s) keeps text at 4.5:1 or more', (coat, mode, tint) => {
-        const colors = buildColors(coat, mode === 'dark', tint);
+        const colors = buildColors(coat, mode !== 'light', tint, mode === 'true black');
         for (const [fg, bg] of PAIRS) {
             expect({ pair: `${fg} on ${bg}`, ratio: contrast(colors[fg], colors[bg]) >= 4.5 })
                 .toEqual({ pair: `${fg} on ${bg}`, ratio: true });
@@ -99,10 +86,22 @@ describe('coat palettes', () => {
                 const { background } = buildColors(coat.key, dark, true);
                 const label = `${coat.key} ${dark ? 'dark' : 'light'}`;
                 expect({ label, ears: contrast(mark.maskBottom, background) >= 2 }).toEqual({ label, ears: true });
+                if (dark) {
+                    const black = buildColors(coat.key, true, true, true).background;
+                    expect({ label: `${label} true black`, ears: contrast(mark.maskBottom, black) >= 2 }).toEqual({ label: `${label} true black`, ears: true });
+                }
                 expect({ label, mask: contrast(mark.maskTop, mark.faceBottom) >= 1.5 }).toEqual({ label, mask: true });
                 expect({ label, wrinkle: contrast(mark.wrinkle, mark.faceTop) >= 1.5 }).toEqual({ label, wrinkle: true });
             }
         }
+    });
+
+    it('puts dark mode on pure black when asked, keeping the cards and light mode as they were', () => {
+        const dark = buildColors('apricot', true, true);
+        const black = buildColors('apricot', true, true, true);
+        expect(black.background).toBe('#000000');
+        expect(black.cardBackground).toBe(dark.cardBackground);
+        expect(buildColors('apricot', false, true, true)).toEqual(buildColors('apricot', false, true));
     });
 
     it('mixes hex colours', () => {

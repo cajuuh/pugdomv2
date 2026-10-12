@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { TabBar } from '../components/TabBar/tabBar';
-import { TAB_BAR_CLEARANCE, DOCK_HEIGHT, DOCK_BOTTOM_OFFSET } from '../components/TabBar/styles';
+import { TAB_BAR_CLEARANCE, DOCK_HEIGHT, DOCK_BOTTOM_OFFSET, dockBottomOffset } from '../components/TabBar/styles';
 import { TopBar } from '../components/TopBar/topBar';
 import { mockTheme } from '../testUtils/theme';
 import { Account } from '../services/mastodon/types';
@@ -52,11 +52,22 @@ describe('TabBar', () => {
 describe('TopBar', () => {
     const user = { id: '1', username: 'pug', acct: 'pug', display_name: 'Pug Dom', avatar: '', emojis: [] } as Account;
 
-    const renderHeader = async () => {
-        const handlers = { onProfilePress: jest.fn(), onSettingsPress: jest.fn(), onLogoutPress: jest.fn() };
-        await render(<TopBar user={user} {...handlers} />);
+    const renderHeader = async (unreadMessages = false) => {
+        const handlers = { onProfilePress: jest.fn(), onSettingsPress: jest.fn(), onLogoutPress: jest.fn(), onMessagesPress: jest.fn() };
+        await render(<TopBar user={user} unreadMessages={unreadMessages} {...handlers} />);
         return handlers;
     };
+
+    it('opens messages from the envelope, with a dot when some are unread', async () => {
+        const { onMessagesPress } = await renderHeader();
+        expect(screen.queryByTestId('messages-dot')).toBeNull();
+        await fireEvent.press(screen.getByRole('button', { name: 'Messages' }));
+        expect(onMessagesPress).toHaveBeenCalled();
+
+        await renderHeader(true);
+        expect(screen.getByTestId('messages-dot')).toBeTruthy();
+        expect(screen.getByRole('button', { name: 'Messages, unread' })).toBeTruthy();
+    });
 
     it('shows the wordmark and opens settings from its own button', async () => {
         const { onSettingsPress } = await renderHeader();
@@ -76,5 +87,17 @@ describe('TopBar', () => {
         await fireEvent.press(screen.getByRole('button', { name: 'Account menu' }));
         await fireEvent.press(screen.getByRole('button', { name: 'Log Out' }));
         expect(onLogoutPress).toHaveBeenCalled();
+    });
+});
+
+describe('dockBottomOffset', () => {
+    it('lifts the dock above a tall Android navigation bar, and keeps the usual gap otherwise', () => {
+        // 3-button navigation
+        expect(dockBottomOffset('android', 48)).toBe(56);
+        // Gestures, or no navigation bar
+        expect(dockBottomOffset('android', 0)).toBe(20);
+        expect(dockBottomOffset('android', 12)).toBe(20);
+        // iOS's home indicator fits the fixed offset
+        expect(dockBottomOffset('ios', 34)).toBe(28);
     });
 });

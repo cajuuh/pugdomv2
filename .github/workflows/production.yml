@@ -2,6 +2,9 @@ name: Production Release
 
 # A push to main is a release. The version comes from app.json's expo.version, bumped by hand in a release PR on
 # develop (it is also the runtime version, so OTA updates never cross it). Build numbers are kept by EAS.
+# - A new version: tag it and build for the stores.
+# - The same version (JavaScript-only fixes): publish an OTA update to the installed builds of that version.
+#   Native changes must bump the version, since an update can't change what's in the build.
 on:
   push:
     branches:
@@ -40,7 +43,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           if git rev-parse -q --verify "refs/tags/$TAG" > /dev/null; then
-            echo "::notice::$TAG already exists, so no new builds. Bump expo.version in app.json for a new release."
+            echo "::notice::$TAG already exists, so no new builds: publishing an OTA update instead. Bump expo.version in app.json for a new release."
             echo "created=false" >> "$GITHUB_OUTPUT"
           else
             git tag "$TAG"
@@ -50,18 +53,15 @@ jobs:
           fi
 
       - name: Setup Node
-        if: steps.tag.outputs.created == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
           cache: yarn
 
       - name: Install dependencies
-        if: steps.tag.outputs.created == 'true'
         run: yarn install --frozen-lockfile
 
       - name: Setup Expo and EAS
-        if: steps.tag.outputs.created == 'true'
         uses: expo/expo-github-action@v8
         with:
           eas-version: latest
@@ -76,3 +76,10 @@ jobs:
       - name: Build Android
         if: steps.tag.outputs.created == 'true'
         run: eas build --profile production --platform android --non-interactive --no-wait
+
+      # The version is already out: send the new JavaScript to the builds of that version instead
+      - name: Publish an OTA update to production
+        if: steps.tag.outputs.created == 'false'
+        env:
+          MESSAGE: ${{ github.event.head_commit.message }}
+        run: eas update --branch production --message "$(printf '%s' "$MESSAGE" | head -n 1)" --non-interactive

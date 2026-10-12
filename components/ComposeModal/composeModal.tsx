@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
     Animated,
     DeviceEventEmitter,
-    Keyboard,
     KeyboardAvoidingView,
     Modal,
     Platform,
@@ -32,8 +31,9 @@ import { hitSlopFor, space } from '../../services/theme/shape';
 import { Avatar, IconButton, PillButton, Well } from '../ui';
 import { CharacterCounter } from './characterCounter';
 import { EmojiPicker } from './emojiPicker';
-import { OptionSheet, SheetOption } from './optionSheet';
+import { ActionSheet, OptionSheet, SheetOption } from './optionSheet';
 import { DEFAULT_POLL_DURATION, PollEditor } from './pollEditor';
+import { useKeyboard } from '../../hooks/useKeyboard';
 import { useDragToDismiss, useSheetTransition } from './sheetTransition';
 import { PILL_HEIGHT, makeStyles } from './styles';
 import { AttachmentStrip } from './attachmentStrip';
@@ -127,27 +127,6 @@ const insertAt = (text: string, cursor: number, insert: string) => {
     return { text: before + piece + after, cursor: cursor + piece.length };
 };
 
-// How much of the window the keyboard covers, measured up from the bottom edge
-export const keyboardInset = (windowHeight: number, keyboardTop: number) => Math.max(windowHeight - keyboardTop, 0);
-
-// iOS reports the keyboard before it moves, Android only after
-const useKeyboard = (windowHeight: number) => {
-    const [keyboard, setKeyboard] = useState({ visible: false, inset: 0 });
-    useEffect(() => {
-        const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', event =>
-            setKeyboard({ visible: true, inset: keyboardInset(windowHeight, event.endCoordinates.screenY) })
-        );
-        const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () =>
-            setKeyboard({ visible: false, inset: 0 })
-        );
-        return () => {
-            show.remove();
-            hide.remove();
-        };
-    }, [windowHeight]);
-    return keyboard;
-};
-
 // Anything typed beyond the reply mentions the sheet opened with, a poll, a content warning or images
 export const hasDraft = ({ text, initialText, showPoll, spoilerText, hasMedia = false }: { text: string; initialText: string; showPoll: boolean; spoilerText: string; hasMedia?: boolean }) =>
     text.trim() !== initialText.trim() || showPoll || spoilerText.trim().length > 0 || hasMedia;
@@ -188,7 +167,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
     const [loading, setLoading] = useState(false);
     const [language, setLanguage] = useState(() => defaultLanguage(user));
     const [visibility, setVisibility] = useState<Visibility>(() => defaultVisibility(user, replyToStatus, quoteStatus));
-    const [picker, setPicker] = useState<'language' | 'visibility' | 'emoji' | 'quotePolicy' | null>(null);
+    const [picker, setPicker] = useState<'language' | 'visibility' | 'emoji' | 'quotePolicy' | 'camera' | null>(null);
     // The post being quoted (✕ drops it) and who may quote this one
     const [quote, setQuote] = useState<Status | null>(quoteStatus);
     const [quotePolicy, setQuotePolicy] = useState<QuotePolicy>(user?.source?.quote_policy ?? 'public');
@@ -383,24 +362,39 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
 
     const addFromLibrary = async () => {
         try {
-            media.add(await pickImages(media.room));
+            addPicked(await pickImages(media.room, media.canAddVideo));
         } catch (error) {
             console.warn('Could not open the gallery:', error);
         }
     };
 
-    const addFromCamera = async () => {
+    // Adds what was picked or shot, saying when a video had to be left out
+    const addPicked = (picked: Parameters<typeof media.add>[0]) => {
+        const { videoNotAlone, videoTooBig } = media.add(picked);
+        if (videoTooBig) {
+            dialog.toast(t('compose.videoTooBig', { size: Math.round(instanceConfiguration.videoSizeLimit / (1024 * 1024)) }));
+        } else if (videoNotAlone) {
+            dialog.toast(t('compose.videoNotAlone'));
+        }
+    };
+
+    const capture = async (video: boolean) => {
         try {
-            const photo = await takePhoto();
-            if (photo === 'denied') {
+            const shot = await takePhoto(video);
+            if (shot === 'denied') {
                 dialog.alert(t('compose.cameraDeniedTitle'), t('compose.cameraDenied'));
                 return;
             }
-            media.add(photo);
+            addPicked(shot);
         } catch (error) {
             console.warn('Could not open the camera:', error);
         }
     };
+
+    // A video can only start an empty post, so only then does the camera ask which
+    const addFromCamera = () => (media.canAddVideo ? setPicker('camera') : capture(false));
+    // iOS can't open the camera while the sheet is still closing
+    const captureAfterSheet = (video: boolean) => setTimeout(() => capture(video), Platform.OS === 'ios' ? 400 : 0);
 
     const handlePublish = async (skipReminder = false) => {
         if (isPublishDisabled) return;
@@ -535,6 +529,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                         maxLength={instanceConfiguration.descriptionLimit}
                         focus={altEditing.focus}
                         onFocusChange={focus => setAltEditing({ ...altEditing, focus })}
+                        video={editingAttachment.isVideo}
                     />
                 </ScrollView>
             )}
@@ -713,7 +708,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
             >
                 {/* A post has either images or a poll */}
                 {tool('image-outline', t('compose.addMedia'), addFromLibrary, false, showPoll || !!lockedPoll || media.room === 0)}
-                {tool('camera-outline', t('compose.takePhoto'), addFromCamera, false, showPoll || !!lockedPoll || media.room === 0)}
+                {tool('camera-outline', t('compose.camera'), addFromCamera, false, showPoll || !!lockedPoll || media.room === 0)}
                 {tool(showPoll ? 'stats-chart' : 'stats-chart-outline', t('compose.poll'), () => (showPoll ? resetPoll() : setShowPoll(true)), showPoll, media.attachments.length > 0 || editing)}
                 {tool('warning-outline', t('compose.contentWarning'), () => setSensitive(!sensitive), sensitive)}
                 {tool('happy-outline', t('compose.customEmoji'), () => setPicker('emoji'))}
@@ -764,6 +759,15 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 onClose={() => setPicker(null)}
             />
             <EmojiPicker visible={picker === 'emoji'} onPick={insertEmoji} onClose={() => setPicker(null)} />
+            <ActionSheet
+                visible={picker === 'camera'}
+                title={t('compose.camera')}
+                actions={[
+                    { key: 'photo', label: t('compose.takePhoto'), icon: 'camera-outline', onPress: () => captureAfterSheet(false) },
+                    { key: 'video', label: t('compose.recordVideo'), icon: 'videocam-outline', onPress: () => captureAfterSheet(true) },
+                ]}
+                onClose={() => setPicker(null)}
+            />
             <ImageEditor
                 visible={!!imageEditing}
                 image={imageEditing?.original ?? null}
@@ -774,6 +778,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
             <AltReminderSheet
                 visible={reminderOpen}
                 count={media.missingDescription.length}
+                video={media.missingDescription.some(attachment => attachment.isVideo)}
                 onDescribe={() => {
                     setReminderOpen(false);
                     const first = media.missingDescription[0];

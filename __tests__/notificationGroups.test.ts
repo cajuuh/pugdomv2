@@ -93,6 +93,26 @@ describe('fetchNotificationGroups', () => {
         expect(page.nextMaxId).toBe('1');
     });
 
+    it('shows each notification on its own row when grouping is off', async () => {
+        useInstance('https://ungrouped.social');
+        mockedGet.mockResolvedValueOnce({
+            data: [
+                { id: '3', type: 'favourite', created_at: '2026-09-29T12:00:00Z', account: account('a'), status },
+                { id: '2', type: 'favourite', created_at: '2026-09-29T11:00:00Z', account: account('b'), status },
+            ],
+        });
+
+        const page = await fetchNotificationGroups(undefined, ['favourite'], false);
+
+        // v1 on any server, since v2 always groups
+        expect(mockedGet).toHaveBeenCalledTimes(1);
+        expect(mockedGet).toHaveBeenCalledWith('/notifications', { params: { max_id: undefined, types: ['favourite'] } });
+        expect(page.groups.map(group => [group.key, group.count, group.accounts.map(a => a.id)])).toEqual([
+            ['ungrouped-3', 1, ['a']],
+            ['ungrouped-2', 1, ['b']],
+        ]);
+    });
+
     it('goes straight to v1 once an instance has no v2', async () => {
         useInstance('https://older.social');
         mockedGet.mockRejectedValueOnce(httpError(404)).mockResolvedValue({ data: [] });

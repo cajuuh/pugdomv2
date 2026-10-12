@@ -12,11 +12,11 @@ import { SegmentOption } from '../../components/ui';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { makeStyles } from './styles';
 import { fullHandle, ProfileHeader } from './profileHeader';
+import { MediaGridRow, MediaTile, toMediaRows } from '../../components/MediaGrid/mediaGrid';
 import { useI18n } from '../../services/i18n/i18nContext';
 
 interface ProfileProps {
     onStatusPress?: (id: string) => void;
-    onSettingsPress?: () => void;
 }
 
 // Bookmarks are private to you, and this is always your own profile
@@ -33,7 +33,8 @@ const EMPTY_TEXT = {
 
 export { fullHandle };
 
-const Profile = ({ onStatusPress, onSettingsPress }: ProfileProps) => {
+// No settings button on the banner: the top bar above the tab already has one
+const Profile = ({ onStatusPress }: ProfileProps) => {
     const { user, checkLoginStatus } = useAuth();
     const { colors, type } = useTheme();
     const { t } = useI18n();
@@ -80,6 +81,9 @@ const Profile = ({ onStatusPress, onSettingsPress }: ProfileProps) => {
         }
     };
 
+    // Media shows as a grid of thumbnails
+    const showGrid = tab === 'media';
+
     const renderEmpty = () => (
         <View style={styles.empty}>
             {isLoading
@@ -91,10 +95,15 @@ const Profile = ({ onStatusPress, onSettingsPress }: ProfileProps) => {
     return (
         <View style={styles.container}>
             <FlashList
-                data={statuses}
-                keyExtractor={(item: Status) => item.id}
-                renderItem={({ item }) => <TootCard status={item} onPress={onStatusPress} />}
-                ListHeaderComponent={<ProfileHeader user={user} mode="self" tabs={tabs} tab={tab} onChangeTab={setTab} onSettingsPress={onSettingsPress} />}
+                data={showGrid ? toMediaRows(statuses) : statuses}
+                keyExtractor={(item: Status | MediaTile[]) => (Array.isArray(item) ? `row-${item[0].status.id}-${item[0].index}` : item.id)}
+                getItemType={(item: Status | MediaTile[]) => (Array.isArray(item) ? 'mediaRow' : 'post')}
+                renderItem={({ item }) =>
+                    Array.isArray(item)
+                        ? <MediaGridRow row={item} onStatusPress={onStatusPress} />
+                        : <TootCard status={item} onPress={onStatusPress} />
+                }
+                ListHeaderComponent={<ProfileHeader user={user} mode="self" tabs={tabs} tab={tab} onChangeTab={setTab} />}
                 ListEmptyComponent={renderEmpty}
                 ListFooterComponent={isFetchingNextPage ? <ActivityIndicator style={styles.footer} color={colors.accentColor} /> : null}
                 onEndReached={handleLoadMore}

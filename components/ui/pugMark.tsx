@@ -6,6 +6,8 @@ import { CoatKey, pugMarkColors } from '../../services/theme/coats';
 interface PugMarkProps {
     coat: CoatKey;
     size?: number;
+    // Happy: the open eye smiles (^) and the muzzle has a little "w"; the closed eye stays as it is
+    mood?: 'happy';
 }
 
 // Below this size the forehead wrinkle turns into noise, so it's left out
@@ -19,9 +21,11 @@ const MUZZLE = '32,38 28.6,38.3 26,40.8 25.9,43 32,44.6 38.1,43 38,40.8 35.4,38.
 const NOSE = '29.6,33.4 34.4,33.4 32,36.2';
 const FACE = 'M 21 16.5 H 43 Q 51.5 16.5 51.5 25 V 40.5 Q 51.5 44 46 45.3 Q 32 48 18 45.3 Q 12.5 44 12.5 40.5 V 25 Q 12.5 16.5 21 16.5 Z';
 const WRINKLE = 'M 26.2 24.6 q 1.45 -2 2.9 0 t 2.9 0 t 2.9 0 t 2.9 0';
+const HAPPY_EYE = 'M 19 33.9 Q 21.3 30.2 23.6 33.9';
+const HAPPY_MOUTH = 'M 29.3 40.7 Q 30.65 42.5 32 40.9 Q 33.35 42.5 34.7 40.7';
 
 // Pugdom's pug, in a coat's colours. Drawn after the author's pug, who is missing their left eye (on our right).
-export const PugMark: React.FC<PugMarkProps> = ({ coat, size = 36 }) => {
+export const PugMark: React.FC<PugMarkProps> = ({ coat, size = 36, mood }) => {
     const { isDark } = useTheme();
     const colors = pugMarkColors(coat, isDark);
     // Gradient ids are document-wide, so each mark needs its own
@@ -52,7 +56,11 @@ export const PugMark: React.FC<PugMarkProps> = ({ coat, size = 36 }) => {
             )}
             <Rect x="15.7" y="27.3" width="11.2" height="10.6" rx="5.3" fill={mask} />
             <Rect x="37.1" y="27.3" width="11.2" height="10.6" rx="5.3" fill={mask} />
-            <Ellipse cx="21.3" cy="32.7" rx="2" ry="2.9" fill={colors.ink} />
+            {mood === 'happy' ? (
+                <Path testID="pug-happy-eye" d={HAPPY_EYE} fill="none" stroke={colors.ink} strokeWidth={1.5} strokeLinecap="round" />
+            ) : (
+                <Ellipse cx="21.3" cy="32.7" rx="2" ry="2.9" fill={colors.ink} />
+            )}
             <Line x1="39.9" y1="32.8" x2="45.5" y2="32.8" stroke={colors.ink} strokeWidth={1.4} strokeLinecap="round" />
             <Polygon points={MUZZLE} fill={mask} stroke={mask} strokeWidth={5.2} strokeLinejoin="round" />
             {/* The muzzle's right half sits a little in shadow */}
@@ -60,6 +68,9 @@ export const PugMark: React.FC<PugMarkProps> = ({ coat, size = 36 }) => {
                 <Polygon points={MUZZLE} fill={colors.ink} stroke={colors.ink} strokeWidth={5.2} strokeLinejoin="round" />
             </G>
             <Polygon points={NOSE} fill={colors.ink} stroke={colors.ink} strokeWidth={2.4} strokeLinejoin="round" />
+            {mood === 'happy' && (
+                <Path d={HAPPY_MOUTH} fill="none" stroke={colors.ink} strokeWidth={1.1} strokeLinecap="round" strokeLinejoin="round" />
+            )}
         </Svg>
     );
 };

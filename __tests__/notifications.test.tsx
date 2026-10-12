@@ -24,6 +24,7 @@ jest.mock('../services/mastodon/notifications', () => {
         })),
     };
 });
+jest.mock('../services/settingsContext', () => ({ useSettings: () => ({ groupNotifications: true }) }));
 jest.mock('../services/mastodon/accounts', () => ({ followAccount: jest.fn(), getRelationships: jest.fn() }));
 jest.mock('../services/mastodon/statuses', () => ({ favouriteStatus: jest.fn(), unfavouriteStatus: jest.fn() }));
 jest.mock('../services/mastodon/markers', () => ({ markNotificationsRead: jest.fn() }));

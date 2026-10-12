@@ -15,8 +15,9 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: space.lg,
     },
+    // As wide as the buttons on the right, so the wordmark stays centered
     avatarButton: {
-        width: 44,
+        width: 88,
         height: 44,
         justifyContent: 'center',
         alignItems: 'flex-start',
@@ -30,6 +31,22 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         fontSize: 24,
         lineHeight: 30,
         color: colors.textPrimary,
+    },
+    actions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    // Unread messages: the same coat-colored dot as the bell's
+    dot: {
+        position: 'absolute',
+        top: 9,
+        right: 9,
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: colors.accentColor,
+        borderWidth: 1.5,
+        borderColor: colors.background,
     },
     settingsButton: {
         alignItems: 'flex-end',

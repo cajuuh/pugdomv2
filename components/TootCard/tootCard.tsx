@@ -1,11 +1,11 @@
-import React, { useCallback, useRef } from 'react';
-import { Image, Platform, Pressable, Share, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import React, { useCallback, useRef, useState } from 'react';
+import { Image, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { BlurView } from 'expo-blur';
 import { useRecyclingState } from '@shopify/flash-list';
 import { Status, Attachment, PreviewCard } from '../../services/mastodon/types';
 import { StatusHtmlContent } from './htmlContent';
 import { useSettings } from '../../services/settingsContext';
+import { useExpandSpoilers } from '../../hooks/useExpandSpoilers';
 import { useTheme } from '../../services/themeContext';
 import { useCompose } from '../../services/composeContext';
 import {
@@ -45,12 +45,13 @@ import { ActionSheet, BottomSheet } from '../ComposeModal/optionSheet';
 import { currentQuotePolicy, QuotePolicy, quotePermission, quotePolicies, setQuotePolicy } from '../../services/mastodon/quotes';
 import { OptionSheet } from '../ComposeModal/optionSheet';
 import { useOptionalAuth } from '../../services/authContext';
+import { ReactionLinks } from './reactionLinks';
 import { useModeration } from '../../hooks/useModeration';
 import { usePostActions } from '../../hooks/usePostActions';
 import { EditHistorySheet } from './editHistorySheet';
 import { dialog } from '../../services/dialog';
 
-const getRelativeTime = (dateString: string, { t }: Translator) => {
+export const getRelativeTime = (dateString: string, { t }: Translator) => {
     const now = new Date();
     const created = new Date(dateString);
     const diffMs = now.getTime() - created.getTime();
@@ -72,9 +73,16 @@ const getRelativeTime = (dateString: string, { t }: Translator) => {
 
 // Alt text when the author wrote one, otherwise the media's position in the post
 const MEDIA_KIND = { image: 'post.image', video: 'post.video', gifv: 'post.gif', unknown: 'post.attachment' } as const;
-const mediaLabel = (attachment: Attachment, index: number, count: number, { t }: Translator) =>
+export const mediaLabel = (attachment: Attachment, index: number, count: number, { t }: Translator) =>
     attachment.description ||
     t('post.mediaPosition', { kind: t(MEDIA_KIND[attachment.type] ?? 'post.attachment'), index: index + 1, count });
+
+// Uncropped, an image takes its own shape: from a wide strip up to a little taller than square
+export const uncroppedHeight = (width: number, attachment: Attachment) => {
+    const size = attachment.meta?.small ?? attachment.meta?.original;
+    if (!size?.width || !size?.height) return 200;
+    return Math.min(Math.max((width * size.height) / size.width, 120), width * 1.25);
+};
 
 // "1 photo", "3 videos", "2 attachments" (mixed kinds)
 export const countMedia = (attachments: Attachment[], { tn }: Translator = defaultTranslator()) => {
@@ -116,6 +124,8 @@ interface TootCardProps {
     // Receives the id of the status to open; for boosts that's the original, since a boost has no thread of its own
     onPress?: (statusId: string) => void;
     threadMode?: boolean;
+    // Who favourited, boosted and quoted it, under the post (a thread's main post); your own posts always show it
+    showReactions?: boolean;
     hasThreadLineTop?: boolean;
     hasThreadLineBottom?: boolean;
     // A post read from another server (its ids aren't ours): no buttons that act on it here; tapping it,
@@ -123,8 +133,8 @@ interface TootCardProps {
     remote?: boolean;
 }
 
-export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPressHashtag, onPress, threadMode, hasThreadLineTop, hasThreadLineBottom, remote }) => {
-    const { compactMode } = useSettings();
+export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPressHashtag, onPress, threadMode, showReactions, hasThreadLineTop, hasThreadLineBottom, remote }) => {
+    const { compactMode, hideCounts, coverSensitiveMedia, uncroppedMedia } = useSettings();
     const { colors, type } = useTheme();
     const styles = useThemedStyles(makeStyles);
     const { openCompose } = useCompose();
@@ -158,13 +168,18 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const recyclingDeps = [targetStatus.id];
     // Only a content warning hides the text; `sensitive` alone just veils the media
     const hasContentWarning = !!targetStatus.spoiler_text;
-    const [isSpoilerCollapsed, setIsSpoilerCollapsed] = useRecyclingState(hasContentWarning, recyclingDeps);
+    // Starts over when the preference arrives or changes, so cards drawn before it know it too
+    const expandSpoilers = useExpandSpoilers();
+    const [isSpoilerCollapsed, setIsSpoilerCollapsed] = useRecyclingState(hasContentWarning && !expandSpoilers, [targetStatus.id, expandSpoilers]);
     const [isFavorited, setIsFavorited] = useRecyclingState(targetStatus.favourited, recyclingDeps);
     const [isReblogged, setIsreblogged] = useRecyclingState(targetStatus.reblogged, recyclingDeps);
     const [favCount, setFavCount] = useRecyclingState(targetStatus.favourites_count, recyclingDeps);
     const [boostCount, setBoostCount] = useRecyclingState(targetStatus.reblogs_count, recyclingDeps);
     const [isBookmarked, setIsBookmarked] = useRecyclingState(!!targetStatus.bookmarked, recyclingDeps);
     const [isMediaRevealed, setIsMediaRevealed] = useRecyclingState(false, recyclingDeps);
+    // The carousel's page; its width is layout, not per-post state
+    const [mediaPage, setMediaPage] = useRecyclingState(0, recyclingDeps);
+    const [carouselWidth, setCarouselWidth] = useState(0);
     // The image description opened from an ALT chip; kept while its sheet slides away
     const [shownDescription, setShownDescription] = useRecyclingState<string | null>(null, recyclingDeps);
     const [descriptionOpen, setDescriptionOpen] = useRecyclingState(false, recyclingDeps);
@@ -307,6 +322,9 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     // The opened CW frame adds its own padding and border
     const contentWidth = hasContentWarning ? bodyWidth - 28 : bodyWidth;
 
+    // The carousel's own width, once laid out; until then the width the body should have
+    const slideWidth = carouselWidth || contentWidth;
+
     const renderMedia = (attachments: Attachment[]) => {
         if (!attachments || attachments.length === 0) {
             return null;
@@ -314,6 +332,11 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
 
         const count = attachments.length;
         const veiled = targetStatus.sensitive && !isMediaRevealed;
+        // Compact Mode keeps its short tiles; uncropped ones show the whole picture
+        const uncropped = uncroppedMedia && !compactMode;
+        const mediaHeight = uncropped
+            ? { height: Math.max(...attachments.map(item => uncroppedHeight(count === 1 ? contentWidth : slideWidth, item))) }
+            : undefined;
         // Images with a description say so; tapping the chip reads it, tapping the image still opens it
         const altChip = (item: Attachment) =>
             !!item.description && (
@@ -332,28 +355,45 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             );
         const tiles = count === 1 ? (
             <Pressable
-                style={[styles.singleMedia, compactMode && styles.singleMediaCompact]}
+                style={[styles.singleMedia, compactMode && styles.singleMediaCompact, mediaHeight]}
                 onPress={() => openMedia(attachments, 0)}
                 accessibilityRole="imagebutton"
                 accessibilityLabel={mediaLabel(attachments[0], 0, count, i18n)}
             >
-                <FocusedImage attachment={attachments[0]} style={styles.mediaImage} />
+                <FocusedImage attachment={attachments[0]} style={styles.mediaImage} blurred={veiled} contain={uncropped} />
                 {altChip(attachments[0])}
             </Pressable>
         ) : (
-            <View style={styles.mediaGrid}>
-                {attachments.map((item, idx) => (
-                    <Pressable
-                        key={item.id || idx}
-                        style={[styles.gridMedia, compactMode && styles.gridMediaCompact, { width: count === 2 ? '48%' : '31%' }]}
-                        onPress={() => openMedia(attachments, idx)}
-                        accessibilityRole="imagebutton"
-                        accessibilityLabel={mediaLabel(item, idx, count, i18n)}
-                    >
-                        <FocusedImage attachment={item} style={styles.mediaImage} />
-                        {altChip(item)}
-                    </Pressable>
-                ))}
+            // Several images: one at a time, swiped sideways, with a dot for each
+            <View>
+                <ScrollView
+                    key={targetStatus.id}
+                    testID="media-carousel"
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    onLayout={event => setCarouselWidth(event.nativeEvent.layout.width)}
+                    onMomentumScrollEnd={event => setMediaPage(Math.round(event.nativeEvent.contentOffset.x / slideWidth))}
+                    style={styles.carousel}
+                >
+                    {attachments.map((item, idx) => (
+                        <Pressable
+                            key={item.id || idx}
+                            style={[styles.carouselSlide, compactMode && styles.singleMediaCompact, mediaHeight, { width: slideWidth }]}
+                            onPress={() => openMedia(attachments, idx)}
+                            accessibilityRole="imagebutton"
+                            accessibilityLabel={mediaLabel(item, idx, count, i18n)}
+                        >
+                            <FocusedImage attachment={item} style={styles.mediaImage} blurred={veiled} contain={uncropped} />
+                            {altChip(item)}
+                        </Pressable>
+                    ))}
+                </ScrollView>
+                <View style={styles.carouselDots} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+                    {attachments.map((item, idx) => (
+                        <View key={item.id || idx} testID={idx === mediaPage ? 'carousel-dot-active' : 'carousel-dot'} style={[styles.carouselDot, idx === mediaPage && styles.carouselDotActive]} />
+                    ))}
+                </View>
             </View>
         );
 
@@ -369,8 +409,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 </View>
                 {veiled ? (
                     <View style={StyleSheet.absoluteFill}>
-                        <BlurView intensity={80} tint="default" style={StyleSheet.absoluteFill} />
-                        <View style={styles.veil}>
+                        <View testID="media-veil" style={[styles.veil, !coverSensitiveMedia && styles.veilBare]}>
                             <View style={styles.veilLabel}>
                                 <Ionicons name="eye-off-outline" size={16} color={colors.textPrimary} />
                                 <Text style={[type.name, styles.veilText]}>{t('post.sensitive', { media: countMedia(attachments, i18n) })}</Text>
@@ -386,7 +425,8 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                         accessibilityLabel={t('post.hideMedia')}
                         hitSlop={6}
                     >
-                        <Ionicons name="eye-off-outline" size={16} color={colors.textPrimary} />
+                        <Ionicons name="eye-off-outline" size={14} color={colors.textPrimary} />
+                        <Text style={[type.label, styles.hideMediaText]}>{t('post.hideMedia')}</Text>
                     </Pressable>
                 )}
             </View>
@@ -466,17 +506,19 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     <Ionicons name="warning-outline" size={22} color={colors.accentText} />
                     <View style={styles.cwText}>
                         <Text style={[type.label, styles.cwLabel]}>{t('post.contentWarning')}</Text>
-                        <Text style={[type.name, styles.cwSpoiler]}>{targetStatus.spoiler_text}</Text>
+                        {renderTextWithEmojis(targetStatus.spoiler_text, targetStatus.emojis, [type.name, styles.cwSpoiler], 15)}
                         {hidden && <Text style={[type.meta, styles.cwHidden]}>{hidden}</Text>}
                     </View>
-                    <PillButton label={t('common.show')} variant="secondary" onPress={() => setIsSpoilerCollapsed(false)} />
+                    <PillButton label={t('common.show')} variant="secondary" onPress={() => setIsSpoilerCollapsed(false)} style={styles.cwButton} />
                 </View>
             );
         }
         return (
             <View style={styles.cwFrame}>
                 <View style={styles.cwFrameHeader}>
-                    <Text style={[type.name, styles.cwFrameTitle]} numberOfLines={2}>{t('post.cwTitle', { text: targetStatus.spoiler_text })}</Text>
+                    <Text style={[type.name, styles.cwFrameTitle]} numberOfLines={2}>
+                        {renderTextWithEmojis(t('post.cwTitle', { text: targetStatus.spoiler_text }), targetStatus.emojis, [type.name, styles.cwFrameTitle], 13)}
+                    </Text>
                     <PillButton label={t('common.hide')} size="small" variant="subtle" onPress={() => setIsSpoilerCollapsed(true)} />
                 </View>
                 <View style={styles.cwFrameContent}>{body}</View>
@@ -580,7 +622,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 accessibilityLabel={tn('post.replies', targetStatus.replies_count || 0)}
             >
                 <Ionicons name="arrow-undo-outline" size={actionIcon} color={colors.textMuted} />
-                <Text style={[type.meta, styles.actionCount]}>{targetStatus.replies_count || 0}</Text>
+                {!hideCounts && <Text style={[type.meta, styles.actionCount]}>{targetStatus.replies_count || 0}</Text>}
             </Pressable>
             <Pressable
                 style={actionButtonStyle}
@@ -591,7 +633,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 accessibilityState={{ selected: isReblogged }}
             >
                 <Ionicons name="repeat" size={actionIcon} color={isReblogged ? colors.accentText : colors.textMuted} />
-                <Text style={[type.meta, styles.actionCount, isReblogged && styles.actionCountActive]}>{boostCount || 0}</Text>
+                {!hideCounts && <Text style={[type.meta, styles.actionCount, isReblogged && styles.actionCountActive]}>{boostCount || 0}</Text>}
             </Pressable>
             <Pressable
                 style={actionButtonStyle}
@@ -602,7 +644,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 accessibilityState={{ selected: isFavorited }}
             >
                 <Ionicons name={isFavorited ? 'star' : 'star-outline'} size={actionIcon} color={isFavorited ? colors.accentText : colors.textMuted} />
-                <Text style={[type.meta, styles.actionCount, isFavorited && styles.actionCountActive]}>{favCount || 0}</Text>
+                {!hideCounts && <Text style={[type.meta, styles.actionCount, isFavorited && styles.actionCountActive]}>{favCount || 0}</Text>}
             </Pressable>
             <Pressable
                 style={actionButtonStyle}
@@ -617,6 +659,9 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             {shareButton}
         </View>
     );
+
+    // Not for posts from another server: their ids aren't ours
+    const reactions = (showReactions || ownPost) && !remote && <ReactionLinks status={targetStatus} />;
 
     const card = (
         <Card style={[styles.card, compactMode && styles.cardCompact, threadMode && styles.cardThread]}>
@@ -656,6 +701,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                         </View>
                         {renderContent()}
                         {actions}
+                        {reactions}
                     </View>
                 </View>
             ) : (
@@ -667,6 +713,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     </View>
                     {renderContent()}
                     {actions}
+                    {reactions}
                 </>
             )}
         </Card>

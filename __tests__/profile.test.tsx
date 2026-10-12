@@ -1,5 +1,5 @@
 import React from 'react';
-import { DeviceEventEmitter } from 'react-native';
+import { DeviceEventEmitter, Text } from 'react-native';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as WebBrowser from 'expo-web-browser';
@@ -7,6 +7,8 @@ import { createTestQueryClient } from '../testUtils/queryClient';
 import Profile, { fullHandle } from '../screens/Profile/profile';
 import { getAccountStatuses } from '../services/mastodon/accounts';
 import { getBookmarks } from '../services/mastodon/bookmarks';
+import { MediaViewerProvider } from '../components/MediaViewer/mediaViewer';
+import { NavigationProvider, useNavigator } from '../services/navigationContext';
 import { Account, Status } from '../services/mastodon/types';
 
 const me: Account = {
@@ -42,11 +44,12 @@ jest.mock('../components/TootCard/tootCard', () => ({
         const { Text: MockText } = jest.requireActual('react-native');
         return <MockText>{status.content}</MockText>;
     },
+    mediaLabel: jest.requireActual('../components/TootCard/tootCard').mediaLabel,
 }));
 
 const mockedStatuses = getAccountStatuses as jest.MockedFunction<typeof getAccountStatuses>;
 const mockedBookmarks = getBookmarks as jest.MockedFunction<typeof getBookmarks>;
-const status = (id: string) => ({ id, content: `post ${id}` } as Status);
+const status = (id: string, extra: Partial<Status> = {}) => ({ id, content: `post ${id}`, media_attachments: [], ...extra } as Status);
 
 describe('Profile', () => {
     let queryClient: QueryClient;
@@ -55,7 +58,9 @@ describe('Profile', () => {
         queryClient = createTestQueryClient();
         return render(
             <QueryClientProvider client={queryClient}>
-                <Profile {...props} />
+                <MediaViewerProvider>
+                    <Profile {...props} />
+                </MediaViewerProvider>
             </QueryClientProvider>
         );
     };
@@ -64,6 +69,36 @@ describe('Profile', () => {
         jest.clearAllMocks();
         mockUser = me;
         mockedStatuses.mockResolvedValue([status('1')]);
+    });
+
+    it('shows the Media tab as a grid with a thumbnail per post that opens the viewer, or the post on a long press', async () => {
+        const image = (id: string) => ({ id, type: 'image', url: `https://x/${id}.png`, preview_url: `https://x/${id}-small.png` });
+        const onStatusPress = jest.fn();
+        mockedStatuses.mockResolvedValue([status('1', { media_attachments: [image('a'), image('b')] as any }), status('2', { media_attachments: [image('c')] as any, sensitive: true })]);
+        await renderProfile({ onStatusPress });
+        await screen.findByText('post 1');
+
+        await fireEvent.press(screen.getByRole('tab', { name: 'Media' }));
+
+        // One thumbnail per post: its first picture, saying how many there are
+        expect(await screen.findByRole('imagebutton', { name: 'Image 1 of 2' })).toBeTruthy();
+        expect(screen.getAllByRole('imagebutton')).toHaveLength(2);
+        expect(screen.getByText('2')).toBeTruthy();
+        expect(screen.queryByText('post 1')).toBeNull();
+        // Sensitive pictures stay blurred in the grid
+        expect(screen.getByTestId('focused-image-blurred', { includeHiddenElements: true })).toBeTruthy();
+
+        await fireEvent(screen.getByRole('imagebutton', { name: 'Image 1 of 1' }), 'longPress');
+        expect(onStatusPress).toHaveBeenCalledWith('2');
+    });
+
+    it("shows the roles the server highlights, with a happy pug for supporters", async () => {
+        mockUser = { ...me, roles: [{ id: '1', name: 'Server supporter', color: '' }, { id: '2', name: 'Moderator', color: '#7A1F1F' }] };
+        await renderProfile();
+
+        expect(await screen.findByLabelText('Role: Server supporter')).toBeTruthy();
+        expect(screen.getByLabelText('Role: Moderator')).toBeTruthy();
+        expect(screen.getAllByTestId('pug-happy-eye', { includeHiddenElements: true })).toHaveLength(1);
     });
 
     it("lists the account's posts without replies first", async () => {
@@ -140,21 +175,31 @@ describe('Profile', () => {
         expect(screen.queryByText(/log out/i)).toBeNull();
     });
 
-    it("opens the instance's profile settings from Edit profile", async () => {
-        await renderProfile();
+    it('opens the in-app profile editor from Edit profile', async () => {
+        const StackProbe = () => <Text testID="stack">{JSON.stringify(useNavigator().stack.map(entry => entry.route))}</Text>;
+        queryClient = createTestQueryClient();
+        await render(
+            <QueryClientProvider client={queryClient}>
+                <NavigationProvider>
+                    <MediaViewerProvider>
+                        <Profile />
+                        <StackProbe />
+                    </MediaViewerProvider>
+                </NavigationProvider>
+            </QueryClientProvider>
+        );
 
         await fireEvent.press(await screen.findByRole('button', { name: 'Edit profile' }));
 
-        await waitFor(() => expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith('https://mastodon.social/settings/profile'));
+        expect(JSON.parse(String(screen.getByTestId('stack').props.children))).toEqual([{ name: 'editProfile' }]);
+        expect(WebBrowser.openBrowserAsync).not.toHaveBeenCalled();
     });
 
-    it('opens Settings from the banner', async () => {
-        const onSettingsPress = jest.fn();
-        await renderProfile({ onSettingsPress });
+    it('has no Settings button on the banner, since the top bar above the tab has one', async () => {
+        await renderProfile();
+        await screen.findByRole('button', { name: 'Edit profile' });
 
-        await fireEvent.press(await screen.findByRole('button', { name: 'Settings' }));
-
-        expect(onSettingsPress).toHaveBeenCalled();
+        expect(screen.queryByRole('button', { name: 'Settings' })).toBeNull();
     });
 
     it.each([

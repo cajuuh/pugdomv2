@@ -177,7 +177,7 @@ describe('Compose with images', () => {
         );
     const pick = async (...names: string[]) => {
         library.mockResolvedValueOnce({ canceled: false, assets: names.map(name => photo(name)) });
-        await fireEvent.press(screen.getByRole('button', { name: 'Add images' }));
+        await fireEvent.press(screen.getByRole('button', { name: 'Add images or a video' }));
     };
     const post = () => fireEvent.press(screen.getByRole('button', { name: 'Post' }));
 
@@ -254,8 +254,64 @@ describe('Compose with images', () => {
         expect(screen.getByRole('button', { name: 'Poll' })).toBeEnabled();
 
         await fireEvent.press(screen.getByRole('button', { name: 'Poll' }));
-        expect(screen.getByRole('button', { name: 'Add images' })).toBeDisabled();
-        expect(screen.getByRole('button', { name: 'Take a photo' })).toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Add images or a video' })).toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Camera' })).toBeDisabled();
+    });
+
+    const video = (extra: Partial<PickedImage> = {}): PickedImage =>
+        ({ uri: 'file:///videos/walk.mp4', width: 1080, height: 1920, fileName: 'walk.mp4', mimeType: 'video/mp4', type: 'video', duration: 12000, fileSize: 5_000_000, ...extra });
+    const pickVideo = async (extra: Partial<PickedImage> = {}) => {
+        library.mockResolvedValueOnce({ canceled: false, assets: [video(extra)] });
+        await fireEvent.press(screen.getByRole('button', { name: 'Add images or a video' }));
+    };
+
+    it('attaches a video on its own, sent as it is, and posts it', async () => {
+        await renderCompose();
+        await act(async () => {});
+        await pickVideo();
+
+        // The gallery offered videos too, since the post was empty
+        expect(library).toHaveBeenLastCalledWith(expect.objectContaining({ mediaTypes: ['images', 'videos'] }));
+        expect(screen.getByRole('button', { name: 'Describe video 1' })).toBeTruthy();
+        expect(screen.getByText('▶ 0:12')).toBeTruthy();
+        // No crop for videos, and nothing else fits with one
+        expect(screen.queryByRole('button', { name: 'Edit video 1' })).toBeNull();
+        expect(screen.getByRole('button', { name: 'Add images or a video' })).toBeDisabled();
+
+        await waitFor(() => expect(screen.getByRole('button', { name: 'Post' })).toBeEnabled());
+        expect(api.post).toHaveBeenCalledTimes(1);
+        // Sent as it is, not re-encoded like a picture
+        expect(ImageManipulator.manipulate).not.toHaveBeenCalled();
+        await fireEvent.changeText(screen.getByLabelText('Post text'), 'Walkies');
+        await post();
+        // The pug asks about the description for videos too
+        expect(await screen.findByText(/noticed your video has no description/)).toBeTruthy();
+        await fireEvent.press(await screen.findByRole('button', { name: 'Post anyway' }));
+        await waitFor(() => expect(createStatus).toHaveBeenCalledWith(expect.objectContaining({ media_ids: ['m1'] })));
+    });
+
+    it('leaves a video out when the post already has pictures', async () => {
+        await renderCompose();
+        await act(async () => {});
+        await pick('a.jpg');
+
+        await pickVideo();
+
+        // Only pictures were offered once there was one
+        expect(library).toHaveBeenLastCalledWith(expect.objectContaining({ mediaTypes: ['images'] }));
+        expect(await screen.findByText('A video goes on its own in a post, so it was left out')).toBeTruthy();
+        expect(screen.queryByRole('button', { name: 'Describe video 1' })).toBeNull();
+        expect(screen.getByRole('button', { name: 'Describe image 1' })).toBeTruthy();
+    });
+
+    it("says when a video is over the server's size limit", async () => {
+        await renderCompose();
+        await act(async () => {});
+        await pickVideo({ fileSize: 200 * 1024 * 1024 });
+
+        expect(await screen.findByText("This video is over your server's 99 MB limit")).toBeTruthy();
+        expect(screen.queryByRole('button', { name: 'Describe video 1' })).toBeNull();
+        expect(api.post).not.toHaveBeenCalled();
     });
 
     it('stops at the instance limit', async () => {
@@ -265,16 +321,42 @@ describe('Compose with images', () => {
 
         expect(screen.getByRole('button', { name: 'Describe image 4' })).toBeTruthy();
         expect(screen.queryByRole('button', { name: 'Describe image 5' })).toBeNull();
-        expect(screen.getByRole('button', { name: 'Add images' })).toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Add images or a video' })).toBeDisabled();
     });
 
     it('explains when the camera is not allowed', async () => {
         cameraPermission.mockResolvedValueOnce({ granted: false });
         await renderCompose();
 
+        await fireEvent.press(screen.getByRole('button', { name: 'Camera' }));
         await fireEvent.press(screen.getByRole('button', { name: 'Take a photo' }));
 
         expect(await screen.findByText('Camera access')).toBeTruthy();
         expect(screen.getByText(/in your phone's settings/)).toBeTruthy();
+    });
+
+    it('records a video with the camera when the post is empty', async () => {
+        camera.mockResolvedValueOnce({ canceled: false, assets: [video({ uri: 'file:///camera/clip.mp4', fileSize: null })] });
+        await renderCompose();
+        await act(async () => {});
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Camera' }));
+        await fireEvent.press(screen.getByRole('button', { name: 'Record a video' }));
+
+        await waitFor(() => expect(camera).toHaveBeenCalledWith(expect.objectContaining({ mediaTypes: ['videos'] })));
+        expect(await screen.findByRole('button', { name: 'Describe video 1' })).toBeTruthy();
+    });
+
+    it('takes a photo straight away once the post has pictures', async () => {
+        camera.mockResolvedValueOnce({ canceled: false, assets: [photo('b.jpg')] });
+        await renderCompose();
+        await act(async () => {});
+        await pick('a.jpg');
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Camera' }));
+
+        await waitFor(() => expect(camera).toHaveBeenCalledWith(expect.objectContaining({ mediaTypes: ['images'] })));
+        expect(screen.queryByRole('button', { name: 'Record a video' })).toBeNull();
+        expect(await screen.findByRole('button', { name: 'Describe image 2' })).toBeTruthy();
     });
 });

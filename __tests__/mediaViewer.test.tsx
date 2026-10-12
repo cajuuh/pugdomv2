@@ -1,20 +1,26 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { Pressable, Text } from 'react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useVideoPlayer } from 'expo-video';
 import * as WebBrowser from 'expo-web-browser';
 import RenderHtml from 'react-native-render-html';
 import { TootCard } from '../components/TootCard/tootCard';
-import { MediaViewerProvider } from '../components/MediaViewer/mediaViewer';
+import { MediaViewerProvider, useMediaViewer } from '../components/MediaViewer/mediaViewer';
 import { favouriteStatus } from '../services/mastodon/statuses';
 import { Attachment, Status } from '../services/mastodon/types';
 import { createTestQueryClient } from '../testUtils/queryClient';
 
 // Observable stand-ins for the native viewers
 jest.mock('react-native-image-viewing', () => {
-    const { Text } = require('react-native');
-    return ({ visible, images, imageIndex }: any) =>
-        visible ? <Text>{`gallery ${imageIndex}: ${images.map((image: any) => image.uri).join(', ')}`}</Text> : null;
+    const { Text, View } = require('react-native');
+    return ({ visible, images, imageIndex, HeaderComponent }: any) =>
+        visible ? (
+            <View>
+                {HeaderComponent && <HeaderComponent imageIndex={imageIndex} />}
+                <Text>{`gallery ${imageIndex}: ${images.map((image: any) => image.uri).join(', ')}`}</Text>
+            </View>
+        ) : null;
 });
 
 jest.mock('expo-video', () => {
@@ -121,6 +127,51 @@ describe('shared media viewer', () => {
         await fireEvent.press(screen.getByLabelText('Image 3 of 3'));
 
         expect(screen.getByText('gallery 1: https://files.example.social/i1, https://files.example.social/i2')).toBeTruthy();
+    });
+
+    describe('opened with a way to the post (the profile media grid)', () => {
+        const OpenProbe = ({ media, onOpenPost }: { media: Attachment[]; onOpenPost: () => void }) => {
+            const { openMedia } = useMediaViewer();
+            return (
+                <Pressable accessibilityRole="button" onPress={() => openMedia(media, 0, onOpenPost)}>
+                    <Text>open</Text>
+                </Pressable>
+            );
+        };
+
+        it.each([
+            ['images', [attachment('i1', 'image')]],
+            ['a video', [attachment('v1', 'video')]],
+        ])('offers to view the post from %s, closing the viewer', async (_, media) => {
+            const onOpenPost = jest.fn();
+            await render(
+                <MediaViewerProvider>
+                    <OpenProbe media={media} onOpenPost={onOpenPost} />
+                </MediaViewerProvider>
+            );
+            await fireEvent.press(screen.getByRole('button', { name: 'open' }));
+
+            await fireEvent.press(screen.getByRole('button', { name: 'View post' }));
+
+            expect(onOpenPost).toHaveBeenCalledTimes(1);
+            expect(screen.queryByRole('button', { name: 'View post' })).toBeNull();
+        });
+
+        it('leaves it out when opened from a post', async () => {
+            await renderCards(makeStatus('1', [attachment('i1', 'image')]));
+            await fireEvent.press(screen.getByLabelText('Image 1 of 1'));
+
+            expect(screen.queryByRole('button', { name: 'View post' })).toBeNull();
+        });
+    });
+
+    it("closes the gallery from its own close button, below the status bar", async () => {
+        await renderCards(makeStatus('1', [attachment('i1', 'image')]));
+        await fireEvent.press(screen.getByLabelText('Image 1 of 1'));
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Close' }));
+
+        expect(screen.queryByText(/^gallery/)).toBeNull();
     });
 
     it('plays a video in the shared player and closes it', async () => {

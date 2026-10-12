@@ -207,7 +207,7 @@ describe('Compose with your post', () => {
             media_attributes: [{ id: 'm1', description: 'A pug', focus: undefined }],
             poll: undefined,
         }));
-        expect(api.post).not.toHaveBeenCalledWith('/statuses', expect.anything());
+        expect(api.post).not.toHaveBeenCalledWith('/statuses', expect.anything(), expect.anything());
         expect(updated).toHaveBeenCalledWith(expect.objectContaining({ id: 'p1' }));
         subscription.remove();
     });
@@ -240,7 +240,7 @@ describe('Compose with your post', () => {
             in_reply_to_id: 'parent',
             media_ids: ['m1'],
             visibility: 'unlisted',
-        })));
+        }), expect.anything()));
         // The description didn't change, so nothing to update first
         expect(api.put).not.toHaveBeenCalled();
     });

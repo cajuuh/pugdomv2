@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { Image, Pressable, Share, Text, View, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../../services/themeContext';
-import { getCredentials } from '../../services/storage';
+import { useNavigator } from '../../services/navigationContext';
 import { Account, Relationship } from '../../services/mastodon/types';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
 import { StatusHtmlContent, openLink } from '../../components/TootCard/htmlContent';
-import { Avatar, IconButton, PillButton, PugMark, SegmentOption, SegmentedPill } from '../../components/ui';
+import { Avatar, IconButton, PillButton, PugMark, RoleBadge, SegmentOption, SegmentedPill } from '../../components/ui';
 import { FollowButton } from '../../components/FollowButton/followButton';
 import { useOpenAccount } from '../../hooks/useOpenAccount';
 import { hitSlopFor, space } from '../../services/theme/shape';
@@ -56,13 +56,8 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
     const moderation = useModeration();
     const remoteServer = mode === 'other' && user.acct.includes('@') ? user.acct.split('@').pop() : undefined;
 
-    const handleEditProfile = async () => {
-        const { instanceUrl } = await getCredentials();
-        const base = instanceUrl ?? originOf(user.url);
-        if (base) {
-            openLink(`${base.replace(/\/$/, '')}/settings/profile`);
-        }
-    };
+    const { push } = useNavigator();
+    const handleEditProfile = () => push({ name: 'editProfile' });
 
     const handleShare = async () => {
         if (!user.url) return;
@@ -158,6 +153,12 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
                     </Text>
                     <Text style={[type.meta, styles.handle]} numberOfLines={1}>{fullHandle(user)}</Text>
                 </View>
+
+                {!!user.roles?.length && (
+                    <View style={styles.roles}>
+                        {user.roles.map(role => <RoleBadge key={role.id} role={role} />)}
+                    </View>
+                )}
 
                 {mode === 'other' && (relationship?.followed_by || remoteServer) && (
                     <View style={styles.otherInfo}>

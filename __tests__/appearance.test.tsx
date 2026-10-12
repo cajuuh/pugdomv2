@@ -19,6 +19,7 @@ jest.mock('expo-secure-store', () => ({
 }));
 jest.mock('expo-font', () => ({ ...jest.requireActual('expo-font'), useFonts: () => [true, null] }));
 jest.mock('../services/authContext', () => ({
+    useOptionalAuth: () => undefined,
     useAuth: () => ({
         user: { id: '1' },
         logout: jest.fn(),

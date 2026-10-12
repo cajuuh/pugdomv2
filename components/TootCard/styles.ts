@@ -51,9 +51,6 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     singleMediaCompact: {
         height: 140,
     },
-    gridMediaCompact: {
-        height: 80,
-    },
     linkPlainCompact: {
         paddingVertical: space.sm,
         paddingHorizontal: 10,
@@ -138,8 +135,13 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         backgroundColor: colors.accentSoft,
     },
     cwText: {
-        flex: 1,
+        flexGrow: 1,
+        flexShrink: 1,
         gap: 1,
+    },
+    // Keeps its width; the text beside it wraps instead
+    cwButton: {
+        flexShrink: 0,
     },
     cwLabel: {
         fontSize: 11,
@@ -193,28 +195,49 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         width: '100%',
         height: '100%',
     },
-    mediaGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: space.sm,
+    carousel: {
+        borderRadius: radii.well,
+        overflow: 'hidden',
     },
-    gridMedia: {
-        height: 120,
-        borderRadius: space.md,
+    carouselSlide: {
+        height: 200,
         overflow: 'hidden',
         backgroundColor: colors.inputBackground,
+    },
+    carouselDots: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: 5,
+        marginTop: space.sm,
+    },
+    carouselDot: {
+        width: 6,
+        height: 6,
+        borderRadius: radii.pill,
+        backgroundColor: colors.borderColor,
+    },
+    carouselDotActive: {
+        backgroundColor: colors.accentColor,
     },
     veil: {
         ...StyleSheet.absoluteFill,
         alignItems: 'center',
         justifyContent: 'center',
         gap: 10,
-        backgroundColor: colors.veil,
+        backgroundColor: colors.veilStrong,
+    },
+    // Blur only: the label keeps its own backing so it stays readable
+    veilBare: {
+        backgroundColor: 'transparent',
     },
     veilLabel: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: radii.pill,
+        backgroundColor: colors.veilStrong,
     },
     veilText: {
         fontSize: 12.5,
@@ -247,12 +270,17 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         position: 'absolute',
         left: space.sm,
         top: space.sm,
-        width: 32,
-        height: 32,
-        borderRadius: radii.pill,
+        flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
+        gap: 4,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: radii.pill,
         backgroundColor: colors.veilStrong,
+    },
+    hideMediaText: {
+        fontSize: 12,
+        color: colors.textPrimary,
     },
     linkPreview: {
         flexDirection: 'row',

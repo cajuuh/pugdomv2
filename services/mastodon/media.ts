@@ -13,11 +13,13 @@ export interface UploadFile {
 // The server may still be processing it, until then without a url
 export type UploadedMedia = Omit<Attachment, 'url'> & { url: string | null };
 
-// Large images take a while on slow connections
+// Large images take a while on slow connections; videos much longer, and the server then converts them
 const UPLOAD_TIMEOUT = 120000;
+const VIDEO_UPLOAD_TIMEOUT = 600000;
 // How often, and how many times, to ask whether the server has finished processing an upload
 export const PROCESSING_POLL_MS = 1000;
 const PROCESSING_POLL_TRIES = 60;
+const VIDEO_PROCESSING_POLL_TRIES = 300;
 
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -25,7 +27,7 @@ const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 // it; then this waits until it's done, since a post can't use media that isn't ready.
 export async function uploadMedia(
     file: UploadFile,
-    { onProgress, signal }: { onProgress?: (fraction: number) => void; signal?: AbortSignal } = {}
+    { onProgress, signal, video }: { onProgress?: (fraction: number) => void; signal?: AbortSignal; video?: boolean } = {}
 ): Promise<UploadedMedia> {
     // v2 needs the full URL: apiClient's base is /api/v1
     const { instanceUrl } = await getCredentials();
@@ -38,7 +40,7 @@ export async function uploadMedia(
     const response = await apiClient.post<UploadedMedia>(`${instanceUrl}/api/v2/media`, form, {
         // Not JSON (the client's default): React Native adds the multipart boundary
         headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: UPLOAD_TIMEOUT,
+        timeout: video ? VIDEO_UPLOAD_TIMEOUT : UPLOAD_TIMEOUT,
         signal,
         onUploadProgress: event => {
             if (event.total) onProgress?.(Math.min(event.loaded / event.total, 1));
@@ -46,14 +48,14 @@ export async function uploadMedia(
     });
 
     if (response.status === 202 || !response.data.url) {
-        return waitForProcessing(response.data.id, signal);
+        return waitForProcessing(response.data.id, signal, video ? VIDEO_PROCESSING_POLL_TRIES : PROCESSING_POLL_TRIES);
     }
     return response.data;
 }
 
 // GET /media/:id answers 206 until the server has processed the file
-export async function waitForProcessing(id: string, signal?: AbortSignal): Promise<UploadedMedia> {
-    for (let tries = 0; tries < PROCESSING_POLL_TRIES; tries++) {
+export async function waitForProcessing(id: string, signal?: AbortSignal, maxTries = PROCESSING_POLL_TRIES): Promise<UploadedMedia> {
+    for (let tries = 0; tries < maxTries; tries++) {
         await wait(PROCESSING_POLL_MS);
         if (signal?.aborted) throw new Error('Upload cancelled');
         const response = await apiClient.get<UploadedMedia>(`/media/${id}`, { signal });

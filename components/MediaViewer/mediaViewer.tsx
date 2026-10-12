@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import { Modal, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { Modal, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useVideoPlayer, VideoView } from 'expo-video';
@@ -9,21 +9,37 @@ import { Attachment } from '../../services/mastodon/types';
 import { styles } from './styles';
 import { mediaColors } from '../../services/theme/media';
 import { useI18n } from '../../services/i18n/i18nContext';
+import { useTheme } from '../../services/themeContext';
 
 interface MediaViewerContextType {
-    openMedia: (attachments: Attachment[], index: number) => void;
+    // With onOpenPost (e.g. from a profile's media grid), the viewer also offers to open the post
+    openMedia: (attachments: Attachment[], index: number, onOpenPost?: () => void) => void;
 }
 
 const MediaViewerContext = createContext<MediaViewerContextType | undefined>(undefined);
 
 const isVideo = (attachment: Attachment) => attachment.type === 'video' || attachment.type === 'gifv';
 
-type OpenMedia =
+type OpenMedia = (
     | { kind: 'images'; images: Attachment[]; index: number }
-    | { kind: 'video'; attachment: Attachment };
+    | { kind: 'video'; attachment: Attachment }
+) & { onOpenPost?: () => void };
+
+// "View post", across from the close button: closes the viewer and opens the post the media is from
+const OpenPostButton = ({ onPress }: { onPress: () => void }) => {
+    const insets = useSafeAreaInsets();
+    const { t } = useI18n();
+    const { type } = useTheme();
+    return (
+        <TouchableOpacity onPress={onPress} style={[styles.openPostButton, { top: insets.top + 12 }]} accessibilityRole="button" accessibilityLabel={t('media.viewPost')}>
+            <Ionicons name="chatbox-outline" size={18} color={mediaColors.ink} />
+            <Text style={[type.name, { color: mediaColors.ink }]}>{t('media.viewPost')}</Text>
+        </TouchableOpacity>
+    );
+};
 
 // Mounted only while a video is open, so a player exists only for the video being watched
-const VideoModal = ({ attachment, onClose }: { attachment: Attachment; onClose: () => void }) => {
+const VideoModal = ({ attachment, onClose, onOpenPost }: { attachment: Attachment; onClose: () => void; onOpenPost?: () => void }) => {
     const insets = useSafeAreaInsets();
     const { t } = useI18n();
     const player = useVideoPlayer(attachment.url, player => {
@@ -50,6 +66,7 @@ const VideoModal = ({ attachment, onClose }: { attachment: Attachment; onClose: 
                 >
                     <Ionicons name="close" size={30} color={mediaColors.ink} />
                 </TouchableOpacity>
+                {onOpenPost && <OpenPostButton onPress={onOpenPost} />}
             </View>
         </Modal>
     );
@@ -59,18 +76,20 @@ const VideoModal = ({ attachment, onClose }: { attachment: Attachment; onClose: 
 export const MediaViewerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [open, setOpen] = useState<OpenMedia | null>(null);
     const { height } = useWindowDimensions();
+    const insets = useSafeAreaInsets();
+    const { t } = useI18n();
 
-    const openMedia = useCallback((attachments: Attachment[], index: number) => {
+    const openMedia = useCallback((attachments: Attachment[], index: number, onOpenPost?: () => void) => {
         const selected = attachments[index];
         if (!selected) {
             return;
         }
         if (isVideo(selected)) {
-            setOpen({ kind: 'video', attachment: selected });
+            setOpen({ kind: 'video', attachment: selected, onOpenPost });
         } else if (selected.type === 'image') {
             // Only images go into the gallery, so swiping never lands on a video URL
             const images = attachments.filter(attachment => attachment.type === 'image');
-            setOpen({ kind: 'images', images, index: images.indexOf(selected) });
+            setOpen({ kind: 'images', images, index: images.indexOf(selected), onOpenPost });
         } else {
             // Unknown media types can't be previewed in-app
             WebBrowser.openBrowserAsync(selected.url).catch(error => console.error('Failed to open media:', error));
@@ -78,7 +97,28 @@ export const MediaViewerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }, []);
 
     const close = useCallback(() => setOpen(null), []);
+    const openPost = open?.onOpenPost
+        ? () => {
+              close();
+              open.onOpenPost?.();
+          }
+        : undefined;
     const value = useMemo(() => ({ openMedia }), [openMedia]);
+
+    // The library's own close button sits under Android's status bar (the app draws edge to edge)
+    const ImageViewerHeader = () => (
+        <>
+            <TouchableOpacity
+                onPress={close}
+                style={[styles.closeButton, { top: insets.top + 12 }]}
+                accessibilityRole="button"
+                accessibilityLabel={t('media.close')}
+            >
+                <Ionicons name="close" size={30} color={mediaColors.ink} />
+            </TouchableOpacity>
+            {openPost && <OpenPostButton onPress={openPost} />}
+        </>
+    );
 
     const imageCount = open?.kind === 'images' ? open.images.length : 0;
     const ImageViewerFooter = ({ imageIndex }: { imageIndex: number }) => {
@@ -110,9 +150,10 @@ export const MediaViewerProvider: React.FC<{ children: React.ReactNode }> = ({ c
                 swipeToCloseEnabled={true}
                 doubleTapToZoomEnabled={true}
                 backgroundColor={mediaColors.scrimStrong}
+                HeaderComponent={ImageViewerHeader}
                 FooterComponent={ImageViewerFooter}
             />
-            {open?.kind === 'video' && <VideoModal attachment={open.attachment} onClose={close} />}
+            {open?.kind === 'video' && <VideoModal attachment={open.attachment} onClose={close} onOpenPost={openPost} />}
         </MediaViewerContext.Provider>
     );
 };

@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
 import { MediaViewerProvider } from '../components/MediaViewer/mediaViewer';
 import { NavigationProvider, useNavigator } from '../services/navigationContext';
-import { TootCard, describeHidden } from '../components/TootCard/tootCard';
+import { TootCard, describeHidden, uncroppedHeight } from '../components/TootCard/tootCard';
 import { COMPACT_ACTION_HEIGHT } from '../components/TootCard/styles';
 import { MIN_TOUCH } from '../services/theme/shape';
 import { Poll } from '../components/Poll/poll';
@@ -27,7 +27,7 @@ jest.mock('../services/mastodon/polls', () => ({
 }));
 
 // Mutable so the Compact Mode tests can turn it on
-const mockSettings = { compactMode: false, mediaAutoplay: false };
+const mockSettings: { compactMode: boolean; mediaAutoplay: boolean; hideCounts: boolean; expandSpoilers: boolean | null; coverSensitiveMedia: boolean; uncroppedMedia: boolean } = { compactMode: false, mediaAutoplay: false, hideCounts: false, expandSpoilers: null, coverSensitiveMedia: true, uncroppedMedia: false };
 jest.mock('../services/settingsContext', () => ({
     useSettings: () => mockSettings,
 }));
@@ -277,6 +277,35 @@ describe('TootCard content', () => {
         media_attachments: [{ id: 'm1', type: 'image', url: 'https://example.social/m1.png', preview_url: 'https://example.social/m1-small.png' }],
     });
 
+    it('shows the whole picture at its own shape when uncropped', async () => {
+        mockSettings.uncroppedMedia = true;
+        try {
+            await renderCard({
+                ...statusA,
+                media_attachments: [{ id: 'm1', type: 'image', url: 'https://example.social/m1.png', preview_url: 'https://example.social/m1-small.png', meta: { small: { width: 400, height: 300 } } }],
+            } as Status);
+
+            expect(screen.getByTestId('focused-image-whole').props.resizeMode).toBe('contain');
+        } finally {
+            mockSettings.uncroppedMedia = false;
+        }
+    });
+
+    it('shows several images as a carousel, one page at a time', async () => {
+        const image = (id: string) => ({ id, type: 'image', url: `https://example.social/${id}.png`, preview_url: `https://example.social/${id}-small.png` });
+        await renderCard({ ...statusA, media_attachments: [image('m1'), image('m2'), image('m3')] } as Status);
+
+        expect(screen.getByRole('imagebutton', { name: 'Image 1 of 3' })).toBeTruthy();
+        expect(screen.getByRole('imagebutton', { name: 'Image 3 of 3' })).toBeTruthy();
+        const dots = () => screen.getAllByTestId(/^carousel-dot/, { includeHiddenElements: true }).map(dot => dot.props.testID);
+        expect(dots()).toEqual(['carousel-dot-active', 'carousel-dot', 'carousel-dot']);
+
+        const carousel = screen.getByTestId('media-carousel');
+        await fireEvent(carousel, 'layout', { nativeEvent: { layout: { width: 300, height: 200 } } });
+        await fireEvent(carousel, 'momentumScrollEnd', { nativeEvent: { contentOffset: { x: 300, y: 0 } } });
+        expect(dots()).toEqual(['carousel-dot', 'carousel-dot-active', 'carousel-dot']);
+    });
+
     it('shows sensitive posts without a CW, veiling only the media', async () => {
         await renderCard(withMedia({ ...statusA, sensitive: true, spoiler_text: '' }));
 
@@ -284,6 +313,22 @@ describe('TootCard content', () => {
         expect(screen.getByText('Sensitive · 1 photo')).toBeTruthy();
         // The veiled image is hidden from screen readers until it's shown
         expect(screen.queryByRole('imagebutton')).toBeNull();
+        // Only a heavily blurred copy is drawn under the cover, never the picture itself
+        const blurred = screen.getByTestId('focused-image-blurred', { includeHiddenElements: true });
+        expect(blurred.props.blurRadius).toBeGreaterThanOrEqual(50);
+    });
+
+    it('only blurs sensitive media when the cover is turned off', async () => {
+        mockSettings.coverSensitiveMedia = false;
+        try {
+            await renderCard(withMedia({ ...statusA, sensitive: true, spoiler_text: '' }));
+
+            expect(screen.getByText('Sensitive · 1 photo')).toBeTruthy();
+            expect(screen.getByTestId('focused-image-blurred', { includeHiddenElements: true })).toBeTruthy();
+            expect(StyleSheet.flatten(screen.getByTestId('media-veil').props.style).backgroundColor).toBe('transparent');
+        } finally {
+            mockSettings.coverSensitiveMedia = true;
+        }
     });
 
     it('shows sensitive media on request and can hide it again', async () => {
@@ -292,9 +337,24 @@ describe('TootCard content', () => {
         await fireEvent.press(screen.getByRole('button', { name: 'Show' }));
         expect(screen.queryByText('Sensitive · 1 photo')).toBeNull();
         expect(screen.getByRole('imagebutton', { name: 'Image 1 of 1' })).toBeTruthy();
+        expect(screen.queryAllByTestId('focused-image-blurred', { includeHiddenElements: true })).toHaveLength(0);
 
         await fireEvent.press(screen.getByRole('button', { name: 'Hide media' }));
         expect(screen.getByText('Sensitive · 1 photo')).toBeTruthy();
+        expect(screen.queryAllByTestId('focused-image-blurred', { includeHiddenElements: true }).length).toBeGreaterThan(0);
+    });
+
+    it('shows custom emoji in a content warning, collapsed and opened', async () => {
+        const blobcat = { shortcode: 'blobcat', url: 'https://example.social/blobcat.png', static_url: '', visible_in_picker: true };
+        await renderCard({ ...statusA, spoiler_text: 'cats :blobcat:', emojis: [blobcat] });
+
+        expect(screen.getByText(/^cats/)).toBeTruthy();
+        expect(screen.queryByText(/:blobcat:/)).toBeNull();
+        expect(JSON.stringify(screen.toJSON())).toContain(blobcat.url);
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Show' }));
+        expect(screen.getByText(/CW · cats/)).toBeTruthy();
+        expect(screen.queryByText(/:blobcat:/)).toBeNull();
     });
 
     it('collapses posts with a CW into a ribbon that says what is hidden', async () => {
@@ -312,6 +372,19 @@ describe('TootCard content', () => {
         await fireEvent.press(screen.getByRole('button', { name: 'Hide' }));
         expect(screen.queryByText(/status A/)).toBeNull();
         expect(screen.getByText('Text and 1 photo hidden')).toBeTruthy();
+    });
+
+    it('opens posts with a CW expanded when content warnings are set to always expand, and can still hide them', async () => {
+        mockSettings.expandSpoilers = true;
+        try {
+            await renderCard({ ...statusA, sensitive: false, spoiler_text: 'Politics' });
+
+            expect(screen.getByText(/status A/)).toBeTruthy();
+            await fireEvent.press(screen.getByRole('button', { name: 'Hide' }));
+            expect(screen.queryByText(/status A/)).toBeNull();
+        } finally {
+            mockSettings.expandSpoilers = null;
+        }
     });
 
     it('treats a CW as collapsible even when the post is not marked sensitive', async () => {
@@ -346,6 +419,19 @@ describe('TootCard content', () => {
         expect(screen.getByRole('button', { name: 'Favourited, 33 favourites' })).toBeSelected();
         expect(screen.getByRole('button', { name: 'Boost, 22 boosts' })).not.toBeSelected();
         expect(screen.getByRole('button', { name: 'Reply, 11 replies' })).toBeTruthy();
+    });
+
+    it('hides the numbers under the post when asked, keeping them for screen readers', async () => {
+        mockSettings.hideCounts = true;
+        try {
+            await renderCard(statusA);
+
+            for (const count of ['11', '22', '33']) expect(screen.queryByText(count)).toBeNull();
+            expect(screen.getByRole('button', { name: 'Favourite, 33 favourites' })).toBeTruthy();
+            expect(screen.getByRole('button', { name: 'Reply, 11 replies' })).toBeTruthy();
+        } finally {
+            mockSettings.hideCounts = false;
+        }
     });
 });
 
@@ -437,6 +523,23 @@ describe('TootCard opens profiles', () => {
         await fireEvent.press(screen.getByText('Booster boosted'));
 
         expect(pushed()[0]).toMatchObject({ name: 'account', accountId: 'booster' });
+    });
+});
+
+describe('uncroppedHeight', () => {
+    const image = (width?: number, height?: number) => ({ id: 'm', type: 'image', url: '', preview_url: '', meta: { small: { width, height } } }) as any;
+
+    it("follows the image's shape", () => {
+        expect(uncroppedHeight(300, image(400, 300))).toBe(225);
+    });
+
+    it('keeps very wide and very tall images within bounds', () => {
+        expect(uncroppedHeight(300, image(3000, 300))).toBe(120);
+        expect(uncroppedHeight(300, image(300, 3000))).toBe(375);
+    });
+
+    it('falls back to the usual height without a size', () => {
+        expect(uncroppedHeight(300, image())).toBe(200);
     });
 });
 

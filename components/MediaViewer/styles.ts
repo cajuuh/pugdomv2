@@ -19,6 +19,18 @@ export const styles = StyleSheet.create({
         borderRadius: 20,
         padding: 4,
     },
+    openPostButton: {
+        position: 'absolute',
+        left: 20,
+        zIndex: 10,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        height: 38,
+        paddingHorizontal: 14,
+        borderRadius: 19,
+        backgroundColor: mediaColors.scrim,
+    },
     navButton: {
         position: 'absolute',
         top: '50%',

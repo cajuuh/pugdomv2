@@ -38,6 +38,11 @@ import ListEditor from './screens/ListEditor/listEditor';
 import ServerPicker from './screens/ServerPicker/serverPicker';
 import Report from './screens/Report/report';
 import Quotes from './screens/Quotes/quotes';
+import Conversations from './screens/Conversations/conversations';
+import Reactions from './screens/Reactions/reactions';
+import EditProfile from './screens/EditProfile/editProfile';
+import { useUnreadConversations } from './hooks/useUnreadConversations';
+import { useServerPreferences } from './hooks/useExpandSpoilers';
 import { useUnreadNotifications } from './hooks/useUnreadNotifications';
 import { DialogHost } from './components/Dialog/dialogHost';
 
@@ -51,7 +56,10 @@ function NavigationRoot() {
   const { languageReady } = useI18n();
   const [activeTab, setActiveTab] = useState<'home' | 'search' | 'notifications' | 'profile'>('home');
   const unreadNotifications = useUnreadNotifications();
-  const { stack, push, pop, reset } = useNavigator();
+  const unreadMessages = useUnreadConversations();
+  // Fetched at sign-in, so posts know whether to open content warnings before they're drawn
+  useServerPreferences();
+  const { stack, push, pop, reset, closeThreads } = useNavigator();
   // The server's stored custom emoji, ready before anyone opens the picker
   useEmojiCachePrimer(user?.id);
 
@@ -88,8 +96,9 @@ function NavigationRoot() {
   const renderScreen = ({ route }: StackEntry) => {
     switch (route.name) {
       case 'thread':
-        // The header's ← goes back to the tabs; Android's back button steps through the posts one by one
-        return <Thread statusId={route.statusId} onBack={reset} onStatusPress={openThread} />;
+        // The header's ← closes every post opened from this one, back to where the first was opened
+        // (Messages, a profile, the tabs...); Android's back button steps through the posts one by one
+        return <Thread statusId={route.statusId} onBack={closeThreads} onStatusPress={openThread} />;
       case 'settings':
         return <Settings onBack={pop} />;
       // Back from a profile returns to the post or notification it was opened from
@@ -109,6 +118,12 @@ function NavigationRoot() {
         return <Report account={route.account} status={route.status} onBack={pop} />;
       case 'quotes':
         return <Quotes status={route.status} onBack={pop} onStatusPress={openThread} />;
+      case 'conversations':
+        return <Conversations onBack={pop} onStatusPress={openThread} />;
+      case 'reactions':
+        return <Reactions statusId={route.statusId} reaction={route.reaction} onBack={pop} />;
+      case 'editProfile':
+        return <EditProfile onBack={pop} />;
     }
   };
 
@@ -164,6 +179,8 @@ function NavigationRoot() {
           onProfilePress={() => setActiveTab('profile')}
           onSettingsPress={openSettings}
           onLogoutPress={logout}
+          onMessagesPress={() => push({ name: 'conversations' })}
+          unreadMessages={unreadMessages}
         />
 
         {/* Screen content area */}
@@ -171,7 +188,7 @@ function NavigationRoot() {
           {activeTab === 'home' && <Timeline onStatusPress={openThread} />}
           {activeTab === 'search' && <Search onStatusPress={openThread} />}
           {activeTab === 'notifications' && <Notifications onStatusPress={openThread} />}
-          {activeTab === 'profile' && <Profile onStatusPress={openThread} onSettingsPress={openSettings} />}
+          {activeTab === 'profile' && <Profile onStatusPress={openThread} />}
         </View>
       </View>
 

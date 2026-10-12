@@ -10,7 +10,12 @@ export interface PickedImage {
     mimeType?: string | null;
     fileName?: string | null;
     fileSize?: number | null;
+    // The picker says what it is; a video also has its length, in milliseconds
+    type?: string | null;
+    duration?: number | null;
 }
+
+export const isVideoPick = (image: Pick<PickedImage, 'type' | 'mimeType'>) => image.type === 'video' || !!image.mimeType?.startsWith('video/');
 
 type MediaLimits = Pick<InstanceConfiguration, 'imageSizeLimit' | 'imageMatrixLimit' | 'supportedMimeTypes'>;
 
@@ -69,6 +74,15 @@ export async function prepareImage(image: PickedImage, limits: MediaLimits): Pro
 
     const context = ImageManipulator.manipulate(image.uri);
     if (plan.width && plan.height) context.resize({ width: plan.width, height: plan.height });
+    const rendered = await context.renderAsync();
+    const saved = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: JPEG_QUALITY });
+    return { uri: saved.uri, name: `${baseName(image)}.jpg`, type: 'image/jpeg' };
+}
+
+// An avatar or header for the profile: scaled down to what the server keeps (it's already cropped to shape), as JPEG
+export async function prepareProfileImage(image: PickedImage, size: { width: number; height: number }): Promise<UploadFile> {
+    const context = ImageManipulator.manipulate(image.uri);
+    if (image.width > size.width || image.height > size.height) context.resize(size);
     const rendered = await context.renderAsync();
     const saved = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: JPEG_QUALITY });
     return { uri: saved.uri, name: `${baseName(image)}.jpg`, type: 'image/jpeg' };

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Alert, DeviceEventEmitter, Text } from 'react-native';
+import { Alert, AppState, DeviceEventEmitter, Text } from 'react-native';
+import { AxiosError } from 'axios';
 import { act, render, screen, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
@@ -215,5 +216,55 @@ describe('AuthProvider account changes', () => {
         await act(() => auth.switchAccount(bob.id));
 
         expect(auth.needsSetup).toBe(false);
+    });
+});
+
+describe('AuthProvider without a connection', () => {
+    const networkError = Object.assign(new AxiosError('Network Error', 'ERR_NETWORK'), { response: undefined });
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockedStorage.__setState({ accessToken: 'alice-token', instanceUrl: alice.instanceUrl }, [alice, bob]);
+    });
+
+    it('keeps the saved account when the server cannot be reached at launch', async () => {
+        mockedGetCurrentAccount.mockRejectedValueOnce(networkError);
+        await renderAuth();
+
+        expect(screen.getByText('alice')).toBeTruthy();
+        expect(auth.user?.id).toBe('alice');
+    });
+
+    it('keeps the signed-in account when a refresh fails', async () => {
+        mockedGetCurrentAccount.mockResolvedValueOnce({ ...alice.userInfo, emojis: [], followers_count: 7 } as any);
+        await renderAuth();
+
+        mockedGetCurrentAccount.mockRejectedValueOnce(networkError);
+        await act(() => auth.checkLoginStatus());
+
+        expect(auth.user?.followers_count).toBe(7);
+    });
+
+    it('checks again when the app comes back', async () => {
+        const listeners: ((state: string) => void)[] = [];
+        jest.spyOn(AppState, 'addEventListener').mockImplementation((_, listener) => {
+            listeners.push(listener as any);
+            return { remove: jest.fn() } as any;
+        });
+        mockedGetCurrentAccount.mockRejectedValueOnce(networkError);
+        await renderAuth();
+
+        mockedGetCurrentAccount.mockResolvedValueOnce({ ...alice.userInfo, emojis: [], followers_count: 7 } as any);
+        await act(async () => listeners.forEach(listener => listener('active')));
+
+        await waitFor(() => expect(auth.user?.followers_count).toBe(7));
+    });
+
+    it('still signs out on a 401', async () => {
+        const unauthorized = new AxiosError('Unauthorized', 'ERR_BAD_REQUEST', undefined, undefined, { status: 401 } as any);
+        mockedGetCurrentAccount.mockRejectedValueOnce(unauthorized);
+        await renderAuth();
+
+        expect(screen.getByText('logged-out')).toBeTruthy();
     });
 });

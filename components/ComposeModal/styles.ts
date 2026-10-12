@@ -357,6 +357,21 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     },
     emojiGrid: {
         height: 320,
+        // Gives way to the keyboard when the sheet is lifted above it
+        flexShrink: 1,
+    },
+    emojiSearch: {
+        minHeight: 44,
+        marginBottom: space.sm,
+        paddingHorizontal: space.md,
+        borderRadius: radii.input,
+        color: colors.textPrimary,
+        backgroundColor: colors.inputBackground,
+    },
+    // A ScrollView shrinks by default: with the keyboard up only the grid gives way, never the chips
+    emojiChipsRow: {
+        flexGrow: 0,
+        flexShrink: 0,
     },
     emojiChips: {
         paddingBottom: space.sm,

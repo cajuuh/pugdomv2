@@ -8,7 +8,7 @@ export const createTestQueryClient = () => {
     const client = new QueryClient({
         defaultOptions: {
             queries: { retry: false, gcTime: Infinity },
-            mutations: { retry: false },
+            mutations: { retry: false, gcTime: Infinity },
         },
     });
     clients.add(client);
