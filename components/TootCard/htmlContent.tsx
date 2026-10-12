@@ -93,7 +93,9 @@ export const StatusHtmlContent = React.memo(({ content, emojis, colors, bodyFont
         if (emojis && emojis.length > 0) {
             emojis.forEach((emoji: CustomEmoji) => {
                 const regex = new RegExp(`:${emoji.shortcode}:`, 'g');
-                html = html.replace(regex, `<emoji src="${emoji.url}" />`);
+                // Closed explicitly: HTML ignores "/>" on custom tags, so everything after the first
+                // emoji (more emoji, the rest of the text) would end up inside it, unseen
+                html = html.replace(regex, `<emoji src="${emoji.url}"></emoji>`);
             });
         }
         return html;
