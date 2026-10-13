@@ -7,6 +7,7 @@ import { Conversation, getConversations } from '../services/mastodon/conversatio
 import { unreadConversationsKey } from '../hooks/useUnreadConversations';
 import Conversations from '../screens/Conversations/conversations';
 import { Account, Status } from '../services/mastodon/types';
+import { dialog } from '../services/dialog';
 
 jest.mock('../services/api/client', () => ({ __esModule: true, default: { get: jest.fn(), post: jest.fn() } }));
 jest.mock('../services/themeContext', () => ({
@@ -75,6 +76,57 @@ describe('Conversations', () => {
         expect(mockedPost).toHaveBeenCalledWith('/conversations/c1/read');
         await waitFor(() => expect(screen.queryByTestId('conversation-unread')).toBeNull());
         await waitFor(() => expect(queryClient.getQueryState(unreadConversationsKey('me'))?.isInvalidated).toBe(true));
+    });
+
+    it('lists only unread conversations on Unread', async () => {
+        await renderScreen([
+            conversation('c1', [ana], post('s1', ana, '<p>oi</p>'), true),
+            conversation('c2', [bruno], post('s2', bruno, '<p>tchau</p>')),
+        ]);
+        await screen.findByRole('button', { name: 'Bruno. tchau' });
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Unread' }));
+
+        expect(screen.getByRole('button', { name: 'Ana. Unread. oi' })).toBeTruthy();
+        expect(screen.queryByRole('button', { name: 'Bruno. tchau' })).toBeNull();
+    });
+
+    it('says when nothing is unread, without offering to mark all read', async () => {
+        await renderScreen([conversation('c2', [bruno], post('s2', bruno, '<p>tchau</p>'))]);
+        await screen.findByRole('button', { name: 'Bruno. tchau' });
+        expect(screen.queryByRole('button', { name: 'Mark all as read' })).toBeNull();
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Unread' }));
+        expect(screen.getByText('No unread messages')).toBeTruthy();
+    });
+
+    it('marks every unread conversation read and refreshes the envelope', async () => {
+        mockedPost.mockResolvedValue({ data: {} });
+        await renderScreen([
+            conversation('c1', [ana], post('s1', ana, '<p>oi</p>'), true),
+            conversation('c2', [bruno], post('s2', bruno, '<p>tchau</p>')),
+            conversation('c3', [bruno, ana], post('s3', bruno, '<p>olá</p>'), true),
+        ]);
+        queryClient.setQueryData(unreadConversationsKey('me'), true);
+
+        await fireEvent.press(await screen.findByRole('button', { name: 'Mark all as read' }));
+
+        expect(mockedPost.mock.calls.map(call => call[0])).toEqual(['/conversations/c1/read', '/conversations/c3/read']);
+        await waitFor(() => expect(screen.queryByTestId('conversation-unread')).toBeNull());
+        expect(screen.queryByRole('button', { name: 'Mark all as read' })).toBeNull();
+        await waitFor(() => expect(queryClient.getQueryState(unreadConversationsKey('me'))?.isInvalidated).toBe(true));
+    });
+
+    it('says so when marking them read fails, and reloads', async () => {
+        const toast = jest.spyOn(dialog, 'toast').mockImplementation(() => {});
+        mockedPost.mockRejectedValue(new Error('Network Error'));
+        await renderScreen([conversation('c1', [ana], post('s1', ana, '<p>oi</p>'), true)]);
+
+        await fireEvent.press(await screen.findByRole('button', { name: 'Mark all as read' }));
+
+        await waitFor(() => expect(toast).toHaveBeenCalledWith("Couldn't mark them all as read. Try again."));
+        await waitFor(() => expect(mockedGet).toHaveBeenCalledTimes(2));
+        toast.mockRestore();
     });
 
     it("opens a read conversation without marking it again", async () => {
