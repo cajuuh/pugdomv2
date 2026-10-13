@@ -3,7 +3,7 @@ import { AppState, AppStateStatus } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { FeedType, NEW_POSTS_LIMIT } from '../services/mastodon/timeline';
 import { FeedDescriptor } from '../services/mastodon/feedTypes';
-import { fetchFeedNewer } from '../services/mastodon/feedService';
+import { fetchFeedNewer, withoutDirect } from '../services/mastodon/feedService';
 import { Account, Status } from '../services/mastodon/types';
 
 export const NEW_POSTS_INTERVAL_MS = 3 * 60_000;
@@ -18,12 +18,14 @@ export interface NewPosts {
 
 const NONE: NewPosts = { count: 0, more: false, accounts: [] };
 
-export const summarizeNewPosts = (posts: Status[]): NewPosts => {
+// Direct posts don't count: the timeline doesn't show them
+export const summarizeNewPosts = (fetched: Status[]): NewPosts => {
+    const posts = withoutDirect(fetched);
     const accounts: Account[] = [];
     for (const post of posts) {
         if (accounts.length < 3 && !accounts.some(a => a.id === post.account.id)) accounts.push(post.account);
     }
-    return { count: posts.length, more: posts.length >= NEW_POSTS_LIMIT, accounts };
+    return { count: posts.length, more: fetched.length >= NEW_POSTS_LIMIT, accounts };
 };
 
 // Checks for posts newer than the top of the list every three minutes while the app is in the foreground.

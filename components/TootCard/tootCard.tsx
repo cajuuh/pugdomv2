@@ -142,6 +142,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const { openMedia } = useMediaViewer();
     const isReblog = !!status.reblog;
     const targetStatus = isReblog ? status.reblog! : status;
+    const isDirect = targetStatus.visibility === 'direct';
 
     const updateCachedStatus = useUpdateCachedStatus();
     const queryClient = useQueryClient();
@@ -664,7 +665,13 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const reactions = (showReactions || ownPost) && !remote && <ReactionLinks status={targetStatus} />;
 
     const card = (
-        <Card style={[styles.card, compactMode && styles.cardCompact, threadMode && styles.cardThread]}>
+        <Card style={[styles.card, isDirect && styles.cardDirect, compactMode && styles.cardCompact, threadMode && styles.cardThread]}>
+            {isDirect && (
+                <View style={[styles.boostRow, compactMode && styles.boostRowCompact]}>
+                    <Ionicons name="lock-closed" size={14} color={colors.accentText} />
+                    <Text style={[type.meta, styles.directText]}>{t('post.privateMention')}</Text>
+                </View>
+            )}
             {isReblog && (
                 <Pressable
                     onPress={() => openPerson(status.account)}

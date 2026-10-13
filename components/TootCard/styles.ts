@@ -19,6 +19,14 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         paddingHorizontal: CARD_PADDING,
         paddingBottom: 6,
     },
+    // Private mentions: an accent edge, so they never pass for a public post
+    cardDirect: {
+        borderWidth: 1,
+        borderColor: colors.accentColor,
+    },
+    directText: {
+        color: colors.accentText,
+    },
     // Compact posts read as a list: full width, no card chrome, a hairline between posts
     cardCompact: {
         marginHorizontal: 0,

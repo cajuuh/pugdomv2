@@ -105,6 +105,14 @@ describe('Notifications', () => {
         expect(screen.getAllByText(/your post|mentioned you|followed you/)).toHaveLength(1);
     });
 
+    it('tells a private mention apart', async () => {
+        const dm = notification('1', 'mention', account('a', 'alice'));
+        mockedFetch.mockResolvedValue([{ ...dm, status: { ...dm.status, visibility: 'direct' } }]);
+        await renderScreen();
+
+        expect(await screen.findByText(/privately mentioned you/)).toBeTruthy();
+    });
+
     it('shows when someone quotes your post, with what they wrote', async () => {
         mockedFetch.mockResolvedValue([notification('1', 'quote', account('a', 'alice'))]);
         await renderScreen();

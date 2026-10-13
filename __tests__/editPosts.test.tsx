@@ -166,6 +166,13 @@ describe('Your own posts', () => {
         await waitFor(() => expect(api.post).toHaveBeenCalledWith('/statuses/p1/unpin'));
     });
 
+    it('marks a direct post as a private mention', async () => {
+        await render(wrap(<TootCard status={post({ visibility: 'direct' })} />));
+        expect(screen.getByText('Private mention')).toBeTruthy();
+        await render(wrap(<TootCard status={post()} />));
+        expect(screen.queryByText('Private mention')).toBeNull();
+    });
+
     it("says why a post can't be pinned, and offers no pin on direct posts", async () => {
         api.post.mockRejectedValue({ response: { status: 422, data: { error: 'Validation failed: You have already pinned the maximum number of posts' } } });
         await openMenu();
