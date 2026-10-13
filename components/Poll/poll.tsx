@@ -3,7 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRecyclingState } from '@shopify/flash-list';
 import { Poll as PollType, PollOption } from '../../services/mastodon/types';
-import { votePoll } from '../../services/mastodon/polls';
+import { getPoll, votePoll } from '../../services/mastodon/polls';
 import { useTheme } from '../../services/themeContext';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
@@ -20,12 +20,15 @@ interface PollProps {
     readOnly?: boolean;
 }
 
+// `expired` is only as fresh as the post, so a poll that ended since it loaded still says false
+const pollEnded = (poll: Pick<PollType, 'expired' | 'expires_at'>, now = Date.now()) =>
+    poll.expired || (!!poll.expires_at && new Date(poll.expires_at).getTime() <= now);
+
 // "18h left", "3d left", "5m left"; "Closed" once the poll has ended
 export const pollTimeLeft = (poll: Pick<PollType, 'expired' | 'expires_at'>, now = Date.now(), { t }: Translator = defaultTranslator()) => {
-    if (poll.expired) return t('poll.closed');
+    if (pollEnded(poll, now)) return t('poll.closed');
     if (!poll.expires_at) return null;
     const minutes = Math.floor((new Date(poll.expires_at).getTime() - now) / 60000);
-    if (minutes <= 0) return t('poll.closed');
     if (minutes < 60) return t('poll.minutesLeft', { count: minutes });
     const hours = Math.floor(minutes / 60);
     if (hours < 24) return t('poll.hoursLeft', { count: hours });
@@ -50,7 +53,8 @@ export const Poll: React.FC<PollProps> = ({ initialPoll, onPollUpdated, readOnly
     const renderedPollId = useRef(initialPoll.id);
     renderedPollId.current = initialPoll.id;
 
-    const isClosed = poll.expired || poll.voted || !!readOnly;
+    const ended = pollEnded(poll);
+    const isClosed = ended || poll.voted || !!readOnly;
     const totalVotes = poll.voters_count || poll.votes_count || 0;
     const topVotes = Math.max(0, ...poll.options.map(option => option.votes_count || 0));
 
@@ -76,8 +80,19 @@ export const Poll: React.FC<PollProps> = ({ initialPoll, onPollUpdated, readOnly
             if (renderedPollId.current === pollId) {
                 setPoll(updatedPoll);
             }
-        } catch (error) {
-            dialog.toast(t('poll.voteFailed'));
+        } catch (error: any) {
+            // Mastodon says why ("You have already voted on this poll", "The poll has already ended")
+            const reason = error?.response?.data?.error;
+            dialog.toast(reason ? t('poll.voteFailedBecause', { reason }) : t('poll.voteFailed'));
+            // Show the poll as it is now, so an ended or already-voted poll turns into results
+            try {
+                const freshPoll = await getPoll(pollId);
+                onPollUpdated?.(freshPoll);
+                if (renderedPollId.current === pollId) {
+                    setPoll(freshPoll);
+                    setSelectedChoices([]);
+                }
+            } catch {}
         } finally {
             if (renderedPollId.current === pollId) {
                 setIsVoting(false);
@@ -142,7 +157,9 @@ export const Poll: React.FC<PollProps> = ({ initialPoll, onPollUpdated, readOnly
     };
 
     const timeLeft = pollTimeLeft(poll, Date.now(), i18n);
-    const summary = [tn('poll.votes', poll.votes_count), timeLeft].filter(Boolean).join(' · ');
+    // A post from another server's feed: voting happens once it's opened through your server
+    const remoteHint = readOnly && !ended && !poll.voted && t('poll.openToVote');
+    const summary = [tn('poll.votes', poll.votes_count), timeLeft, remoteHint].filter(Boolean).join(' · ');
 
     return (
         <Well style={styles.container} accessibilityRole={isClosed ? undefined : poll.multiple ? undefined : 'radiogroup'}>
