@@ -664,14 +664,16 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     // Not for posts from another server: their ids aren't ours
     const reactions = (showReactions || ownPost) && !remote && <ReactionLinks status={targetStatus} />;
 
+    // Under the name, in the text column: clear of a thread's avatar line, and shown even behind a content warning
+    const privateMention = isDirect && (
+        <View style={styles.directRow}>
+            <Ionicons name="lock-closed" size={13} color={colors.accentText} />
+            <Text style={[type.meta, styles.directText]}>{t('post.privateMention')}</Text>
+        </View>
+    );
+
     const card = (
         <Card style={[styles.card, isDirect && styles.cardDirect, compactMode && styles.cardCompact, threadMode && styles.cardThread]}>
-            {isDirect && (
-                <View style={[styles.boostRow, compactMode && styles.boostRowCompact]}>
-                    <Ionicons name="lock-closed" size={14} color={colors.accentText} />
-                    <Text style={[type.meta, styles.directText]}>{t('post.privateMention')}</Text>
-                </View>
-            )}
             {isReblog && (
                 <Pressable
                     onPress={() => openPerson(status.account)}
@@ -706,6 +708,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                             {names}
                             {time}
                         </View>
+                        {privateMention}
                         {renderContent()}
                         {actions}
                         {reactions}
@@ -718,6 +721,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                         {names}
                         {time}
                     </View>
+                    {privateMention}
                     {renderContent()}
                     {actions}
                     {reactions}

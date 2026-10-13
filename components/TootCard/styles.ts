@@ -24,6 +24,12 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         borderWidth: 1,
         borderColor: colors.accentColor,
     },
+    directRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        marginTop: 6,
+    },
     directText: {
         color: colors.accentText,
     },
