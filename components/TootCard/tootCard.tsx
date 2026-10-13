@@ -785,6 +785,15 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                                 }, Platform.OS === 'ios' ? 400 : 0),
                             }]
                             : []),
+                        // Mastodon doesn't pin direct posts
+                        ...(targetStatus.visibility !== 'direct'
+                            ? [{
+                                key: 'pin',
+                                icon: targetStatus.pinned ? ('pin' as const) : ('pin-outline' as const),
+                                label: t(targetStatus.pinned ? 'posts.unpin' : 'posts.pin'),
+                                onPress: () => postActions.togglePin(targetStatus),
+                            }]
+                            : []),
                         { key: 'edit', icon: 'create-outline', label: t('posts.edit'), onPress: () => postActions.edit(targetStatus) },
                         { key: 'redraft', icon: 'refresh', label: t('posts.redraft'), description: t('posts.redraftHint'), onPress: () => postActions.redraft(targetStatus) },
                         { key: 'delete', icon: 'trash-outline', label: t('posts.delete'), onPress: () => postActions.remove(targetStatus) },
