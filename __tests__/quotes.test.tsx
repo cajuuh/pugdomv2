@@ -113,6 +113,12 @@ describe('Quote posts', () => {
         expect(onPress).toHaveBeenCalledWith('q1');
     });
 
+    it('says when the quoted post has a poll', async () => {
+        const poll = { id: 'p1', expires_at: null, expired: false, multiple: false, votes_count: 0, voters_count: 0, voted: false, own_votes: [], options: [], emojis: [] };
+        await renderCard(quoting({ state: 'accepted', quoted_status: { ...quoted, poll } }));
+        expect(screen.getByText('Has a poll: open it to vote')).toBeTruthy();
+    });
+
     it('opens the quoted post in a thread when the card has no handler', async () => {
         await renderCard(quoting({ state: 'accepted', quoted_status: quoted }));
 

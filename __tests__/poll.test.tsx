@@ -2,16 +2,18 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { Poll, pollTimeLeft } from '../components/Poll/poll';
-import { votePoll } from '../services/mastodon/polls';
+import { getPoll, votePoll } from '../services/mastodon/polls';
+import { dialog } from '../services/dialog';
 import { Poll as PollType } from '../services/mastodon/types';
 import { mockTheme } from '../testUtils/theme';
 
-jest.mock('../services/mastodon/polls', () => ({ votePoll: jest.fn() }));
+jest.mock('../services/mastodon/polls', () => ({ votePoll: jest.fn(), getPoll: jest.fn() }));
 jest.mock('../services/themeContext', () => ({
     useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
 }));
 
 const mockedVote = votePoll as jest.MockedFunction<typeof votePoll>;
+const mockedGet = getPoll as jest.MockedFunction<typeof getPoll>;
 const { colors } = mockTheme;
 const HOUR = 60 * 60 * 1000;
 
@@ -72,6 +74,36 @@ describe('Poll voting', () => {
         expect(screen.getByRole('checkbox', { name: 'In a sunbeam' })).toBeChecked();
         expect(screen.getByRole('checkbox', { name: 'On your laptop' })).not.toBeChecked();
     });
+
+    it("says why a vote failed and shows the poll as it is now", async () => {
+        const toast = jest.spyOn(dialog, 'toast').mockImplementation(() => {});
+        mockedVote.mockRejectedValue({ response: { status: 422, data: { error: 'Validation failed: The poll has already ended' } } });
+        mockedGet.mockResolvedValue(makePoll({ expired: true }));
+        const onPollUpdated = jest.fn();
+        await render(<Poll initialPoll={makePoll()} onPollUpdated={onPollUpdated} />);
+
+        await fireEvent.press(screen.getByRole('radio', { name: 'On the sofa' }));
+        await fireEvent.press(screen.getByRole('button', { name: 'Vote' }));
+
+        expect(toast).toHaveBeenCalledWith("Couldn't vote: Validation failed: The poll has already ended");
+        expect(mockedGet).toHaveBeenCalledWith('p1');
+        expect(onPollUpdated).toHaveBeenCalledWith(expect.objectContaining({ expired: true }));
+        expect(screen.queryByRole('radio')).toBeNull();
+        expect(screen.getByText('214 votes · Closed')).toBeTruthy();
+    });
+
+    it('falls back to the generic message without a reason', async () => {
+        const toast = jest.spyOn(dialog, 'toast').mockImplementation(() => {});
+        mockedVote.mockRejectedValue(new Error('Network Error'));
+        mockedGet.mockRejectedValue(new Error('Network Error'));
+        await render(<Poll initialPoll={makePoll()} />);
+
+        await fireEvent.press(screen.getByRole('radio', { name: 'On the sofa' }));
+        await fireEvent.press(screen.getByRole('button', { name: 'Vote' }));
+
+        expect(toast).toHaveBeenCalledWith('Failed to submit your vote. Please try again.');
+        expect(screen.getAllByRole('radio')).toHaveLength(3);
+    });
 });
 
 describe('Poll results', () => {
@@ -93,6 +125,19 @@ describe('Poll results', () => {
     it('says Closed once the poll has ended', async () => {
         await render(<Poll initialPoll={makePoll({ expired: true })} />);
         expect(screen.getByText('214 votes · Closed')).toBeTruthy();
+    });
+
+    it('shows results once the end time has passed, even if the post still says open', async () => {
+        await render(<Poll initialPoll={makePoll({ expired: false, expires_at: new Date(Date.now() - 60000).toISOString() })} />);
+        expect(screen.queryByRole('radio')).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Vote' })).toBeNull();
+        expect(screen.getByText('214 votes · Closed')).toBeTruthy();
+    });
+
+    it("says how to vote on a post from another server's feed", async () => {
+        await render(<Poll initialPoll={makePoll()} readOnly />);
+        expect(screen.queryByRole('radio')).toBeNull();
+        expect(screen.getByText('214 votes · 18h left · Open the post to vote')).toBeTruthy();
     });
 });
 
