@@ -167,6 +167,8 @@ export const ptBR: Dictionary = {
     thread: {
         title: 'Publicação',
         titleBy: 'Publicação de {{name}}',
+        oldestFirst: 'Mais antigas primeiro',
+        newestFirst: 'Mais recentes primeiro',
     },
     search: {
         placeholder: 'Buscar pessoas, hashtags e publicações',
@@ -377,6 +379,11 @@ export const ptBR: Dictionary = {
         title: 'Mensagens',
         openUnread: 'Mensagens, não lidas',
         unread: 'Não lida',
+        all: 'Todas',
+        unreadFilter: 'Não lidas',
+        markAllRead: 'Marcar todas como lidas',
+        markAllReadFailed: 'Não deu para marcar todas como lidas. Tente de novo.',
+        noneUnread: 'Nenhuma mensagem não lida',
         you: 'Você: {{text}}',
         none: 'Nenhuma mensagem ainda. Para escrever uma, comece uma publicação e escolha "Mencionados" em quem pode ver.',
     },

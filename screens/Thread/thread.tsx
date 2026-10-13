@@ -13,7 +13,8 @@ import {
 import { FlashList } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { IconButton } from '../../components/ui';
+import { IconButton, SegmentOption, SegmentedPill } from '../../components/ui';
+import { getSetting, saveSetting } from '../../services/storage';
 import { space } from '../../services/theme/shape';
 import { TAB_BAR_CLEARANCE } from '../../components/TabBar/styles';
 import { getStatus, getStatusContext } from '../../services/mastodon/statuses';
@@ -34,6 +35,11 @@ type ThreadStatus = Status & {
     isMain?: boolean;
 };
 
+type Order = 'oldest' | 'newest';
+
+// Remembered for every thread: long conversations are easier to answer with the newest on top
+export const THREAD_NEWEST_FIRST_KEY = 'pugdom_settings_thread_newest_first';
+
 export default function Thread({
     statusId,
     onBack,
@@ -46,6 +52,21 @@ export default function Thread({
     const [statuses, setStatuses] = useState<ThreadStatus[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [order, setOrder] = useState<Order>('oldest');
+    const orders: SegmentOption<Order>[] = [
+        { value: 'oldest', label: t('thread.oldestFirst') },
+        { value: 'newest', label: t('thread.newestFirst') },
+    ];
+    const shown = order === 'newest' ? [...statuses].reverse() : statuses;
+
+    useEffect(() => {
+        getSetting(THREAD_NEWEST_FIRST_KEY, false).then(newest => setOrder(newest ? 'newest' : 'oldest'));
+    }, []);
+
+    const changeOrder = (value: Order) => {
+        setOrder(value);
+        saveSetting(THREAD_NEWEST_FIRST_KEY, value === 'newest');
+    };
     // The post this thread is about (for a boost, the original's author)
     const mainAccount = statuses.find(status => status.isMain)?.account;
 
@@ -151,6 +172,12 @@ export default function Thread({
                 <View style={styles.headerSpacer} />
             </View>
 
+            {!loading && statuses.length > 1 && (
+                <View style={styles.order}>
+                    <SegmentedPill variant="chips" options={orders} value={order} onChange={changeOrder} />
+                </View>
+            )}
+
             {loading ? (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator
@@ -160,7 +187,9 @@ export default function Thread({
                 </View>
             ) : (
                 <FlashList
-                    data={statuses}
+                    // A fresh list per order, starting from the top
+                    key={order}
+                    data={shown}
                    keyExtractor={(item) => item.id}
                     contentContainerStyle={styles.listContent}
                     renderItem={({ item, index }) => {
@@ -191,7 +220,7 @@ export default function Thread({
                                     showReactions={isMain}
                                     hasThreadLineTop={index > 0}
                                     hasThreadLineBottom={
-                                        index < statuses.length - 1
+                                        index < shown.length - 1
                                     }
                                 />
                             </View>
@@ -232,6 +261,12 @@ const styles = StyleSheet.create({
 
     headerSpacer: {
         width: 44,
+    },
+
+    order: {
+        paddingTop: space.md,
+        paddingBottom: space.sm,
+        paddingHorizontal: space.lg,
     },
 
     loadingContainer: {

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FlashList } from '@shopify/flash-list';
@@ -13,7 +13,8 @@ import { plainText } from '../../services/htmlText';
 import { radii, space } from '../../services/theme/shape';
 import { TAB_BAR_CLEARANCE } from '../../components/TabBar/styles';
 import { getRelativeTime } from '../../components/TootCard/tootCard';
-import { Avatar, IconButton } from '../../components/ui';
+import { Avatar, IconButton, PillButton, SegmentOption, SegmentedPill } from '../../components/ui';
+import { dialog } from '../../services/dialog';
 
 interface ConversationsProps {
     onBack: () => void;
@@ -22,7 +23,10 @@ interface ConversationsProps {
 
 export const conversationsKey = (accountId: string) => ['conversations', accountId];
 
-// Your direct conversations, newest activity first. Opening one marks it read and shows its thread.
+type Filter = 'all' | 'unread';
+
+// Your direct conversations, newest activity first. Opening one marks it read and shows its thread;
+// Unread lists only the unread ones, and Mark all as read clears them (Mastodon can't mark them unread again).
 const Conversations = ({ onBack, onStatusPress }: ConversationsProps) => {
     const { colors, type } = useTheme();
     const i18n = useI18n();
@@ -39,24 +43,46 @@ const Conversations = ({ onBack, onStatusPress }: ConversationsProps) => {
         getNextPageParam: (page: ConversationsPage) => page.nextMaxId,
     });
     const conversations = data?.pages.flatMap(page => page.conversations) ?? [];
+    const unreadIds = conversations.filter(conversation => conversation.unread).map(conversation => conversation.id);
+    const [filter, setFilter] = useState<Filter>('all');
+    const [markingAll, setMarkingAll] = useState(false);
+    const filters: SegmentOption<Filter>[] = [
+        { value: 'all', label: t('conversations.all') },
+        { value: 'unread', label: t('conversations.unreadFilter') },
+    ];
+    const shown = filter === 'unread' ? conversations.filter(conversation => conversation.unread) : conversations;
+
+    // Read at once here; the envelope's dot checks again once the server agrees. Resolves false if any failed.
+    const markRead = async (ids: string[]) => {
+        queryClient.setQueryData<InfiniteData<ConversationsPage>>(key, current =>
+            current && {
+                ...current,
+                pages: current.pages.map(page => ({
+                    ...page,
+                    conversations: page.conversations.map(item => (ids.includes(item.id) ? { ...item, unread: false } : item)),
+                })),
+            }
+        );
+        // Mastodon has no "read all", so one request each
+        const results = await Promise.allSettled(ids.map(markConversationRead));
+        results.forEach(result => result.status === 'rejected' && console.warn('Marking the conversation read failed:', result.reason));
+        queryClient.invalidateQueries({ queryKey: unreadConversationsKey(me?.id ?? '') });
+        return results.every(result => result.status === 'fulfilled');
+    };
+
+    const markAllRead = async () => {
+        setMarkingAll(true);
+        const ok = await markRead(unreadIds);
+        setMarkingAll(false);
+        if (!ok) {
+            dialog.toast(t('conversations.markAllReadFailed'));
+            refetch();
+        }
+    };
 
     const open = (conversation: Conversation) => {
         if (!conversation.last_status) return;
-        if (conversation.unread) {
-            // Read at once here; the envelope's dot checks again once the server agrees
-            queryClient.setQueryData<InfiniteData<ConversationsPage>>(key, current =>
-                current && {
-                    ...current,
-                    pages: current.pages.map(page => ({
-                        ...page,
-                        conversations: page.conversations.map(item => (item.id === conversation.id ? { ...item, unread: false } : item)),
-                    })),
-                }
-            );
-            markConversationRead(conversation.id)
-                .catch(error => console.warn('Marking the conversation read failed:', error))
-                .finally(() => queryClient.invalidateQueries({ queryKey: unreadConversationsKey(me?.id ?? '') }));
-        }
+        if (conversation.unread) markRead([conversation.id]);
         onStatusPress(conversation.last_status.id);
     };
 
@@ -99,12 +125,25 @@ const Conversations = ({ onBack, onStatusPress }: ConversationsProps) => {
                 </Text>
                 <View style={styles.spacer} />
             </View>
+            <View style={styles.filters}>
+                <SegmentedPill variant="chips" options={filters} value={filter} onChange={setFilter} />
+                {unreadIds.length > 0 && (
+                    <PillButton
+                        label={t('conversations.markAllRead')}
+                        icon="checkmark-done"
+                        variant="ghost"
+                        size="small"
+                        loading={markingAll}
+                        onPress={markAllRead}
+                    />
+                )}
+            </View>
 
             {isLoading ? (
                 <ActivityIndicator style={styles.loading} color={colors.accentColor} />
             ) : (
                 <FlashList
-                    data={conversations}
+                    data={shown}
                     keyExtractor={item => item.id}
                     renderItem={renderRow}
                     contentContainerStyle={styles.list}
@@ -119,7 +158,7 @@ const Conversations = ({ onBack, onStatusPress }: ConversationsProps) => {
                             progressBackgroundColor={colors.cardBackground}
                         />
                     }
-                    ListEmptyComponent={<Text style={[type.body, styles.empty, { color: colors.textMuted }]}>{t('conversations.none')}</Text>}
+                    ListEmptyComponent={<Text style={[type.body, styles.empty, { color: colors.textMuted }]}>{t(filter === 'unread' ? 'conversations.noneUnread' : 'conversations.none')}</Text>}
                     ListFooterComponent={isFetchingNextPage ? <ActivityIndicator color={colors.accentColor} /> : null}
                 />
             )}
@@ -144,6 +183,15 @@ const styles = StyleSheet.create({
     },
     spacer: {
         width: 44,
+    },
+    filters: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: space.sm,
+        paddingTop: 14,
+        paddingBottom: 6,
+        paddingHorizontal: space.lg,
     },
     loading: {
         marginTop: space.xl,

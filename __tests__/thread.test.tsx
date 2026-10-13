@@ -1,11 +1,12 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
-import { fireEvent, render, screen, within } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
 import { MediaViewerProvider } from '../components/MediaViewer/mediaViewer';
-import Thread from '../screens/Thread/thread';
+import Thread, { THREAD_NEWEST_FIRST_KEY } from '../screens/Thread/thread';
 import { getStatus, getStatusContext } from '../services/mastodon/statuses';
 import { Status } from '../services/mastodon/types';
 
@@ -71,8 +72,9 @@ const renderThread = (onStatusPress = jest.fn()) =>
     );
 
 describe('Thread', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
         jest.clearAllMocks();
+        await AsyncStorage.clear();
         mockedGetStatus.mockResolvedValue(makeStatus('main'));
         mockedGetContext.mockResolvedValue({ ancestors: [makeStatus('parent')], descendants: [makeStatus('reply')] });
     });
@@ -94,6 +96,34 @@ describe('Thread', () => {
 
         await fireEvent.press(screen.getByText(/status reply/));
         expect(onStatusPress).toHaveBeenCalledWith('reply');
+    });
+
+    it('puts the newest posts first when asked, and remembers it', async () => {
+        await renderThread();
+        await screen.findByText(/status parent/);
+        const order = () => screen.getAllByText(/^status /).map(node => node.props.children);
+        expect(order()).toEqual(['status parent', 'status main', 'status reply']);
+        expect(screen.getByRole('button', { name: 'Oldest first' })).toBeSelected();
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Newest first' }));
+
+        await waitFor(() => expect(order()).toEqual(['status reply', 'status main', 'status parent']));
+        await waitFor(async () => expect(await AsyncStorage.getItem(THREAD_NEWEST_FIRST_KEY)).toBe('true'));
+    });
+
+    it('opens newest first once that was chosen', async () => {
+        await AsyncStorage.setItem(THREAD_NEWEST_FIRST_KEY, 'true');
+        await renderThread();
+
+        await waitFor(() => expect(screen.getByRole('button', { name: 'Newest first' })).toBeSelected());
+        expect(screen.getAllByText(/^status /).map(node => node.props.children)).toEqual(['status reply', 'status main', 'status parent']);
+    });
+
+    it('has no order choice for a lone post', async () => {
+        mockedGetContext.mockResolvedValue({ ancestors: [], descendants: [] });
+        await renderThread();
+        await screen.findByText(/status main/);
+        expect(screen.queryByRole('button', { name: 'Newest first' })).toBeNull();
     });
 
     it('says whose post it is in the header', async () => {

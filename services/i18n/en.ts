@@ -169,6 +169,8 @@ export const en = {
     thread: {
         title: 'Post',
         titleBy: 'Post by {{name}}',
+        oldestFirst: 'Oldest first',
+        newestFirst: 'Newest first',
     },
     search: {
         placeholder: 'Search people, hashtags and posts',
@@ -381,6 +383,11 @@ export const en = {
         title: 'Messages',
         openUnread: 'Messages, unread',
         unread: 'Unread',
+        all: 'All',
+        unreadFilter: 'Unread',
+        markAllRead: 'Mark all as read',
+        markAllReadFailed: "Couldn't mark them all as read. Try again.",
+        noneUnread: 'No unread messages',
         // The last message in a conversation, when you sent it
         you: 'You: {{text}}',
         none: 'No messages yet. To write one, start a post and set who can see it to "Mentioned".',
