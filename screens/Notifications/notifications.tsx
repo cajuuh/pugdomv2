@@ -34,6 +34,8 @@ const FILTERS: NotificationFilter[] = ['all', 'mentions', 'follows'];
 // Types share the accent and differ by glyph and wording
 const TYPE_CONFIG: Record<string, { badge: React.ComponentProps<typeof Ionicons>['name']; action: TKey }> = {
     mention: { badge: 'at', action: 'notifications.mention' },
+    // A mention in a direct post
+    privateMention: { badge: 'lock-closed', action: 'notifications.privateMention' },
     favourite: { badge: 'star', action: 'notifications.favourite' },
     reblog: { badge: 'repeat', action: 'notifications.reblog' },
     follow: { badge: 'person-add', action: 'notifications.follow' },
@@ -129,9 +131,9 @@ const NotificationRow = ({ group, relationship, onStatusPress }: NotificationRow
     const i18n = useI18n();
     const { t, tn } = i18n;
     const { openAccount } = useOpenAccount();
-    const config = TYPE_CONFIG[group.type];
-    const action = t(config.action);
     const { status } = group;
+    const config = TYPE_CONFIG[group.type === 'mention' && status?.visibility === 'direct' ? 'privateMention' : group.type];
+    const action = t(config.action);
     const account = group.accounts[0];
     const name = account ? nameOf(account) : '';
     const time = notificationTime(group.created_at, new Date(), i18n);

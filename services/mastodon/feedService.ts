@@ -6,6 +6,9 @@ import { getTagTimeline, TagTimelineOptions } from './tags';
 import { Status } from './types';
 import { getServerTimeline } from './servers';
 
+// Direct posts (Mastodon puts the ones mentioning you in Home and lists) belong in Messages only
+export const withoutDirect = (posts: Status[]): Status[] => posts.filter(post => post.visibility !== 'direct');
+
 export const parseTrendingOffset = (cursor?: string): number => {
     if (cursor && cursor.startsWith('offset:')) {
         const val = parseInt(cursor.slice(7), 10);

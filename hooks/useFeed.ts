@@ -1,7 +1,10 @@
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { InfiniteData, useInfiniteQuery } from '@tanstack/react-query';
 import { FeedDescriptor } from '../services/mastodon/feedTypes';
-import { fetchFeedPage } from '../services/mastodon/feedService';
+import { fetchFeedPage, withoutDirect } from '../services/mastodon/feedService';
 import { Status } from '../services/mastodon/types';
+
+// Filtered for display only, so each page keeps its last post as the cursor for the next
+const hideDirect = (data: InfiniteData<Status[], string | undefined>) => ({ ...data, pages: data.pages.map(withoutDirect) });
 
 export const useFeed = (feed: FeedDescriptor) => {
     return useInfiniteQuery({
@@ -23,5 +26,6 @@ export const useFeed = (feed: FeedDescriptor) => {
 
             return lastPage[lastPage.length - 1].id;
         },
+        select: hideDirect,
     });
 };
