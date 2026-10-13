@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../services/authContext';
 import { useTheme } from '../../services/themeContext';
 import { Status } from '../../services/mastodon/types';
-import { accountStatusesKey, ProfileTab, useAccountStatuses } from '../../hooks/useAccountStatuses';
+import { accountStatusesKey, ProfileTab, useProfileStatuses } from '../../hooks/useAccountStatuses';
 import { useBookmarks } from '../../hooks/useBookmarks';
 import { TootCard } from '../../components/TootCard/tootCard';
 import { SegmentOption } from '../../components/ui';
@@ -22,12 +22,14 @@ interface ProfileProps {
 // Bookmarks are private to you, and this is always your own profile
 type Tab = ProfileTab | 'bookmarks';
 
-const TABS: Tab[] = ['posts', 'replies', 'media', 'bookmarks'];
+// Pinned comes first, and only when there are pinned posts
+const tabsFor = (hasPinned: boolean): Tab[] => [...(hasPinned ? ['pinned' as const] : []), 'posts', 'replies', 'media', 'bookmarks'];
 
 const EMPTY_TEXT = {
     posts: 'profile.emptyPosts',
     replies: 'profile.emptyReplies',
     media: 'profile.emptyMedia',
+    pinned: 'profile.emptyPinned',
     bookmarks: 'profile.emptyBookmarks',
 } as const;
 
@@ -41,16 +43,20 @@ const Profile = ({ onStatusPress }: ProfileProps) => {
     const styles = useThemedStyles(makeStyles);
     const queryClient = useQueryClient();
     const [tab, setTab] = useState<Tab>('posts');
-    const tabs: SegmentOption<Tab>[] = TABS.map(value => ({ value, label: t(`profile.${value}`) }));
     const [isPullRefreshing, setIsPullRefreshing] = useState(false);
 
     const showBookmarks = tab === 'bookmarks';
-    const accountStatuses = useAccountStatuses(user?.id, showBookmarks ? 'posts' : tab, !showBookmarks);
+    const accountStatuses = useProfileStatuses(user?.id, showBookmarks ? 'posts' : tab, !showBookmarks);
+    const { hasPinned } = accountStatuses;
+    const tabs: SegmentOption<Tab>[] = tabsFor(hasPinned).map(value => ({ value, label: t(`profile.${value}`), icon: value === 'pinned' ? 'pin' : undefined }));
     const bookmarks = useBookmarks(showBookmarks);
     const { isLoading, isFetchingNextPage, hasNextPage, fetchNextPage, refetch } = showBookmarks ? bookmarks : accountStatuses;
-    const statuses = showBookmarks
-        ? bookmarks.data?.pages.flatMap(page => page.statuses) ?? []
-        : accountStatuses.data?.pages.flat() ?? [];
+    const statuses = showBookmarks ? bookmarks.data?.pages.flatMap(page => page.statuses) ?? [] : accountStatuses.statuses;
+
+    // Unpinning the last pinned post takes the Pinned tab away
+    useEffect(() => {
+        if (tab === 'pinned' && !hasPinned) setTab('posts');
+    }, [tab, hasPinned]);
 
     // A new post belongs at the top of your own lists
     useEffect(() => {

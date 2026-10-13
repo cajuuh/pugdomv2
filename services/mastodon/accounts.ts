@@ -10,6 +10,7 @@ export async function getCurrentAccount(): Promise<Account> {
 export interface AccountStatusesFilter {
     exclude_replies?: boolean;
     only_media?: boolean;
+    pinned?: boolean;
 }
 
 // An account's posts, newest first

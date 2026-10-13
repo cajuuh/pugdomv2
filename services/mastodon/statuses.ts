@@ -59,6 +59,16 @@ export async function unbookmarkStatus(id: string): Promise<Status> {
     return response.data;
 }
 
+export async function pinStatus(id: string): Promise<Status> {
+    const response = await apiClient.post(`/statuses/${id}/pin`);
+    return response.data;
+}
+
+export async function unpinStatus(id: string): Promise<Status> {
+    const response = await apiClient.post(`/statuses/${id}/unpin`);
+    return response.data;
+}
+
 export async function getStatus(id: string): Promise<Status> {
     const response = await apiClient.get(`/statuses/${id}`);
     return response.data;
