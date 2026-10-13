@@ -10,12 +10,15 @@ jobs:
     uses: ./.github/workflows/checks.yml
 
   publish-ota:
-    name: Publish OTA Update to Preview
+    name: Publish OTA Updates to Preview and Testers
     needs: checks
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # The release tags, to compare with the version the testers have
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -34,3 +37,28 @@ jobs:
 
       - name: Publish EAS Update
         run: eas update --branch preview --message "Automated update from GitHub Actions"
+
+      # Closed testing: every merge goes straight to the testers' store builds of this version, for fast feedback.
+      # Only when nothing native changed since that version's release, or the update could crash those builds.
+      # ponytail: compares app.json, eas.json, yarn.lock and dependencies, so a JavaScript-only dependency change
+      # also holds updates back until the next release; use @expo/fingerprint if that gets in the way.
+      - name: Check the testers' builds can take this update
+        id: testers
+        run: |
+          TAG="v$(node -p "require('./app.json').expo.version")"
+          deps() { git show "$1:package.json" | node -e 'let s = ""; process.stdin.on("data", d => (s += d)).on("end", () => console.log(JSON.stringify(JSON.parse(s).dependencies)))'; }
+          if ! git rev-parse -q --verify "refs/tags/$TAG" > /dev/null; then
+            echo "::notice::$TAG isn't released yet, so the testers get this with the $TAG build."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          elif ! git diff --quiet "$TAG" HEAD -- app.json eas.json yarn.lock || [ "$(deps "$TAG")" != "$(deps HEAD)" ]; then
+            echo "::warning::Native config or dependencies changed since $TAG, so an update could break its builds: bump expo.version and release."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish EAS Update to testers (production)
+        if: steps.testers.outputs.publish == 'true'
+        env:
+          MESSAGE: ${{ github.event.head_commit.message }}
+        run: eas update --branch production --message "$(printf '%s' "$MESSAGE" | head -n 1)" --non-interactive
