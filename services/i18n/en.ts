@@ -169,6 +169,8 @@ export const en = {
     thread: {
         title: 'Post',
         titleBy: 'Post by {{name}}',
+        oldestFirst: 'Oldest first',
+        newestFirst: 'Newest first',
     },
     search: {
         placeholder: 'Search people, hashtags and posts',

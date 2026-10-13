@@ -167,6 +167,8 @@ export const ptBR: Dictionary = {
     thread: {
         title: 'Publicação',
         titleBy: 'Publicação de {{name}}',
+        oldestFirst: 'Mais antigas primeiro',
+        newestFirst: 'Mais recentes primeiro',
     },
     search: {
         placeholder: 'Buscar pessoas, hashtags e publicações',
