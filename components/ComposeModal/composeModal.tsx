@@ -391,8 +391,8 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
         }
     };
 
-    // A video can only start an empty post, so only then does the camera ask which
-    const addFromCamera = () => (media.canAddVideo ? setPicker('camera') : capture(false));
+    // Always asks photo or video; once the post has media, video is shown but greyed out with the reason
+    const addFromCamera = () => setPicker('camera');
     // iOS can't open the camera while the sheet is still closing
     const captureAfterSheet = (video: boolean) => setTimeout(() => capture(video), Platform.OS === 'ios' ? 400 : 0);
 
@@ -764,7 +764,15 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 title={t('compose.camera')}
                 actions={[
                     { key: 'photo', label: t('compose.takePhoto'), icon: 'camera-outline', onPress: () => captureAfterSheet(false) },
-                    { key: 'video', label: t('compose.recordVideo'), icon: 'videocam-outline', onPress: () => captureAfterSheet(true) },
+                    {
+                        key: 'video',
+                        label: t('compose.recordVideo'),
+                        icon: 'videocam-outline',
+                        // Mastodon takes photos or one video, not both, so a video can only start an empty post
+                        disabled: !media.canAddVideo,
+                        description: media.canAddVideo ? undefined : t('compose.videoOnlyAlone'),
+                        onPress: () => captureAfterSheet(true),
+                    },
                 ]}
                 onClose={() => setPicker(null)}
             />
