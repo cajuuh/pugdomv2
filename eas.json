@@ -39,6 +39,10 @@
       "ios": {
         "ascAppId": "6818288991",
         "appleTeamId": "G6H6CPS7BU"
+      },
+      "android": {
+        "track": "Mastodon Teste Alpha",
+        "releaseStatus": "draft"
       }
     }
   }
