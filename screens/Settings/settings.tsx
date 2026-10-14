@@ -224,8 +224,11 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                     <View style={styles.divider} />
                     <View style={styles.row}>
                         <Ionicons name="code-slash-outline" size={20} color={colors.accentText} />
-                        <Text style={[labelStyle, styles.rowText]}>{t('settings.codeVersion')}</Text>
-                        <Text style={[type.meta, styles.rowValue]} selectable>{codeVersionLabel(i18n)}</Text>
+                        {/* An update's label is long ("2026-10-13 21:43 · d095fe8 (production)"): its own line, under the name */}
+                        <View style={styles.rowText}>
+                            <Text style={labelStyle}>{t('settings.codeVersion')}</Text>
+                            <Text style={[type.meta, styles.rowValue]} selectable>{codeVersionLabel(i18n)}</Text>
+                        </View>
                     </View>
                     <View style={styles.divider} />
                     <Pressable
