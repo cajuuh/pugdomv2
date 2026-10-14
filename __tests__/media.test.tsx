@@ -299,7 +299,7 @@ describe('Compose with images', () => {
 
         // Only pictures were offered once there was one
         expect(library).toHaveBeenLastCalledWith(expect.objectContaining({ mediaTypes: ['images'] }));
-        expect(await screen.findByText('A video goes on its own in a post, so it was left out')).toBeTruthy();
+        expect(await screen.findByText('A post can have photos or one video, not both, so the video was left out')).toBeTruthy();
         expect(screen.queryByRole('button', { name: 'Describe video 1' })).toBeNull();
         expect(screen.getByRole('button', { name: 'Describe image 1' })).toBeTruthy();
     });
@@ -347,7 +347,7 @@ describe('Compose with images', () => {
         expect(await screen.findByRole('button', { name: 'Describe video 1' })).toBeTruthy();
     });
 
-    it('takes a photo straight away once the post has pictures', async () => {
+    it('still asks once the post has pictures, with video greyed out and why', async () => {
         camera.mockResolvedValueOnce({ canceled: false, assets: [photo('b.jpg')] });
         await renderCompose();
         await act(async () => {});
@@ -355,8 +355,12 @@ describe('Compose with images', () => {
 
         await fireEvent.press(screen.getByRole('button', { name: 'Camera' }));
 
+        expect(camera).not.toHaveBeenCalled();
+        expect(screen.getByRole('button', { name: 'Record a video' })).toBeDisabled();
+        expect(screen.getByText('A post can have photos or one video, not both. Remove the photos to record a video.')).toBeTruthy();
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Take a photo' }));
         await waitFor(() => expect(camera).toHaveBeenCalledWith(expect.objectContaining({ mediaTypes: ['images'] })));
-        expect(screen.queryByRole('button', { name: 'Record a video' })).toBeNull();
         expect(await screen.findByRole('button', { name: 'Describe image 2' })).toBeTruthy();
     });
 });
