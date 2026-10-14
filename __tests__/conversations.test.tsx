@@ -117,16 +117,50 @@ describe('Conversations', () => {
         await waitFor(() => expect(queryClient.getQueryState(unreadConversationsKey('me'))?.isInvalidated).toBe(true));
     });
 
-    it('says so when marking them read fails, and reloads', async () => {
+    it('keeps the ones that worked read and brings back the dot on the ones that failed', async () => {
         const toast = jest.spyOn(dialog, 'toast').mockImplementation(() => {});
-        mockedPost.mockRejectedValue(new Error('Network Error'));
+        mockedPost.mockImplementation((url: string) =>
+            url === '/conversations/c2/read' ? Promise.reject(Object.assign(new Error('Server error'), { response: { status: 500 } })) : Promise.resolve({ data: {} })
+        );
+        await renderScreen([
+            conversation('c1', [ana], post('s1', ana, '<p>oi</p>'), true),
+            conversation('c2', [bruno], post('s2', bruno, '<p>tchau</p>'), true),
+        ]);
+
+        await fireEvent.press(await screen.findByRole('button', { name: 'Mark all as read' }));
+
+        await waitFor(() => expect(toast).toHaveBeenCalledWith("Couldn't mark 1 conversation as read. Try again."));
+        expect(screen.getAllByTestId('conversation-unread')).toHaveLength(1);
+        expect(mockedGet).toHaveBeenCalledTimes(1);
+        toast.mockRestore();
+    });
+
+    it('says when the server has no way to mark them read', async () => {
+        const toast = jest.spyOn(dialog, 'toast').mockImplementation(() => {});
+        mockedPost.mockRejectedValue(Object.assign(new Error('Not found'), { response: { status: 404 } }));
         await renderScreen([conversation('c1', [ana], post('s1', ana, '<p>oi</p>'), true)]);
 
         await fireEvent.press(await screen.findByRole('button', { name: 'Mark all as read' }));
 
-        await waitFor(() => expect(toast).toHaveBeenCalledWith("Couldn't mark them all as read. Try again."));
-        await waitFor(() => expect(mockedGet).toHaveBeenCalledTimes(2));
+        await waitFor(() => expect(toast).toHaveBeenCalledWith("Your server doesn't let apps mark messages as read."));
         toast.mockRestore();
+    });
+
+    it('sends a few at a time', async () => {
+        let inFlight = 0;
+        let most = 0;
+        mockedPost.mockImplementation(async () => {
+            most = Math.max(most, ++inFlight);
+            await new Promise(resolve => setTimeout(resolve, 0));
+            inFlight--;
+            return { data: {} };
+        });
+        await renderScreen(Array.from({ length: 10 }, (_, n) => conversation(`c${n}`, [ana], post(`s${n}`, ana, `<p>${n}</p>`), true)));
+
+        await fireEvent.press(await screen.findByRole('button', { name: 'Mark all as read' }));
+
+        await waitFor(() => expect(mockedPost).toHaveBeenCalledTimes(10));
+        expect(most).toBe(4);
     });
 
     it("opens a read conversation without marking it again", async () => {
