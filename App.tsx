@@ -45,6 +45,7 @@ import { useUnreadConversations } from './hooks/useUnreadConversations';
 import { useServerPreferences } from './hooks/useExpandSpoilers';
 import { useUnreadNotifications } from './hooks/useUnreadNotifications';
 import { DialogHost } from './components/Dialog/dialogHost';
+import { useAppUpdates } from './hooks/useAppUpdates';
 
 // Keep the pug splash up until the fonts and the saved account are loaded
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -56,6 +57,8 @@ function NavigationRoot() {
   const { languageReady } = useI18n();
   const [activeTab, setActiveTab] = useState<'home' | 'search' | 'notifications' | 'profile'>('home');
   const unreadNotifications = useUnreadNotifications();
+  // New over-the-air code: checks on returning to the app, offers a restart once it's downloaded
+  useAppUpdates();
   const unreadMessages = useUnreadConversations();
   // Fetched at sign-in, so posts know whether to open content warnings before they're drawn
   useServerPreferences();
