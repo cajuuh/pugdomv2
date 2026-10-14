@@ -649,6 +649,7 @@ export const en = {
         keepEditing: 'Keep editing',
     },
     updates: {
+        downloading: 'Downloading an update…',
         readyTitle: 'Update ready',
         readyMessage: 'Restart pugdon to use the latest version.',
         restart: 'Restart',
