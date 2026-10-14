@@ -641,6 +641,7 @@ export const ptBR: Dictionary = {
         keepEditing: 'Continuar editando',
     },
     updates: {
+        downloading: 'Baixando uma atualização…',
         readyTitle: 'Atualização pronta',
         readyMessage: 'Reinicie o pugdon para usar a versão mais recente.',
         restart: 'Reiniciar',

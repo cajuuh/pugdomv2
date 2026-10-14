@@ -48,6 +48,19 @@ describe('useAppUpdates', () => {
         expect(mocked.fetchUpdateAsync).not.toHaveBeenCalled();
     });
 
+    it('says when an update starts downloading', async () => {
+        const toast = jest.spyOn(dialog, 'toast').mockImplementation(() => {});
+        mocked.useUpdates.mockReturnValue({ isDownloading: true, isUpdatePending: false } as any);
+        await renderHook(() => useAppUpdates());
+        expect(toast).toHaveBeenCalledWith('Downloading an update…');
+    });
+
+    it('stays quiet when nothing is downloading', async () => {
+        const toast = jest.spyOn(dialog, 'toast').mockImplementation(() => {});
+        await renderHook(() => useAppUpdates());
+        expect(toast).not.toHaveBeenCalled();
+    });
+
     it('offers to restart once an update is downloaded', async () => {
         const alert = jest.spyOn(dialog, 'alert').mockImplementation(() => {});
         mocked.useUpdates.mockReturnValue({ isUpdatePending: true, downloadedUpdate: { updateId: 'u1' } } as any);
