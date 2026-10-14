@@ -50,8 +50,8 @@ export interface ThreadRow {
     replyingTo?: Status['account'];
 }
 
-// Ancestors and the post on top; then each answer to the post (oldest or newest first) with its whole branch
-// under it, one indent in and in reading order. Replies whose parent is missing count as answers to the post.
+// Oldest first: ancestors and the post, then each answer to the post with its whole branch under it, one indent in
+// and in reading order. Replies whose parent is missing count as answers to the post.
 export function threadRows(statuses: ThreadStatus[], newestFirst: boolean): ThreadRow[] {
     const mainIndex = statuses.findIndex(status => status.isMain);
     if (mainIndex < 0) return statuses.map(status => ({ status, depth: 0 }));
@@ -64,11 +64,9 @@ export function threadRows(statuses: ThreadStatus[], newestFirst: boolean): Thre
     });
     const answersTo = (id: string) => [...(children.get(id) ?? [])].sort((a, b) => a.created_at.localeCompare(b.created_at));
 
-    const rows: ThreadRow[] = statuses.slice(0, mainIndex + 1).map(status => ({ status, depth: 0 }));
-    const heads = answersTo(main.id);
-    if (newestFirst) heads.reverse();
-    heads.forEach(head => {
-        rows.push({ status: head, depth: 1 });
+    const chain: ThreadRow[] = statuses.slice(0, mainIndex + 1).map(status => ({ status, depth: 0 }));
+    const branches = answersTo(main.id).map(head => {
+        const rows: ThreadRow[] = [{ status: head, depth: 1 }];
         const branch = (id: string) =>
             answersTo(id).forEach(reply => {
                 const parent = byId.get(reply.in_reply_to_id ?? '');
@@ -76,8 +74,11 @@ export function threadRows(statuses: ThreadStatus[], newestFirst: boolean): Thre
                 branch(reply.id);
             });
         branch(head.id);
+        return rows;
     });
-    return rows;
+    // Newest first turns the whole thread over (a direct message opens on its latest post, everything above it),
+    // keeping each branch in reading order under its first reply
+    return newestFirst ? [...branches.reverse().flat(), ...chain.reverse()] : [...chain, ...branches.flat()];
 }
 
 export default function Thread({
@@ -279,8 +280,8 @@ export default function Thread({
                                         threadMode={true}
                                         showReactions={isMain}
                                         // The avatar line links what the post answers down to it, and a reply to its branch
-                                        hasThreadLineTop={depth === 0 && index > 0}
-                                        hasThreadLineBottom={(depth === 0 && !isMain) || (depth === 1 && inBranch)}
+                                        hasThreadLineTop={depth === 0 && shown[index - 1]?.depth === 0}
+                                        hasThreadLineBottom={(depth === 0 && nextDepth === 0) || (depth === 1 && inBranch)}
                                         indent={depth === 2 ? indent : 0}
                                         replyingTo={replyingTo && `@${replyingTo.username}`}
                                     />
