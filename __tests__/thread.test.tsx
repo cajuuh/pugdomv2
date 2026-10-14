@@ -86,12 +86,17 @@ describe('threadRows', () => {
         const statuses = [makeStatus('parent'), main, reply('b', 'main', 3), reply('a', 'main', 1), reply('a1', 'a', 2), by(reply('a2', 'a1', 4), 'nina')];
         const rows = (newest: boolean) => threadRows(statuses, newest).map(row => `${row.status.id}:${row.depth}`);
         expect(rows(false)).toEqual(['parent:0', 'main:0', 'a:1', 'a1:2', 'a2:2', 'b:1']);
-        expect(rows(true)).toEqual(['parent:0', 'main:0', 'b:1', 'a:1', 'a1:2', 'a2:2']);
+        expect(rows(true)).toEqual(['b:1', 'a:1', 'a1:2', 'a2:2', 'main:0', 'parent:0']);
     });
 
     it('says whom a reply deeper in a branch answers', () => {
         const statuses = [main, reply('a', 'main', 1), by(reply('a1', 'a', 2), 'ana'), reply('a2', 'a1', 3)];
         expect(threadRows(statuses, false).map(row => row.replyingTo?.username)).toEqual([undefined, undefined, undefined, 'ana']);
+    });
+
+    it('turns a direct message over: it opens on the latest post, everything else above it', () => {
+        const statuses = [makeStatus('first'), makeStatus('second'), main];
+        expect(threadRows(statuses, true).map(row => row.status.id)).toEqual(['main', 'second', 'first']);
     });
 
     it('hangs a reply whose parent is gone off the post', () => {
@@ -126,7 +131,7 @@ describe('Thread', () => {
         expect(onStatusPress).toHaveBeenCalledWith('reply');
     });
 
-    it('puts the newest replies first when asked, keeping the post on top, and remembers it', async () => {
+    it('puts the newest posts first when asked, and remembers it', async () => {
         mockedGetContext.mockResolvedValue({ ancestors: [makeStatus('parent')], descendants: [reply('older', 'main', 1), reply('newer', 'main', 2)] });
         await renderThread();
         await screen.findByText(/status parent/);
@@ -136,7 +141,10 @@ describe('Thread', () => {
 
         await fireEvent.press(screen.getByRole('button', { name: 'Newest first' }));
 
-        await waitFor(() => expect(order()).toEqual(['status parent', 'status main', 'status newer', 'status older']));
+        await waitFor(() => expect(order()).toEqual(['status newer', 'status older', 'status main', 'status parent']));
+        // The post still links down to what it answers
+        expect(screen.getAllByTestId('thread-line-bottom')).toHaveLength(1);
+        expect(screen.getAllByTestId('thread-line-top')).toHaveLength(1);
         await waitFor(async () => expect(await AsyncStorage.getItem(THREAD_NEWEST_FIRST_KEY)).toBe('true'));
     });
 
