@@ -39,6 +39,7 @@ import ServerPicker from './screens/ServerPicker/serverPicker';
 import Report from './screens/Report/report';
 import Quotes from './screens/Quotes/quotes';
 import Conversations from './screens/Conversations/conversations';
+import ConversationGroup from './screens/Conversations/conversationGroup';
 import Reactions from './screens/Reactions/reactions';
 import EditProfile from './screens/EditProfile/editProfile';
 import { useUnreadConversations } from './hooks/useUnreadConversations';
@@ -122,7 +123,9 @@ function NavigationRoot() {
       case 'quotes':
         return <Quotes status={route.status} onBack={pop} onStatusPress={openThread} />;
       case 'conversations':
-        return <Conversations onBack={pop} onStatusPress={openThread} />;
+        return <Conversations onBack={pop} onStatusPress={openThread} onGroupPress={groupKey => push({ name: 'conversationGroup', groupKey })} />;
+      case 'conversationGroup':
+        return <ConversationGroup groupKey={route.groupKey} onBack={pop} onStatusPress={openThread} />;
       case 'reactions':
         return <Reactions statusId={route.statusId} reaction={route.reaction} onBack={pop} />;
       case 'editProfile':

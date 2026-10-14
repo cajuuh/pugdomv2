@@ -391,6 +391,11 @@ export const en = {
         markAllReadFailed_one: "Couldn't mark 1 conversation as read. Try again.",
         markAllReadFailed_other: "Couldn't mark {{count}} conversations as read. Try again.",
         markReadUnsupported: "Your server doesn't let apps mark messages as read.",
+        // Mastodon keeps a separate conversation per thread; pugdon groups them by person
+        threadCount_one: '{{count}} conversation',
+        threadCount_other: '{{count}} conversations',
+        threadNumber: 'Conversation {{number}}',
+        yourself: 'You',
         noneUnread: 'No unread messages',
         // The last message in a conversation, when you sent it
         you: 'You: {{text}}',

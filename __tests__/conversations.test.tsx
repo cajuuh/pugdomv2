@@ -3,9 +3,10 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
 import apiClient from '../services/api/client';
-import { Conversation, getConversations } from '../services/mastodon/conversations';
+import { Conversation, getConversations, groupConversations } from '../services/mastodon/conversations';
 import { unreadConversationsKey } from '../hooks/useUnreadConversations';
 import Conversations from '../screens/Conversations/conversations';
+import ConversationGroupScreen from '../screens/Conversations/conversationGroup';
 import { Account, Status } from '../services/mastodon/types';
 import { dialog } from '../services/dialog';
 
@@ -40,16 +41,33 @@ describe('getConversations', () => {
 describe('Conversations', () => {
     let queryClient: QueryClient;
     const onStatusPress = jest.fn();
+    const onGroupPress = jest.fn();
 
     const renderScreen = async (conversations: Conversation[]) => {
         mockedGet.mockResolvedValue({ data: conversations, headers: {} });
         queryClient = createTestQueryClient();
         await render(
             <QueryClientProvider client={queryClient}>
-                <Conversations onBack={jest.fn()} onStatusPress={onStatusPress} />
+                <Conversations onBack={jest.fn()} onStatusPress={onStatusPress} onGroupPress={onGroupPress} />
             </QueryClientProvider>
         );
     };
+
+    it('puts every thread with the same people in one row, and opens their threads', async () => {
+        await renderScreen([
+            conversation('c1', [ana], post('s1', ana, '<p>de novo</p>'), true),
+            conversation('c2', [bruno], post('s2', bruno, '<p>oi</p>')),
+            conversation('c3', [ana], post('s3', ana, '<p>primeira</p>')),
+        ]);
+
+        const row = await screen.findByRole('button', { name: 'Ana. 2 conversations. Unread. de novo' });
+        expect(screen.getByText('2 conversations')).toBeTruthy();
+        expect(screen.getByRole('button', { name: 'Bruno. oi' })).toBeTruthy();
+
+        await fireEvent.press(row);
+        expect(onGroupPress).toHaveBeenCalledWith('ana');
+        expect(onStatusPress).not.toHaveBeenCalled();
+    });
 
     it('lists who each conversation is with and its last message', async () => {
         await renderScreen([
@@ -176,5 +194,48 @@ describe('Conversations', () => {
         await renderScreen([]);
 
         expect(await screen.findByText(/No messages yet/)).toBeTruthy();
+    });
+});
+
+describe('groupConversations', () => {
+    it('groups by the same set of people, in any order, keeping the newest first', () => {
+        const groups = groupConversations([
+            conversation('c1', [ana, bruno], post('s1', ana, 'a')),
+            conversation('c2', [ana], post('s2', ana, 'b')),
+            conversation('c3', [bruno, ana], post('s3', bruno, 'c'), true),
+        ]);
+        expect(groups.map(group => [group.key, group.threads.map(thread => thread.id), group.unread])).toEqual([
+            ['ana,bruno', ['c1', 'c3'], true],
+            ['ana', ['c2'], false],
+        ]);
+    });
+});
+
+describe('ConversationGroupScreen', () => {
+    it("numbers each thread, shows its last message, and opens it marked read", async () => {
+        mockedGet.mockResolvedValue({
+            data: [
+                conversation('c1', [ana], post('s1', me, '<p>tô indo</p>'), true),
+                conversation('c2', [bruno], post('s2', bruno, '<p>outro</p>')),
+                conversation('c3', [ana], post('s3', ana, '<p>oi</p>')),
+            ],
+            headers: {},
+        });
+        mockedPost.mockResolvedValue({ data: {} });
+        const onStatusPress = jest.fn();
+        await render(
+            <QueryClientProvider client={createTestQueryClient()}>
+                <ConversationGroupScreen groupKey="ana" onBack={jest.fn()} onStatusPress={onStatusPress} />
+            </QueryClientProvider>
+        );
+
+        expect(await screen.findByText('2 conversations')).toBeTruthy();
+        // Oldest is 1
+        expect(screen.getByRole('button', { name: 'Conversation 1. Ana: oi' })).toBeTruthy();
+        expect(screen.queryByText('outro')).toBeNull();
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Conversation 2. Unread. You: tô indo' }));
+        expect(mockedPost).toHaveBeenCalledWith('/conversations/c1/read');
+        expect(onStatusPress).toHaveBeenCalledWith('s1');
     });
 });
