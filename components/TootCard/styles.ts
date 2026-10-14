@@ -10,12 +10,21 @@ export const COMPACT_AVATAR = 32;
 export const COMPACT_PADDING = 12;
 export const COMPACT_ACTION_HEIGHT = 32;
 export const COMPACT_ACTION_ICON = 18;
+const CARD_PADDING_TOP = 14;
+const COMPACT_PADDING_TOP = 10;
+
+// Where a thread card's avatar sits, so the thread screen can hang reply branches off it
+export const threadCardMetrics = (compact: boolean) => ({
+    avatarSize: compact ? COMPACT_AVATAR : 42,
+    padding: compact ? COMPACT_PADDING : CARD_PADDING,
+    paddingTop: compact ? COMPACT_PADDING_TOP : CARD_PADDING_TOP,
+});
 
 export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     card: {
         marginHorizontal: CARD_MARGIN,
         marginBottom: space.md,
-        paddingTop: 14,
+        paddingTop: CARD_PADDING_TOP,
         paddingHorizontal: CARD_PADDING,
         paddingBottom: 6,
     },
@@ -37,7 +46,7 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     cardCompact: {
         marginHorizontal: 0,
         marginBottom: 0,
-        paddingTop: 10,
+        paddingTop: COMPACT_PADDING_TOP,
         paddingHorizontal: COMPACT_PADDING,
         paddingBottom: 2,
         borderWidth: 0,

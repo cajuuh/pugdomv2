@@ -171,6 +171,7 @@ export const en = {
         titleBy: 'Post by {{name}}',
         oldestFirst: 'Oldest first',
         newestFirst: 'Newest first',
+        replyingTo: 'Replying to {{name}}',
     },
     search: {
         placeholder: 'Search people, hashtags and posts',
