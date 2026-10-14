@@ -20,6 +20,8 @@ import { TAB_BAR_CLEARANCE } from '../../components/TabBar/styles';
 import { getStatus, getStatusContext } from '../../services/mastodon/statuses';
 import { Status } from '../../services/mastodon/types';
 import { TootCard } from '../../components/TootCard/tootCard';
+import { threadCardMetrics } from '../../components/TootCard/styles';
+import { useSettings } from '../../services/settingsContext';
 import { useTheme } from '../../services/themeContext';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
@@ -40,6 +42,44 @@ type Order = 'oldest' | 'newest';
 // Remembered for every thread: long conversations are easier to answer with the newest on top
 export const THREAD_NEWEST_FIRST_KEY = 'pugdom_settings_thread_newest_first';
 
+export interface ThreadRow {
+    status: ThreadStatus;
+    // 0: the post and what it answers; 1: an answer to the post; 2: anything further down that answer's branch
+    depth: 0 | 1 | 2;
+    // For depth 2 rows that answer someone other than the branch's first reply
+    replyingTo?: Status['account'];
+}
+
+// Ancestors and the post on top; then each answer to the post (oldest or newest first) with its whole branch
+// under it, one indent in and in reading order. Replies whose parent is missing count as answers to the post.
+export function threadRows(statuses: ThreadStatus[], newestFirst: boolean): ThreadRow[] {
+    const mainIndex = statuses.findIndex(status => status.isMain);
+    if (mainIndex < 0) return statuses.map(status => ({ status, depth: 0 }));
+    const main = statuses[mainIndex];
+    const byId = new Map(statuses.map(status => [status.id, status]));
+    const children = new Map<string, ThreadStatus[]>();
+    statuses.slice(mainIndex + 1).forEach(reply => {
+        const parent = reply.in_reply_to_id && byId.has(reply.in_reply_to_id) ? reply.in_reply_to_id : main.id;
+        children.set(parent, [...(children.get(parent) ?? []), reply]);
+    });
+    const answersTo = (id: string) => [...(children.get(id) ?? [])].sort((a, b) => a.created_at.localeCompare(b.created_at));
+
+    const rows: ThreadRow[] = statuses.slice(0, mainIndex + 1).map(status => ({ status, depth: 0 }));
+    const heads = answersTo(main.id);
+    if (newestFirst) heads.reverse();
+    heads.forEach(head => {
+        rows.push({ status: head, depth: 1 });
+        const branch = (id: string) =>
+            answersTo(id).forEach(reply => {
+                const parent = byId.get(reply.in_reply_to_id ?? '');
+                rows.push({ status: reply, depth: 2, replyingTo: parent && parent.id !== head.id ? parent.account : undefined });
+                branch(reply.id);
+            });
+        branch(head.id);
+    });
+    return rows;
+}
+
 export default function Thread({
     statusId,
     onBack,
@@ -57,7 +97,13 @@ export default function Thread({
         { value: 'oldest', label: t('thread.oldestFirst') },
         { value: 'newest', label: t('thread.newestFirst') },
     ];
-    const shown = order === 'newest' ? [...statuses].reverse() : statuses;
+    const shown = threadRows(statuses, order === 'newest');
+    // A branch hangs one indent in, its line running down from the first reply's avatar
+    const { compactMode } = useSettings();
+    const card = threadCardMetrics(compactMode);
+    const indent = card.padding + card.avatarSize / 2;
+    const railLeft = indent - 1;
+    const elbowY = card.paddingTop + card.avatarSize / 2 - 1;
 
     useEffect(() => {
         getSetting(THREAD_NEWEST_FIRST_KEY, false).then(newest => setOrder(newest ? 'newest' : 'oldest'));
@@ -190,39 +236,55 @@ export default function Thread({
                     // A fresh list per order, starting from the top
                     key={order}
                     data={shown}
-                   keyExtractor={(item) => item.id}
+                    keyExtractor={(row) => row.status.id}
                     contentContainerStyle={styles.listContent}
-                    renderItem={({ item, index }) => {
+                    renderItem={({ item: { status: item, depth, replyingTo }, index }) => {
                         const isMain = item.isMain;
+                        const nextDepth = shown[index + 1]?.depth;
+                        // A branch ends at the next answer to the post; only then a hairline
+                        const inBranch = nextDepth === 2;
 
                         return (
-                            <View
-                                style={[
-                                    styles.postContainer,
-                                    {
-                                        borderBottomColor:
-                                            colors.borderColor,
-                                    },
-                                    isMain && {
-                                        backgroundColor:
-                                            colors.cardBackground,
-                                        borderLeftColor:
-                                            colors.accentSoft,
-                                        borderLeftWidth:
-                                            StyleSheet.hairlineWidth,
-                                    },
-                                ]}
-                            >
-                                <TootCard
-                                    status={item}
-                                    onPress={onStatusPress}
-                                    threadMode={true}
-                                    showReactions={isMain}
-                                    hasThreadLineTop={index > 0}
-                                    hasThreadLineBottom={
-                                        index < shown.length - 1
-                                    }
-                                />
+                            <View style={depth === 2 && { paddingLeft: indent }}>
+                                {depth === 2 && (
+                                    <>
+                                        {/* Curves from the branch's line into this reply's avatar; carries on if more follow */}
+                                        <View
+                                            testID="thread-branch"
+                                            style={[styles.branchCurve, { left: railLeft, width: indent + card.padding - railLeft - space.xs, height: elbowY + 2, borderColor: colors.borderColor }]}
+                                        />
+                                        {inBranch && <View style={[styles.branchRail, { left: railLeft, top: elbowY, backgroundColor: colors.borderColor }]} />}
+                                    </>
+                                )}
+                                <View
+                                    style={[
+                                        !(depth > 0 && inBranch) && styles.postContainer,
+                                        {
+                                            borderBottomColor:
+                                                colors.borderColor,
+                                        },
+                                        isMain && {
+                                            backgroundColor:
+                                                colors.cardBackground,
+                                            borderLeftColor:
+                                                colors.accentSoft,
+                                            borderLeftWidth:
+                                                StyleSheet.hairlineWidth,
+                                        },
+                                    ]}
+                                >
+                                    <TootCard
+                                        status={item}
+                                        onPress={onStatusPress}
+                                        threadMode={true}
+                                        showReactions={isMain}
+                                        // The avatar line links what the post answers down to it, and a reply to its branch
+                                        hasThreadLineTop={depth === 0 && index > 0}
+                                        hasThreadLineBottom={(depth === 0 && !isMain) || (depth === 1 && inBranch)}
+                                        indent={depth === 2 ? indent : 0}
+                                        replyingTo={replyingTo && `@${replyingTo.username}`}
+                                    />
+                                </View>
                             </View>
                         );
                     }}
@@ -277,6 +339,20 @@ const styles = StyleSheet.create({
 
     listContent: {
         paddingBottom: TAB_BAR_CLEARANCE,
+    },
+
+    branchCurve: {
+        position: 'absolute',
+        top: 0,
+        borderLeftWidth: 2,
+        borderBottomWidth: 2,
+        borderBottomLeftRadius: space.md,
+    },
+
+    branchRail: {
+        position: 'absolute',
+        bottom: 0,
+        width: 2,
     },
 
     postContainer: {

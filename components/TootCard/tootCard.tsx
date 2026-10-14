@@ -10,13 +10,11 @@ import { useTheme } from '../../services/themeContext';
 import { useCompose } from '../../services/composeContext';
 import {
     CARD_MARGIN,
-    CARD_PADDING,
     COMPACT_ACTION_HEIGHT,
     COMPACT_ACTION_ICON,
-    COMPACT_AVATAR,
-    COMPACT_PADDING,
     THREAD_AVATAR_GAP,
     makeStyles,
+    threadCardMetrics,
 } from './styles';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import {
@@ -128,12 +126,16 @@ interface TootCardProps {
     showReactions?: boolean;
     hasThreadLineTop?: boolean;
     hasThreadLineBottom?: boolean;
+    // Thread replies sit this far in, so media shrinks to fit
+    indent?: number;
+    // A thread reply that answers someone other than the post above it: whom (e.g. "@ana")
+    replyingTo?: string;
     // A post read from another server (its ids aren't ours): no buttons that act on it here; tapping it,
     // its author or "open to interact" finds it through our server first
     remote?: boolean;
 }
 
-export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPressHashtag, onPress, threadMode, showReactions, hasThreadLineTop, hasThreadLineBottom, remote }) => {
+export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPressHashtag, onPress, threadMode, showReactions, hasThreadLineTop, hasThreadLineBottom, indent = 0, replyingTo, remote }) => {
     const { compactMode, hideCounts, coverSensitiveMedia, uncroppedMedia } = useSettings();
     const { colors, type } = useTheme();
     const styles = useThemedStyles(makeStyles);
@@ -312,13 +314,12 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         }
     };
 
-    const avatarSize = compactMode ? COMPACT_AVATAR : 42;
-    const cardPadding = compactMode ? COMPACT_PADDING : CARD_PADDING;
+    const { avatarSize, padding: cardPadding } = threadCardMetrics(compactMode);
     // Threads and Compact Mode put the avatar in its own column, beside the post
     const avatarColumn = threadMode || compactMode;
     // Width the post body gets: the card's inner width, minus the avatar column. Compact and thread cards are full width
     const bodyWidth = avatarColumn
-        ? width - cardPadding * 2 - avatarSize - THREAD_AVATAR_GAP
+        ? width - indent - cardPadding * 2 - avatarSize - THREAD_AVATAR_GAP
         : width - CARD_MARGIN * 2 - cardPadding * 2;
     // The opened CW frame adds its own padding and border
     const contentWidth = hasContentWarning ? bodyWidth - 28 : bodyWidth;
@@ -672,6 +673,15 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         </View>
     );
 
+    const replyLabel = replyingTo && (
+        <View style={styles.directRow}>
+            <Ionicons name="return-down-forward" size={13} color={colors.textMuted} />
+            <Text style={[type.meta, { color: colors.textMuted }]} numberOfLines={1}>
+                {t('thread.replyingTo', { name: replyingTo })}
+            </Text>
+        </View>
+    );
+
     const card = (
         <Card style={[styles.card, isDirect && styles.cardDirect, compactMode && styles.cardCompact, threadMode && styles.cardThread]}>
             {isReblog && (
@@ -696,10 +706,10 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 <View style={styles.threadRow}>
                     <View style={[styles.threadAvatarColumn, { width: avatarSize }]}>
                         {hasThreadLineTop && (
-                            <View style={[styles.threadLine, { top: -cardPadding, height: cardPadding + avatarSize / 2 }]} />
+                            <View testID="thread-line-top" style={[styles.threadLine, { top: -cardPadding, height: cardPadding + avatarSize / 2 }]} />
                         )}
                         {hasThreadLineBottom && (
-                            <View style={[styles.threadLine, { top: avatarSize / 2, bottom: -cardPadding }]} />
+                            <View testID="thread-line-bottom" style={[styles.threadLine, { top: avatarSize / 2, bottom: -cardPadding }]} />
                         )}
                         {avatar}
                     </View>
@@ -709,6 +719,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                             {time}
                         </View>
                         {privateMention}
+                        {replyLabel}
                         {renderContent()}
                         {actions}
                         {reactions}

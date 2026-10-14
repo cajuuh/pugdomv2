@@ -169,6 +169,7 @@ export const ptBR: Dictionary = {
         titleBy: 'Publicação de {{name}}',
         oldestFirst: 'Mais antigas primeiro',
         newestFirst: 'Mais recentes primeiro',
+        replyingTo: 'Respondendo a {{name}}',
     },
     search: {
         placeholder: 'Buscar pessoas, hashtags e publicações',
