@@ -18,6 +18,8 @@ export type Route =
     | { name: 'quotes'; status: Status }
     // Your direct conversations
     | { name: 'conversations' }
+    // Every thread with one person (or group of people), by the key Messages groups them under
+    | { name: 'conversationGroup'; groupKey: string }
     // Who favourited or boosted a post
     | { name: 'reactions'; statusId: string; reaction: 'favourites' | 'boosts' }
     | { name: 'editProfile' };
