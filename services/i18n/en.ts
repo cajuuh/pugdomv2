@@ -388,7 +388,9 @@ export const en = {
         all: 'All',
         unreadFilter: 'Unread',
         markAllRead: 'Mark all as read',
-        markAllReadFailed: "Couldn't mark them all as read. Try again.",
+        markAllReadFailed_one: "Couldn't mark 1 conversation as read. Try again.",
+        markAllReadFailed_other: "Couldn't mark {{count}} conversations as read. Try again.",
+        markReadUnsupported: "Your server doesn't let apps mark messages as read.",
         noneUnread: 'No unread messages',
         // The last message in a conversation, when you sent it
         you: 'You: {{text}}',

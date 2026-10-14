@@ -25,12 +25,16 @@ export const conversationsKey = (accountId: string) => ['conversations', account
 
 type Filter = 'all' | 'unread';
 
+const MARK_READ_BATCH = 4;
+// Answers from a server that has no way to mark a conversation read
+const UNSUPPORTED = [404, 405, 501];
+
 // Your direct conversations, newest activity first. Opening one marks it read and shows its thread;
 // Unread lists only the unread ones, and Mark all as read clears them (Mastodon can't mark them unread again).
 const Conversations = ({ onBack, onStatusPress }: ConversationsProps) => {
     const { colors, type } = useTheme();
     const i18n = useI18n();
-    const { t } = i18n;
+    const { t, tn } = i18n;
     const insets = useSafeAreaInsets();
     const queryClient = useQueryClient();
     const me = useOptionalAuth()?.user;
@@ -52,32 +56,44 @@ const Conversations = ({ onBack, onStatusPress }: ConversationsProps) => {
     ];
     const shown = filter === 'unread' ? conversations.filter(conversation => conversation.unread) : conversations;
 
-    // Read at once here; the envelope's dot checks again once the server agrees. Resolves false if any failed.
-    const markRead = async (ids: string[]) => {
+    const setUnread = (ids: string[], unread: boolean) =>
         queryClient.setQueryData<InfiniteData<ConversationsPage>>(key, current =>
             current && {
                 ...current,
                 pages: current.pages.map(page => ({
                     ...page,
-                    conversations: page.conversations.map(item => (ids.includes(item.id) ? { ...item, unread: false } : item)),
+                    conversations: page.conversations.map(item => (ids.includes(item.id) ? { ...item, unread } : item)),
                 })),
             }
         );
-        // Mastodon has no "read all", so one request each
-        const results = await Promise.allSettled(ids.map(markConversationRead));
-        results.forEach(result => result.status === 'rejected' && console.warn('Marking the conversation read failed:', result.reason));
+
+    // Read at once here; the ones the server refuses get their dot back, and the envelope checks again.
+    // Resolves the HTTP status of each failure (undefined when the request never got an answer).
+    const markRead = async (ids: string[]) => {
+        setUnread(ids, false);
+        const failed: { id: string; status?: number }[] = [];
+        // Mastodon has no "read all": one request each, a few at a time so a long list doesn't trip the rate limit
+        for (let start = 0; start < ids.length; start += MARK_READ_BATCH) {
+            const batch = ids.slice(start, start + MARK_READ_BATCH);
+            const results = await Promise.allSettled(batch.map(markConversationRead));
+            results.forEach((result, n) => {
+                if (result.status === 'fulfilled') return;
+                console.warn('Marking the conversation read failed:', result.reason);
+                failed.push({ id: batch[n], status: result.reason?.response?.status });
+            });
+        }
+        if (failed.length) setUnread(failed.map(item => item.id), true);
         queryClient.invalidateQueries({ queryKey: unreadConversationsKey(me?.id ?? '') });
-        return results.every(result => result.status === 'fulfilled');
+        return failed;
     };
 
     const markAllRead = async () => {
         setMarkingAll(true);
-        const ok = await markRead(unreadIds);
+        const failed = await markRead(unreadIds);
         setMarkingAll(false);
-        if (!ok) {
-            dialog.toast(t('conversations.markAllReadFailed'));
-            refetch();
-        }
+        if (!failed.length) return;
+        const unsupported = failed.every(item => item.status !== undefined && UNSUPPORTED.includes(item.status));
+        dialog.toast(unsupported ? t('conversations.markReadUnsupported') : tn('conversations.markAllReadFailed', failed.length));
     };
 
     const open = (conversation: Conversation) => {
