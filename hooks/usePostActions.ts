@@ -1,22 +1,41 @@
 import { useCallback } from 'react';
 import { Platform } from 'react-native';
-import { deleteStatus } from '../services/mastodon/statuses';
+import { useQueryClient } from '@tanstack/react-query';
+import { deleteStatus, pinStatus, unpinStatus } from '../services/mastodon/statuses';
 import { Status } from '../services/mastodon/types';
 import { useCompose } from '../services/composeContext';
 import { useI18n } from '../services/i18n/i18nContext';
-import { useRemoveCachedStatus } from './useUpdateCachedStatus';
+import { useRemoveCachedStatus, useUpdateCachedStatus } from './useUpdateCachedStatus';
+import { accountStatusesKey } from './useAccountStatuses';
 import { dialog } from '../services/dialog';
 
 // iOS can't present the compose modal while the menu's own modal is still closing
 const afterMenu = (open: () => void) => setTimeout(open, Platform.OS === 'ios' ? 400 : 0);
 
-// Edit, delete, and delete-and-redraft one of your own posts. Deleting asks first.
+// Edit, pin, delete, and delete-and-redraft one of your own posts. Deleting asks first.
 export const usePostActions = () => {
     const { t } = useI18n();
     const { openCompose } = useCompose();
     const removeCachedStatus = useRemoveCachedStatus();
+    const updateCachedStatus = useUpdateCachedStatus();
+    const queryClient = useQueryClient();
 
     const edit = useCallback((status: Status) => afterMenu(() => openCompose({ existingPost: { mode: 'edit', status } })), [openCompose]);
+
+    // Pins it to the top of your profile, or takes it off
+    const togglePin = useCallback(async (status: Status) => {
+        try {
+            const updated = await (status.pinned ? unpinStatus : pinStatus)(status.id);
+            updateCachedStatus(updated);
+            queryClient.invalidateQueries({ queryKey: accountStatusesKey(status.account.id, 'pinned') });
+            dialog.toast(t(updated.pinned ? 'posts.pinDone' : 'posts.unpinDone'));
+        } catch (error: any) {
+            console.warn('Pin failed:', error);
+            // Mastodon says why (most often: the most posts you can pin are already pinned)
+            const reason = error?.response?.data?.error;
+            dialog.toast(reason ? t('posts.pinFailedBecause', { reason }) : t('posts.pinFailed'));
+        }
+    }, [queryClient, t, updateCachedStatus]);
 
     const deleteNow = useCallback(async (status: Status) => {
         try {
@@ -56,5 +75,5 @@ export const usePostActions = () => {
         [deleteNow, openCompose, t]
     );
 
-    return { edit, remove, redraft };
+    return { edit, togglePin, remove, redraft };
 };

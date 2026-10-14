@@ -1,11 +1,14 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../../services/themeContext';
 import { hitSlopFor, radii, space } from '../../services/theme/shape';
 
 export interface SegmentOption<T extends string> {
     value: T;
     label: string;
+    // Shown before the label on underline tabs
+    icon?: React.ComponentProps<typeof Ionicons>['name'];
 }
 
 interface SegmentedPillProps<T extends string> {
@@ -60,9 +63,12 @@ export function SegmentedPill<T extends string>({ options, value, onChange, vari
                             key={option.value}
                             onPress={() => onChange(option.value)}
                             accessibilityRole="tab"
+                            // Just the label, so screen readers don't read the icon's glyph
+                            accessibilityLabel={option.label}
                             accessibilityState={{ selected }}
                             style={[styles.underlineTab, { borderBottomColor: selected ? colors.accentColor : 'transparent' }]}
                         >
+                            {option.icon && <Ionicons name={option.icon} size={15} color={selected ? colors.textPrimary : colors.textMuted} />}
                             <Text style={[type.name, styles.underlineLabel, { color: selected ? colors.textPrimary : colors.textMuted }]}>
                                 {option.label}
                             </Text>
@@ -145,6 +151,9 @@ const styles = StyleSheet.create({
     },
     underlineTab: {
         minHeight: 44,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
         justifyContent: 'center',
         borderBottomWidth: 3,
     },

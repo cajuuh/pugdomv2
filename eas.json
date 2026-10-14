@@ -22,7 +22,10 @@
     },
     "production": {
       "channel": "production",
-      "autoIncrement": true
+      "autoIncrement": true,
+      "android": {
+        "buildArtifactPaths": ["android/app/build/outputs/mapping/release/mapping.txt"]
+      }
     }
   },
   "submit": {
@@ -36,6 +39,10 @@
       "ios": {
         "ascAppId": "6818288991",
         "appleTeamId": "G6H6CPS7BU"
+      },
+      "android": {
+        "track": "Mastodon Teste Alpha",
+        "releaseStatus": "draft"
       }
     }
   }

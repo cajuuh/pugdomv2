@@ -9,7 +9,7 @@ import { useTheme } from '../../services/themeContext';
 import { getCoat } from '../../services/theme/coats';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { Avatar, Card, IconButton, PugMark, SectionLabel, ThemedSwitch } from '../../components/ui';
-import { appVersionLabel } from '../../services/appVersion';
+import { appVersionLabel, codeVersionLabel } from '../../services/appVersion';
 import Appearance from './appearance';
 import { SettingsHeader } from './header';
 import { makeStyles } from './styles';
@@ -220,6 +220,15 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                         <Ionicons name="information-circle-outline" size={20} color={colors.accentText} />
                         <Text style={[labelStyle, styles.rowText]}>{t('settings.version')}</Text>
                         <Text style={[type.meta, styles.rowValue]}>{appVersionLabel()}</Text>
+                    </View>
+                    <View style={styles.divider} />
+                    <View style={styles.row}>
+                        <Ionicons name="code-slash-outline" size={20} color={colors.accentText} />
+                        {/* An update's label is long ("2026-10-13 21:43 · d095fe8 (production)"): its own line, under the name */}
+                        <View style={styles.rowText}>
+                            <Text style={labelStyle}>{t('settings.codeVersion')}</Text>
+                            <Text style={[type.meta, styles.rowValue]} selectable>{codeVersionLabel(i18n)}</Text>
+                        </View>
                     </View>
                     <View style={styles.divider} />
                     <Pressable

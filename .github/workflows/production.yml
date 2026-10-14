@@ -67,19 +67,23 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      # Queued on EAS without waiting; the iOS build goes to App Store Connect when it finishes, and you release it
-      # from there. Android has no Play Store setup yet, so its build stays on EAS.
+      # Queued on EAS without waiting; each build is submitted when it finishes. iOS goes to App Store Connect and you
+      # release it from there. Android lands as a draft in the closed test (eas.json): add the release notes and
+      # mapping.txt (the build's artifact) in Play Console, then send it for review.
+      # Needs the Google service account key on EAS (Credentials → Android → Service credentials).
       - name: Build iOS and submit to App Store Connect
         if: steps.tag.outputs.created == 'true'
         run: eas build --profile production --platform ios --non-interactive --no-wait --auto-submit
 
       - name: Build Android
         if: steps.tag.outputs.created == 'true'
-        run: eas build --profile production --platform android --non-interactive --no-wait
+        run: eas build --profile production --platform android --non-interactive --no-wait --auto-submit
 
       # The version is already out: send the new JavaScript to the builds of that version instead
       - name: Publish an OTA update to production
         if: steps.tag.outputs.created == 'false'
         env:
           MESSAGE: ${{ github.event.head_commit.message }}
+          # Shown in Settings as the code version
+          EXPO_PUBLIC_GIT_COMMIT: ${{ github.sha }}
         run: eas update --branch production --message "$(printf '%s' "$MESSAGE" | head -n 1)" --non-interactive

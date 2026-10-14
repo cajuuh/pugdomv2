@@ -12,6 +12,7 @@
     "axios": "^1.16.1",
     "expo": "~56.0.23",
     "expo-blur": "~56.0.4",
+    "expo-build-properties": "~56.0.27",
     "expo-constants": "~56.0.27",
     "expo-dev-client": "~56.0.27",
     "expo-font": "~56.0.7",

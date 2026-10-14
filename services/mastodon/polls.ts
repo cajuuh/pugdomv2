@@ -9,3 +9,8 @@ export async function votePoll(id: string, params: VoteParams): Promise<Poll> {
     const response = await apiClient.post(`/polls/${id}/votes`, params);
     return response.data;
 }
+
+export async function getPoll(id: string): Promise<Poll> {
+    const response = await apiClient.get(`/polls/${id}`);
+    return response.data;
+}

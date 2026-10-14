@@ -20,6 +20,8 @@ jest.mock('../services/api/client', () => ({
 }));
 jest.mock('../services/storage', () => ({
     getCredentials: async () => ({ accessToken: 'token', instanceUrl: 'https://home.social' }),
+    getSetting: async (_key: string, fallback: boolean) => fallback,
+    saveSetting: async () => {},
 }));
 const me: Account = { id: 'me', username: 'me', acct: 'me', display_name: 'Me', avatar: '', emojis: [], source: { quote_policy: 'public' } };
 const mockUpdateUser = jest.fn();

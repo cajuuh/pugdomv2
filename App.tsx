@@ -39,12 +39,14 @@ import ServerPicker from './screens/ServerPicker/serverPicker';
 import Report from './screens/Report/report';
 import Quotes from './screens/Quotes/quotes';
 import Conversations from './screens/Conversations/conversations';
+import ConversationGroup from './screens/Conversations/conversationGroup';
 import Reactions from './screens/Reactions/reactions';
 import EditProfile from './screens/EditProfile/editProfile';
 import { useUnreadConversations } from './hooks/useUnreadConversations';
 import { useServerPreferences } from './hooks/useExpandSpoilers';
 import { useUnreadNotifications } from './hooks/useUnreadNotifications';
 import { DialogHost } from './components/Dialog/dialogHost';
+import { useAppUpdates } from './hooks/useAppUpdates';
 
 // Keep the pug splash up until the fonts and the saved account are loaded
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -56,6 +58,8 @@ function NavigationRoot() {
   const { languageReady } = useI18n();
   const [activeTab, setActiveTab] = useState<'home' | 'search' | 'notifications' | 'profile'>('home');
   const unreadNotifications = useUnreadNotifications();
+  // New over-the-air code: checks on returning to the app, offers a restart once it's downloaded
+  useAppUpdates();
   const unreadMessages = useUnreadConversations();
   // Fetched at sign-in, so posts know whether to open content warnings before they're drawn
   useServerPreferences();
@@ -119,7 +123,9 @@ function NavigationRoot() {
       case 'quotes':
         return <Quotes status={route.status} onBack={pop} onStatusPress={openThread} />;
       case 'conversations':
-        return <Conversations onBack={pop} onStatusPress={openThread} />;
+        return <Conversations onBack={pop} onStatusPress={openThread} onGroupPress={groupKey => push({ name: 'conversationGroup', groupKey })} />;
+      case 'conversationGroup':
+        return <ConversationGroup groupKey={route.groupKey} onBack={pop} onStatusPress={openThread} />;
       case 'reactions':
         return <Reactions statusId={route.statusId} reaction={route.reaction} onBack={pop} />;
       case 'editProfile':

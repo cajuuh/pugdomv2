@@ -151,6 +151,39 @@ describe('Your own posts', () => {
         expect(queryClient.getQueryData<InfiniteData<Status[]>>(['timeline', 'home'])?.pages[0]).toEqual([]);
     });
 
+    it('pins a post to your profile, and unpins it', async () => {
+        api.post.mockResolvedValue({ data: post({ pinned: true }) });
+        queryClient.setQueryData(['timeline', 'home'], { pages: [[post()]], pageParams: [undefined] });
+        await openMenu();
+        await fireEvent.press(await screen.findByRole('button', { name: 'Pin to profile' }));
+
+        await waitFor(() => expect(api.post).toHaveBeenCalledWith('/statuses/p1/pin'));
+        expect(await screen.findByText('Pinned to your profile')).toBeTruthy();
+        expect(queryClient.getQueryData<InfiniteData<Status[]>>(['timeline', 'home'])?.pages[0][0].pinned).toBe(true);
+
+        await openMenu(post({ pinned: true }));
+        await fireEvent.press(await screen.findByRole('button', { name: 'Unpin from profile' }));
+        await waitFor(() => expect(api.post).toHaveBeenCalledWith('/statuses/p1/unpin'));
+    });
+
+    it('marks a direct post as a private mention', async () => {
+        await render(wrap(<TootCard status={post({ visibility: 'direct' })} />));
+        expect(screen.getByText('Private mention')).toBeTruthy();
+        await render(wrap(<TootCard status={post()} />));
+        expect(screen.queryByText('Private mention')).toBeNull();
+    });
+
+    it("says why a post can't be pinned, and offers no pin on direct posts", async () => {
+        api.post.mockRejectedValue({ response: { status: 422, data: { error: 'Validation failed: You have already pinned the maximum number of posts' } } });
+        await openMenu();
+        await fireEvent.press(await screen.findByRole('button', { name: 'Pin to profile' }));
+        expect(await screen.findByText("Couldn't pin: Validation failed: You have already pinned the maximum number of posts")).toBeTruthy();
+
+        await openMenu(post({ visibility: 'direct' }));
+        await screen.findAllByRole('button', { name: 'Edit' });
+        expect(screen.queryAllByRole('button', { name: 'Pin to profile' })).toHaveLength(0);
+    });
+
     it('deletes and brings the text back to redraft', async () => {
         await openMenu();
         await fireEvent.press(await screen.findByRole('button', { name: 'Delete and redraft' }));

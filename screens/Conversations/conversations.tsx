@@ -1,76 +1,75 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FlashList } from '@shopify/flash-list';
-import { InfiniteData, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '../../services/themeContext';
 import { useI18n } from '../../services/i18n/i18nContext';
-import { useOptionalAuth } from '../../services/authContext';
-import { Conversation, ConversationsPage, getConversations, markConversationRead } from '../../services/mastodon/conversations';
-import { unreadConversationsKey } from '../../hooks/useUnreadConversations';
+import { ConversationGroup, groupConversations, statusPreview } from '../../services/mastodon/conversations';
+import { useConversations } from '../../hooks/useConversations';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
-import { plainText } from '../../services/htmlText';
 import { radii, space } from '../../services/theme/shape';
 import { TAB_BAR_CLEARANCE } from '../../components/TabBar/styles';
 import { getRelativeTime } from '../../components/TootCard/tootCard';
-import { Avatar, IconButton } from '../../components/ui';
+import { Avatar, IconButton, PillButton, SegmentOption, SegmentedPill } from '../../components/ui';
+import { dialog } from '../../services/dialog';
 
 interface ConversationsProps {
     onBack: () => void;
     onStatusPress: (id: string) => void;
+    // A person you have several threads with: their own screen
+    onGroupPress: (groupKey: string) => void;
 }
 
-export const conversationsKey = (accountId: string) => ['conversations', accountId];
+type Filter = 'all' | 'unread';
 
-// Your direct conversations, newest activity first. Opening one marks it read and shows its thread.
-const Conversations = ({ onBack, onStatusPress }: ConversationsProps) => {
+// Answers from a server that has no way to mark a conversation read
+const UNSUPPORTED = [404, 405, 501];
+
+// Your direct conversations, one row per person (or group of people), newest activity first. Opening a person
+// with one thread marks it read and shows it; with several, their threads. Unread lists only the unread ones,
+// and Mark all as read clears them (Mastodon can't mark them unread again).
+const Conversations = ({ onBack, onStatusPress, onGroupPress }: ConversationsProps) => {
     const { colors, type } = useTheme();
     const i18n = useI18n();
-    const { t } = i18n;
+    const { t, tn } = i18n;
     const insets = useSafeAreaInsets();
-    const queryClient = useQueryClient();
-    const me = useOptionalAuth()?.user;
-    const key = conversationsKey(me?.id ?? '');
+    const { query, conversations, markRead, open, me } = useConversations();
+    const { isLoading, hasNextPage, fetchNextPage, isFetchingNextPage, refetch, isRefetching } = query;
+    const unreadIds = conversations.filter(conversation => conversation.unread).map(conversation => conversation.id);
+    // Older threads with someone join their row as their page loads
+    const groups = groupConversations(conversations);
+    const [filter, setFilter] = useState<Filter>('all');
+    const [markingAll, setMarkingAll] = useState(false);
+    const filters: SegmentOption<Filter>[] = [
+        { value: 'all', label: t('conversations.all') },
+        { value: 'unread', label: t('conversations.unreadFilter') },
+    ];
+    const shown = filter === 'unread' ? groups.filter(group => group.unread) : groups;
 
-    const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage, refetch, isRefetching } = useInfiniteQuery({
-        queryKey: key,
-        queryFn: ({ pageParam }) => getConversations(pageParam),
-        initialPageParam: undefined as string | undefined,
-        getNextPageParam: (page: ConversationsPage) => page.nextMaxId,
-    });
-    const conversations = data?.pages.flatMap(page => page.conversations) ?? [];
-
-    const open = (conversation: Conversation) => {
-        if (!conversation.last_status) return;
-        if (conversation.unread) {
-            // Read at once here; the envelope's dot checks again once the server agrees
-            queryClient.setQueryData<InfiniteData<ConversationsPage>>(key, current =>
-                current && {
-                    ...current,
-                    pages: current.pages.map(page => ({
-                        ...page,
-                        conversations: page.conversations.map(item => (item.id === conversation.id ? { ...item, unread: false } : item)),
-                    })),
-                }
-            );
-            markConversationRead(conversation.id)
-                .catch(error => console.warn('Marking the conversation read failed:', error))
-                .finally(() => queryClient.invalidateQueries({ queryKey: unreadConversationsKey(me?.id ?? '') }));
-        }
-        onStatusPress(conversation.last_status.id);
+    const markAllRead = async () => {
+        setMarkingAll(true);
+        const failed = await markRead(unreadIds);
+        setMarkingAll(false);
+        if (!failed.length) return;
+        const unsupported = failed.every(item => item.status !== undefined && UNSUPPORTED.includes(item.status));
+        dialog.toast(unsupported ? t('conversations.markReadUnsupported') : tn('conversations.markAllReadFailed', failed.length));
     };
 
-    const renderRow = ({ item }: { item: Conversation }) => {
-        const people = item.accounts.length ? item.accounts : item.last_status ? [item.last_status.account] : [];
+    const openGroup = (group: ConversationGroup) =>
+        group.threads.length === 1 ? open(group.threads[0], onStatusPress) : onGroupPress(group.key);
+
+    const renderRow = ({ item }: { item: ConversationGroup }) => {
+        const people = item.people;
         const names = people.map(account => account.display_name || account.username).join(', ');
-        const last = item.last_status;
-        const text = last ? (last.spoiler_text ? `⚠ ${last.spoiler_text}` : plainText(last.content).replace(/\s+/g, ' ')) : '';
+        const last = item.threads[0].last_status;
+        const text = last ? statusPreview(last) : '';
         const preview = last && last.account.id === me?.id ? t('conversations.you', { text }) : text;
+        const threads = item.threads.length > 1 ? tn('conversations.threadCount', item.threads.length) : null;
         return (
             <Pressable
-                onPress={() => open(item)}
+                onPress={() => openGroup(item)}
                 accessibilityRole="button"
-                accessibilityLabel={[names, item.unread ? t('conversations.unread') : null, preview].filter(Boolean).join('. ')}
+                accessibilityLabel={[names, threads, item.unread ? t('conversations.unread') : null, preview].filter(Boolean).join('. ')}
                 style={({ pressed }) => [styles.row, { borderBottomColor: colors.borderColor }, pressed && { backgroundColor: colors.inputBackground }]}
             >
                 <Avatar name={names} uri={people[0]?.avatar} size={44} />
@@ -82,6 +81,11 @@ const Conversations = ({ onBack, onStatusPress }: ConversationsProps) => {
                         {last && <Text style={[type.meta, { color: colors.textMuted }]}>{getRelativeTime(last.created_at, i18n)}</Text>}
                         {item.unread && <View testID="conversation-unread" style={[styles.dot, { backgroundColor: colors.accentColor }]} />}
                     </View>
+                    {threads && (
+                        <View style={[styles.threadsChip, { backgroundColor: colors.accentSoft }]}>
+                            <Text style={[type.meta, { color: colors.accentText }]}>{threads}</Text>
+                        </View>
+                    )}
                     <Text style={[type.body, { color: item.unread ? colors.textPrimary : colors.textSecondary }]} numberOfLines={2}>
                         {renderTextWithEmojis(preview, last?.emojis ?? [], [type.body, { color: item.unread ? colors.textPrimary : colors.textSecondary }], 14)}
                     </Text>
@@ -99,13 +103,26 @@ const Conversations = ({ onBack, onStatusPress }: ConversationsProps) => {
                 </Text>
                 <View style={styles.spacer} />
             </View>
+            <View style={styles.filters}>
+                <SegmentedPill variant="chips" options={filters} value={filter} onChange={setFilter} />
+                {unreadIds.length > 0 && (
+                    <PillButton
+                        label={t('conversations.markAllRead')}
+                        icon="checkmark-done"
+                        variant="ghost"
+                        size="small"
+                        loading={markingAll}
+                        onPress={markAllRead}
+                    />
+                )}
+            </View>
 
             {isLoading ? (
                 <ActivityIndicator style={styles.loading} color={colors.accentColor} />
             ) : (
                 <FlashList
-                    data={conversations}
-                    keyExtractor={item => item.id}
+                    data={shown}
+                    keyExtractor={item => item.key}
                     renderItem={renderRow}
                     contentContainerStyle={styles.list}
                     onEndReached={() => hasNextPage && !isFetchingNextPage && fetchNextPage()}
@@ -119,7 +136,7 @@ const Conversations = ({ onBack, onStatusPress }: ConversationsProps) => {
                             progressBackgroundColor={colors.cardBackground}
                         />
                     }
-                    ListEmptyComponent={<Text style={[type.body, styles.empty, { color: colors.textMuted }]}>{t('conversations.none')}</Text>}
+                    ListEmptyComponent={<Text style={[type.body, styles.empty, { color: colors.textMuted }]}>{t(filter === 'unread' ? 'conversations.noneUnread' : 'conversations.none')}</Text>}
                     ListFooterComponent={isFetchingNextPage ? <ActivityIndicator color={colors.accentColor} /> : null}
                 />
             )}
@@ -144,6 +161,15 @@ const styles = StyleSheet.create({
     },
     spacer: {
         width: 44,
+    },
+    filters: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: space.sm,
+        paddingTop: 14,
+        paddingBottom: 6,
+        paddingHorizontal: space.lg,
     },
     loading: {
         marginTop: space.xl,
@@ -174,6 +200,13 @@ const styles = StyleSheet.create({
         width: 10,
         height: 10,
         borderRadius: radii.pill,
+    },
+    threadsChip: {
+        alignSelf: 'flex-start',
+        borderRadius: radii.pill,
+        paddingHorizontal: space.sm,
+        paddingVertical: 1,
+        marginBottom: 2,
     },
     empty: {
         textAlign: 'center',

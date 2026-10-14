@@ -108,6 +108,8 @@ export interface Status {
     favourited?: boolean;
     reblogged?: boolean;
     bookmarked?: boolean;
+    // Only on your own posts
+    pinned?: boolean;
     card?: PreviewCard | null;
     poll?: Poll | null;
     // When it was last edited, if ever

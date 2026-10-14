@@ -1,11 +1,11 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, RefreshControl, Text, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../services/authContext';
 import { useTheme } from '../../services/themeContext';
 import { Account as AccountType, Status } from '../../services/mastodon/types';
-import { ProfileTab, useAccountStatuses } from '../../hooks/useAccountStatuses';
+import { ProfileTab, useProfileStatuses } from '../../hooks/useAccountStatuses';
 import { useAccount } from '../../hooks/useAccount';
 import { useRelationships } from '../../hooks/useRelationships';
 import { TootCard } from '../../components/TootCard/tootCard';
@@ -16,12 +16,14 @@ import { ProfileHeader } from '../Profile/profileHeader';
 import { MediaGridRow, MediaTile, toMediaRows } from '../../components/MediaGrid/mediaGrid';
 import { makeStyles } from '../Profile/styles';
 
-const TABS: ProfileTab[] = ['posts', 'replies', 'media'];
+// Pinned comes first, and only when there are pinned posts
+const tabsFor = (hasPinned: boolean): ProfileTab[] => [...(hasPinned ? ['pinned' as const] : []), 'posts', 'replies', 'media'];
 
 const EMPTY_TEXT = {
     posts: 'profile.emptyPosts',
     replies: 'profile.emptyReplies',
     media: 'profile.emptyMedia',
+    pinned: 'profile.emptyPinned',
 } as const;
 
 interface AccountProps {
@@ -42,13 +44,17 @@ const Account = ({ accountId, account: initialAccount, onBack, onStatusPress, on
     const insets = useSafeAreaInsets();
     const isSelf = user?.id === accountId;
     const [tab, setTab] = useState<ProfileTab>('posts');
-    const tabs: SegmentOption<ProfileTab>[] = TABS.map(value => ({ value, label: t(`profile.${value}`) }));
     const [isPullRefreshing, setIsPullRefreshing] = useState(false);
 
     const { data: account, isError, refetch: refetchAccount } = useAccount(accountId, initialAccount);
     const relationships = useRelationships(isSelf ? [] : [accountId]);
-    const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage, refetch } = useAccountStatuses(accountId, tab);
-    const statuses = data?.pages.flat() ?? [];
+    const { statuses, hasPinned, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage, refetch } = useProfileStatuses(accountId, tab);
+    const tabs: SegmentOption<ProfileTab>[] = tabsFor(hasPinned).map(value => ({ value, label: t(`profile.${value}`), icon: value === 'pinned' ? 'pin' : undefined }));
+
+    // Unpinning the last pinned post takes the Pinned tab away
+    useEffect(() => {
+        if (tab === 'pinned' && !hasPinned) setTab('posts');
+    }, [tab, hasPinned]);
 
     const handleRefresh = useCallback(async () => {
         setIsPullRefreshing(true);

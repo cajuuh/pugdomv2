@@ -68,7 +68,28 @@ describe('Profile', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         mockUser = me;
-        mockedStatuses.mockResolvedValue([status('1')]);
+        mockedStatuses.mockImplementation(async (_id, _maxId, filter) => (filter?.pinned ? [] : [status('1')]));
+    });
+
+    it('lists pinned posts on a Pinned tab that comes first, while Posts stays in order', async () => {
+        mockedStatuses.mockImplementation(async (_id, _maxId, filter) =>
+            filter?.pinned ? [status('3')] : [status('4'), status('3'), status('1')]
+        );
+        await renderProfile();
+
+        await waitFor(() => expect(screen.getAllByRole('tab').map(tab => tab.props.accessibilityLabel)).toEqual(['Pinned', 'Posts', 'Replies', 'Media', 'Bookmarks']));
+        expect(screen.getAllByText(/^post /).map(node => node.props.children)).toEqual(['post 4', 'post 3', 'post 1']);
+        expect(screen.getByRole('tab', { name: 'Posts' })).toBeSelected();
+        expect(mockedStatuses).toHaveBeenCalledWith('7', undefined, { pinned: true });
+
+        await fireEvent.press(screen.getByRole('tab', { name: 'Pinned' }));
+        await waitFor(() => expect(screen.getAllByText(/^post /).map(node => node.props.children)).toEqual(['post 3']));
+    });
+
+    it('has no Pinned tab without pinned posts', async () => {
+        await renderProfile();
+        await screen.findByText('post 1');
+        expect(screen.queryByRole('tab', { name: 'Pinned' })).toBeNull();
     });
 
     it('shows the Media tab as a grid with a thumbnail per post that opens the viewer, or the post on a long press', async () => {

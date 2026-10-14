@@ -105,6 +105,13 @@ export const QuotedPost: React.FC<QuotedPostProps> = ({ quote, onOpen, timeOf })
                     </View>
                 ))}
 
+            {status.poll && (
+                <View style={styles.warning}>
+                    <Ionicons name="stats-chart-outline" size={14} color={colors.textMuted} />
+                    <Text style={[type.meta, { color: colors.textMuted }]}>{t('quotes.hasPoll')}</Text>
+                </View>
+            )}
+
             {nested && (
                 <View style={styles.warning}>
                     <Ionicons name="return-down-forward-outline" size={14} color={colors.textMuted} />
