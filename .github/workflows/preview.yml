@@ -36,6 +36,9 @@ jobs:
         run: yarn install --frozen-lockfile
 
       - name: Publish EAS Update
+        env:
+          # Shown in Settings as the code version
+          EXPO_PUBLIC_GIT_COMMIT: ${{ github.sha }}
         run: eas update --branch preview --message "Automated update from GitHub Actions"
 
       # Closed testing: every merge goes straight to the testers' store builds of this version, for fast feedback.
@@ -61,4 +64,5 @@ jobs:
         if: steps.testers.outputs.publish == 'true'
         env:
           MESSAGE: ${{ github.event.head_commit.message }}
+          EXPO_PUBLIC_GIT_COMMIT: ${{ github.sha }}
         run: eas update --branch production --message "$(printf '%s' "$MESSAGE" | head -n 1)" --non-interactive

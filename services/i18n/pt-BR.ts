@@ -640,6 +640,12 @@ export const ptBR: Dictionary = {
         discard: 'Descartar',
         keepEditing: 'Continuar editando',
     },
+    updates: {
+        readyTitle: 'Atualização pronta',
+        readyMessage: 'Reinicie o pugdon para usar a versão mais recente.',
+        restart: 'Reiniciar',
+        later: 'Depois',
+    },
     settings: {
         title: 'Configurações',
         close: 'Fechar configurações',
@@ -667,6 +673,8 @@ export const ptBR: Dictionary = {
         coverSensitiveMedia: 'Cobrir mídia sensível, além de desfocar',
         about: 'Sobre',
         version: 'Versão do app',
+        codeVersion: 'Versão do código',
+        codeBuiltIn: 'Original da instalação',
         privacy: 'Política de privacidade',
     },
     languageNames: {

@@ -647,6 +647,12 @@ export const en = {
         discard: 'Discard',
         keepEditing: 'Keep editing',
     },
+    updates: {
+        readyTitle: 'Update ready',
+        readyMessage: 'Restart pugdon to use the latest version.',
+        restart: 'Restart',
+        later: 'Later',
+    },
     settings: {
         title: 'Settings',
         close: 'Close settings',
@@ -674,6 +680,8 @@ export const en = {
         coverSensitiveMedia: 'Cover sensitive media, not only blur it',
         about: 'About',
         version: 'App Version',
+        codeVersion: 'Code version',
+        codeBuiltIn: 'Built-in',
         privacy: 'Privacy Policy',
     },
     // Each language's name in its own language
