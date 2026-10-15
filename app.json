@@ -95,6 +95,25 @@
             "enableShrinkResourcesInReleaseBuilds": true
           }
         }
+      ],
+      [
+        "expo-sharing",
+        {
+          "android": {
+            "enabled": true,
+            "singleShareMimeTypes": ["text/plain", "image/*", "video/*"],
+            "multipleShareMimeTypes": ["image/*"]
+          },
+          "ios": {
+            "enabled": true,
+            "activationRule": {
+              "supportsText": true,
+              "supportsWebUrlWithMaxCount": 1,
+              "supportsImageWithMaxCount": 4,
+              "supportsMovieWithMaxCount": 1
+            }
+          }
+        }
       ]
     ],
     "locales": {

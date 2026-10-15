@@ -31,6 +31,7 @@ import { useQuery } from '@tanstack/react-query';
 import { searchEmojis } from './emojiPicker';
 import { useCustomEmojis } from '../../hooks/useCustomEmojis';
 import { canSchedule } from '../../services/mastodon/scheduledStatuses';
+import type { SharedContent } from '../../services/sharedContent';
 import { Account, Status } from '../../services/mastodon/types';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
 import { replyMentionsText } from '../../services/mastodon/mentions';
@@ -148,6 +149,8 @@ interface ComposeModalProps {
     quoteStatus?: Status | null;
     // One of your posts to edit, or to redraft after deleting it
     existingPost?: ExistingPost | null;
+    // Text and media another app shared with pugdon
+    shared?: SharedContent | null;
     closeCompose: () => void;
 }
 
@@ -159,7 +162,7 @@ const unchangedPoll = (poll: NonNullable<Status['poll']>) => ({
     expires_in: Math.max(300, Math.round(((poll.expires_at ? new Date(poll.expires_at).getTime() : Date.now()) - Date.now()) / 1000)),
 });
 
-const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quoteStatus = null, existingPost = null, closeCompose }) => {
+const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quoteStatus = null, existingPost = null, shared = null, closeCompose }) => {
     const { user } = useAuth();
     const { colors, type } = useTheme();
     const i18n = useI18n();
@@ -253,8 +256,10 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
             const startText = replyToStatus ? replyMentionsText(replyToStatus, user) : '';
             initialText.current = startText;
             drag.setValue(0);
-            setText(startText);
-            cursor.current = startText.length;
+            // Something shared from another app counts as a draft, so closing asks first
+            const withShared = shared?.text ? `${startText}${shared.text}` : startText;
+            setText(withShared);
+            cursor.current = withShared.length;
             setSensitive(false);
             setSpoilerText('');
             setLanguage(defaultLanguage(user));
@@ -269,6 +274,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
             setPicker(null);
             setScheduledAt(null);
             media.reset();
+            if (shared?.media.length) addPicked(shared.media);
             setAltEditing(null);
             setImageEditing(null);
             setReminderOpen(false);
@@ -318,7 +324,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 clearTimeout(timer);
             };
         }
-    }, [isOpen, replyToStatus, quoteStatus, existingPost, drag]);
+    }, [isOpen, replyToStatus, quoteStatus, existingPost, shared, drag]);
 
     // Closing stops uploads that are still going
     const cancelUploads = media.cancel;

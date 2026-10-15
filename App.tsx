@@ -14,6 +14,7 @@ import { AuthProvider, useAuth } from './services/authContext';
 import { SettingsProvider } from './services/settingsContext';
 import { ThemeProvider, useTheme } from './services/themeContext';
 import { ComposeProvider, useCompose } from './services/composeContext';
+import { useShareIntoCompose } from './hooks/useShareIntoCompose';
 import { MediaViewerProvider } from './components/MediaViewer/mediaViewer';
 import Login from './screens/Login/login';
 import Profile from './screens/Profile/profile';
@@ -67,6 +68,7 @@ function NavigationRoot() {
   const { stack, push, pop, reset, closeThreads } = useNavigator();
   // The server's stored custom emoji, ready before anyone opens the picker
   useEmojiCachePrimer(user?.id);
+  useShareIntoCompose(!!user && !needsSetup);
 
   const handleTabPress = (tab: 'home' | 'search' | 'notifications' | 'profile') => {
       // The dock floats over the stacked screens: a tab press closes them all and shows that tab
