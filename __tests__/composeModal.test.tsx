@@ -1,5 +1,6 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { Dimensions, Keyboard, Platform, StyleSheet } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
 import ComposeModal, { defaultVisibility, hasDraft } from '../components/ComposeModal/composeModal';
@@ -292,6 +293,25 @@ describe('ComposeModal', () => {
         expect(mockedCreateStatus).toHaveBeenCalledWith(
             expect.objectContaining({ poll: expect.objectContaining({ expires_in: 259200 }) })
         );
+    });
+
+    it('on Android, keeps the toolbar above the keyboard when the window ends above the navigation bar', async () => {
+        // A 900dp screen whose window stops 48dp short, above a 3-button navigation bar; the keyboard's top is at 600dp
+        jest.replaceProperty(Platform, 'OS', 'android');
+        const get = Dimensions.get;
+        jest.spyOn(Dimensions, 'get').mockImplementation(dim => ({ ...get(dim), height: dim === 'screen' ? 900 : 852 }));
+        const listeners: Record<string, (event: any) => void> = {};
+        jest.spyOn(Keyboard, 'addListener').mockImplementation((event: string, listener: any) => {
+            listeners[event] = listener;
+            return { remove: jest.fn() } as any;
+        });
+        await renderCompose();
+
+        await act(() => listeners.keyboardDidShow({ endCoordinates: { screenX: 0, screenY: 600, width: 400, height: 252 } }));
+
+        // Compose covers the whole screen, so it rises by everything under the keyboard's top: 300, not 252
+        expect(StyleSheet.flatten(screen.getByTestId('compose-keyboard-area').props.style).paddingBottom).toBe(300);
+        jest.restoreAllMocks();
     });
 
     it('inserts a custom emoji shortcode at the cursor', async () => {
