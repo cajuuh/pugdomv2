@@ -10,6 +10,7 @@ import { shouldDismiss } from '../components/ComposeModal/sheetTransition';
 import { counterState } from '../components/ComposeModal/characterCounter';
 import { fetchCustomEmojis } from '../services/mastodon/customEmojis';
 import { createStatus } from '../services/mastodon/statuses';
+import { dialog } from '../services/dialog';
 import { DEFAULT_INSTANCE_CONFIGURATION, fetchInstanceConfiguration } from '../services/mastodon/instance';
 import { Account, Status } from '../services/mastodon/types';
 
@@ -312,6 +313,26 @@ describe('ComposeModal', () => {
         // Compose covers the whole screen, so it rises by everything under the keyboard's top: 300, not 252
         expect(StyleSheet.flatten(screen.getByTestId('compose-keyboard-area').props.style).paddingBottom).toBe(300);
         jest.restoreAllMocks();
+    });
+
+    it('schedules a post for later and says when it goes out', async () => {
+        const toast = jest.spyOn(dialog, 'toast').mockImplementation(() => {});
+        await renderCompose();
+        await fireEvent.changeText(composer(), 'Later');
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Schedule post' }));
+        // The sheet offers an hour from now; confirming it turns Post into Schedule
+        await fireEvent.press(screen.getAllByRole('button', { name: 'Schedule' })[0]);
+        expect(screen.getByText(/^Scheduled for /)).toBeTruthy();
+        // The header's button comes first; the sheet's own is still sliding away
+        await fireEvent.press(screen.getAllByRole('button', { name: 'Schedule' })[0]);
+
+        const sent = mockedCreateStatus.mock.calls[0][0];
+        expect(sent.status).toBe('Later');
+        const at = new Date(sent.scheduled_at!).getTime();
+        expect(at - Date.now()).toBeGreaterThan(55 * 60_000);
+        expect(toast).toHaveBeenCalledWith(expect.stringMatching(/^Scheduled for /));
+        toast.mockRestore();
     });
 
     it('inserts a custom emoji shortcode at the cursor', async () => {

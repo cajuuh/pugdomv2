@@ -187,7 +187,7 @@ describe('Post menu', () => {
 
 describe('Who can quote your posts, by default', () => {
     it('is a setting saved on your account', async () => {
-        await render(wrap(<Settings onBack={jest.fn()} />));
+        await render(wrap(<Settings onBack={jest.fn()} onScheduledPosts={jest.fn()} />));
 
         await fireEvent.press(await screen.findByRole('button', { name: 'Who can quote your posts: Anyone' }));
         await fireEvent.press(await screen.findByRole('radio', { name: /^Followers/ }));
