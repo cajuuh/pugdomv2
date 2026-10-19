@@ -360,6 +360,7 @@ export const en = {
         poll: 'Poll',
         contentWarning: 'Content warning',
         customEmoji: 'Custom emoji',
+        emojiSuggestions: 'Matching custom emoji',
         discardTitle: 'Discard this post?',
         discardMessage: 'Your draft will be lost.',
         keepEditing: 'Keep editing',
