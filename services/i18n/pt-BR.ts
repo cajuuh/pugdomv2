@@ -113,6 +113,8 @@ export const ptBR: Dictionary = {
         addToLists: 'Listas',
         addToListsLabel: 'Adicionar {{name}} a listas',
         addToListsTitle: 'Adicionar às listas',
+        createAndAdd: 'Criar e adicionar',
+        createdWith: '{{name}} agora está em {{list}}',
         followFirst: 'Siga {{name}} para adicionar a uma lista.',
         inList: 'Em {{list}}',
         notInList: 'Fora de {{list}}',

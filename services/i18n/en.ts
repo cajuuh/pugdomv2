@@ -115,6 +115,8 @@ export const en = {
         addToLists: 'Lists',
         addToListsLabel: 'Add {{name}} to lists',
         addToListsTitle: 'Add to lists',
+        createAndAdd: 'Create and add',
+        createdWith: '{{name}} is now in {{list}}',
         followFirst: 'Follow {{name}} to add them to a list.',
         inList: 'In {{list}}',
         notInList: 'Not in {{list}}',
