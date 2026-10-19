@@ -23,8 +23,11 @@ import { plainText } from '../../services/htmlText';
 import { STATUS_UPDATED_EVENT, useUpdateCachedStatus } from '../../hooks/useUpdateCachedStatus';
 import type { ExistingPost } from '../../services/composeContext';
 import { ScheduleSheet, formatScheduleTime } from './scheduleSheet';
-import { EmojiSuggestions } from './emojiSuggestions';
-import { completeShortcode, shortcodeAtCursor } from './emojiAutocomplete';
+import { Suggestion, SuggestionRow } from './suggestionRow';
+import { completeToken, tokenAtCursor } from './autocomplete';
+import { search } from '../../services/mastodon/search';
+import { useDebounced } from '../../hooks/useSearch';
+import { useQuery } from '@tanstack/react-query';
 import { searchEmojis } from './emojiPicker';
 import { useCustomEmojis } from '../../hooks/useCustomEmojis';
 import { canSchedule } from '../../services/mastodon/scheduledStatuses';
@@ -203,11 +206,20 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
     // The cursor as state too, so the emoji suggestions follow it while typing
     const [caret, setCaret] = useState(0);
     const { data: customEmojis } = useCustomEmojis(isOpen);
-    const typedShortcode = shortcodeAtCursor(text, caret);
+    // A ":shortcode" or "@mention" being typed, to suggest how to finish it
+    const token = tokenAtCursor(text, caret);
     const emojiMatches = useMemo(
-        () => (typedShortcode ? searchEmojis((customEmojis ?? []).filter(emoji => emoji.visible_in_picker), typedShortcode.query) : []),
-        [customEmojis, typedShortcode?.query]
+        () => (token?.trigger === ':' ? searchEmojis((customEmojis ?? []).filter(emoji => emoji.visible_in_picker), token.query) : []),
+        [customEmojis, token?.trigger, token?.query]
     );
+    // People, once typing pauses; the server only looks up unknown accounts for a full @user@server
+    const mentionQuery = useDebounced(token?.trigger === '@' ? token.query : '', 250);
+    const { data: mentionMatches } = useQuery({
+        queryKey: ['mentionSuggestions', mentionQuery],
+        queryFn: async () => (await search({ q: mentionQuery, type: 'accounts', limit: 8, resolve: mentionQuery.includes('@') })).accounts,
+        enabled: isOpen && mentionQuery.length > 0,
+        staleTime: 60_000,
+    });
 
     const { mounted, progress } = useSheetTransition(isOpen);
     // The text the sheet opened with (reply mentions), to tell whether there's a draft to lose
@@ -346,15 +358,33 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
         cursor.current = next.cursor;
     };
 
-    // A suggestion tapped: the half-typed ":neofox_som" becomes ":neofox_something: ", cursor after it
-    const completeEmoji = (shortcode: string) => {
-        if (!typedShortcode) return;
-        const next = completeShortcode(text, typedShortcode.start, caret, shortcode);
+    // A suggestion tapped: the half-typed ":neofox_som" or "@an" becomes the full one plus a space, cursor after it
+    const complete = (replacement: string) => {
+        if (!token) return;
+        const next = completeToken(text, token.start, caret, replacement);
         setText(next.text);
         cursor.current = next.cursor;
         setCaret(next.cursor);
         requestAnimationFrame(() => inputRef.current?.setSelection?.(next.cursor, next.cursor));
     };
+    const suggestions: Suggestion[] =
+        token?.trigger === ':'
+            ? emojiMatches.map(emoji => ({
+                  key: emoji.shortcode,
+                  image: emoji.static_url || emoji.url,
+                  title: `:${emoji.shortcode}:`,
+                  onPick: () => complete(`:${emoji.shortcode}:`),
+              }))
+            : token?.trigger === '@'
+              ? (mentionMatches ?? []).map(account => ({
+                    key: account.id,
+                    image: account.avatar,
+                    person: true,
+                    title: account.display_name || account.username,
+                    subtitle: `@${account.acct}`,
+                    onPick: () => complete(`@${account.acct}`),
+                }))
+              : [];
 
     const describeImage = (key: string) => {
         const attachment = media.attachments.find(item => item.key === key);
@@ -744,7 +774,9 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 )}
             </ScrollView>
 
-            {!altEditing && <EmojiSuggestions matches={emojiMatches} onPick={completeEmoji} />}
+            {!altEditing && (
+                <SuggestionRow label={t(token?.trigger === '@' ? 'compose.mentionSuggestions' : 'compose.emojiSuggestions')} suggestions={suggestions} />
+            )}
 
             {/* When it will go out, in words, with a way to post now instead */}
             {scheduledAt && !altEditing && (
