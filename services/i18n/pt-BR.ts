@@ -356,6 +356,7 @@ export const ptBR: Dictionary = {
         contentWarning: 'Aviso de conteúdo',
         customEmoji: 'Emoji personalizado',
         emojiSuggestions: 'Emoji personalizados que combinam',
+        mentionSuggestions: 'Pessoas que combinam',
         discardTitle: 'Descartar esta publicação?',
         discardMessage: 'Seu rascunho será perdido.',
         keepEditing: 'Continuar editando',

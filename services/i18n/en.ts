@@ -361,6 +361,7 @@ export const en = {
         contentWarning: 'Content warning',
         customEmoji: 'Custom emoji',
         emojiSuggestions: 'Matching custom emoji',
+        mentionSuggestions: 'Matching people',
         discardTitle: 'Discard this post?',
         discardMessage: 'Your draft will be lost.',
         keepEditing: 'Keep editing',
