@@ -19,6 +19,8 @@ export interface CreateStatusParams {
         expires_in: number;
         multiple?: boolean;
     };
+    // Publish later instead (ISO 8601, at least five minutes ahead): the server answers with a ScheduledStatus
+    scheduled_at?: string;
 }
 
 // Mastodon makes one post per Idempotency-Key, so a retried request can't post twice

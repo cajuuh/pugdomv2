@@ -27,9 +27,10 @@ const PRIVACY_URL = 'https://github.com/cajuuh/pugdomv2/blob/main/PRIVACY.md';
 
 interface SettingsProps {
     onBack: () => void;
+    onScheduledPosts: () => void;
 }
 
-const Settings: React.FC<SettingsProps> = ({ onBack }) => {
+const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts }) => {
     const { user, logout, savedAccounts, switchAccount, setAddingAccount, updateUser } = useAuth();
     const { colors, type, coat } = useTheme();
     const styles = useThemedStyles(makeStyles);
@@ -198,6 +199,12 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
 
                 <SectionLabel style={styles.sectionLabel}>{t('settings.posts')}</SectionLabel>
                 <Card style={styles.group}>
+                    <Pressable style={styles.row} onPress={onScheduledPosts} accessibilityRole="button">
+                        <Ionicons name="calendar-outline" size={20} color={colors.accentText} />
+                        <Text style={[labelStyle, styles.rowText]}>{t('scheduled.title')}</Text>
+                        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                    </Pressable>
+                    <View style={styles.divider} />
                     {switchRow('list-outline', t('settings.compactMode'), compactMode, setCompactMode)}
                     <View style={styles.divider} />
                     {switchRow('stats-chart-outline', t('settings.hideCounts'), hideCounts, setHideCounts)}

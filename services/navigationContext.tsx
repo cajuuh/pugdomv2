@@ -6,6 +6,8 @@ import { Account, Status } from './mastodon/types';
 export type Route =
     | { name: 'thread'; statusId: string }
     | { name: 'settings' }
+    // Posts waiting to be published
+    | { name: 'scheduledPosts' }
     | { name: 'account'; accountId: string; account?: Account }
     | { name: 'hashtag'; tag: string }
     | { name: 'link'; url: string; title?: string }

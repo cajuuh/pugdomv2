@@ -22,6 +22,8 @@ import { createStatus, editStatus, getStatusSource } from '../../services/mastod
 import { plainText } from '../../services/htmlText';
 import { STATUS_UPDATED_EVENT, useUpdateCachedStatus } from '../../hooks/useUpdateCachedStatus';
 import type { ExistingPost } from '../../services/composeContext';
+import { ScheduleSheet, formatScheduleTime } from './scheduleSheet';
+import { canSchedule } from '../../services/mastodon/scheduledStatuses';
 import { Account, Status } from '../../services/mastodon/types';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
 import { replyMentionsText } from '../../services/mastodon/mentions';
@@ -154,7 +156,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
     const { user } = useAuth();
     const { colors, type } = useTheme();
     const i18n = useI18n();
-    const { t } = i18n;
+    const { t, locale } = i18n;
     const styles = useThemedStyles(makeStyles);
     const insets = useSafeAreaInsets();
     const { height: windowHeight } = useWindowDimensions();
@@ -170,7 +172,9 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
     const [loading, setLoading] = useState(false);
     const [language, setLanguage] = useState(() => defaultLanguage(user));
     const [visibility, setVisibility] = useState<Visibility>(() => defaultVisibility(user, replyToStatus, quoteStatus));
-    const [picker, setPicker] = useState<'language' | 'visibility' | 'emoji' | 'quotePolicy' | 'camera' | null>(null);
+    const [picker, setPicker] = useState<'language' | 'visibility' | 'emoji' | 'quotePolicy' | 'camera' | 'schedule' | null>(null);
+    // Publish later: the server posts it then (not for edits)
+    const [scheduledAt, setScheduledAt] = useState<Date | null>(null);
     // The post being quoted (✕ drops it) and who may quote this one
     const [quote, setQuote] = useState<Status | null>(quoteStatus);
     const [quotePolicy, setQuotePolicy] = useState<QuotePolicy>(user?.source?.quote_policy ?? 'public');
@@ -239,6 +243,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
             setPollDuration(DEFAULT_POLL_DURATION);
             setPollMultiple(false);
             setPicker(null);
+            setScheduledAt(null);
             media.reset();
             setAltEditing(null);
             setImageEditing(null);
@@ -433,6 +438,12 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 closeCompose();
                 return;
             }
+            // Too late by the time Post was tapped: ask for a new time rather than post now
+            if (scheduledAt && !canSchedule(scheduledAt)) {
+                dialog.alert(t('schedule.tooSoonTitle'), t('schedule.tooSoon'));
+                setPicker('schedule');
+                return;
+            }
             const mediaIds = await media.finish();
             await createStatus({
                 status: text,
@@ -445,9 +456,14 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 media_ids: mediaIds.length > 0 ? mediaIds : undefined,
                 quoted_status_id: quote?.id,
                 quote_approval_policy: instanceConfiguration.supportsQuotes ? shownQuotePolicy : undefined,
+                scheduled_at: scheduledAt?.toISOString(),
             });
 
-            DeviceEventEmitter.emit('status_published');
+            if (scheduledAt) {
+                dialog.toast(t('schedule.scheduledToast', { when: formatScheduleTime(scheduledAt, locale) }));
+            } else {
+                DeviceEventEmitter.emit('status_published');
+            }
             closeCompose();
         } catch (error: any) {
             console.error('Failed to post status:', error);
@@ -511,7 +527,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                             <PillButton label={t('compose.done')} onPress={saveDescription} disabled={altOverLimit} />
                         ) : (
                             <PillButton
-                                label={editing ? t('compose.save') : t('compose.post')}
+                                label={editing ? t('compose.save') : scheduledAt ? t('schedule.confirm') : t('compose.post')}
                                 onPress={() => handlePublish()}
                                 disabled={isPublishDisabled && !loading}
                                 loading={loading}
@@ -705,6 +721,24 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 )}
             </ScrollView>
 
+            {/* When it will go out, in words, with a way to post now instead */}
+            {scheduledAt && !altEditing && (
+                <View style={[styles.scheduledRow, { borderTopColor: colors.borderColor }]}>
+                    <Pressable
+                        onPress={() => setPicker('schedule')}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('schedule.scheduledFor', { when: formatScheduleTime(scheduledAt, locale) })}
+                        style={[styles.scheduledChip, { backgroundColor: colors.accentSoft }]}
+                    >
+                        <Ionicons name="calendar" size={14} color={colors.accentText} />
+                        <Text style={[type.label, { color: colors.accentText }]} numberOfLines={1}>
+                            {t('schedule.scheduledFor', { when: formatScheduleTime(scheduledAt, locale) })}
+                        </Text>
+                    </Pressable>
+                    <IconButton icon="close" accessibilityLabel={t('schedule.clear')} onPress={() => setScheduledAt(null)} />
+                </View>
+            )}
+
             <View
                 accessibilityRole="toolbar"
                 style={[styles.toolbar, { paddingBottom: keyboard.visible ? 10 : Math.max(insets.bottom, 10) }, altEditing && styles.hidden]}
@@ -715,6 +749,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 {tool(showPoll ? 'stats-chart' : 'stats-chart-outline', t('compose.poll'), () => (showPoll ? resetPoll() : setShowPoll(true)), showPoll, media.attachments.length > 0 || editing)}
                 {tool('warning-outline', t('compose.contentWarning'), () => setSensitive(!sensitive), sensitive)}
                 {tool('happy-outline', t('compose.customEmoji'), () => setPicker('emoji'))}
+                {!editing && tool(scheduledAt ? 'calendar' : 'calendar-outline', t('schedule.title'), () => setPicker('schedule'), !!scheduledAt)}
                 <View style={styles.toolbarSpacer} />
                 <CharacterCounter remaining={remaining} max={instanceConfiguration.maxCharacters} />
             </View>
@@ -737,6 +772,13 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 )}
             </View>
 
+            <ScheduleSheet
+                visible={picker === 'schedule'}
+                value={scheduledAt}
+                onSchedule={setScheduledAt}
+                onClear={scheduledAt ? () => setScheduledAt(null) : undefined}
+                onClose={() => setPicker(null)}
+            />
             <OptionSheet
                 visible={picker === 'visibility'}
                 title={t('compose.whoCanSee')}

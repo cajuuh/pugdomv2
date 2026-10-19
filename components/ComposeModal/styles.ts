@@ -149,6 +149,23 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         lineHeight: 24.5,
         textAlignVertical: 'top',
     },
+    scheduledRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.xs,
+        paddingTop: space.sm,
+        paddingHorizontal: space.md,
+        borderTopWidth: StyleSheet.hairlineWidth,
+    },
+    scheduledChip: {
+        flexShrink: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.xs,
+        borderRadius: radii.pill,
+        paddingHorizontal: space.md,
+        paddingVertical: space.xs,
+    },
     toolbar: {
         flexDirection: 'row',
         alignItems: 'center',
