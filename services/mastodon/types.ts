@@ -190,6 +190,8 @@ export interface Relationship {
     following: boolean;
     requested: boolean;
     followed_by: boolean;
+    // Their posts come as notifications (the bell)
+    notifying?: boolean;
     blocking?: boolean;
     muting?: boolean;
 }

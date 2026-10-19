@@ -29,6 +29,12 @@ const useRelationshipChange = (change: (accountId: string) => Promise<Relationsh
 
 export const useFollowAccount = () => useRelationshipChange(followAccount);
 
+// The bell on a profile you follow: their posts as notifications, or not
+const notifyOn = (accountId: string) => followAccount(accountId, { notify: true });
+const notifyOff = (accountId: string) => followAccount(accountId, { notify: false });
+export const useNotifyOn = () => useRelationshipChange(notifyOn);
+export const useNotifyOff = () => useRelationshipChange(notifyOff);
+
 // Unfollows, or cancels a follow request that's still pending
 export const useUnfollowAccount = () => useRelationshipChange(unfollowAccount);
 

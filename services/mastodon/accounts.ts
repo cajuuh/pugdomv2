@@ -24,9 +24,19 @@ export async function getAccount(accountId: string): Promise<Account> {
     return response.data;
 }
 
-export async function followAccount(accountId: string): Promise<Relationship> {
-    const response = await apiClient.post<Relationship>(`/accounts/${accountId}/follow`);
+// `notify` turns the bell on or off: a notification whenever they post (following them again keeps the follow)
+export async function followAccount(accountId: string, options?: { notify?: boolean }): Promise<Relationship> {
+    const response = await apiClient.post<Relationship>(`/accounts/${accountId}/follow`, options);
     return response.data;
+}
+
+// Someone asked to follow your locked account
+export async function authorizeFollowRequest(accountId: string): Promise<void> {
+    await apiClient.post(`/follow_requests/${accountId}/authorize`);
+}
+
+export async function rejectFollowRequest(accountId: string): Promise<void> {
+    await apiClient.post(`/follow_requests/${accountId}/reject`);
 }
 
 // Also cancels a pending follow request

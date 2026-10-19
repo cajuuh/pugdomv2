@@ -16,6 +16,7 @@ import { AVATAR_SIZE, BANNER_HEIGHT, SHARE_SIZE, makeStyles } from './styles';
 import { AccountListsSheet } from '../../components/AccountListsSheet/accountListsSheet';
 import { ActionSheet } from '../../components/ComposeModal/optionSheet';
 import { useModeration } from '../../hooks/useModeration';
+import { useNotifyOff, useNotifyOn } from '../../hooks/useRelationships';
 import { dialog } from '../../services/dialog';
 
 const originOf = (url?: string) => url?.match(/^https?:\/\/[^/?#]+/i)?.[0];
@@ -55,6 +56,23 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
     const [menuOpen, setMenuOpen] = useState(false);
     const moderation = useModeration();
     const remoteServer = mode === 'other' && user.acct.includes('@') ? user.acct.split('@').pop() : undefined;
+    const notifyOn = useNotifyOn();
+    const notifyOff = useNotifyOff();
+    const [bellBusy, setBellBusy] = useState(false);
+    // The bell: their posts as notifications. Only for people you follow
+    const toggleBell = async () => {
+        const turningOn = !relationship?.notifying;
+        setBellBusy(true);
+        try {
+            await (turningOn ? notifyOn(user.id) : notifyOff(user.id));
+            dialog.toast(t(turningOn ? 'profile.notifyOnDone' : 'profile.notifyOffDone', { name }));
+        } catch (error) {
+            console.warn('Changing the bell failed:', error);
+            dialog.toast(t('profile.notifyFailed'));
+        } finally {
+            setBellBusy(false);
+        }
+    };
 
     const { push } = useNavigator();
     const handleEditProfile = () => push({ name: 'editProfile' });
@@ -92,6 +110,16 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
                         style={[styles.bannerButton, styles.bannerButtonLeft, { top: topInset + space.md }]}
                     />
                 )}
+                {/* Report, mute, block: on the banner, where your own profile has Settings, so the row below
+                    keeps room for Follow, the bell, lists and share */}
+                {mode === 'other' && (
+                    <IconButton
+                        icon="ellipsis-horizontal"
+                        accessibilityLabel={t('moderation.profileMenu', { name })}
+                        onPress={() => setMenuOpen(true)}
+                        style={[styles.bannerButton, { top: topInset + space.md }]}
+                    />
+                )}
                 {mode === 'self' && onSettingsPress && (
                     <IconButton
                         icon="options-outline"
@@ -113,6 +141,23 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
                         ) : (
                             <FollowButton accountId={user.id} name={name} relationship={relationship} allowUnfollow size="medium" />
                         )}
+                        {mode === 'other' && relationship?.following && (
+                            <Pressable
+                                onPress={toggleBell}
+                                disabled={bellBusy}
+                                accessibilityRole="switch"
+                                accessibilityState={{ checked: !!relationship.notifying, busy: bellBusy }}
+                                accessibilityLabel={t('profile.notify', { name })}
+                                hitSlop={hitSlopFor(SHARE_SIZE, SHARE_SIZE)}
+                                style={({ pressed }) => [styles.share, relationship.notifying && { backgroundColor: colors.accentSoft }, pressed && { opacity: 0.7 }]}
+                            >
+                                <Ionicons
+                                    name={relationship.notifying ? 'notifications' : 'notifications-outline'}
+                                    size={18}
+                                    color={relationship.notifying ? colors.accentText : colors.textPrimary}
+                                />
+                            </Pressable>
+                        )}
                         {mode === 'other' && relationship && (
                             <Pressable
                                 onPress={() => setListsOpen(true)}
@@ -133,17 +178,6 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
                         >
                             <Ionicons name="share-outline" size={18} color={colors.textPrimary} />
                         </Pressable>
-                        {mode === 'other' && (
-                            <Pressable
-                                onPress={() => setMenuOpen(true)}
-                                accessibilityRole="button"
-                                accessibilityLabel={t('moderation.profileMenu', { name })}
-                                hitSlop={hitSlopFor(SHARE_SIZE, SHARE_SIZE)}
-                                style={({ pressed }) => [styles.share, pressed && { opacity: 0.7 }]}
-                            >
-                                <Ionicons name="ellipsis-horizontal" size={18} color={colors.textPrimary} />
-                            </Pressable>
-                        )}
                     </View>
                 </View>
 
