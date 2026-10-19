@@ -355,6 +355,7 @@ export const ptBR: Dictionary = {
         poll: 'Enquete',
         contentWarning: 'Aviso de conteúdo',
         customEmoji: 'Emoji personalizado',
+        emojiSuggestions: 'Emoji personalizados que combinam',
         discardTitle: 'Descartar esta publicação?',
         discardMessage: 'Seu rascunho será perdido.',
         keepEditing: 'Continuar editando',

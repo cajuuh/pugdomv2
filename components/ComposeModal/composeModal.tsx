@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
     Animated,
     DeviceEventEmitter,
@@ -23,6 +23,10 @@ import { plainText } from '../../services/htmlText';
 import { STATUS_UPDATED_EVENT, useUpdateCachedStatus } from '../../hooks/useUpdateCachedStatus';
 import type { ExistingPost } from '../../services/composeContext';
 import { ScheduleSheet, formatScheduleTime } from './scheduleSheet';
+import { EmojiSuggestions } from './emojiSuggestions';
+import { completeShortcode, shortcodeAtCursor } from './emojiAutocomplete';
+import { searchEmojis } from './emojiPicker';
+import { useCustomEmojis } from '../../hooks/useCustomEmojis';
 import { canSchedule } from '../../services/mastodon/scheduledStatuses';
 import { Account, Status } from '../../services/mastodon/types';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
@@ -196,6 +200,14 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
 
     const inputRef = useRef<TextInput>(null);
     const cursor = useRef(0);
+    // The cursor as state too, so the emoji suggestions follow it while typing
+    const [caret, setCaret] = useState(0);
+    const { data: customEmojis } = useCustomEmojis(isOpen);
+    const typedShortcode = shortcodeAtCursor(text, caret);
+    const emojiMatches = useMemo(
+        () => (typedShortcode ? searchEmojis((customEmojis ?? []).filter(emoji => emoji.visible_in_picker), typedShortcode.query) : []),
+        [customEmojis, typedShortcode?.query]
+    );
 
     const { mounted, progress } = useSheetTransition(isOpen);
     // The text the sheet opened with (reply mentions), to tell whether there's a draft to lose
@@ -332,6 +344,16 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
         const next = insertAt(text, cursor.current, `:${shortcode}:`);
         setText(next.text);
         cursor.current = next.cursor;
+    };
+
+    // A suggestion tapped: the half-typed ":neofox_som" becomes ":neofox_something: ", cursor after it
+    const completeEmoji = (shortcode: string) => {
+        if (!typedShortcode) return;
+        const next = completeShortcode(text, typedShortcode.start, caret, shortcode);
+        setText(next.text);
+        cursor.current = next.cursor;
+        setCaret(next.cursor);
+        requestAnimationFrame(() => inputRef.current?.setSelection?.(next.cursor, next.cursor));
     };
 
     const describeImage = (key: string) => {
@@ -669,6 +691,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                     onChangeText={setText}
                     onSelectionChange={event => {
                         cursor.current = event.nativeEvent.selection.end;
+                        setCaret(event.nativeEvent.selection.end);
                     }}
                 />
 
@@ -720,6 +743,8 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                     />
                 )}
             </ScrollView>
+
+            {!altEditing && <EmojiSuggestions matches={emojiMatches} onPick={completeEmoji} />}
 
             {/* When it will go out, in words, with a way to post now instead */}
             {scheduledAt && !altEditing && (

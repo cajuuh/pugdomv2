@@ -335,6 +335,29 @@ describe('ComposeModal', () => {
         toast.mockRestore();
     });
 
+    it('suggests custom emoji while typing a shortcode, and completes the one picked', async () => {
+        mockedEmojis.mockResolvedValue([
+            { shortcode: 'blobcat', url: 'https://x/blobcat.png', static_url: 'https://x/blobcat.png', visible_in_picker: true },
+            { shortcode: 'blobfox', url: 'https://x/blobfox.png', static_url: 'https://x/blobfox.png', visible_in_picker: true },
+            { shortcode: 'neofox', url: 'https://x/neofox.png', static_url: 'https://x/neofox.png', visible_in_picker: true },
+            { shortcode: 'blobsecret', url: 'https://x/s.png', static_url: '', visible_in_picker: false },
+        ]);
+        await renderCompose();
+
+        await fireEvent.changeText(composer(), 'hi :blob');
+        await fireEvent(composer(), 'selectionChange', { nativeEvent: { selection: { start: 8, end: 8 } } });
+
+        expect(await screen.findByRole('button', { name: ':blobcat:' })).toBeTruthy();
+        expect(screen.getByRole('button', { name: ':blobfox:' })).toBeTruthy();
+        expect(screen.queryByRole('button', { name: ':neofox:' })).toBeNull();
+        expect(screen.queryByRole('button', { name: ':blobsecret:' })).toBeNull();
+
+        await fireEvent.press(screen.getByRole('button', { name: ':blobfox:' }));
+
+        expect(composer().props.value).toBe('hi :blobfox: ');
+        expect(screen.queryByRole('button', { name: ':blobcat:' })).toBeNull();
+    });
+
     it('inserts a custom emoji shortcode at the cursor', async () => {
         mockedEmojis.mockResolvedValue([
             { shortcode: 'blobcat', url: 'https://x/blobcat.png', static_url: 'https://x/blobcat.png', visible_in_picker: true },
