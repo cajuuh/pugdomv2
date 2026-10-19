@@ -4,6 +4,7 @@ import {
     DeviceEventEmitter,
     KeyboardAvoidingView,
     Modal,
+    Dimensions,
     Platform,
     Pressable,
     ScrollView,
@@ -157,7 +158,9 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
     const styles = useThemedStyles(makeStyles);
     const insets = useSafeAreaInsets();
     const { height: windowHeight } = useWindowDimensions();
-    const keyboard = useKeyboard(windowHeight);
+    // Compose covers the whole screen, navigation bar included, so the keyboard is measured against the screen.
+    // On Android the window can end above a 3-button navigation bar: measured against it, the toolbar sat under the keyboard.
+    const keyboard = useKeyboard(Platform.OS === 'android' ? Dimensions.get('screen').height : windowHeight);
     // The modal is always mounted, so only load the instance limits while composing
     const instanceConfiguration = useInstanceConfiguration(isOpen && !!user);
 
@@ -730,7 +733,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                         {sheet}
                     </KeyboardAvoidingView>
                 ) : (
-                    <View style={[styles.keyboardAvoider, { paddingBottom: keyboard.inset }]}>{sheet}</View>
+                    <View testID="compose-keyboard-area" style={[styles.keyboardAvoider, { paddingBottom: keyboard.inset }]}>{sheet}</View>
                 )}
             </View>
 
