@@ -16,6 +16,7 @@ import { useTheme } from '../../services/themeContext';
 import { FEED_PILL_HEIGHT, makeStyles } from './styles';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { useI18n } from '../../services/i18n/i18nContext';
+import { autoplayViewability } from '../../services/media/autoplay';
 import { useNewPosts } from '../../hooks/useNewPosts';
 import { NewPostsPill } from './newPostsPill';
 
@@ -281,6 +282,7 @@ const Timeline = ({ onStatusPress }: TimelineProps) => {
                 <View style={styles.list}>
                     {newPosts.count > 0 && <NewPostsPill newPosts={newPosts} loading={loadingNewPosts} onPress={showNewPosts} />}
                     <FlashList
+                        {...autoplayViewability}
                         ref={listRef}
                         data={statuses}
                         keyExtractor={(item) => item.id}

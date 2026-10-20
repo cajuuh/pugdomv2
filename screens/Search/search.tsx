@@ -25,6 +25,7 @@ import { SearchType, shouldResolve } from '../../services/mastodon/search';
 import { TrendLink } from '../../services/mastodon/trends';
 import { Account, Status } from '../../services/mastodon/types';
 import { Tag } from '../../services/mastodon/tags';
+import { autoplayViewability } from '../../services/media/autoplay';
 import { makeStyles } from './styles';
 
 type Tab = 'all' | SearchType;
@@ -285,6 +286,7 @@ export default function Search({ onStatusPress }: SearchProps) {
         empty: React.ReactNode
     ) => (
         <FlashList
+            {...autoplayViewability}
             data={page.data?.pages.flat() ?? []}
             keyExtractor={keyOf}
             renderItem={({ item }) => renderItem(item)}
@@ -378,6 +380,7 @@ export default function Search({ onStatusPress }: SearchProps) {
                 <View style={styles.exploreContainer}>
                     {exploreTab === 'posts' && (
                         <FlashList
+                            {...autoplayViewability}
                             data={trendingStatuses.data?.pages.flat() ?? []}
                             keyExtractor={(item: Status) => item.id}
                             renderItem={({ item }) => <TootCard status={item} onPress={onStatusPress} />}

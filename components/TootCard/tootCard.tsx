@@ -48,6 +48,7 @@ import { useModeration } from '../../hooks/useModeration';
 import { usePostActions } from '../../hooks/usePostActions';
 import { EditHistorySheet } from './editHistorySheet';
 import { dialog } from '../../services/dialog';
+import { useIsAutoplayPost } from '../../services/media/autoplay';
 
 export const getRelativeTime = (dateString: string, { t }: Translator) => {
     const now = new Date();
@@ -136,7 +137,7 @@ interface TootCardProps {
 }
 
 export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPressHashtag, onPress, threadMode, showReactions, hasThreadLineTop, hasThreadLineBottom, indent = 0, replyingTo, remote }) => {
-    const { compactMode, hideCounts, coverSensitiveMedia, uncroppedMedia } = useSettings();
+    const { compactMode, hideCounts, coverSensitiveMedia, uncroppedMedia, mediaAutoplay } = useSettings();
     const { colors, type } = useTheme();
     const styles = useThemedStyles(makeStyles);
     const { openCompose } = useCompose();
@@ -184,6 +185,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     // The carousel's page; its width is layout, not per-post state
     const [mediaPage, setMediaPage] = useRecyclingState(0, recyclingDeps);
     const [carouselWidth, setCarouselWidth] = useState(0);
+    const isAutoplayPost = useIsAutoplayPost(targetStatus.id);
     // The image description opened from an ALT chip; kept while its sheet slides away
     const [shownDescription, setShownDescription] = useRecyclingState<string | null>(null, recyclingDeps);
     const [descriptionOpen, setDescriptionOpen] = useRecyclingState(false, recyclingDeps);
@@ -339,6 +341,8 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         const veiled = hidesMedia && !isMediaRevealed;
         // Compact Mode keeps its short tiles; uncropped ones show the whole picture
         const uncropped = uncroppedMedia && !compactMode;
+        // Autoplay: the carousel's current video or GIF, while this is the post in view
+        const plays = (idx: number) => mediaAutoplay && isAutoplayPost && !veiled && idx === mediaPage && (attachments[idx].type === 'video' || attachments[idx].type === 'gifv');
         const mediaHeight = uncropped
             ? { height: Math.max(...attachments.map(item => uncroppedHeight(count === 1 ? contentWidth : slideWidth, item))) }
             : undefined;
@@ -365,7 +369,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 accessibilityRole="imagebutton"
                 accessibilityLabel={mediaLabel(attachments[0], 0, count, i18n)}
             >
-                <FocusedImage attachment={attachments[0]} style={styles.mediaImage} blurred={veiled} contain={uncropped} />
+                <FocusedImage attachment={attachments[0]} style={styles.mediaImage} blurred={veiled} contain={uncropped} playing={plays(0)} />
                 {altChip(attachments[0])}
             </Pressable>
         ) : (
@@ -389,7 +393,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                             accessibilityRole="imagebutton"
                             accessibilityLabel={mediaLabel(item, idx, count, i18n)}
                         >
-                            <FocusedImage attachment={item} style={styles.mediaImage} blurred={veiled} contain={uncropped} />
+                            <FocusedImage attachment={item} style={styles.mediaImage} blurred={veiled} contain={uncropped} playing={plays(idx)} />
                             {altChip(item)}
                         </Pressable>
                     ))}

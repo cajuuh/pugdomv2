@@ -1,6 +1,6 @@
 import React from 'react';
 import { Alert, Platform, Share, StyleSheet } from 'react-native';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, renderHook, screen } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
 import { MediaViewerProvider } from '../components/MediaViewer/mediaViewer';
@@ -12,6 +12,20 @@ import { Poll } from '../components/Poll/poll';
 import { bookmarkStatus, favouriteStatus, unbookmarkStatus } from '../services/mastodon/statuses';
 import { votePoll } from '../services/mastodon/polls';
 import { Attachment, Poll as PollType, Status } from '../services/mastodon/types';
+import { autoplayViewability, setAutoplayPost, useIsAutoplayPost } from '../services/media/autoplay';
+
+// An observable stand-in for the native video player
+jest.mock('expo-video', () => {
+    const { Text } = require('react-native');
+    return {
+        useVideoPlayer: (source: string, setup?: (player: any) => void) => {
+            const player = { source, muted: false, loop: false, play: jest.fn() };
+            setup?.(player);
+            return player;
+        },
+        VideoView: ({ player, testID }: any) => <Text testID={testID}>{`${player.source} muted=${player.muted} loop=${player.loop}`}</Text>,
+    };
+});
 
 jest.mock('../services/mastodon/statuses', () => ({
     favouriteStatus: jest.fn(),
@@ -652,5 +666,77 @@ describe('TootCard press', () => {
 
         await fireEvent.press(screen.getByText(/status A/));
         expect(onPress).toHaveBeenCalledWith('A');
+    });
+});
+
+describe('TootCard autoplay', () => {
+    const video: Attachment = { id: 'v1', type: 'video', url: 'https://example.social/v1.mp4', preview_url: 'https://example.social/v1.png' };
+    const image: Attachment = { id: 'm1', type: 'image', url: 'https://example.social/m1.png', preview_url: 'https://example.social/m1-small.png' };
+    const withVideo = { ...statusA, media_attachments: [video] } as Status;
+
+    beforeEach(() => {
+        mockSettings.mediaAutoplay = true;
+        setAutoplayPost('A');
+    });
+    afterEach(() => {
+        mockSettings.mediaAutoplay = false;
+        setAutoplayPost(null);
+    });
+
+    const renderCard = (status: Status) =>
+        render(
+            <QueryClientProvider client={createTestQueryClient()}>
+                <MediaViewerProvider>
+                    <TootCard status={status} />
+                </MediaViewerProvider>
+            </QueryClientProvider>
+        );
+
+    it('plays the post in view muted and looping, without the play badge', async () => {
+        await renderCard(withVideo);
+        expect(screen.getByTestId('inline-video').props.children).toBe('https://example.social/v1.mp4 muted=true loop=true');
+        expect(screen.queryByTestId('video-badge', { includeHiddenElements: true })).toBeNull();
+    });
+
+    it('stops when another post comes into view', async () => {
+        await renderCard(withVideo);
+        await act(async () => setAutoplayPost('B'));
+        expect(screen.queryByTestId('inline-video')).toBeNull();
+        expect(screen.getByTestId('video-badge', { includeHiddenElements: true })).toBeTruthy();
+    });
+
+    it('shows only the frame with Autoplay off', async () => {
+        mockSettings.mediaAutoplay = false;
+        await renderCard(withVideo);
+        expect(screen.queryByTestId('inline-video')).toBeNull();
+    });
+
+    it('does not play veiled sensitive media', async () => {
+        await renderCard({ ...withVideo, sensitive: true });
+        expect(screen.queryByTestId('inline-video')).toBeNull();
+    });
+
+    it('plays only the carousel page in view', async () => {
+        await renderCard({ ...statusA, media_attachments: [image, video] } as Status);
+        expect(screen.queryByTestId('inline-video')).toBeNull();
+    });
+
+    it('picks the first post in view with a video or GIF, boosts and wrapped rows included', async () => {
+        const pick = (...items: unknown[]) =>
+            act(async () => autoplayViewability.onViewableItemsChanged({ viewableItems: items.map((item, index) => ({ item, index, key: String(index), isViewable: true })) as any }));
+        const gif = { ...statusB, media_attachments: [{ ...video, type: 'gifv' }] } as Status;
+        const isB = await renderHook(() => useIsAutoplayPost('B'));
+        const isA = await renderHook(() => useIsAutoplayPost('A'));
+
+        // A boost plays as its original post
+        await pick({ ...statusA, media_attachments: [image] }, { ...statusA, id: 'R', reblog: gif });
+        expect(isB.result.current).toBe(true);
+        // Thread rows wrap the status
+        await pick({ status: withVideo, depth: 0 });
+        expect(isA.result.current).toBe(true);
+        // Nothing playable in view: nothing plays
+        await pick({ ...statusA, media_attachments: [image] });
+        expect(isA.result.current).toBe(false);
+        expect(isB.result.current).toBe(false);
     });
 });
