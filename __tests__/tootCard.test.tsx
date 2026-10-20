@@ -32,6 +32,11 @@ jest.mock('../services/settingsContext', () => ({
     useSettings: () => mockSettings,
 }));
 
+let mockMediaDisplay: 'default' | 'show_all' | 'hide_all' = 'default';
+jest.mock('../hooks/useExpandSpoilers', () => ({
+    ...jest.requireActual('../hooks/useExpandSpoilers'),
+    useMediaDisplay: () => mockMediaDisplay,
+}));
 jest.mock('../services/themeContext', () => ({
     useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
 }));
@@ -328,6 +333,29 @@ describe('TootCard content', () => {
             expect(StyleSheet.flatten(screen.getByTestId('media-veil').props.style).backgroundColor).toBe('transparent');
         } finally {
             mockSettings.coverSensitiveMedia = true;
+        }
+    });
+
+    it('shows sensitive media as it is when the account (or the app) shows all media', async () => {
+        mockMediaDisplay = 'show_all';
+        try {
+            await renderCard(withMedia({ ...statusA, sensitive: true, spoiler_text: '' }));
+            expect(screen.queryByText('Sensitive · 1 photo')).toBeNull();
+            expect(screen.queryByTestId('media-veil')).toBeNull();
+            expect(screen.queryByTestId('focused-image-blurred', { includeHiddenElements: true })).toBeNull();
+        } finally {
+            mockMediaDisplay = 'default';
+        }
+    });
+
+    it('veils all media, sensitive or not, when the account hides all media', async () => {
+        mockMediaDisplay = 'hide_all';
+        try {
+            await renderCard(withMedia({ ...statusA, sensitive: false }));
+            expect(screen.getByText('Media hidden · 1 photo')).toBeTruthy();
+            expect(screen.getByTestId('media-veil')).toBeTruthy();
+        } finally {
+            mockMediaDisplay = 'default';
         }
     });
 

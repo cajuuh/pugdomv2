@@ -9,6 +9,8 @@ interface SettingsContextType {
     hideCounts: boolean;
     // Posts with a content warning open expanded; null until you set it here (then the account's web preference applies)
     expandSpoilers: boolean | null;
+    // Sensitive media shown without the blur; null until switched in the app, so the account's setting applies
+    showSensitiveMedia: boolean | null;
     // Hidden sensitive media gets a cover over the blur; off, it's only blurred
     coverSensitiveMedia: boolean;
     setNotifications: (value: boolean) => Promise<void>;
@@ -22,6 +24,7 @@ interface SettingsContextType {
     setUncroppedMedia: (value: boolean) => Promise<void>;
     setGroupNotifications: (value: boolean) => Promise<void>;
     setExpandSpoilers: (value: boolean) => Promise<void>;
+    setShowSensitiveMedia: (value: boolean) => Promise<void>;
     setCoverSensitiveMedia: (value: boolean) => Promise<void>;
     loadingSettings: boolean;
 }
@@ -35,6 +38,7 @@ export const HIDE_COUNTS_KEY = 'pugdom_settings_hide_counts';
 export const GROUP_NOTIFICATIONS_KEY = 'pugdom_settings_group_notifications';
 export const UNCROPPED_MEDIA_KEY = 'pugdom_settings_uncropped_media';
 export const EXPAND_SPOILERS_KEY = 'pugdom_settings_expand_spoilers';
+export const SHOW_SENSITIVE_KEY = 'pugdom_settings_show_sensitive';
 export const COVER_SENSITIVE_KEY = 'pugdom_settings_cover_sensitive';
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -45,6 +49,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const [groupNotifications, setGroupNotificationsState] = useState(true);
     const [uncroppedMedia, setUncroppedMediaState] = useState(false);
     const [expandSpoilers, setExpandSpoilersState] = useState<boolean | null>(null);
+    const [showSensitiveMedia, setShowSensitiveMediaState] = useState<boolean | null>(null);
     const [coverSensitiveMedia, setCoverSensitiveMediaState] = useState(true);
     const [loadingSettings, setLoadingSettings] = useState(true);
 
@@ -58,6 +63,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 const grouped = await getSetting(GROUP_NOTIFICATIONS_KEY, true);
                 const uncropped = await getSetting(UNCROPPED_MEDIA_KEY, false);
                 const spoilers = await getStringSetting(EXPAND_SPOILERS_KEY, '');
+                const sensitive = await getStringSetting(SHOW_SENSITIVE_KEY, '');
                 const cover = await getSetting(COVER_SENSITIVE_KEY, true);
                 setNotificationsState(notify);
                 setMediaAutoplayState(autoplay);
@@ -66,6 +72,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 setGroupNotificationsState(grouped);
                 setUncroppedMediaState(uncropped);
                 setExpandSpoilersState(spoilers === '' ? null : spoilers === 'true');
+                setShowSensitiveMediaState(sensitive === '' ? null : sensitive === 'true');
                 setCoverSensitiveMediaState(cover);
             } catch (error) {
                 console.error('Failed to load settings:', error);
@@ -106,6 +113,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         await saveSetting(UNCROPPED_MEDIA_KEY, value);
     };
 
+    const setShowSensitiveMedia = async (value: boolean) => {
+        setShowSensitiveMediaState(value);
+        await saveStringSetting(SHOW_SENSITIVE_KEY, String(value));
+    };
+
     const setExpandSpoilers = async (value: boolean) => {
         setExpandSpoilersState(value);
         await saveStringSetting(EXPAND_SPOILERS_KEY, String(value));
@@ -124,6 +136,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 compactMode,
                 hideCounts,
                 expandSpoilers,
+                showSensitiveMedia,
                 coverSensitiveMedia,
                 setNotifications,
                 setMediaAutoplay,
@@ -134,6 +147,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 uncroppedMedia,
                 setUncroppedMedia,
                 setExpandSpoilers,
+                setShowSensitiveMedia,
                 setCoverSensitiveMedia,
                 loadingSettings,
             }}

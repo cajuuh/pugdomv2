@@ -275,6 +275,8 @@ export const en = {
         hiddenLink: 'a link',
         hidden: '{{list}} hidden',
         sensitive: 'Sensitive · {{media}}',
+        // The account hides all media (Media display: Hide all)
+        hiddenMedia: 'Media hidden · {{media}}',
         hideMedia: 'Hide media',
         contentWarning: 'Content warning',
         cwTitle: 'CW · {{text}}',
@@ -741,6 +743,7 @@ export const en = {
         media: 'Media',
         groupNotifications: 'Group favourites and boosts in notifications',
         expandSpoilers: 'Always expand content warnings',
+        showSensitiveMedia: 'Show sensitive media without blur',
         coverSensitiveMedia: 'Cover sensitive media, not only blur it',
         about: 'About',
         version: 'App Version',
