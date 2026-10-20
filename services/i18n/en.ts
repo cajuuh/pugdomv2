@@ -584,6 +584,8 @@ export const en = {
         closeVideo: 'Close video',
         viewPost: 'View post',
         close: 'Close',
+        previous: 'Previous image',
+        next: 'Next image',
     },
     notifications: {
         title: 'Notifications',

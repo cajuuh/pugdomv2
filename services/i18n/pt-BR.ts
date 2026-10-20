@@ -574,6 +574,8 @@ export const ptBR: Dictionary = {
         closeVideo: 'Fechar vídeo',
         viewPost: 'Ver publicação',
         close: 'Fechar',
+        previous: 'Imagem anterior',
+        next: 'Próxima imagem',
     },
     notifications: {
         title: 'Notificações',

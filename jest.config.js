@@ -1,6 +1,6 @@
 module.exports = {
   preset: 'jest-expo',
-  setupFiles: ['./jest.setup.js'],
+  setupFiles: ['./jest.setup.js', 'react-native-gesture-handler/jestSetup.js'],
   setupFilesAfterEnv: ['./jest.afterEnv.js'],
   // The first render in a file compiles React Native: ~30s per worker on a cold cache (as in CI)
   testTimeout: 60000,

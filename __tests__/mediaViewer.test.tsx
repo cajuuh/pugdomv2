@@ -11,18 +11,7 @@ import { favouriteStatus } from '../services/mastodon/statuses';
 import { Attachment, Status } from '../services/mastodon/types';
 import { createTestQueryClient } from '../testUtils/queryClient';
 
-// Observable stand-ins for the native viewers
-jest.mock('react-native-image-viewing', () => {
-    const { Text, View } = require('react-native');
-    return ({ visible, images, imageIndex, HeaderComponent }: any) =>
-        visible ? (
-            <View>
-                {HeaderComponent && <HeaderComponent imageIndex={imageIndex} />}
-                <Text>{`gallery ${imageIndex}: ${images.map((image: any) => image.uri).join(', ')}`}</Text>
-            </View>
-        ) : null;
-});
-
+// An observable stand-in for the native video player
 jest.mock('expo-video', () => {
     const { Text } = require('react-native');
     return {
@@ -126,7 +115,10 @@ describe('shared media viewer', () => {
 
         await fireEvent.press(screen.getByLabelText('Image 3 of 3'));
 
-        expect(screen.getByText('gallery 1: https://files.example.social/i1, https://files.example.social/i2')).toBeTruthy();
+        // The video is left out of the gallery, which opens on the tapped image (the second of two)
+        expect(screen.getByText('2 / 2')).toBeTruthy();
+        expect(screen.getByRole('button', { name: 'Previous image' })).toBeTruthy();
+        expect(screen.queryByRole('button', { name: 'Next image' })).toBeNull();
     });
 
     describe('opened with a way to the post (the profile media grid)', () => {
