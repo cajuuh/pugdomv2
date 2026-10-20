@@ -2,7 +2,12 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
+import { File } from 'expo-file-system';
 import { ImageGallery } from '../components/MediaViewer/imageGallery';
+
+jest.mock('../services/themeContext', () => ({
+    useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
+}));
 
 const images = [{ uri: 'https://x/1.jpg' }, { uri: 'https://x/2.jpg', description: 'A pug' }];
 
@@ -40,6 +45,12 @@ describe('ImageGallery', () => {
         expect(screen.getByLabelText('A pug')).toBeTruthy();
         await fireEvent.press(screen.getByRole('button', { name: 'Next image' }));
         expect(screen.getByText('2 / 2')).toBeTruthy();
+    });
+
+    it('saves the image being looked at', async () => {
+        await render(<ImageGallery images={images} index={1} visible onClose={jest.fn()} />);
+        await fireEvent.press(screen.getByRole('button', { name: 'Save' }));
+        expect(File.downloadFileAsync).toHaveBeenCalledWith('https://x/2.jpg', expect.anything(), { idempotent: true });
     });
 
     it('closes from its close button', async () => {

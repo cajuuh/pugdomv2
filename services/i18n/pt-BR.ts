@@ -576,6 +576,12 @@ export const ptBR: Dictionary = {
         close: 'Fechar',
         previous: 'Imagem anterior',
         next: 'Próxima imagem',
+        save: 'Salvar',
+        saving: 'Salvando…',
+        saved: 'Salvo no seu celular',
+        saveFailedTitle: 'Não deu para salvar',
+        saveFailed: 'O pugdon não conseguiu salvar isso no seu celular. Você pode compartilhar o link.',
+        shareLink: 'Compartilhar link',
     },
     notifications: {
         title: 'Notificações',
