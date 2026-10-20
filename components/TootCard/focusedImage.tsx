@@ -36,16 +36,19 @@ const InlineVideo: React.FC<{ url: string; contain?: boolean }> = ({ url, contai
         player.play();
     });
     return (
-        <VideoView
-            testID="inline-video"
-            player={player}
-            style={StyleSheet.absoluteFill}
-            contentFit={contain ? 'contain' : 'cover'}
-            nativeControls={false}
-            // A SurfaceView ignores the tile's clipping and lags behind the list while scrolling
-            surfaceType="textureView"
-            pointerEvents="none"
-        />
+        <>
+            <VideoView
+                testID="inline-video"
+                player={player}
+                style={StyleSheet.absoluteFill}
+                contentFit={contain ? 'contain' : 'cover'}
+                nativeControls={false}
+                // A SurfaceView ignores the tile's clipping and lags behind the list while scrolling
+                surfaceType="textureView"
+            />
+            {/* On Android the video view takes every touch for itself, so a plain view on top gets the tap for the tile */}
+            <View testID="video-touch-cover" style={StyleSheet.absoluteFill} />
+        </>
     );
 };
 

@@ -290,6 +290,16 @@ describe('Compose with images', () => {
         await waitFor(() => expect(createStatus).toHaveBeenCalledWith(expect.objectContaining({ media_ids: ['m1'] })));
     });
 
+    it('opens the description editor when the video itself is tapped', async () => {
+        await renderCompose();
+        await act(async () => {});
+        await pickVideo();
+
+        // The tap lands on the view over the video (Android's video view keeps touches to itself)
+        await fireEvent.press(screen.getByTestId('video-touch-cover'));
+        expect(screen.getByTestId('alt-text-editor')).toBeTruthy();
+    });
+
     it('leaves a video out when the post already has pictures', async () => {
         await renderCompose();
         await act(async () => {});
