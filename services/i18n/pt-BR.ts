@@ -7,6 +7,8 @@ export const ptBR: Dictionary = {
         cancel: 'Cancelar',
         close: 'Fechar',
         continue: 'Continuar',
+        moreTabs: 'Mais abas',
+        earlierTabs: 'Abas anteriores',
         error: 'Erro',
         show: 'Mostrar',
         hide: 'Ocultar',

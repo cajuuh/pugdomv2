@@ -6,6 +6,9 @@ export const en = {
         ok: 'OK',
         close: 'Close',
         continue: 'Continue',
+        // Arrows at the ends of a row of tabs that scrolls
+        moreTabs: 'More tabs',
+        earlierTabs: 'Earlier tabs',
         error: 'Error',
         show: 'Show',
         hide: 'Hide',
