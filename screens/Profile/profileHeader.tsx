@@ -3,7 +3,7 @@ import { Image, Pressable, Share, Text, View, useWindowDimensions } from 'react-
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../../services/themeContext';
 import { useNavigator } from '../../services/navigationContext';
-import { Account, Relationship } from '../../services/mastodon/types';
+import { Account, Attachment, Relationship } from '../../services/mastodon/types';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
 import { StatusHtmlContent, openLink } from '../../components/TootCard/htmlContent';
 import { Avatar, IconButton, PillButton, PugMark, RoleBadge, SegmentOption, SegmentedPill } from '../../components/ui';
@@ -16,6 +16,7 @@ import { AVATAR_SIZE, BANNER_HEIGHT, SHARE_SIZE, makeStyles } from './styles';
 import { AccountListsSheet } from '../../components/AccountListsSheet/accountListsSheet';
 import { ActionSheet } from '../../components/ComposeModal/optionSheet';
 import { useModeration } from '../../hooks/useModeration';
+import { useMediaViewer } from '../../components/MediaViewer/mediaViewer';
 import { useNotifyOff, useNotifyOn } from '../../hooks/useRelationships';
 import { dialog } from '../../services/dialog';
 
@@ -75,6 +76,9 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
     };
 
     const { push } = useNavigator();
+    const { openMedia } = useMediaViewer();
+    // The profile picture or header, full size in the viewer (zoom, swipe to close)
+    const viewImage = (url: string) => openMedia([{ id: url, type: 'image', url, preview_url: url } as Attachment], 0);
     const handleEditProfile = () => push({ name: 'editProfile' });
 
     const handleShare = async () => {
@@ -96,7 +100,9 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
         <View style={styles.header}>
             <View style={[styles.banner, topInset > 0 && { height: BANNER_HEIGHT + topInset }]}>
                 {hasHeaderImage(user) ? (
-                    <Image testID="profile-banner-image" source={{ uri: user.header }} style={styles.bannerImage} />
+                    <Pressable onPress={() => viewImage(user.header!)} accessibilityRole="imagebutton" accessibilityLabel={t('profile.viewHeader', { name })}>
+                        <Image testID="profile-banner-image" source={{ uri: user.header }} style={styles.bannerImage} />
+                    </Pressable>
                 ) : (
                     <View testID="profile-banner-mark" style={styles.bannerMark}>
                         <PugMark coat={coat} size={220} />
@@ -132,9 +138,15 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
 
             <View style={styles.info}>
                 <View style={styles.avatarRow}>
-                    <View style={styles.avatarRing}>
+                    <Pressable
+                        onPress={() => user.avatar && viewImage(user.avatar)}
+                        disabled={!user.avatar}
+                        accessibilityRole="imagebutton"
+                        accessibilityLabel={t('profile.viewAvatar', { name })}
+                        style={styles.avatarRing}
+                    >
                         <Avatar name={name} uri={user.avatar} size={AVATAR_SIZE} />
-                    </View>
+                    </Pressable>
                     <View style={styles.actions}>
                         {mode === 'self' ? (
                             <PillButton label={t('profile.editProfile')} variant="secondary" onPress={handleEditProfile} />

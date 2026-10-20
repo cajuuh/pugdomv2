@@ -103,7 +103,7 @@ describe('Profile', () => {
 
         // One thumbnail per post: its first picture, saying how many there are
         expect(await screen.findByRole('imagebutton', { name: 'Image 1 of 2' })).toBeTruthy();
-        expect(screen.getAllByRole('imagebutton')).toHaveLength(2);
+        expect(screen.getAllByRole('imagebutton', { name: /^Image \d of/ })).toHaveLength(2);
         expect(screen.getByText('2')).toBeTruthy();
         expect(screen.queryByText('post 1')).toBeNull();
         // Sensitive pictures stay blurred in the grid

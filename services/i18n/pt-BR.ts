@@ -665,6 +665,8 @@ export const ptBR: Dictionary = {
         statFollowers: 'seguidores',
         editProfile: 'Editar perfil',
         shareProfile: 'Compartilhar perfil',
+        viewAvatar: 'Ver a foto de perfil de {{name}}',
+        viewHeader: 'Ver a imagem de capa de {{name}}',
         notify: 'Avisar quando {{name}} publicar',
         notifyOnDone: 'Você será avisado quando {{name}} publicar',
         notifyOffDone: 'Você não será mais avisado das publicações de {{name}}',

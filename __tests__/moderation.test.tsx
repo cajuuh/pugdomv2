@@ -15,6 +15,11 @@ import Report from '../screens/Report/report';
 import { NavigationProvider, useNavigator } from '../services/navigationContext';
 import { Account, Relationship, Status } from '../services/mastodon/types';
 
+const mockOpenMedia = jest.fn();
+jest.mock('../components/MediaViewer/mediaViewer', () => ({
+    MediaViewerProvider: ({ children }: { children: React.ReactNode }) => children,
+    useMediaViewer: () => ({ openMedia: mockOpenMedia }),
+}));
 jest.mock('../services/api/client', () => ({
     __esModule: true,
     default: { get: jest.fn(), post: jest.fn() },
@@ -153,6 +158,16 @@ describe('Post menu', () => {
         await pressInDialog('Block');
 
         expect(api.post).toHaveBeenCalledWith('/accounts/ana/block');
+    });
+});
+
+describe('Profile picture', () => {
+    it('opens full size in the viewer', async () => {
+        await render(wrap(<ProfileHeader user={{ ...ana, avatar: 'https://x/ana.png' }} mode="other" tabs={[{ value: 'posts', label: 'Posts' }]} tab="posts" onChangeTab={jest.fn()} />));
+
+        await fireEvent.press(screen.getByRole('imagebutton', { name: "View Ana's profile picture" }));
+
+        expect(mockOpenMedia).toHaveBeenCalledWith([expect.objectContaining({ type: 'image', url: 'https://x/ana.png' })], 0);
     });
 });
 

@@ -677,6 +677,8 @@ export const en = {
         statFollowers: 'followers',
         editProfile: 'Edit profile',
         shareProfile: 'Share profile',
+        viewAvatar: "View {{name}}'s profile picture",
+        viewHeader: "View {{name}}'s header image",
         notify: 'Notify me when {{name}} posts',
         notifyOnDone: "You'll be notified when {{name}} posts",
         notifyOffDone: "You won't be notified of {{name}}'s posts anymore",
