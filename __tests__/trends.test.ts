@@ -5,8 +5,10 @@ import {
     getTrendingLinks,
     getTrendingStatuses,
     getTrendingTags,
+    mergeTrending,
     weeklyTrendUsage,
 } from '../services/mastodon/trends';
+import { Status } from '../services/mastodon/types';
 
 jest.mock('../services/api/client', () => ({
     __esModule: true,
@@ -148,6 +150,26 @@ describe('trends service', () => {
         it('handles empty or missing history', () => {
             expect(weeklyTrendUsage(undefined)).toEqual({ uses: 0, people: 0 });
             expect(weeklyTrendUsage([])).toEqual({ uses: 0, people: 0 });
+        });
+    });
+
+    describe('mergeTrending', () => {
+        const post = (id: string, uri: string, favs: number) => ({ id, uri, favourites_count: favs, reblogs_count: 0, replies_count: 0 }) as Status;
+
+        it('keeps our copy of a post trending elsewhere and ranks by engagement times servers', () => {
+            const ours = post('1', 'https://a/1', 10);
+            const theirs = post('x1', 'https://a/1', 30);
+            const big = post('x2', 'https://b/2', 50);
+            const merged = mergeTrending([ours], [[theirs, big], [post('y1', 'https://a/1', 20)]]);
+            // a/1: best 30 × 3 servers = 90 beats b/2: 50 × 1
+            expect(merged).toEqual([
+                { status: ours, remote: false },
+                { status: big, remote: true },
+            ]);
+        });
+
+        it('works with no server answering', () => {
+            expect(mergeTrending([], [[], []])).toEqual([]);
         });
     });
 });

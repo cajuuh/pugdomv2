@@ -232,7 +232,7 @@ export const en = {
         removeRecent: 'Remove {{term}} from recent searches',
     },
     explore: {
-        posts: 'Posts',
+        trending: 'Trending',
         hashtags: 'Hashtags',
         news: 'News',
         people: 'People',

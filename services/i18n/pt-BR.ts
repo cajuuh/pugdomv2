@@ -228,7 +228,7 @@ export const ptBR: Dictionary = {
         removeRecent: 'Remover {{term}} das buscas recentes',
     },
     explore: {
-        posts: 'Publicações',
+        trending: 'Em alta',
         hashtags: 'Hashtags',
         news: 'Notícias',
         people: 'Pessoas',
