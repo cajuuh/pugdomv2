@@ -3,6 +3,8 @@
 export const en = {
     common: {
         cancel: 'Cancel',
+        openingPost: 'Opening post…',
+        openingProfile: 'Opening profile…',
         ok: 'OK',
         close: 'Close',
         continue: 'Continue',
@@ -232,7 +234,7 @@ export const en = {
         removeRecent: 'Remove {{term}} from recent searches',
     },
     explore: {
-        posts: 'Posts',
+        trending: 'Trending',
         hashtags: 'Hashtags',
         news: 'News',
         people: 'People',

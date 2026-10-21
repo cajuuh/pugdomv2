@@ -4,6 +4,8 @@ import { Dictionary } from './en';
 export const ptBR: Dictionary = {
     common: {
         ok: 'OK',
+        openingPost: 'Abrindo publicação…',
+        openingProfile: 'Abrindo perfil…',
         cancel: 'Cancelar',
         close: 'Fechar',
         continue: 'Continuar',
@@ -228,7 +230,7 @@ export const ptBR: Dictionary = {
         removeRecent: 'Remover {{term}} das buscas recentes',
     },
     explore: {
-        posts: 'Publicações',
+        trending: 'Em alta',
         hashtags: 'Hashtags',
         news: 'Notícias',
         people: 'Pessoas',

@@ -6,8 +6,12 @@ import {
     getTrendingLinks,
     getTrendingStatuses,
     getTrendingTags,
+    getServerTrendingStatuses,
+    TRENDING_SERVERS,
     TrendLink,
 } from '../services/mastodon/trends';
+import { normalizeDomain } from '../services/mastodon/servers';
+import { getCredentials } from '../services/storage';
 import { Tag } from '../services/mastodon/tags';
 import { Account, Status } from '../services/mastodon/types';
 import {
@@ -18,6 +22,7 @@ import {
 } from '../services/recentSearches';
 
 export const trendingStatusesKey = () => ['timeline', 'trending'];
+export const fediverseTrendingKey = () => ['trends', 'fediverse'];
 export const trendingTagsKey = () => ['trends', 'tags'];
 export const trendingLinksKey = () => ['trends', 'links'];
 export const suggestionsKey = () => ['suggestions'];
@@ -31,6 +36,18 @@ export const useTrendingStatuses = (enabled = true) =>
         initialPageParam: 0,
         getNextPageParam: (lastPage: Status[], allPages) =>
             lastPage.length === 20 ? allPages.length * 20 : undefined,
+        enabled,
+    });
+
+// The big servers' trending posts (not ours: that's useTrendingStatuses), one list per server
+export const useFediverseTrending = (enabled = true) =>
+    useQuery<Status[][]>({
+        queryKey: fediverseTrendingKey(),
+        queryFn: async () => {
+            const { instanceUrl } = await getCredentials();
+            const own = instanceUrl ? normalizeDomain(instanceUrl) : '';
+            return Promise.all(TRENDING_SERVERS.filter(domain => domain !== own).map(domain => getServerTrendingStatuses(domain)));
+        },
         enabled,
     });
 

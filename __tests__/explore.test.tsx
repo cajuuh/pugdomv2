@@ -15,6 +15,7 @@ import { recentSearchKey } from '../services/recentSearches';
 jest.mock('../services/api/client', () => ({
     __esModule: true,
     default: { get: jest.fn(), post: jest.fn() },
+    publicClient: { get: jest.fn() },
 }));
 jest.mock('../services/storage', () => ({
     getCredentials: jest.fn().mockResolvedValue({ accessToken: 't', instanceUrl: 'https://pug.social' }),
@@ -25,20 +26,21 @@ jest.mock('../services/themeContext', () => ({
     useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
 }));
 jest.mock('../components/TootCard/tootCard', () => ({
-    TootCard: ({ status, onPress }: { status: Status; onPress?: (id: string) => void }) => {
+    TootCard: ({ status, onPress, remote }: { status: Status; onPress?: (id: string) => void; remote?: boolean }) => {
         const { Pressable, Text: MockText } = jest.requireActual('react-native');
         return (
             <Pressable onPress={() => onPress?.(status.id)}>
-                <MockText>{status.content}</MockText>
+                <MockText>{remote ? `${status.content} (remote)` : status.content}</MockText>
             </Pressable>
         );
     },
 }));
 
 const get = apiClient.get as jest.Mock;
+const publicGet = (jest.requireMock('../services/api/client') as { publicClient: { get: jest.Mock } }).publicClient.get;
 const WebBrowser = jest.requireMock('expo-web-browser');
 
-const trendingStatus = { id: 'trend-1', content: 'trending pug post' };
+const trendingStatus = { id: 'trend-1', uri: 'https://pug.social/statuses/1', content: 'trending pug post', favourites_count: 5, reblogs_count: 0, replies_count: 0 };
 const trendingTag = { name: 'puglife', url: 'https://pug.social/tags/puglife', history: [{ day: '1', uses: '10', accounts: '5' }] };
 const trendingNews: TrendLink = {
     url: 'https://pugnews.com/article/1',
@@ -116,12 +118,30 @@ describe('Explore on Search screen', () => {
     it('shows explore tabs when query is empty and defaults to trending posts', async () => {
         await renderSearch();
 
-        expect(screen.getByText('Posts')).toBeTruthy();
+        expect(screen.getByText('Trending')).toBeTruthy();
         expect(screen.getByText('Hashtags')).toBeTruthy();
         expect(screen.getByText('News')).toBeTruthy();
         expect(screen.getByText('People')).toBeTruthy();
 
         expect(await screen.findByText('trending pug post')).toBeTruthy();
+    });
+
+    it('adds the big servers\' trends, ours first when a post trends on both, ranked by engagement', async () => {
+        const remoteHit = { id: '9', uri: 'https://mas.to/statuses/9', content: 'big fediverse post', favourites_count: 900, reblogs_count: 50, replies_count: 10 };
+        // The same post as ours, seen from another server: it stays ours (and counts as trending twice)
+        const ourCopy = { ...trendingStatus, id: '77' };
+        publicGet.mockImplementation(async (url: string) =>
+            url.startsWith('https://mastodon.social/') ? { data: [remoteHit, ourCopy] } : { data: [] }
+        );
+        await renderSearch();
+
+        const big = await screen.findByText('big fediverse post (remote)');
+        const ours = screen.getByText('trending pug post');
+        expect(publicGet).toHaveBeenCalledWith('https://mas.to/api/v1/trends/statuses', { params: { limit: 20 } });
+        expect(screen.queryByText('trending pug post (remote)')).toBeNull();
+        // 960 engagement on one server outranks 5 on two
+        const order = screen.getAllByText(/post/).map(node => node.props.children);
+        expect(order.indexOf(big.props.children)).toBeLessThan(order.indexOf(ours.props.children));
     });
 
     it('switches to trending hashtags tab and renders hashtags', async () => {
