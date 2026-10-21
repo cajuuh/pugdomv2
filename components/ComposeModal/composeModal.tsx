@@ -251,6 +251,17 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
         ], { cancelable: true, onDismiss: cancel });
     });
 
+    // Adds what was picked, shot or shared, saying when a video had to be left out. Declared before the
+    // effect below: compose renders nothing until mounted, so a later declaration isn't there yet when it runs
+    const addPicked = (picked: Parameters<typeof media.add>[0]) => {
+        const { videoNotAlone, videoTooBig } = media.add(picked);
+        if (videoTooBig) {
+            dialog.toast(t('compose.videoTooBig', { size: Math.round(instanceConfiguration.videoSizeLimit / (1024 * 1024)) }));
+        } else if (videoNotAlone) {
+            dialog.toast(t('compose.videoNotAlone'));
+        }
+    };
+
     useEffect(() => {
         if (isOpen) {
             const startText = replyToStatus ? replyMentionsText(replyToStatus, user) : '';
@@ -431,16 +442,6 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
             addPicked(await pickImages(media.room, media.canAddVideo));
         } catch (error) {
             console.warn('Could not open the gallery:', error);
-        }
-    };
-
-    // Adds what was picked or shot, saying when a video had to be left out
-    const addPicked = (picked: Parameters<typeof media.add>[0]) => {
-        const { videoNotAlone, videoTooBig } = media.add(picked);
-        if (videoTooBig) {
-            dialog.toast(t('compose.videoTooBig', { size: Math.round(instanceConfiguration.videoSizeLimit / (1024 * 1024)) }));
-        } else if (videoNotAlone) {
-            dialog.toast(t('compose.videoNotAlone'));
         }
     };
 
