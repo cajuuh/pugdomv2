@@ -30,6 +30,35 @@ export async function getServerTimeline(domain: string, maxId?: string, sinceId?
     return response.data;
 }
 
+// A server in joinmastodon.org's public directory
+export interface DirectoryServer {
+    domain: string;
+    total_users: number;
+    languages?: string[];
+}
+
+// A suggestion: a server from the directory, or one you already have an account on (`mine`)
+export type ServerSuggestion = { domain: string; total_users?: number; mine?: boolean };
+
+// joinmastodon.org's server list, read without an account. It only has servers that signed the Mastodon
+// server covenant, so a typed address that isn't there still has to work.
+export async function getServerDirectory(): Promise<DirectoryServer[]> {
+    const { data } = await publicClient.get<DirectoryServer[]>('https://api.joinmastodon.org/servers');
+    return Array.isArray(data) ? data : [];
+}
+
+// Servers whose address has what's typed in it: yours first (the directory misses most servers), then the
+// directory's, those starting with it first, then the biggest. Nothing once the address is typed in full.
+export const matchServers = (servers: DirectoryServer[], typed: string, limit = 5, mine: string[] = []): ServerSuggestion[] => {
+    const query = normalizeDomain(typed);
+    if (!query || mine.includes(query) || servers.some(server => server.domain === query)) return [];
+    const yours = mine.filter(domain => domain.includes(query)).map(domain => ({ domain, mine: true }));
+    const directory = servers
+        .filter(server => server.domain.includes(query) && !mine.includes(server.domain))
+        .sort((a, b) => Number(b.domain.startsWith(query)) - Number(a.domain.startsWith(query)) || b.total_users - a.total_users);
+    return [...yours, ...directory].slice(0, limit);
+};
+
 // Can we show this server's timeline? Its name and description, or why not
 export async function checkServer(input: string): Promise<ServerCheck> {
     const domain = normalizeDomain(input);

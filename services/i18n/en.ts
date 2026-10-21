@@ -59,6 +59,9 @@ export const en = {
         notMastodon: "{{server}} didn't answer like a Mastodon server. Check the address: it's the server where you made your account, like mastodon.social.",
         unreachableTitle: "Couldn't reach the server",
         unreachable: "Couldn't reach {{server}}. Check the address and your connection, then try again.",
+        yourServer: 'You have an account here',
+        serverPeople_one: '{{count}} person',
+        serverPeople_other: '{{count}} people',
     },
     setup: {
         title: 'Setting things up',
