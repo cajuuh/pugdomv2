@@ -23,3 +23,18 @@ export const useExpandSpoilers = () => {
     const { data } = useServerPreferences();
     return expandSpoilers ?? data?.['reading:expand:spoilers'] === true;
 };
+
+export type MediaDisplay = 'default' | 'show_all' | 'hide_all';
+
+// How post media shows: "show_all" without the sensitive blur, "hide_all" veiled even when not sensitive,
+// "default" veiled only when sensitive. The app's switch wins once used; otherwise the account's
+// "Media display" from the web. Hiding everything only comes from the account.
+export const useMediaDisplay = (): MediaDisplay => {
+    const { showSensitiveMedia } = useSettings();
+    const { data } = useServerPreferences();
+    const account = data?.['reading:expand:media'];
+    if (showSensitiveMedia === true) return 'show_all';
+    if (account === 'hide_all') return 'hide_all';
+    if (showSensitiveMedia === null && account === 'show_all') return 'show_all';
+    return 'default';
+};

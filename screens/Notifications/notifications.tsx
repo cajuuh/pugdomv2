@@ -12,6 +12,8 @@ import { useCompose } from '../../services/composeContext';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
 import { NotificationFilter, SUPPORTED_NOTIFICATION_TYPES, useNotifications } from '../../hooks/useNotifications';
 import { useRelationships } from '../../hooks/useRelationships';
+import { authorizeFollowRequest, rejectFollowRequest } from '../../services/mastodon/accounts';
+import { useOptionalAuth } from '../../services/authContext';
 import { FollowButton } from '../../components/FollowButton/followButton';
 import { useUpdateCachedStatus } from '../../hooks/useUpdateCachedStatus';
 import { Avatar, AvatarBadge, IconButton, PillButton, SectionLabel, SegmentOption, SegmentedPill, Well } from '../../components/ui';
@@ -42,6 +44,43 @@ const TYPE_CONFIG: Record<string, { badge: React.ComponentProps<typeof Ionicons>
     quote: { badge: 'chatbox-ellipses', action: 'notifications.quote' },
     // The post attached is your quote; the post it quotes was edited
     quoted_update: { badge: 'create', action: 'notifications.quotedUpdate' },
+    // Someone you turned the bell on for posted
+    status: { badge: 'notifications', action: 'notifications.status' },
+    update: { badge: 'create', action: 'notifications.update' },
+    follow_request: { badge: 'person-add', action: 'notifications.followRequest' },
+    poll: { badge: 'stats-chart', action: 'notifications.pollEnded' },
+};
+
+// Accept or turn down someone who asked to follow your locked account; the answer stays on the row
+const FollowRequestActions = ({ account }: { account: Account }) => {
+    const { t } = useI18n();
+    const styles = useThemedStyles(makeStyles);
+    const { type } = useTheme();
+    const queryClient = useQueryClient();
+    const [answer, setAnswer] = useRecyclingState<'accepted' | 'rejected' | 'pending' | null>(null, [account.id]);
+
+    const respond = async (accept: boolean) => {
+        setAnswer('pending');
+        try {
+            await (accept ? authorizeFollowRequest(account.id) : rejectFollowRequest(account.id));
+            setAnswer(accept ? 'accepted' : 'rejected');
+            queryClient.invalidateQueries({ queryKey: ['relationships'] });
+        } catch (error) {
+            console.warn('Answering the follow request failed:', error);
+            setAnswer(null);
+            dialog.toast(t('notifications.followRequestFailed'));
+        }
+    };
+
+    if (answer === 'accepted' || answer === 'rejected') {
+        return <Text style={[type.meta, styles.handle]}>{t(answer === 'accepted' ? 'notifications.accepted' : 'notifications.rejected')}</Text>;
+    }
+    return (
+        <View style={styles.requestActions}>
+            <PillButton label={t('notifications.accept')} size="small" disabled={answer === 'pending'} onPress={() => respond(true)} />
+            <PillButton label={t('notifications.reject')} size="small" variant="ghost" disabled={answer === 'pending'} onPress={() => respond(false)} />
+        </View>
+    );
 };
 
 const nameOf = (account: Account) => account.display_name || account.username;
@@ -131,6 +170,7 @@ const NotificationRow = ({ group, relationship, onStatusPress }: NotificationRow
     const i18n = useI18n();
     const { t, tn } = i18n;
     const { openAccount } = useOpenAccount();
+    const me = useOptionalAuth()?.user;
     const { status } = group;
     const config = TYPE_CONFIG[group.type === 'mention' && status?.visibility === 'direct' ? 'privateMention' : group.type];
     const action = t(config.action);
@@ -143,7 +183,11 @@ const NotificationRow = ({ group, relationship, onStatusPress }: NotificationRow
     const shown = group.accounts.slice(0, group.count > 2 ? 2 : group.count);
     const others = group.count - shown.length;
     const actors = actorsText(group.accounts.map(nameOf), group.count, i18n);
-    const headline = (
+    // "Your poll has ended" / "A poll you voted in has ended": no names first, they don't read well in Portuguese
+    const pollSentence = group.type === 'poll' && t(account && account.id === me?.id ? 'notifications.ownPollEnded' : 'notifications.pollEnded');
+    const headline = pollSentence ? (
+        <Text style={[type.body, styles.action, styles.headlineText]} numberOfLines={2}>{pollSentence}</Text>
+    ) : (
         <Text style={styles.headlineText} numberOfLines={2}>
             {shown.map((person, index) => (
                 <React.Fragment key={person.id}>
@@ -172,7 +216,7 @@ const NotificationRow = ({ group, relationship, onStatusPress }: NotificationRow
         </Pressable>
     );
 
-    if (group.type === 'follow' && account) {
+    if ((group.type === 'follow' || group.type === 'follow_request') && account) {
         return (
             <View style={[styles.row, styles.rowCentered]}>
                 {avatar}
@@ -186,7 +230,9 @@ const NotificationRow = ({ group, relationship, onStatusPress }: NotificationRow
                     {headline}
                     <Text style={[type.meta, styles.handle]} numberOfLines={1}>@{account.acct} · {time}</Text>
                 </Pressable>
-                <FollowButton accountId={account.id} name={nameOf(account)} relationship={relationship} />
+                {group.type === 'follow_request'
+                    ? <FollowRequestActions account={account} />
+                    : <FollowButton accountId={account.id} name={nameOf(account)} relationship={relationship} />}
             </View>
         );
     }
@@ -211,7 +257,12 @@ const NotificationRow = ({ group, relationship, onStatusPress }: NotificationRow
             )}
         </>
     );
-    const label = t(text ? 'notifications.rowWithText' : 'notifications.row', { actors, action, time, text });
+    const label = t(text ? 'notifications.rowWithText' : 'notifications.row', {
+        actors: pollSentence ? '' : actors,
+        action: pollSentence || action,
+        time,
+        text,
+    }).trim();
 
     if (group.type === 'mention' && status) {
         // The row isn't one accessible element here, or screen readers couldn't reach Reply and Favourite;

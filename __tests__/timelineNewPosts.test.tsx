@@ -1,5 +1,7 @@
+import { ScrollView } from 'react-native';
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
 import { fetchHomeTimeline, fetchPublicTimeline } from '../services/mastodon/timeline';
@@ -93,5 +95,21 @@ describe('Timeline new posts pill', () => {
         expect(mockedHome).toHaveBeenLastCalledWith(undefined);
         // The pill stops loading once the list has scrolled up
         await waitFor(() => expect(screen.getByRole('button', { name: '1 new post' })).not.toBeBusy());
+    });
+
+    it('goes back to the top when the feed you are on is tapped again, and switches on another', async () => {
+        mockNewPosts = { count: 0, more: false, accounts: [] };
+        const scrollTo = jest.spyOn(ScrollView.prototype as any, 'scrollTo');
+        await renderTimeline();
+        await screen.findByText('post 10');
+        scrollTo.mockClear();
+
+        await act(async () => fireEvent.press(screen.getByRole('tab', { name: 'Home' })));
+        await waitFor(() => expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ y: 0 })));
+        expect(fetchPublicTimeline).not.toHaveBeenCalled();
+
+        await fireEvent.press(screen.getByRole('tab', { name: 'Local' }));
+        await waitFor(() => expect(fetchPublicTimeline).toHaveBeenCalled());
+        scrollTo.mockRestore();
     });
 });

@@ -130,6 +130,10 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     stack: {
         gap: 6,
     },
+    requestActions: {
+        flexDirection: 'row',
+        gap: 6,
+    },
     followContent: {
         gap: 1,
     },

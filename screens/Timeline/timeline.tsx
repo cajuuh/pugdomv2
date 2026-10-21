@@ -16,6 +16,7 @@ import { useTheme } from '../../services/themeContext';
 import { FEED_PILL_HEIGHT, makeStyles } from './styles';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { useI18n } from '../../services/i18n/i18nContext';
+import { autoplayViewability } from '../../services/media/autoplay';
 import { useNewPosts } from '../../hooks/useNewPosts';
 import { NewPostsPill } from './newPostsPill';
 
@@ -56,7 +57,12 @@ const Timeline = ({ onStatusPress }: TimelineProps) => {
         pillsRef.current?.scrollTo({ x: 0, animated: true });
     }, []);
 
+    // Another feed switches to it; the one you're on goes back to its top, like Home in the dock
     const selectPinned = (feed: FeedDescriptor) => {
+        if (feed.id === activeFeed.id) {
+            scrollListToTop(listRef.current);
+            return;
+        }
         setActiveFeed(feed);
         setPreviewing(false);
     };
@@ -276,6 +282,7 @@ const Timeline = ({ onStatusPress }: TimelineProps) => {
                 <View style={styles.list}>
                     {newPosts.count > 0 && <NewPostsPill newPosts={newPosts} loading={loadingNewPosts} onPress={showNewPosts} />}
                     <FlashList
+                        {...autoplayViewability}
                         ref={listRef}
                         data={statuses}
                         keyExtractor={(item) => item.id}

@@ -13,6 +13,7 @@ import { TAB_BAR_CLEARANCE } from '../../components/TabBar/styles';
 import { TootCard } from '../../components/TootCard/tootCard';
 import { IconButton, PillButton } from '../../components/ui';
 import { dialog } from '../../services/dialog';
+import { autoplayViewability } from '../../services/media/autoplay';
 
 interface QuotesProps {
     // The post whose quotes these are
@@ -75,6 +76,7 @@ const Quotes = ({ status, onBack, onStatusPress }: QuotesProps) => {
                 <ActivityIndicator style={styles.loading} color={colors.accentColor} />
             ) : (
                 <FlashList
+                    {...autoplayViewability}
                     data={quotes}
                     keyExtractor={item => item.id}
                     contentContainerStyle={styles.list}

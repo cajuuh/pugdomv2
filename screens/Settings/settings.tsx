@@ -20,7 +20,7 @@ import { useInstanceConfiguration } from '../../hooks/useInstanceConfiguration';
 import { QuotePolicy, quotePolicies } from '../../services/mastodon/quotes';
 import { updateDefaultQuotePolicy } from '../../services/mastodon/accounts';
 import { dialog } from '../../services/dialog';
-import { useExpandSpoilers } from '../../hooks/useExpandSpoilers';
+import { useExpandSpoilers, useMediaDisplay } from '../../hooks/useExpandSpoilers';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
 
 const PRIVACY_URL = 'https://github.com/cajuuh/pugdomv2/blob/main/PRIVACY.md';
@@ -50,9 +50,12 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts }) => {
         setExpandSpoilers,
         coverSensitiveMedia,
         setCoverSensitiveMedia,
+        setShowSensitiveMedia,
     } = useSettings();
     // What posts do now: your switch, or the account's web preference until you use it
     const expandSpoilers = useExpandSpoilers();
+    // On when the app or the account shows sensitive media as it is
+    const showSensitive = useMediaDisplay() === 'show_all';
     // Appearance is a second level inside Settings
     const [page, setPage] = useState<'main' | 'appearance'>('main');
     const { t, language, setLanguage, dict } = useI18n();
@@ -217,6 +220,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts }) => {
                     {switchRow('play-circle-outline', t('settings.autoplay'), mediaAutoplay, setMediaAutoplay)}
                     <View style={styles.divider} />
                     {switchRow('expand-outline', t('settings.uncroppedMedia'), uncroppedMedia, setUncroppedMedia)}
+                    <View style={styles.divider} />
+                    {switchRow('eye-outline', t('settings.showSensitiveMedia'), showSensitive, setShowSensitiveMedia)}
                     <View style={styles.divider} />
                     {switchRow('eye-off-outline', t('settings.coverSensitiveMedia'), coverSensitiveMedia, setCoverSensitiveMedia)}
                 </Card>

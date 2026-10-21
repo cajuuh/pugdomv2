@@ -8,6 +8,7 @@ import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { useLinkTimeline } from '../../hooks/useExplore';
 import { Status } from '../../services/mastodon/types';
+import { autoplayViewability } from '../../services/media/autoplay';
 import { TootCard } from '../../components/TootCard/tootCard';
 import { IconButton, PillButton } from '../../components/ui';
 import { openLink } from '../../components/TootCard/htmlContent';
@@ -87,6 +88,7 @@ const LinkTimeline = ({ url, title, onBack, onStatusPress }: LinkTimelineProps) 
             </View>
 
             <FlashList
+                {...autoplayViewability}
                 data={statuses}
                 keyExtractor={(item: Status) => item.id}
                 renderItem={({ item }) => <TootCard status={item} onPress={onStatusPress} />}

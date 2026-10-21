@@ -15,7 +15,8 @@ export interface Attachment {
     description?: string;
     // Sizes and the focal point (-1..1, y up), when the server knows them
     meta?: {
-        original?: { width?: number; height?: number };
+        // A video's or GIF's length in seconds
+        original?: { width?: number; height?: number; duration?: number };
         small?: { width?: number; height?: number };
         focus?: { x: number; y: number };
     } | null;
@@ -190,6 +191,8 @@ export interface Relationship {
     following: boolean;
     requested: boolean;
     followed_by: boolean;
+    // Their posts come as notifications (the bell)
+    notifying?: boolean;
     blocking?: boolean;
     muting?: boolean;
 }
