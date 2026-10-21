@@ -1,13 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
-import { StyleSheet, ActivityIndicator, BackHandler, DeviceEventEmitter, TouchableOpacity, Platform, LogBox, View } from 'react-native';
-
-// react-native-image-viewing's default header (the media viewer's close button) still uses React Native's
-// deprecated SafeAreaView; the app itself uses react-native-safe-area-context. Remove once that header is replaced.
-LogBox.ignoreLogs([
-    "SafeAreaView has been deprecated and will be removed in a future release",
-]);
+import { StyleSheet, ActivityIndicator, BackHandler, DeviceEventEmitter, TouchableOpacity, Platform, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './services/authContext';

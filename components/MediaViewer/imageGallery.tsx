@@ -162,8 +162,7 @@ interface ImageGalleryProps {
 }
 
 // The full-screen image viewer: swipe between images, pinch or double tap to zoom, drag down to close.
-// Built on gesture handler + reanimated (already in the app's builds), replacing react-native-image-viewing,
-// whose Android gestures stopped working on React Native 0.85.
+// Built on gesture handler + reanimated.
 export const ImageGallery = ({ images, index, visible, onClose, extraButton }: ImageGalleryProps) => {
     const { width, height } = useWindowDimensions();
     const insets = useSafeAreaInsets();

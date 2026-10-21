@@ -7,7 +7,6 @@ jest.mock('expo-video', () => ({
     useVideoPlayer: () => ({ play: jest.fn(), pause: jest.fn(), loop: false }),
     VideoView: () => null,
 }));
-jest.mock('react-native-image-viewing', () => () => null);
 // Saving media to the gallery (see __tests__/saveMedia.test.tsx for an observable stand-in)
 jest.mock('expo-media-library', () => ({
     Asset: { create: jest.fn(async () => ({})) },
