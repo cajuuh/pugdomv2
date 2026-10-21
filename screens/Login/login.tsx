@@ -1,5 +1,6 @@
 import React,{useState } from 'react'
-import { ScrollView, StyleSheet,Text,TextInput,useWindowDimensions,View } from 'react-native'
+import { Pressable, ScrollView, StyleSheet,Text,TextInput,useWindowDimensions,View } from 'react-native'
+import { useQuery } from '@tanstack/react-query'
 import { PillButton, PugMark} from '../../components/ui'
 import { radii,space} from '../../services/theme/shape'
 import * as WebBrowser from 'expo-web-browser'
@@ -7,8 +8,9 @@ import * as Linking from 'expo-linking'
 
 // services
 import { registerOnServer, ServerError } from '../../services/mastodon/apps'
+import { getServerDirectory, matchServers, normalizeDomain, ServerSuggestion } from '../../services/mastodon/servers'
 import { exchangeCodeForToken } from '../../services/mastodon/auth'
-import { saveCredentials } from '../../services/storage'
+import { getSavedAccounts, saveCredentials } from '../../services/storage'
 import { getCurrentAccount } from '../../services/mastodon/accounts'
 import { useAuth } from '../../services/authContext'
 import { useTheme } from '../../services/themeContext'
@@ -29,7 +31,19 @@ const Login: React.FC<LoginProps> = ({ onCancel }) => {
     const [focused,setFocused] = useState<boolean>(false);
     const { login } = useAuth();
     const { colors,type,coat } = useTheme();
-    const { t } = useI18n();
+    const { t, tn, locale } = useI18n();
+    // Servers to pick from as you type the address; without the directory (offline) the field works as before
+    const directory = useQuery({ queryKey: ['servers', 'directory'], queryFn: getServerDirectory, staleTime: 24 * 60 * 60 * 1000 });
+    // The servers of accounts already on this phone, suggested first (just their addresses, not the accounts)
+    const mine = useQuery({
+        queryKey: ['servers', 'mine'],
+        queryFn: async () => [...new Set((await getSavedAccounts()).map(account => normalizeDomain(account.instanceUrl)))],
+    });
+    const suggestions = loading ? [] : matchServers(directory.data ?? [], instance, 5, mine.data ?? []);
+    const detail = (server: ServerSuggestion) =>
+        server.mine
+            ? t('login.yourServer')
+            : tn('login.serverPeople', server.total_users ?? 0, { count: (server.total_users ?? 0).toLocaleString(locale) });
     // The app draws edge to edge, so the window doesn't shrink for the keyboard: make room for it
     const keyboard = useKeyboard(useWindowDimensions().height);
 
@@ -143,6 +157,23 @@ const Login: React.FC<LoginProps> = ({ onCancel }) => {
                         ]}
                     />
 
+                    {suggestions.length > 0 && (
+                        <View style={[styles.suggestions, { backgroundColor: colors.cardBackground, borderColor: colors.borderColor }]}>
+                            {suggestions.map(server => (
+                                <Pressable
+                                    key={server.domain}
+                                    onPress={() => setInstance(server.domain)}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={`${server.domain}, ${detail(server)}`}
+                                    style={({ pressed }) => [styles.suggestion, pressed && { backgroundColor: colors.accentSoft }]}
+                                >
+                                    <Text style={[type.name, { color: colors.textPrimary }]} numberOfLines={1}>{server.domain}</Text>
+                                    <Text style={[type.meta, { color: server.mine ? colors.accentText : colors.textMuted }]} numberOfLines={1}>{detail(server)}</Text>
+                                </Pressable>
+                            ))}
+                        </View>
+                    )}
+
                     <PillButton
                         label={t('common.continue')}
                         onPress={handleLogin}
@@ -166,6 +197,18 @@ const Login: React.FC<LoginProps> = ({ onCancel }) => {
     )
 }
 const styles = StyleSheet.create({
+    // Under the address field, one row per server
+    suggestions: {
+        marginTop: space.sm,
+        borderRadius: radii.input,
+        borderWidth: StyleSheet.hairlineWidth,
+        overflow: 'hidden',
+    },
+    suggestion: {
+        paddingHorizontal: space.md,
+        paddingVertical: space.sm,
+        gap: 2,
+    },
     container: {
         flexGrow: 1,
         justifyContent: 'center',

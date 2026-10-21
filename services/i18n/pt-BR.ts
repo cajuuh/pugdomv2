@@ -57,6 +57,9 @@ export const ptBR: Dictionary = {
         notMastodon: '{{server}} não respondeu como um servidor Mastodon. Confira o endereço: é o do servidor onde você criou a conta, como mastodon.social.',
         unreachableTitle: 'Não deu para acessar o servidor',
         unreachable: 'Não deu para acessar {{server}}. Confira o endereço e a sua conexão e tente de novo.',
+        yourServer: 'Você tem uma conta aqui',
+        serverPeople_one: '{{count}} pessoa',
+        serverPeople_other: '{{count}} pessoas',
     },
     setup: {
         title: 'Preparando tudo',
