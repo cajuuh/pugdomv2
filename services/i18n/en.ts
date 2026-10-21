@@ -3,6 +3,8 @@
 export const en = {
     common: {
         cancel: 'Cancel',
+        openingPost: 'Opening post…',
+        openingProfile: 'Opening profile…',
         ok: 'OK',
         close: 'Close',
         continue: 'Continue',

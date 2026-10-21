@@ -4,6 +4,8 @@ import { Dictionary } from './en';
 export const ptBR: Dictionary = {
     common: {
         ok: 'OK',
+        openingPost: 'Abrindo publicação…',
+        openingProfile: 'Abrindo perfil…',
         cancel: 'Cancelar',
         close: 'Fechar',
         continue: 'Continuar',
