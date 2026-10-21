@@ -31,21 +31,4 @@ export const styles = StyleSheet.create({
         borderRadius: 19,
         backgroundColor: mediaColors.scrim,
     },
-    navButton: {
-        position: 'absolute',
-        top: '50%',
-        marginTop: -20,
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: mediaColors.scrim,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    navLeft: {
-        left: 16,
-    },
-    navRight: {
-        right: 16,
-    },
 });

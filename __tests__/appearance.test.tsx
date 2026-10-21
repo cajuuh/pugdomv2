@@ -48,7 +48,7 @@ const renderAppearance = async () => {
     await render(
         <QueryClientProvider client={createTestQueryClient()}>
             <ThemeProvider>
-                <Settings onBack={jest.fn()} />
+                <Settings onBack={jest.fn()} onScheduledPosts={jest.fn()} />
             </ThemeProvider>
         </QueryClientProvider>
     );

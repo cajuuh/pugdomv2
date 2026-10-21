@@ -14,6 +14,7 @@ import { makeStyles } from './styles';
 import { usePinnedFeeds } from '../../hooks/usePinnedFeeds';
 import { createHashtagFeed } from '../../services/mastodon/feedTypes';
 import { dialog } from '../../services/dialog';
+import { autoplayViewability } from '../../services/media/autoplay';
 
 interface HashtagProps {
     tag: string;
@@ -104,6 +105,7 @@ const Hashtag = ({ tag, onBack, onStatusPress }: HashtagProps) => {
                 <View style={styles.headerSpacer} />
             </View>
             <FlashList
+                {...autoplayViewability}
                 data={statuses}
                 keyExtractor={(item: Status) => item.id}
                 renderItem={({ item }) => <TootCard status={item} onPress={onStatusPress} />}

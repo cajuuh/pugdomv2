@@ -25,6 +25,7 @@ import { useSettings } from '../../services/settingsContext';
 import { useTheme } from '../../services/themeContext';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
+import { autoplayViewability } from '../../services/media/autoplay';
 import { STATUS_DELETED_EVENT, STATUS_UPDATED_EVENT } from '../../hooks/useUpdateCachedStatus';
 
 interface ThreadProps {
@@ -234,6 +235,7 @@ export default function Thread({
                 </View>
             ) : (
                 <FlashList
+                    {...autoplayViewability}
                     // A fresh list per order, starting from the top
                     key={order}
                     data={shown}

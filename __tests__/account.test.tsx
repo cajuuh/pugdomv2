@@ -8,6 +8,7 @@ import Account from '../screens/Account/account';
 import { FollowButton } from '../components/FollowButton/followButton';
 import { mentionFor, useOpenAccount } from '../hooks/useOpenAccount';
 import { NavigationProvider, useNavigator } from '../services/navigationContext';
+import { MediaViewerProvider } from '../components/MediaViewer/mediaViewer';
 import { followAccount, getAccount, getAccountStatuses, getRelationships, unfollowAccount } from '../services/mastodon/accounts';
 import { resolveAccount } from '../services/mastodon/search';
 import { Account as AccountType, Relationship, Status } from '../services/mastodon/types';
@@ -69,7 +70,9 @@ const relationship = (overrides: Partial<Relationship> = {}): Relationship => ({
 });
 
 const withQuery = (children: React.ReactNode) => (
-    <QueryClientProvider client={createTestQueryClient()}>{children}</QueryClientProvider>
+    <QueryClientProvider client={createTestQueryClient()}>
+        <MediaViewerProvider>{children}</MediaViewerProvider>
+    </QueryClientProvider>
 );
 
 beforeEach(() => {

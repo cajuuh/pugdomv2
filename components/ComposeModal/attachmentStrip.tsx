@@ -17,7 +17,13 @@ const VideoThumb = ({ uri }: { uri: string }) => {
     const player = useVideoPlayer(uri, player => {
         player.muted = true;
     });
-    return <VideoView player={player} style={styles.image} contentFit="cover" nativeControls={false} pointerEvents="none" />;
+    return (
+        <>
+            <VideoView player={player} style={styles.image} contentFit="cover" nativeControls={false} />
+            {/* On Android the video view takes every touch for itself, so a plain view on top gets the tap for the button */}
+            <View testID="video-touch-cover" style={StyleSheet.absoluteFill} />
+        </>
+    );
 };
 
 interface AttachmentStripProps {

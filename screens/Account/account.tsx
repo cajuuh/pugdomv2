@@ -12,6 +12,7 @@ import { TootCard } from '../../components/TootCard/tootCard';
 import { IconButton, SegmentOption } from '../../components/ui';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { useI18n } from '../../services/i18n/i18nContext';
+import { autoplayViewability } from '../../services/media/autoplay';
 import { ProfileHeader } from '../Profile/profileHeader';
 import { MediaGridRow, MediaTile, toMediaRows } from '../../components/MediaGrid/mediaGrid';
 import { makeStyles } from '../Profile/styles';
@@ -92,6 +93,7 @@ const Account = ({ accountId, account: initialAccount, onBack, onStatusPress, on
     return (
         <View style={styles.container}>
             <FlashList
+                {...autoplayViewability}
                 data={showGrid ? toMediaRows(statuses) : statuses}
                 keyExtractor={(item: Status | MediaTile[]) => (Array.isArray(item) ? `row-${item[0].status.id}-${item[0].index}` : item.id)}
                 getItemType={(item: Status | MediaTile[]) => (Array.isArray(item) ? 'mediaRow' : 'post')}

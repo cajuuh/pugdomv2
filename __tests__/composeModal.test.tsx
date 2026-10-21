@@ -1,5 +1,6 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { Dimensions, Keyboard, Platform, StyleSheet } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
 import ComposeModal, { defaultVisibility, hasDraft } from '../components/ComposeModal/composeModal';
@@ -9,6 +10,8 @@ import { shouldDismiss } from '../components/ComposeModal/sheetTransition';
 import { counterState } from '../components/ComposeModal/characterCounter';
 import { fetchCustomEmojis } from '../services/mastodon/customEmojis';
 import { createStatus } from '../services/mastodon/statuses';
+import { search } from '../services/mastodon/search';
+import { dialog } from '../services/dialog';
 import { DEFAULT_INSTANCE_CONFIGURATION, fetchInstanceConfiguration } from '../services/mastodon/instance';
 import { Account, Status } from '../services/mastodon/types';
 
@@ -25,6 +28,8 @@ jest.mock('../services/themeContext', () => ({
 jest.mock('../services/mastodon/statuses', () => ({
     createStatus: jest.fn(),
 }));
+
+jest.mock('../services/mastodon/search', () => ({ search: jest.fn() }));
 
 jest.mock('../services/mastodon/customEmojis', () => ({
     fetchCustomEmojis: jest.fn(),
@@ -292,6 +297,85 @@ describe('ComposeModal', () => {
         expect(mockedCreateStatus).toHaveBeenCalledWith(
             expect.objectContaining({ poll: expect.objectContaining({ expires_in: 259200 }) })
         );
+    });
+
+    it('on Android, keeps the toolbar above the keyboard when the window ends above the navigation bar', async () => {
+        // A 900dp screen whose window stops 48dp short, above a 3-button navigation bar; the keyboard's top is at 600dp
+        jest.replaceProperty(Platform, 'OS', 'android');
+        const get = Dimensions.get;
+        jest.spyOn(Dimensions, 'get').mockImplementation(dim => ({ ...get(dim), height: dim === 'screen' ? 900 : 852 }));
+        const listeners: Record<string, (event: any) => void> = {};
+        jest.spyOn(Keyboard, 'addListener').mockImplementation((event: string, listener: any) => {
+            listeners[event] = listener;
+            return { remove: jest.fn() } as any;
+        });
+        await renderCompose();
+
+        await act(() => listeners.keyboardDidShow({ endCoordinates: { screenX: 0, screenY: 600, width: 400, height: 252 } }));
+
+        // Compose covers the whole screen, so it rises by everything under the keyboard's top: 300, not 252
+        expect(StyleSheet.flatten(screen.getByTestId('compose-keyboard-area').props.style).paddingBottom).toBe(300);
+        jest.restoreAllMocks();
+    });
+
+    it('schedules a post for later and says when it goes out', async () => {
+        const toast = jest.spyOn(dialog, 'toast').mockImplementation(() => {});
+        await renderCompose();
+        await fireEvent.changeText(composer(), 'Later');
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Schedule post' }));
+        // The sheet offers an hour from now; confirming it turns Post into Schedule
+        await fireEvent.press(screen.getAllByRole('button', { name: 'Schedule' })[0]);
+        expect(screen.getByText(/^Scheduled for /)).toBeTruthy();
+        // The header's button comes first; the sheet's own is still sliding away
+        await fireEvent.press(screen.getAllByRole('button', { name: 'Schedule' })[0]);
+
+        const sent = mockedCreateStatus.mock.calls[0][0];
+        expect(sent.status).toBe('Later');
+        const at = new Date(sent.scheduled_at!).getTime();
+        expect(at - Date.now()).toBeGreaterThan(55 * 60_000);
+        expect(toast).toHaveBeenCalledWith(expect.stringMatching(/^Scheduled for /));
+        toast.mockRestore();
+    });
+
+    it('suggests custom emoji while typing a shortcode, and completes the one picked', async () => {
+        mockedEmojis.mockResolvedValue([
+            { shortcode: 'blobcat', url: 'https://x/blobcat.png', static_url: 'https://x/blobcat.png', visible_in_picker: true },
+            { shortcode: 'blobfox', url: 'https://x/blobfox.png', static_url: 'https://x/blobfox.png', visible_in_picker: true },
+            { shortcode: 'neofox', url: 'https://x/neofox.png', static_url: 'https://x/neofox.png', visible_in_picker: true },
+            { shortcode: 'blobsecret', url: 'https://x/s.png', static_url: '', visible_in_picker: false },
+        ]);
+        await renderCompose();
+
+        await fireEvent.changeText(composer(), 'hi :blob');
+        await fireEvent(composer(), 'selectionChange', { nativeEvent: { selection: { start: 8, end: 8 } } });
+
+        expect(await screen.findByRole('button', { name: ':blobcat:' })).toBeTruthy();
+        expect(screen.getByRole('button', { name: ':blobfox:' })).toBeTruthy();
+        expect(screen.queryByRole('button', { name: ':neofox:' })).toBeNull();
+        expect(screen.queryByRole('button', { name: ':blobsecret:' })).toBeNull();
+
+        await fireEvent.press(screen.getByRole('button', { name: ':blobfox:' }));
+
+        expect(composer().props.value).toBe('hi :blobfox: ');
+        expect(screen.queryByRole('button', { name: ':blobcat:' })).toBeNull();
+    });
+
+    it('suggests people while typing a mention, and completes the one picked', async () => {
+        (search as jest.Mock).mockResolvedValue({
+            accounts: [{ id: '1', username: 'ana', acct: 'ana@pug.social', display_name: 'Ana', avatar: '', emojis: [] }],
+            hashtags: [],
+            statuses: [],
+        });
+        await renderCompose();
+
+        await fireEvent.changeText(composer(), 'oi @an');
+        await fireEvent(composer(), 'selectionChange', { nativeEvent: { selection: { start: 6, end: 6 } } });
+
+        await fireEvent.press(await screen.findByRole('button', { name: 'Ana, @ana@pug.social' }));
+
+        expect(search).toHaveBeenCalledWith({ q: 'an', type: 'accounts', limit: 8, resolve: false });
+        expect(composer().props.value).toBe('oi @ana@pug.social ');
     });
 
     it('inserts a custom emoji shortcode at the cursor', async () => {

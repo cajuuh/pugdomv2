@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
 import Notifications from '../screens/Notifications/notifications';
 import { groupsFromNotifications } from '../services/mastodon/notifications';
-import { followAccount, getRelationships } from '../services/mastodon/accounts';
+import { authorizeFollowRequest, followAccount, getRelationships } from '../services/mastodon/accounts';
 import { favouriteStatus } from '../services/mastodon/statuses';
 import { markNotificationsRead } from '../services/mastodon/markers';
 import { Account, Notification } from '../services/mastodon/types';
@@ -25,7 +25,13 @@ jest.mock('../services/mastodon/notifications', () => {
     };
 });
 jest.mock('../services/settingsContext', () => ({ useSettings: () => ({ groupNotifications: true }) }));
-jest.mock('../services/mastodon/accounts', () => ({ followAccount: jest.fn(), getRelationships: jest.fn() }));
+jest.mock('../services/mastodon/accounts', () => ({
+    followAccount: jest.fn(),
+    getRelationships: jest.fn(),
+    authorizeFollowRequest: jest.fn(),
+    rejectFollowRequest: jest.fn(),
+}));
+jest.mock('../services/authContext', () => ({ useOptionalAuth: () => ({ user: { id: 'me' } }) }));
 jest.mock('../services/mastodon/statuses', () => ({ favouriteStatus: jest.fn(), unfavouriteStatus: jest.fn() }));
 jest.mock('../services/mastodon/markers', () => ({ markNotificationsRead: jest.fn() }));
 jest.mock('../services/themeContext', () => ({
@@ -50,7 +56,7 @@ const notification = (id: string, type: Notification['type'], from: Account, cre
     type,
     created_at: createdAt.toISOString(),
     account: from,
-    status: type === 'follow' ? undefined : ({ id: `s-${id}`, content: `<p>post ${id}</p>`, spoiler_text: '', emojis: [] } as any),
+    status: type === 'follow' || type === 'follow_request' ? undefined : ({ id: `s-${id}`, content: `<p>post ${id}</p>`, spoiler_text: '', emojis: [] } as any),
 });
 
 const relationship = (id: string, following: boolean, requested = false) => ({ id, following, requested, followed_by: true });
@@ -76,12 +82,14 @@ describe('Notifications', () => {
         await renderScreen();
 
         await screen.findByText(/mentioned you/);
-        expect(mockedFetch).toHaveBeenCalledWith(undefined, ['mention', 'reblog', 'favourite', 'follow', 'quote', 'quoted_update']);
+        expect(mockedFetch).toHaveBeenCalledWith(undefined, [
+            'mention', 'status', 'reblog', 'favourite', 'follow', 'follow_request', 'quote', 'quoted_update', 'poll', 'update',
+        ]);
     });
 
     it.each([
         ['Mentions', ['mention']],
-        ['Follows', ['follow']],
+        ['Follows', ['follow', 'follow_request']],
     ] as const)('filters %s on the server from the switcher', async (tab, types) => {
         mockedFetch.mockResolvedValue([]);
         await renderScreen();
@@ -96,13 +104,42 @@ describe('Notifications', () => {
 
     it('skips notification types it cannot render', async () => {
         mockedFetch.mockResolvedValue([
-            notification('1', 'poll', account('a', 'alice')),
+            notification('1', 'admin.sign_up', account('a', 'alice')),
             notification('2', 'favourite', account('b', 'bob')),
         ]);
         await renderScreen();
 
         expect(await screen.findByText(/favourited your post/)).toBeTruthy();
         expect(screen.getAllByText(/your post|mentioned you|followed you/)).toHaveLength(1);
+    });
+
+    it('shows posts from people with the bell on, edits of boosted posts, and ended polls', async () => {
+        mockedFetch.mockResolvedValue([
+            notification('1', 'status', account('a', 'alice')),
+            notification('2', 'update', account('b', 'bob')),
+            notification('3', 'poll', account('c', 'carol')),
+            notification('4', 'poll', account('me', 'me')),
+        ]);
+        await renderScreen();
+
+        expect(await screen.findByText(/posted$/)).toBeTruthy();
+        expect(screen.getByText('post 1')).toBeTruthy();
+        expect(screen.getByText(/edited a post you boosted/)).toBeTruthy();
+        expect(screen.getByText('A poll you voted in has ended')).toBeTruthy();
+        expect(screen.getByText('Your poll has ended')).toBeTruthy();
+    });
+
+    it('accepts a follow request from the row', async () => {
+        (authorizeFollowRequest as jest.Mock).mockResolvedValue(undefined);
+        mockedFetch.mockResolvedValue([notification('1', 'follow_request', account('a', 'alice'))]);
+        await renderScreen();
+
+        expect(await screen.findByText(/asked to follow you/)).toBeTruthy();
+        await fireEvent.press(screen.getByRole('button', { name: 'Accept' }));
+
+        expect(authorizeFollowRequest).toHaveBeenCalledWith('a');
+        expect(await screen.findByText('Accepted')).toBeTruthy();
+        expect(screen.queryByRole('button', { name: 'Reject' })).toBeNull();
     });
 
     it('tells a private mention apart', async () => {

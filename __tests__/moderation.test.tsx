@@ -10,10 +10,16 @@ import { createReport, getRules } from '../services/mastodon/reports';
 import { TootCard } from '../components/TootCard/tootCard';
 import { MediaViewerProvider } from '../components/MediaViewer/mediaViewer';
 import { ProfileHeader } from '../screens/Profile/profileHeader';
+import { dialog } from '../services/dialog';
 import Report from '../screens/Report/report';
 import { NavigationProvider, useNavigator } from '../services/navigationContext';
 import { Account, Relationship, Status } from '../services/mastodon/types';
 
+const mockOpenMedia = jest.fn();
+jest.mock('../components/MediaViewer/mediaViewer', () => ({
+    MediaViewerProvider: ({ children }: { children: React.ReactNode }) => children,
+    useMediaViewer: () => ({ openMedia: mockOpenMedia }),
+}));
 jest.mock('../services/api/client', () => ({
     __esModule: true,
     default: { get: jest.fn(), post: jest.fn() },
@@ -152,6 +158,46 @@ describe('Post menu', () => {
         await pressInDialog('Block');
 
         expect(api.post).toHaveBeenCalledWith('/accounts/ana/block');
+    });
+});
+
+describe('Profile picture', () => {
+    it('opens full size in the viewer', async () => {
+        await render(wrap(<ProfileHeader user={{ ...ana, avatar: 'https://x/ana.png' }} mode="other" tabs={[{ value: 'posts', label: 'Posts' }]} tab="posts" onChangeTab={jest.fn()} />));
+
+        await fireEvent.press(screen.getByRole('imagebutton', { name: "View Ana's profile picture" }));
+
+        expect(mockOpenMedia).toHaveBeenCalledWith([expect.objectContaining({ type: 'image', url: 'https://x/ana.png' })], 0);
+    });
+});
+
+describe('Profile bell', () => {
+    const renderHeader = (rel?: Relationship) =>
+        render(wrap(<ProfileHeader user={ana} mode="other" tabs={[{ value: 'posts', label: 'Posts' }]} tab="posts" onChangeTab={jest.fn()} relationship={rel} />));
+
+    it('is only there for people you follow', async () => {
+        await renderHeader(relationship());
+        expect(screen.queryByRole('switch', { name: 'Notify me when Ana posts' })).toBeNull();
+    });
+
+    it('turns their posts into notifications, and says so', async () => {
+        const toast = jest.spyOn(dialog, 'toast').mockImplementation(() => {});
+        await renderHeader(relationship({ following: true, notifying: false }));
+
+        const bell = screen.getByRole('switch', { name: 'Notify me when Ana posts' });
+        expect(bell).not.toBeChecked();
+        await fireEvent.press(bell);
+
+        expect(api.post).toHaveBeenCalledWith('/accounts/ana/follow', { notify: true });
+        await waitFor(() => expect(toast).toHaveBeenCalledWith("You'll be notified when Ana posts"));
+    });
+
+    it('turns them off again', async () => {
+        await renderHeader(relationship({ following: true, notifying: true }));
+        const bell = screen.getByRole('switch', { name: 'Notify me when Ana posts' });
+        expect(bell).toBeChecked();
+        await fireEvent.press(bell);
+        expect(api.post).toHaveBeenCalledWith('/accounts/ana/follow', { notify: false });
     });
 });
 

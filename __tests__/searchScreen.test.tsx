@@ -92,7 +92,7 @@ describe('Search screen', () => {
     it('shows explore tabs before anything is typed', async () => {
         serve({});
         await renderSearch();
-        expect(screen.getByText('Posts')).toBeTruthy();
+        expect(screen.getByText('Trending')).toBeTruthy();
         expect(screen.getByText('Hashtags')).toBeTruthy();
         expect(screen.getByText('News')).toBeTruthy();
         expect(screen.getByText('People')).toBeTruthy();

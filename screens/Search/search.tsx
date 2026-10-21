@@ -13,6 +13,7 @@ import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { useDebounced, useSearchAll, useSearchPage } from '../../hooks/useSearch';
 import {
+    useFediverseTrending,
     useRecentSearches,
     useSuggestions,
     useTrendingLinks,
@@ -22,9 +23,10 @@ import {
 import { useRelationships } from '../../hooks/useRelationships';
 import { useOpenAccount } from '../../hooks/useOpenAccount';
 import { SearchType, shouldResolve } from '../../services/mastodon/search';
-import { TrendLink } from '../../services/mastodon/trends';
+import { mergeTrending, TrendingPost, TrendLink } from '../../services/mastodon/trends';
 import { Account, Status } from '../../services/mastodon/types';
 import { Tag } from '../../services/mastodon/tags';
+import { autoplayViewability } from '../../services/media/autoplay';
 import { makeStyles } from './styles';
 
 type Tab = 'all' | SearchType;
@@ -39,7 +41,7 @@ const TAB_LABEL = {
 type ExploreTab = 'posts' | 'hashtags' | 'news' | 'people';
 const EXPLORE_TABS: ExploreTab[] = ['posts', 'hashtags', 'news', 'people'];
 const EXPLORE_TAB_LABEL = {
-    posts: 'explore.posts',
+    posts: 'explore.trending',
     hashtags: 'explore.hashtags',
     news: 'explore.news',
     people: 'explore.people',
@@ -94,7 +96,13 @@ export default function Search({ onStatusPress }: SearchProps) {
     );
 
     // Explore results (when q is empty)
+    // Trending: our server's trends (first page) and the big servers', merged and ranked as one page
     const trendingStatuses = useTrendingStatuses(!q && exploreTab === 'posts');
+    const fediverseTrending = useFediverseTrending(!q && exploreTab === 'posts');
+    const trendingPosts = useMemo(
+        () => mergeTrending(trendingStatuses.data?.pages[0] ?? [], fediverseTrending.data ?? []),
+        [trendingStatuses.data, fediverseTrending.data]
+    );
     const trendingTags = useTrendingTags(!q && exploreTab === 'hashtags');
     const trendingLinks = useTrendingLinks(!q && exploreTab === 'news');
     const suggestions = useSuggestions(!q && exploreTab === 'people');
@@ -141,14 +149,14 @@ export default function Search({ onStatusPress }: SearchProps) {
     const handleExploreRefresh = useCallback(async () => {
         setIsExploreRefreshing(true);
         try {
-            if (exploreTab === 'posts') await trendingStatuses.refetch();
+            if (exploreTab === 'posts') await Promise.all([trendingStatuses.refetch(), fediverseTrending.refetch()]);
             else if (exploreTab === 'hashtags') await trendingTags.refetch();
             else if (exploreTab === 'news') await trendingLinks.refetch();
             else if (exploreTab === 'people') await suggestions.refetch();
         } finally {
             setIsExploreRefreshing(false);
         }
-    }, [exploreTab, trendingStatuses, trendingTags, trendingLinks, suggestions]);
+    }, [exploreTab, trendingStatuses, fediverseTrending, trendingTags, trendingLinks, suggestions]);
 
     const field = (
         <View style={styles.field}>
@@ -285,6 +293,7 @@ export default function Search({ onStatusPress }: SearchProps) {
         empty: React.ReactNode
     ) => (
         <FlashList
+            {...autoplayViewability}
             data={page.data?.pages.flat() ?? []}
             keyExtractor={keyOf}
             renderItem={({ item }) => renderItem(item)}
@@ -378,25 +387,16 @@ export default function Search({ onStatusPress }: SearchProps) {
                 <View style={styles.exploreContainer}>
                     {exploreTab === 'posts' && (
                         <FlashList
-                            data={trendingStatuses.data?.pages.flat() ?? []}
-                            keyExtractor={(item: Status) => item.id}
-                            renderItem={({ item }) => <TootCard status={item} onPress={onStatusPress} />}
+                            {...autoplayViewability}
+                            data={trendingPosts}
+                            // Ids repeat across servers; the post's address doesn't
+                            keyExtractor={(item: TrendingPost) => item.status.uri}
+                            renderItem={({ item }) => <TootCard status={item.status} onPress={onStatusPress} remote={item.remote} />}
                             ListEmptyComponent={
-                                trendingStatuses.isLoading
+                                trendingStatuses.isLoading || fediverseTrending.isLoading
                                     ? loading(true)
                                     : renderEmptyExplore(t('explore.emptyPosts'))
                             }
-                            ListFooterComponent={
-                                trendingStatuses.isFetchingNextPage ? (
-                                    <ActivityIndicator style={styles.footer} color={colors.accentColor} />
-                                ) : null
-                            }
-                            onEndReached={() => {
-                                if (trendingStatuses.hasNextPage && !trendingStatuses.isFetchingNextPage) {
-                                    trendingStatuses.fetchNextPage();
-                                }
-                            }}
-                            onEndReachedThreshold={0.5}
                             refreshControl={
                                 <RefreshControl
                                     refreshing={isExploreRefreshing}

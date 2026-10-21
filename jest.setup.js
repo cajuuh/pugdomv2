@@ -7,7 +7,16 @@ jest.mock('expo-video', () => ({
     useVideoPlayer: () => ({ play: jest.fn(), pause: jest.fn(), loop: false }),
     VideoView: () => null,
 }));
-jest.mock('react-native-image-viewing', () => () => null);
+// Saving media to the gallery (see __tests__/saveMedia.test.tsx for an observable stand-in)
+jest.mock('expo-media-library', () => ({
+    Asset: { create: jest.fn(async () => ({})) },
+    requestPermissionsAsync: jest.fn(async () => ({ granted: true })),
+}));
+jest.mock('expo-file-system', () => ({
+    Paths: { cache: 'file:///cache/' },
+    Directory: jest.fn().mockImplementation(() => ({ create: jest.fn() })),
+    File: { downloadFileAsync: jest.fn(async () => ({ uri: 'file:///cache/file', delete: jest.fn() })) },
+}));
 
 // AsyncStorage's native module isn't available in jest; the package ships an in-memory mock
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));

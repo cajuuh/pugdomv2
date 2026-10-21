@@ -13,6 +13,7 @@ import { createTranslator } from '../services/i18n/translate';
 import ListEditor from '../screens/ListEditor/listEditor';
 import { FeedsSheet } from '../components/FeedsSheet/feedsSheet';
 import { AccountListsSheet } from '../components/AccountListsSheet/accountListsSheet';
+import { dialog } from '../services/dialog';
 import { NavigationProvider } from '../services/navigationContext';
 import { Account } from '../services/mastodon/types';
 
@@ -180,6 +181,25 @@ describe('Adding someone to lists', () => {
 
         await fireEvent.press(await screen.findByRole('checkbox', { name: 'Friends' }));
         expect(api.post).toHaveBeenCalledWith('/lists/7/accounts', { account_ids: ['ana'] });
+    });
+
+    it('makes a new list with them in it', async () => {
+        const toast = jest.spyOn(dialog, 'toast').mockImplementation(() => {});
+        api.post.mockImplementation(async (url: string) => ({ data: url === '/lists' ? { id: '9', title: 'Pugs', replies_policy: 'list' } : {} }));
+        await renderSheet(true);
+
+        await fireEvent.press(await screen.findByRole('button', { name: 'New list' }));
+        await fireEvent.changeText(screen.getByLabelText('Name'), ' Pugs ');
+        await fireEvent.press(screen.getByRole('button', { name: 'Create and add' }));
+
+        expect(api.post).toHaveBeenCalledWith('/lists', { title: 'Pugs' });
+        await waitFor(() => expect(api.post).toHaveBeenCalledWith('/lists/9/accounts', { account_ids: ['ana'] }));
+        await waitFor(() => expect(toast).toHaveBeenCalledWith('Ana is now in Pugs'));
+    });
+
+    it("offers no new list for someone you don't follow", async () => {
+        await renderSheet(false);
+        expect(screen.queryByRole('button', { name: 'New list' })).toBeNull();
     });
 
     it('shows the lists they are already in', async () => {

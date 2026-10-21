@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 import { Status } from './mastodon/types';
+import { SharedContent } from './sharedContent';
 import ComposeModal from '../components/ComposeModal/composeModal';
 
 interface ComposeContextType {
@@ -9,6 +10,8 @@ interface ComposeContextType {
     quoteStatus: Status | null;
     // One of your posts being edited, or redrafted after deleting it
     existingPost: ExistingPost | null;
+    // Text and media another app shared with pugdon
+    shared: SharedContent | null;
     openCompose: (params?: ComposeParams) => void;
     closeCompose: () => void;
 }
@@ -23,6 +26,7 @@ interface ComposeParams {
     replyToStatus?: Status;
     quoteStatus?: Status;
     existingPost?: ExistingPost;
+    shared?: SharedContent;
 }
 
 const ComposeContext = createContext<ComposeContextType | undefined>(undefined);
@@ -32,11 +36,13 @@ export const ComposeProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const [replyToStatus, setReplyToStatus] = useState<Status | null>(null);
     const [quoteStatus, setQuoteStatus] = useState<Status | null>(null);
     const [existingPost, setExistingPost] = useState<ExistingPost | null>(null);
+    const [shared, setShared] = useState<SharedContent | null>(null);
 
     const openCompose = (params?: ComposeParams) => {
         setReplyToStatus(params?.replyToStatus ?? null);
         setQuoteStatus(params?.quoteStatus ?? null);
         setExistingPost(params?.existingPost ?? null);
+        setShared(params?.shared ?? null);
         setIsOpen(true);
     };
 
@@ -45,16 +51,18 @@ export const ComposeProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setReplyToStatus(null);
         setQuoteStatus(null);
         setExistingPost(null);
+        setShared(null);
     };
 
     return (
-        <ComposeContext.Provider value={{ isOpen, replyToStatus, quoteStatus, existingPost, openCompose, closeCompose }}>
+        <ComposeContext.Provider value={{ isOpen, replyToStatus, quoteStatus, existingPost, shared, openCompose, closeCompose }}>
             {children}
             <ComposeModal
                 isOpen={isOpen}
                 replyToStatus={replyToStatus}
                 quoteStatus={quoteStatus}
                 existingPost={existingPost}
+                shared={shared}
                 closeCompose={closeCompose}
             />
         </ComposeContext.Provider>

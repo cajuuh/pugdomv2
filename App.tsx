@@ -1,19 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
-import { StyleSheet, ActivityIndicator, BackHandler, DeviceEventEmitter, TouchableOpacity, Platform, LogBox, View } from 'react-native';
-
-// react-native-image-viewing's default header (the media viewer's close button) still uses React Native's
-// deprecated SafeAreaView; the app itself uses react-native-safe-area-context. Remove once that header is replaced.
-LogBox.ignoreLogs([
-    "SafeAreaView has been deprecated and will be removed in a future release",
-]);
+import { StyleSheet, ActivityIndicator, BackHandler, DeviceEventEmitter, TouchableOpacity, Platform, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './services/authContext';
 import { SettingsProvider } from './services/settingsContext';
 import { ThemeProvider, useTheme } from './services/themeContext';
 import { ComposeProvider, useCompose } from './services/composeContext';
+import { useShareIntoCompose } from './hooks/useShareIntoCompose';
 import { MediaViewerProvider } from './components/MediaViewer/mediaViewer';
 import Login from './screens/Login/login';
 import Profile from './screens/Profile/profile';
@@ -40,6 +35,7 @@ import Report from './screens/Report/report';
 import Quotes from './screens/Quotes/quotes';
 import Conversations from './screens/Conversations/conversations';
 import ConversationGroup from './screens/Conversations/conversationGroup';
+import ScheduledPosts from './screens/Scheduled/scheduledPosts';
 import Reactions from './screens/Reactions/reactions';
 import EditProfile from './screens/EditProfile/editProfile';
 import { useUnreadConversations } from './hooks/useUnreadConversations';
@@ -66,6 +62,7 @@ function NavigationRoot() {
   const { stack, push, pop, reset, closeThreads } = useNavigator();
   // The server's stored custom emoji, ready before anyone opens the picker
   useEmojiCachePrimer(user?.id);
+  useShareIntoCompose(!!user && !needsSetup);
 
   const handleTabPress = (tab: 'home' | 'search' | 'notifications' | 'profile') => {
       // The dock floats over the stacked screens: a tab press closes them all and shows that tab
@@ -104,7 +101,9 @@ function NavigationRoot() {
         // (Messages, a profile, the tabs...); Android's back button steps through the posts one by one
         return <Thread statusId={route.statusId} onBack={closeThreads} onStatusPress={openThread} />;
       case 'settings':
-        return <Settings onBack={pop} />;
+        return <Settings onBack={pop} onScheduledPosts={() => push({ name: 'scheduledPosts' })} />;
+      case 'scheduledPosts':
+        return <ScheduledPosts onBack={pop} />;
       // Back from a profile returns to the post or notification it was opened from
       case 'account':
         return <Account accountId={route.accountId} account={route.account} onBack={pop} onStatusPress={openThread} onSettingsPress={openSettings} />;

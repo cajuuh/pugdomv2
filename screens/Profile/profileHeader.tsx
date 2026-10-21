@@ -3,7 +3,7 @@ import { Image, Pressable, Share, Text, View, useWindowDimensions } from 'react-
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../../services/themeContext';
 import { useNavigator } from '../../services/navigationContext';
-import { Account, Relationship } from '../../services/mastodon/types';
+import { Account, Attachment, Relationship } from '../../services/mastodon/types';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
 import { StatusHtmlContent, openLink } from '../../components/TootCard/htmlContent';
 import { Avatar, IconButton, PillButton, PugMark, RoleBadge, SegmentOption, SegmentedPill } from '../../components/ui';
@@ -16,6 +16,8 @@ import { AVATAR_SIZE, BANNER_HEIGHT, SHARE_SIZE, makeStyles } from './styles';
 import { AccountListsSheet } from '../../components/AccountListsSheet/accountListsSheet';
 import { ActionSheet } from '../../components/ComposeModal/optionSheet';
 import { useModeration } from '../../hooks/useModeration';
+import { useMediaViewer } from '../../components/MediaViewer/mediaViewer';
+import { useNotifyOff, useNotifyOn } from '../../hooks/useRelationships';
 import { dialog } from '../../services/dialog';
 
 const originOf = (url?: string) => url?.match(/^https?:\/\/[^/?#]+/i)?.[0];
@@ -55,8 +57,28 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
     const [menuOpen, setMenuOpen] = useState(false);
     const moderation = useModeration();
     const remoteServer = mode === 'other' && user.acct.includes('@') ? user.acct.split('@').pop() : undefined;
+    const notifyOn = useNotifyOn();
+    const notifyOff = useNotifyOff();
+    const [bellBusy, setBellBusy] = useState(false);
+    // The bell: their posts as notifications. Only for people you follow
+    const toggleBell = async () => {
+        const turningOn = !relationship?.notifying;
+        setBellBusy(true);
+        try {
+            await (turningOn ? notifyOn(user.id) : notifyOff(user.id));
+            dialog.toast(t(turningOn ? 'profile.notifyOnDone' : 'profile.notifyOffDone', { name }));
+        } catch (error) {
+            console.warn('Changing the bell failed:', error);
+            dialog.toast(t('profile.notifyFailed'));
+        } finally {
+            setBellBusy(false);
+        }
+    };
 
     const { push } = useNavigator();
+    const { openMedia } = useMediaViewer();
+    // The profile picture or header, full size in the viewer (zoom, swipe to close)
+    const viewImage = (url: string) => openMedia([{ id: url, type: 'image', url, preview_url: url } as Attachment], 0);
     const handleEditProfile = () => push({ name: 'editProfile' });
 
     const handleShare = async () => {
@@ -78,7 +100,9 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
         <View style={styles.header}>
             <View style={[styles.banner, topInset > 0 && { height: BANNER_HEIGHT + topInset }]}>
                 {hasHeaderImage(user) ? (
-                    <Image testID="profile-banner-image" source={{ uri: user.header }} style={styles.bannerImage} />
+                    <Pressable onPress={() => viewImage(user.header!)} accessibilityRole="imagebutton" accessibilityLabel={t('profile.viewHeader', { name })}>
+                        <Image testID="profile-banner-image" source={{ uri: user.header }} style={styles.bannerImage} />
+                    </Pressable>
                 ) : (
                     <View testID="profile-banner-mark" style={styles.bannerMark}>
                         <PugMark coat={coat} size={220} />
@@ -90,6 +114,16 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
                         accessibilityLabel={t('account.back')}
                         onPress={onBack}
                         style={[styles.bannerButton, styles.bannerButtonLeft, { top: topInset + space.md }]}
+                    />
+                )}
+                {/* Report, mute, block: on the banner, where your own profile has Settings, so the row below
+                    keeps room for Follow, the bell, lists and share */}
+                {mode === 'other' && (
+                    <IconButton
+                        icon="ellipsis-horizontal"
+                        accessibilityLabel={t('moderation.profileMenu', { name })}
+                        onPress={() => setMenuOpen(true)}
+                        style={[styles.bannerButton, { top: topInset + space.md }]}
                     />
                 )}
                 {mode === 'self' && onSettingsPress && (
@@ -104,14 +138,37 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
 
             <View style={styles.info}>
                 <View style={styles.avatarRow}>
-                    <View style={styles.avatarRing}>
+                    <Pressable
+                        onPress={() => user.avatar && viewImage(user.avatar)}
+                        disabled={!user.avatar}
+                        accessibilityRole="imagebutton"
+                        accessibilityLabel={t('profile.viewAvatar', { name })}
+                        style={styles.avatarRing}
+                    >
                         <Avatar name={name} uri={user.avatar} size={AVATAR_SIZE} />
-                    </View>
+                    </Pressable>
                     <View style={styles.actions}>
                         {mode === 'self' ? (
                             <PillButton label={t('profile.editProfile')} variant="secondary" onPress={handleEditProfile} />
                         ) : (
                             <FollowButton accountId={user.id} name={name} relationship={relationship} allowUnfollow size="medium" />
+                        )}
+                        {mode === 'other' && relationship?.following && (
+                            <Pressable
+                                onPress={toggleBell}
+                                disabled={bellBusy}
+                                accessibilityRole="switch"
+                                accessibilityState={{ checked: !!relationship.notifying, busy: bellBusy }}
+                                accessibilityLabel={t('profile.notify', { name })}
+                                hitSlop={hitSlopFor(SHARE_SIZE, SHARE_SIZE)}
+                                style={({ pressed }) => [styles.share, relationship.notifying && { backgroundColor: colors.accentSoft }, pressed && { opacity: 0.7 }]}
+                            >
+                                <Ionicons
+                                    name={relationship.notifying ? 'notifications' : 'notifications-outline'}
+                                    size={18}
+                                    color={relationship.notifying ? colors.accentText : colors.textPrimary}
+                                />
+                            </Pressable>
                         )}
                         {mode === 'other' && relationship && (
                             <Pressable
@@ -133,17 +190,6 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
                         >
                             <Ionicons name="share-outline" size={18} color={colors.textPrimary} />
                         </Pressable>
-                        {mode === 'other' && (
-                            <Pressable
-                                onPress={() => setMenuOpen(true)}
-                                accessibilityRole="button"
-                                accessibilityLabel={t('moderation.profileMenu', { name })}
-                                hitSlop={hitSlopFor(SHARE_SIZE, SHARE_SIZE)}
-                                style={({ pressed }) => [styles.share, pressed && { opacity: 0.7 }]}
-                            >
-                                <Ionicons name="ellipsis-horizontal" size={18} color={colors.textPrimary} />
-                            </Pressable>
-                        )}
                     </View>
                 </View>
 

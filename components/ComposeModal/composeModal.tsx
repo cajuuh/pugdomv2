@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
     Animated,
     DeviceEventEmitter,
     KeyboardAvoidingView,
     Modal,
+    Dimensions,
     Platform,
     Pressable,
     ScrollView,
@@ -21,6 +22,16 @@ import { createStatus, editStatus, getStatusSource } from '../../services/mastod
 import { plainText } from '../../services/htmlText';
 import { STATUS_UPDATED_EVENT, useUpdateCachedStatus } from '../../hooks/useUpdateCachedStatus';
 import type { ExistingPost } from '../../services/composeContext';
+import { ScheduleSheet, formatScheduleTime } from './scheduleSheet';
+import { Suggestion, SuggestionRow } from './suggestionRow';
+import { completeToken, tokenAtCursor } from './autocomplete';
+import { search } from '../../services/mastodon/search';
+import { useDebounced } from '../../hooks/useSearch';
+import { useQuery } from '@tanstack/react-query';
+import { searchEmojis } from './emojiPicker';
+import { useCustomEmojis } from '../../hooks/useCustomEmojis';
+import { canSchedule } from '../../services/mastodon/scheduledStatuses';
+import type { SharedContent } from '../../services/sharedContent';
 import { Account, Status } from '../../services/mastodon/types';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
 import { replyMentionsText } from '../../services/mastodon/mentions';
@@ -138,6 +149,8 @@ interface ComposeModalProps {
     quoteStatus?: Status | null;
     // One of your posts to edit, or to redraft after deleting it
     existingPost?: ExistingPost | null;
+    // Text and media another app shared with pugdon
+    shared?: SharedContent | null;
     closeCompose: () => void;
 }
 
@@ -149,15 +162,17 @@ const unchangedPoll = (poll: NonNullable<Status['poll']>) => ({
     expires_in: Math.max(300, Math.round(((poll.expires_at ? new Date(poll.expires_at).getTime() : Date.now()) - Date.now()) / 1000)),
 });
 
-const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quoteStatus = null, existingPost = null, closeCompose }) => {
+const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quoteStatus = null, existingPost = null, shared = null, closeCompose }) => {
     const { user } = useAuth();
     const { colors, type } = useTheme();
     const i18n = useI18n();
-    const { t } = i18n;
+    const { t, locale } = i18n;
     const styles = useThemedStyles(makeStyles);
     const insets = useSafeAreaInsets();
     const { height: windowHeight } = useWindowDimensions();
-    const keyboard = useKeyboard(windowHeight);
+    // Compose covers the whole screen, navigation bar included, so the keyboard is measured against the screen.
+    // On Android the window can end above a 3-button navigation bar: measured against it, the toolbar sat under the keyboard.
+    const keyboard = useKeyboard(Platform.OS === 'android' ? Dimensions.get('screen').height : windowHeight);
     // The modal is always mounted, so only load the instance limits while composing
     const instanceConfiguration = useInstanceConfiguration(isOpen && !!user);
 
@@ -167,7 +182,9 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
     const [loading, setLoading] = useState(false);
     const [language, setLanguage] = useState(() => defaultLanguage(user));
     const [visibility, setVisibility] = useState<Visibility>(() => defaultVisibility(user, replyToStatus, quoteStatus));
-    const [picker, setPicker] = useState<'language' | 'visibility' | 'emoji' | 'quotePolicy' | 'camera' | null>(null);
+    const [picker, setPicker] = useState<'language' | 'visibility' | 'emoji' | 'quotePolicy' | 'camera' | 'schedule' | null>(null);
+    // Publish later: the server posts it then (not for edits)
+    const [scheduledAt, setScheduledAt] = useState<Date | null>(null);
     // The post being quoted (✕ drops it) and who may quote this one
     const [quote, setQuote] = useState<Status | null>(quoteStatus);
     const [quotePolicy, setQuotePolicy] = useState<QuotePolicy>(user?.source?.quote_policy ?? 'public');
@@ -189,6 +206,23 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
 
     const inputRef = useRef<TextInput>(null);
     const cursor = useRef(0);
+    // The cursor as state too, so the emoji suggestions follow it while typing
+    const [caret, setCaret] = useState(0);
+    const { data: customEmojis } = useCustomEmojis(isOpen);
+    // A ":shortcode" or "@mention" being typed, to suggest how to finish it
+    const token = tokenAtCursor(text, caret);
+    const emojiMatches = useMemo(
+        () => (token?.trigger === ':' ? searchEmojis((customEmojis ?? []).filter(emoji => emoji.visible_in_picker), token.query) : []),
+        [customEmojis, token?.trigger, token?.query]
+    );
+    // People, once typing pauses; the server only looks up unknown accounts for a full @user@server
+    const mentionQuery = useDebounced(token?.trigger === '@' ? token.query : '', 250);
+    const { data: mentionMatches } = useQuery({
+        queryKey: ['mentionSuggestions', mentionQuery],
+        queryFn: async () => (await search({ q: mentionQuery, type: 'accounts', limit: 8, resolve: mentionQuery.includes('@') })).accounts,
+        enabled: isOpen && mentionQuery.length > 0,
+        staleTime: 60_000,
+    });
 
     const { mounted, progress } = useSheetTransition(isOpen);
     // The text the sheet opened with (reply mentions), to tell whether there's a draft to lose
@@ -217,13 +251,26 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
         ], { cancelable: true, onDismiss: cancel });
     });
 
+    // Adds what was picked, shot or shared, saying when a video had to be left out. Declared before the
+    // effect below: compose renders nothing until mounted, so a later declaration isn't there yet when it runs
+    const addPicked = (picked: Parameters<typeof media.add>[0]) => {
+        const { videoNotAlone, videoTooBig } = media.add(picked);
+        if (videoTooBig) {
+            dialog.toast(t('compose.videoTooBig', { size: Math.round(instanceConfiguration.videoSizeLimit / (1024 * 1024)) }));
+        } else if (videoNotAlone) {
+            dialog.toast(t('compose.videoNotAlone'));
+        }
+    };
+
     useEffect(() => {
         if (isOpen) {
             const startText = replyToStatus ? replyMentionsText(replyToStatus, user) : '';
             initialText.current = startText;
             drag.setValue(0);
-            setText(startText);
-            cursor.current = startText.length;
+            // Something shared from another app counts as a draft, so closing asks first
+            const withShared = shared?.text ? `${startText}${shared.text}` : startText;
+            setText(withShared);
+            cursor.current = withShared.length;
             setSensitive(false);
             setSpoilerText('');
             setLanguage(defaultLanguage(user));
@@ -236,7 +283,9 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
             setPollDuration(DEFAULT_POLL_DURATION);
             setPollMultiple(false);
             setPicker(null);
+            setScheduledAt(null);
             media.reset();
+            if (shared?.media.length) addPicked(shared.media);
             setAltEditing(null);
             setImageEditing(null);
             setReminderOpen(false);
@@ -286,7 +335,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 clearTimeout(timer);
             };
         }
-    }, [isOpen, replyToStatus, quoteStatus, existingPost, drag]);
+    }, [isOpen, replyToStatus, quoteStatus, existingPost, shared, drag]);
 
     // Closing stops uploads that are still going
     const cancelUploads = media.cancel;
@@ -325,6 +374,34 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
         setText(next.text);
         cursor.current = next.cursor;
     };
+
+    // A suggestion tapped: the half-typed ":neofox_som" or "@an" becomes the full one plus a space, cursor after it
+    const complete = (replacement: string) => {
+        if (!token) return;
+        const next = completeToken(text, token.start, caret, replacement);
+        setText(next.text);
+        cursor.current = next.cursor;
+        setCaret(next.cursor);
+        requestAnimationFrame(() => inputRef.current?.setSelection?.(next.cursor, next.cursor));
+    };
+    const suggestions: Suggestion[] =
+        token?.trigger === ':'
+            ? emojiMatches.map(emoji => ({
+                  key: emoji.shortcode,
+                  image: emoji.static_url || emoji.url,
+                  title: `:${emoji.shortcode}:`,
+                  onPick: () => complete(`:${emoji.shortcode}:`),
+              }))
+            : token?.trigger === '@'
+              ? (mentionMatches ?? []).map(account => ({
+                    key: account.id,
+                    image: account.avatar,
+                    person: true,
+                    title: account.display_name || account.username,
+                    subtitle: `@${account.acct}`,
+                    onPick: () => complete(`@${account.acct}`),
+                }))
+              : [];
 
     const describeImage = (key: string) => {
         const attachment = media.attachments.find(item => item.key === key);
@@ -365,16 +442,6 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
             addPicked(await pickImages(media.room, media.canAddVideo));
         } catch (error) {
             console.warn('Could not open the gallery:', error);
-        }
-    };
-
-    // Adds what was picked or shot, saying when a video had to be left out
-    const addPicked = (picked: Parameters<typeof media.add>[0]) => {
-        const { videoNotAlone, videoTooBig } = media.add(picked);
-        if (videoTooBig) {
-            dialog.toast(t('compose.videoTooBig', { size: Math.round(instanceConfiguration.videoSizeLimit / (1024 * 1024)) }));
-        } else if (videoNotAlone) {
-            dialog.toast(t('compose.videoNotAlone'));
         }
     };
 
@@ -430,6 +497,12 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 closeCompose();
                 return;
             }
+            // Too late by the time Post was tapped: ask for a new time rather than post now
+            if (scheduledAt && !canSchedule(scheduledAt)) {
+                dialog.alert(t('schedule.tooSoonTitle'), t('schedule.tooSoon'));
+                setPicker('schedule');
+                return;
+            }
             const mediaIds = await media.finish();
             await createStatus({
                 status: text,
@@ -442,9 +515,14 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 media_ids: mediaIds.length > 0 ? mediaIds : undefined,
                 quoted_status_id: quote?.id,
                 quote_approval_policy: instanceConfiguration.supportsQuotes ? shownQuotePolicy : undefined,
+                scheduled_at: scheduledAt?.toISOString(),
             });
 
-            DeviceEventEmitter.emit('status_published');
+            if (scheduledAt) {
+                dialog.toast(t('schedule.scheduledToast', { when: formatScheduleTime(scheduledAt, locale) }));
+            } else {
+                DeviceEventEmitter.emit('status_published');
+            }
             closeCompose();
         } catch (error: any) {
             console.error('Failed to post status:', error);
@@ -508,7 +586,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                             <PillButton label={t('compose.done')} onPress={saveDescription} disabled={altOverLimit} />
                         ) : (
                             <PillButton
-                                label={editing ? t('compose.save') : t('compose.post')}
+                                label={editing ? t('compose.save') : scheduledAt ? t('schedule.confirm') : t('compose.post')}
                                 onPress={() => handlePublish()}
                                 disabled={isPublishDisabled && !loading}
                                 loading={loading}
@@ -650,6 +728,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                     onChangeText={setText}
                     onSelectionChange={event => {
                         cursor.current = event.nativeEvent.selection.end;
+                        setCaret(event.nativeEvent.selection.end);
                     }}
                 />
 
@@ -702,6 +781,28 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 )}
             </ScrollView>
 
+            {!altEditing && (
+                <SuggestionRow label={t(token?.trigger === '@' ? 'compose.mentionSuggestions' : 'compose.emojiSuggestions')} suggestions={suggestions} />
+            )}
+
+            {/* When it will go out, in words, with a way to post now instead */}
+            {scheduledAt && !altEditing && (
+                <View style={[styles.scheduledRow, { borderTopColor: colors.borderColor }]}>
+                    <Pressable
+                        onPress={() => setPicker('schedule')}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('schedule.scheduledFor', { when: formatScheduleTime(scheduledAt, locale) })}
+                        style={[styles.scheduledChip, { backgroundColor: colors.accentSoft }]}
+                    >
+                        <Ionicons name="calendar" size={14} color={colors.accentText} />
+                        <Text style={[type.label, { color: colors.accentText }]} numberOfLines={1}>
+                            {t('schedule.scheduledFor', { when: formatScheduleTime(scheduledAt, locale) })}
+                        </Text>
+                    </Pressable>
+                    <IconButton icon="close" accessibilityLabel={t('schedule.clear')} onPress={() => setScheduledAt(null)} />
+                </View>
+            )}
+
             <View
                 accessibilityRole="toolbar"
                 style={[styles.toolbar, { paddingBottom: keyboard.visible ? 10 : Math.max(insets.bottom, 10) }, altEditing && styles.hidden]}
@@ -712,6 +813,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 {tool(showPoll ? 'stats-chart' : 'stats-chart-outline', t('compose.poll'), () => (showPoll ? resetPoll() : setShowPoll(true)), showPoll, media.attachments.length > 0 || editing)}
                 {tool('warning-outline', t('compose.contentWarning'), () => setSensitive(!sensitive), sensitive)}
                 {tool('happy-outline', t('compose.customEmoji'), () => setPicker('emoji'))}
+                {!editing && tool(scheduledAt ? 'calendar' : 'calendar-outline', t('schedule.title'), () => setPicker('schedule'), !!scheduledAt)}
                 <View style={styles.toolbarSpacer} />
                 <CharacterCounter remaining={remaining} max={instanceConfiguration.maxCharacters} />
             </View>
@@ -730,10 +832,17 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                         {sheet}
                     </KeyboardAvoidingView>
                 ) : (
-                    <View style={[styles.keyboardAvoider, { paddingBottom: keyboard.inset }]}>{sheet}</View>
+                    <View testID="compose-keyboard-area" style={[styles.keyboardAvoider, { paddingBottom: keyboard.inset }]}>{sheet}</View>
                 )}
             </View>
 
+            <ScheduleSheet
+                visible={picker === 'schedule'}
+                value={scheduledAt}
+                onSchedule={setScheduledAt}
+                onClear={scheduledAt ? () => setScheduledAt(null) : undefined}
+                onClose={() => setPicker(null)}
+            />
             <OptionSheet
                 visible={picker === 'visibility'}
                 title={t('compose.whoCanSee')}
