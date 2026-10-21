@@ -181,6 +181,22 @@ describe('Compose with images', () => {
     };
     const post = () => fireEvent.press(screen.getByRole('button', { name: 'Post' }));
 
+    it('attaches a photo shared from another app as compose opens', async () => {
+        // As in the app: compose waits closed (rendering nothing), then a share opens it
+        const client = createTestQueryClient();
+        const shared = { text: 'From the gallery', media: [photo('shared.jpg')] };
+        const compose = (isOpen: boolean) => (
+            <QueryClientProvider client={client}>
+                <ComposeModal isOpen={isOpen} replyToStatus={null} shared={isOpen ? shared : null} closeCompose={jest.fn()} />
+            </QueryClientProvider>
+        );
+        const { rerender } = await render(compose(false));
+        await rerender(compose(true));
+
+        expect(await screen.findByRole('button', { name: 'Describe image 1' })).toBeTruthy();
+        expect(screen.getByLabelText('Post text').props.value).toBe('From the gallery');
+    });
+
     it('uploads picked images and posts them, even without text', async () => {
         await renderCompose();
         await pick('a.jpg', 'b.jpg');

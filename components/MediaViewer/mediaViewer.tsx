@@ -5,6 +5,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import * as WebBrowser from 'expo-web-browser';
 import { ImageGallery } from './imageGallery';
+import { SaveMediaButton } from './saveMediaButton';
+import { DialogHost } from '../Dialog/dialogHost';
 import { Attachment } from '../../services/mastodon/types';
 import { styles } from './styles';
 import { mediaColors } from '../../services/theme/media';
@@ -66,8 +68,12 @@ const VideoModal = ({ attachment, onClose, onOpenPost }: { attachment: Attachmen
                 >
                     <Ionicons name="close" size={30} color={mediaColors.ink} />
                 </TouchableOpacity>
+                {/* Left of the close button (38 wide, 20 from the edge) */}
+                <SaveMediaButton url={attachment.url} style={{ top: insets.top + 12, right: 66 }} />
                 {onOpenPost && <OpenPostButton onPress={onOpenPost} />}
             </View>
+            {/* Toasts and dialogs from Save draw over the video, not behind its modal */}
+            <DialogHost />
         </Modal>
     );
 };

@@ -6,6 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { mediaColors } from '../../services/theme/media';
 import { useI18n } from '../../services/i18n/i18nContext';
+import { SaveMediaButton } from './saveMediaButton';
+import { DialogHost } from '../Dialog/dialogHost';
 
 const MAX_SCALE = 4;
 const DOUBLE_TAP_SCALE = 2.5;
@@ -160,8 +162,7 @@ interface ImageGalleryProps {
 }
 
 // The full-screen image viewer: swipe between images, pinch or double tap to zoom, drag down to close.
-// Built on gesture handler + reanimated (already in the app's builds), replacing react-native-image-viewing,
-// whose Android gestures stopped working on React Native 0.85.
+// Built on gesture handler + reanimated.
 export const ImageGallery = ({ images, index, visible, onClose, extraButton }: ImageGalleryProps) => {
     const { width, height } = useWindowDimensions();
     const insets = useSafeAreaInsets();
@@ -239,6 +240,8 @@ export const ImageGallery = ({ images, index, visible, onClose, extraButton }: I
                     <Ionicons name="close" size={30} color={mediaColors.ink} />
                 </TouchableOpacity>
                 {extraButton}
+                {/* Left of the close button (44 wide, 16 from the edge), centred on it */}
+                {images[current] && <SaveMediaButton url={images[current].uri} style={{ top: insets.top + 15, right: 68 }} />}
 
                 {images.length > 1 && (
                     <>
@@ -267,6 +270,8 @@ export const ImageGallery = ({ images, index, visible, onClose, extraButton }: I
                         )}
                     </>
                 )}
+                {/* Toasts and dialogs from Save draw over the gallery, not behind its modal */}
+                <DialogHost active={visible} />
             </GestureHandlerRootView>
         </Modal>
     );

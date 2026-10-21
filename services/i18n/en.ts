@@ -588,6 +588,12 @@ export const en = {
         close: 'Close',
         previous: 'Previous image',
         next: 'Next image',
+        save: 'Save',
+        saving: 'Saving…',
+        saved: 'Saved to your phone',
+        saveFailedTitle: "Couldn't save",
+        saveFailed: "pugdon couldn't save this to your phone. You can share its link instead.",
+        shareLink: 'Share link',
     },
     notifications: {
         title: 'Notifications',
