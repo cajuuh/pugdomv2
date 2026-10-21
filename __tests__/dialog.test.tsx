@@ -140,6 +140,23 @@ describe('Toast', () => {
             jest.useRealTimers();
         }
     });
+
+    it('stays while something is on its way, then goes', async () => {
+        jest.useFakeTimers();
+        try {
+            let done: () => void = () => {};
+            const lookup = new Promise<void>(resolve => (done = resolve));
+            await render(<DialogHost />);
+            await act(async () => dialog.toast('Opening post…', lookup));
+
+            await act(async () => jest.advanceTimersByTime(TOAST_DURATION_MS * 3));
+            expect(screen.getByText('Opening post…')).toBeTruthy();
+            await act(async () => done());
+            expect(screen.queryByTestId('toast')).toBeNull();
+        } finally {
+            jest.useRealTimers();
+        }
+    });
 });
 
 describe('stackButtons', () => {

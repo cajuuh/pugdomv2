@@ -110,18 +110,22 @@ export const dialog = {
         AccessibilityInfo.announceForAccessibility([title, subtitle, message].filter(Boolean).join('. '));
     },
 
-    // A short note that goes away by itself: something failed, or something was done
-    toast(text: string) {
+    // A short note that goes away by itself: something failed, or something was done. Given `until`
+    // (something on its way, e.g. "Opening post…"), it stays until that settles instead
+    toast(text: string, until?: Promise<unknown>) {
         if (!hasHost()) {
-            Alert.alert(text);
+            // A progress note isn't worth a blocking alert
+            if (!until) Alert.alert(text);
             return;
         }
         const id = nextId++;
         set({ toast: { id, text } });
         AccessibilityInfo.announceForAccessibility(text);
-        setTimeout(() => {
+        const hide = () => {
             if (state.toast?.id === id) set({ toast: null });
-        }, TOAST_DURATION_MS);
+        };
+        if (until) until.then(hide, hide);
+        else setTimeout(hide, TOAST_DURATION_MS);
     },
 };
 

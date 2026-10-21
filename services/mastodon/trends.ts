@@ -1,4 +1,4 @@
-import apiClient from '../api/client';
+import apiClient, { publicClient } from '../api/client';
 import { getCredentials } from '../storage';
 import { Tag } from './tags';
 import { Account, PreviewCard, Status } from './types';
@@ -41,6 +41,48 @@ export async function getTrendingStatuses(limit = 20, offset?: number): Promise<
         }
         throw error;
     }
+}
+
+// Big public servers whose trends join our server's in Trending: each server only counts the engagement it sees
+export const TRENDING_SERVERS = ['mastodon.social', 'mas.to', 'mastodon.online', 'fosstodon.org'];
+
+// Another server's trending posts, read without an account; a server that fails just adds nothing
+export async function getServerTrendingStatuses(domain: string, limit = 20): Promise<Status[]> {
+    try {
+        const { data } = await publicClient.get<Status[]>(`https://${domain}/api/v1/trends/statuses`, { params: { limit } });
+        return Array.isArray(data) ? data : [];
+    } catch {
+        return [];
+    }
+}
+
+export interface TrendingPost {
+    status: Status;
+    // Read from another server: its ids aren't ours, so the card opens it through our server
+    remote: boolean;
+}
+
+const engagement = (status: Status) => status.favourites_count + status.reblogs_count + status.replies_count;
+
+// One list from every server's trends. Our server's copy of a post wins (it can be acted on here);
+// ranked by its best engagement times how many servers trend it.
+export function mergeTrending(local: Status[], others: Status[][]): TrendingPost[] {
+    const byUri = new Map<string, TrendingPost & { best: number; servers: number }>();
+    const add = (list: Status[], remote: boolean) =>
+        list.forEach(status => {
+            const seen = byUri.get(status.uri);
+            if (seen) {
+                seen.servers += 1;
+                seen.best = Math.max(seen.best, engagement(status));
+            } else {
+                byUri.set(status.uri, { status, remote, best: engagement(status), servers: 1 });
+            }
+        });
+    add(local, false);
+    others.forEach(list => add(list, true));
+    return [...byUri.values()]
+        .sort((a, b) => b.best * b.servers - a.best * a.servers)
+        .map(({ status, remote }) => ({ status, remote }));
 }
 
 // Trending hashtags: GET /api/v1/trends/tags

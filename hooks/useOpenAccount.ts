@@ -3,6 +3,24 @@ import { openLink } from '../components/TootCard/htmlContent';
 import { fediverseLinkKind, resolveAccount, resolveStatus } from '../services/mastodon/search';
 import { Account, Mention } from '../services/mastodon/types';
 import { useNavigator } from '../services/navigationContext';
+import { dialog } from '../services/dialog';
+import { useI18n } from '../services/i18n/i18nContext';
+
+// Our server fetching a post or profile from another server can take a few seconds: one lookup at a
+// time, with a toast saying it's on its way, so repeated taps don't open it twice
+let lookingUp = false;
+const lookUp = async <T,>(message: string, find: () => Promise<T>): Promise<T | 'busy'> => {
+    if (lookingUp) return 'busy';
+    lookingUp = true;
+    const found = find();
+    // Up until the lookup is done, however long our server takes
+    dialog.toast(message, found);
+    try {
+        return await found;
+    } finally {
+        lookingUp = false;
+    }
+};
 
 // A mention link only has the profile URL; the post's mentions say which account it is
 export const mentionFor = (mentions: Mention[] | undefined, href: string) =>
@@ -11,6 +29,7 @@ export const mentionFor = (mentions: Mention[] | undefined, href: string) =>
 // Opens profiles and hashtags inside pugdom: from an account we have, a mention link, or a hashtag
 export const useOpenAccount = () => {
     const { push } = useNavigator();
+    const { t } = useI18n();
 
     const openAccount = useCallback(
         (account: Account) => push({ name: 'account', accountId: account.id, account }),
@@ -26,7 +45,8 @@ export const useOpenAccount = () => {
                 return;
             }
             try {
-                const account = await resolveAccount(href);
+                const account = await lookUp(t('common.openingProfile'), () => resolveAccount(href));
+                if (account === 'busy') return;
                 if (account) {
                     push({ name: 'account', accountId: account.id, account });
                     return;
@@ -36,7 +56,7 @@ export const useOpenAccount = () => {
             }
             openLink(href);
         },
-        [push]
+        [push, t]
     );
 
     // A hashtag link's tag; the screen shows the server's spelling once loaded
@@ -55,13 +75,15 @@ export const useOpenAccount = () => {
             const kind = fediverseLinkKind(href);
             try {
                 if (kind === 'post') {
-                    const status = await resolveStatus(href);
+                    const status = await lookUp(t('common.openingPost'), () => resolveStatus(href));
+                    if (status === 'busy') return;
                     if (status) {
                         push({ name: 'thread', statusId: status.id });
                         return;
                     }
                 } else if (kind === 'profile') {
-                    const account = await resolveAccount(href);
+                    const account = await lookUp(t('common.openingProfile'), () => resolveAccount(href));
+                    if (account === 'busy') return;
                     if (account) {
                         push({ name: 'account', accountId: account.id, account });
                         return;
@@ -72,7 +94,7 @@ export const useOpenAccount = () => {
             }
             openLink(href);
         },
-        [push]
+        [push, t]
     );
 
     return { openAccount, openMention, openHashtag, openLinkTimeline, openLinkInApp };
