@@ -4,6 +4,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StyleSheet, ActivityIndicator, BackHandler, DeviceEventEmitter, TouchableOpacity, Platform, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider, useAuth } from './services/authContext';
 import { SettingsProvider } from './services/settingsContext';
 import { ThemeProvider, useTheme } from './services/themeContext';
@@ -218,6 +219,8 @@ function NavigationRoot() {
 
 export default function App() {
   return (
+    // Gesture handler's swipes (notification rows) need a root view; the image viewer's modal has its own
+    <GestureHandlerRootView style={styles.container}>
     <SafeAreaProvider>
       {/* Above AuthProvider so it can reset cached server state when the account changes */}
       <QueryClientProvider client={queryClient}>
@@ -240,6 +243,7 @@ export default function App() {
         </ThemeProvider>
       </QueryClientProvider>
     </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 

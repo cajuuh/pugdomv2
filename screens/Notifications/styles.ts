@@ -25,6 +25,11 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     title: {
         color: colors.textPrimary,
     },
+    headerActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.sm,
+    },
     markRead: {
         backgroundColor: colors.inputBackground,
         borderRadius: radii.pill,
@@ -101,6 +106,32 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     },
     rowPressed: {
         backgroundColor: colors.inputBackground,
+    },
+    // A swiped row covers the Remove action behind it
+    swipeRow: {
+        backgroundColor: colors.cardBackground,
+    },
+    removeAction: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.sm,
+        paddingLeft: ROW_PADDING,
+        backgroundColor: colors.dangerColor,
+    },
+    removeText: {
+        color: colors.cardBackground,
+    },
+    selectable: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingLeft: ROW_PADDING,
+    },
+    selectableOn: {
+        backgroundColor: colors.accentSoft,
+    },
+    selectableContent: {
+        flex: 1,
     },
     stack44: {
         width: AVATAR_SIZE,

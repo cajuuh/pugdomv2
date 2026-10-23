@@ -11,6 +11,7 @@ import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { Avatar, Card, IconButton, PugMark, SectionLabel, ThemedSwitch } from '../../components/ui';
 import { appVersionLabel, codeVersionLabel } from '../../services/appVersion';
 import Appearance from './appearance';
+import ClearNotificationsHelp from './clearNotificationsHelp';
 import { SettingsHeader } from './header';
 import { makeStyles } from './styles';
 import { useI18n } from '../../services/i18n/i18nContext';
@@ -56,8 +57,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts }) => {
     const expandSpoilers = useExpandSpoilers();
     // On when the app or the account shows sensitive media as it is
     const showSensitive = useMediaDisplay() === 'show_all';
-    // Appearance is a second level inside Settings
-    const [page, setPage] = useState<'main' | 'appearance'>('main');
+    // Appearance and the clear-notifications help are a second level inside Settings
+    const [page, setPage] = useState<'main' | 'appearance' | 'clearNotifications'>('main');
     const { t, language, setLanguage, dict } = useI18n();
     const [languageSheetVisible, setLanguageSheetVisible] = useState(false);
     const [quoteSheetVisible, setQuoteSheetVisible] = useState(false);
@@ -82,6 +83,14 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts }) => {
         return (
             <SafeAreaView style={styles.safeArea}>
                 <Appearance onBack={() => setPage('main')} />
+            </SafeAreaView>
+        );
+    }
+
+    if (page === 'clearNotifications') {
+        return (
+            <SafeAreaView style={styles.safeArea}>
+                <ClearNotificationsHelp onBack={() => setPage('main')} />
             </SafeAreaView>
         );
     }
@@ -198,6 +207,12 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts }) => {
                     {switchRow('notifications-outline', t('settings.pushNotifications'), notifications, setNotifications)}
                     <View style={styles.divider} />
                     {switchRow('layers-outline', t('settings.groupNotifications'), groupNotifications, setGroupNotifications)}
+                    <View style={styles.divider} />
+                    <Pressable style={styles.row} onPress={() => setPage('clearNotifications')} accessibilityRole="button" accessibilityLabel={t('settings.clearNotifications')}>
+                        <Ionicons name="trash-outline" size={20} color={colors.accentText} />
+                        <Text style={[labelStyle, styles.rowText]}>{t('settings.clearNotifications')}</Text>
+                        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                    </Pressable>
                 </Card>
 
                 <SectionLabel style={styles.sectionLabel}>{t('settings.posts')}</SectionLabel>

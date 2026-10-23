@@ -107,3 +107,24 @@ describe('Appearance settings', () => {
         await waitFor(async () => expect(await AsyncStorage.getItem('pugdom_settings_tint')).toBe('false'));
     });
 });
+
+describe('Clear notifications help', () => {
+    it('opens from Settings, explains the three ways and goes back', async () => {
+        await render(
+            <QueryClientProvider client={createTestQueryClient()}>
+                <ThemeProvider>
+                    <Settings onBack={jest.fn()} onScheduledPosts={jest.fn()} />
+                </ThemeProvider>
+            </QueryClientProvider>
+        );
+        await fireEvent.press(await screen.findByRole('button', { name: 'Clear notifications' }));
+
+        expect(screen.getByLabelText(/^Swipe one away\./)).toBeTruthy();
+        expect(screen.getByLabelText(/^Select the ones you want\./)).toBeTruthy();
+        expect(screen.getByLabelText(/^Clear them all\./)).toBeTruthy();
+        expect(screen.getByText(/can't be undone/)).toBeTruthy();
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Back to settings' }));
+        expect(await screen.findByRole('button', { name: 'Clear notifications' })).toBeTruthy();
+    });
+});
