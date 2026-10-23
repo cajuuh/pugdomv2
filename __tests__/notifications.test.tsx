@@ -4,7 +4,8 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
 import Notifications from '../screens/Notifications/notifications';
-import { groupsFromNotifications } from '../services/mastodon/notifications';
+import { clearNotifications, dismissNotificationGroup, groupsFromNotifications } from '../services/mastodon/notifications';
+import { dialog } from '../services/dialog';
 import { authorizeFollowRequest, followAccount, getRelationships } from '../services/mastodon/accounts';
 import { favouriteStatus } from '../services/mastodon/statuses';
 import { markNotificationsRead } from '../services/mastodon/markers';
@@ -22,6 +23,8 @@ jest.mock('../services/mastodon/notifications', () => {
             groups: actual.groupsFromNotifications(await mockV1(maxId, types)),
             nextMaxId: undefined,
         })),
+        clearNotifications: jest.fn(),
+        dismissNotificationGroup: jest.fn(),
     };
 });
 jest.mock('../services/settingsContext', () => ({ useSettings: () => ({ groupNotifications: true }) }));
@@ -307,6 +310,97 @@ describe('Notifications', () => {
 
         expect(mockedMarkRead).toHaveBeenCalledWith('110');
         expect(screen.getByRole('button', { name: 'Mark all as read' })).toBeSelected();
+    });
+
+    describe('clear all', () => {
+        // Presses the confirmation's destructive button, as the user would
+        const confirmClear = async () => {
+            const alert = jest.spyOn(dialog, 'alert');
+            await fireEvent.press(screen.getByRole('button', { name: 'Clear' }));
+            await fireEvent.press(await screen.findByRole('button', { name: /Clear all/ }));
+            const [title, , buttons] = alert.mock.calls[alert.mock.calls.length - 1];
+            expect(title).toBe('Clear all notifications?');
+            await waitFor(async () => buttons!.find(button => button.style === 'destructive')!.onPress!());
+        };
+
+        it('asks first, then deletes them and empties the list', async () => {
+            mockedFetch.mockResolvedValue([notification('110', 'mention', account('a', 'alice'))]);
+            (clearNotifications as jest.Mock).mockResolvedValue(undefined);
+            const toast = jest.spyOn(dialog, 'toast');
+            await renderScreen();
+            await screen.findByText(/mentioned you/);
+
+            await confirmClear();
+
+            expect(clearNotifications).toHaveBeenCalledTimes(1);
+            await waitFor(() => expect(screen.queryByText(/mentioned you/)).toBeNull());
+            expect(toast).toHaveBeenCalledWith('Notifications cleared');
+        });
+
+        it('keeps the list and says so when clearing fails', async () => {
+            mockedFetch.mockResolvedValue([notification('110', 'mention', account('a', 'alice'))]);
+            (clearNotifications as jest.Mock).mockRejectedValue(new Error('offline'));
+            const toast = jest.spyOn(dialog, 'toast');
+            await renderScreen();
+            await screen.findByText(/mentioned you/);
+
+            await confirmClear();
+
+            await waitFor(() => expect(toast).toHaveBeenCalledWith("Couldn't clear notifications. Try again."));
+            expect(screen.getByText(/mentioned you/)).toBeTruthy();
+        });
+
+        it('removes only the notifications you tick', async () => {
+            mockedFetch.mockResolvedValue([
+                notification('110', 'mention', account('a', 'alice')),
+                notification('99', 'mention', account('b', 'bob')),
+            ]);
+            (dismissNotificationGroup as jest.Mock).mockResolvedValue(undefined);
+            const alert = jest.spyOn(dialog, 'alert');
+            await renderScreen();
+            await screen.findAllByText(/mentioned you/);
+
+            await fireEvent.press(screen.getByRole('button', { name: 'Clear' }));
+            await fireEvent.press(await screen.findByRole('button', { name: 'Select notifications' }));
+            const remove = screen.getByRole('button', { name: 'Remove' });
+            expect(remove).toBeDisabled();
+
+            // While picking, a row ticks instead of opening
+            await fireEvent.press(screen.getByRole('checkbox', { name: /bob/ }));
+            expect(screen.getByText('1 selected')).toBeTruthy();
+            await fireEvent.press(remove);
+            const [title, , buttons] = alert.mock.calls[alert.mock.calls.length - 1];
+            expect(title).toBe('Remove 1 notification?');
+            await waitFor(async () => buttons!.find(button => button.style === 'destructive')!.onPress!());
+
+            expect(dismissNotificationGroup).toHaveBeenCalledTimes(1);
+            expect((dismissNotificationGroup as jest.Mock).mock.calls[0][0]).toMatchObject({ ids: ['99'] });
+            await waitFor(() => expect(screen.getAllByText(/mentioned you/)).toHaveLength(1));
+            // Done: back to the normal header
+            expect(screen.getByRole('button', { name: 'Clear' })).toBeTruthy();
+        });
+
+        it('starts picking with the notification you hold ticked', async () => {
+            mockedFetch.mockResolvedValue([
+                notification('110', 'mention', account('a', 'alice')),
+                notification('99', 'mention', account('b', 'bob')),
+            ]);
+            await renderScreen();
+            const [, bobs] = await screen.findAllByText(/mentioned you/);
+
+            await fireEvent(bobs, 'longPress');
+
+            expect(screen.getByText('1 selected')).toBeTruthy();
+            expect(screen.getByRole('checkbox', { name: /bob/ })).toBeChecked();
+            expect(screen.getByRole('checkbox', { name: /alice/ })).not.toBeChecked();
+            expect(screen.getByRole('button', { name: 'Remove' })).toBeEnabled();
+        });
+
+        it('is off while there is nothing to clear', async () => {
+            mockedFetch.mockResolvedValue([]);
+            await renderScreen();
+            await waitFor(() => expect(screen.getByRole('button', { name: 'Clear' })).toBeDisabled());
+        });
     });
 
     describe('grouped rows', () => {
