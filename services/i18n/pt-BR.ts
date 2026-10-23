@@ -765,6 +765,7 @@ export const ptBR: Dictionary = {
         posts: 'Publicações',
         media: 'Mídia',
         groupNotifications: 'Agrupar favoritos e boosts nas notificações',
+        clearNotifications: 'Limpar notificações',
         expandSpoilers: 'Sempre expandir avisos de conteúdo',
         showSensitiveMedia: 'Mostrar mídia sensível sem desfoque',
         coverSensitiveMedia: 'Cobrir mídia sensível, além de desfocar',
@@ -777,6 +778,18 @@ export const ptBR: Dictionary = {
     languageNames: {
         'pt-BR': 'Português (Brasil)',
         en: 'English',
+    },
+    clearHelp: {
+        title: 'Limpar notificações',
+        back: 'Voltar para configurações',
+        intro: 'Há três jeitos de remover notificações, todos na tela de Notificações.',
+        swipeTitle: 'Deslize para tirar uma',
+        swipeText: 'Arraste uma notificação quase toda para a direita e solte: ela sai voando e é removida. Um arrasto curto a devolve ao lugar.',
+        selectTitle: 'Selecione as que quiser',
+        selectText: 'Segure uma notificação para começar a selecionar, já com ela marcada. Toque em outras para marcar ou desmarcar e depois em Remover. Também dá para começar em Limpar → Selecionar notificações.',
+        allTitle: 'Limpe todas',
+        allText: 'Toque em Limpar → Limpar todas para remover todas as notificações de uma vez.',
+        note: 'Remover apaga as notificações da sua conta no servidor: elas somem em todos os apps que você usa, e não dá para desfazer. Para só deixar de vê-las como novas, use ✓✓ Marcar todas como lidas.',
     },
     appearance: {
         title: 'Aparência',

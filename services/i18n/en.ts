@@ -777,6 +777,7 @@ export const en = {
         posts: 'Posts',
         media: 'Media',
         groupNotifications: 'Group favourites and boosts in notifications',
+        clearNotifications: 'Clear notifications',
         expandSpoilers: 'Always expand content warnings',
         showSensitiveMedia: 'Show sensitive media without blur',
         coverSensitiveMedia: 'Cover sensitive media, not only blur it',
@@ -790,6 +791,18 @@ export const en = {
     languageNames: {
         'pt-BR': 'Português (Brasil)',
         en: 'English',
+    },
+    clearHelp: {
+        title: 'Clear notifications',
+        back: 'Back to settings',
+        intro: 'There are three ways to remove notifications, all on the Notifications screen.',
+        swipeTitle: 'Swipe one away',
+        swipeText: "Drag a notification most of the way to the right and let go: it flies off and is removed. A short drag puts it back.",
+        selectTitle: 'Select the ones you want',
+        selectText: 'Hold a notification to start selecting, with it ticked. Tap others to tick or untick them, then tap Remove. You can also start from Clear → Select notifications.',
+        allTitle: 'Clear them all',
+        allText: 'Tap Clear → Clear all to remove every notification at once.',
+        note: "Removing deletes notifications from your account on your server, so they're gone in every app you use, and it can't be undone. To only stop them showing as new, use ✓✓ Mark all as read.",
     },
     appearance: {
         title: 'Appearance',
