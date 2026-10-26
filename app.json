@@ -3,7 +3,7 @@
     "name": "pugdon",
     "slug": "pugdom",
     "scheme": "pugdom",
-    "version": "1.3.2",
+    "version": "1.3.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -71,6 +71,14 @@
         }
       ],
       "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#E8995A",
+          "defaultChannel": "default"
+        }
+      ],
       [
         "expo-image-picker",
         {

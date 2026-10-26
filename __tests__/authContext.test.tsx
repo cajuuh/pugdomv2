@@ -8,10 +8,12 @@ import { AuthProvider, useAuth } from '../services/authContext';
 import { UNAUTHORIZED_EVENT } from '../services/api/client';
 import { getCurrentAccount } from '../services/mastodon/accounts';
 import * as storage from '../services/storage';
+import { unsubscribe as unsubscribePush } from '../services/push';
 
 jest.mock('../services/mastodon/accounts', () => ({
     getCurrentAccount: jest.fn(),
 }));
+jest.mock('../services/push', () => ({ unsubscribe: jest.fn(async () => {}) }));
 
 // In-memory replacement for SecureStore-backed storage
 jest.mock('../services/storage', () => {
@@ -183,6 +185,16 @@ describe('AuthProvider account changes', () => {
 
         expect(screen.getByText('alice')).toBeTruthy();
         expect(queryClient.getQueryData(['timeline', 'home'])).toBeDefined();
+    });
+
+    it("stops the removed account's pushes", async () => {
+        mockedStorage.__setState({ accessToken: 'alice-token', instanceUrl: alice.instanceUrl }, [alice, bob]);
+        await renderAuth();
+
+        await act(() => auth.logout(bob.id));
+
+        expect(unsubscribePush).toHaveBeenCalledTimes(1);
+        expect(unsubscribePush).toHaveBeenCalledWith(bob);
     });
 
     it('drops cached timelines when a new account logs in', async () => {

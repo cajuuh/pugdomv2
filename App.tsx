@@ -44,6 +44,7 @@ import { useServerPreferences } from './hooks/useExpandSpoilers';
 import { useUnreadNotifications } from './hooks/useUnreadNotifications';
 import { DialogHost } from './components/Dialog/dialogHost';
 import { useAppUpdates } from './hooks/useAppUpdates';
+import { usePushNotifications } from './hooks/usePushNotifications';
 
 // Keep the pug splash up until the fonts and the saved account are loaded
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -135,6 +136,11 @@ function NavigationRoot() {
 
   const statusBarStyle = isDark ? 'light' : 'dark';
   const ready = !loading && fontsReady && languageReady;
+  // Push subscriptions, and a tapped push opens its post or profile (or Notifications)
+  usePushNotifications(ready && !!user && !isAddingAccount && !needsSetup, () => {
+    reset();
+    setActiveTab('notifications');
+  });
 
   useEffect(() => {
     if (ready) {

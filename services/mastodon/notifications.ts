@@ -19,6 +19,12 @@ export async function fetchNotifications(maxId?: string, types?: Notification['t
     return response.data;
 }
 
+// One notification, e.g. the one a tapped push is about
+export async function getNotification(id: string): Promise<Notification> {
+    const response = await apiClient.get<Notification>(`/notifications/${id}`);
+    return response.data;
+}
+
 // Snowflake ids: a longer id is newer, and equal lengths compare as strings
 export const isNewerId = (a: string, b: string) => (a.length !== b.length ? a.length > b.length : a > b);
 

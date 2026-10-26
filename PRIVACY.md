@@ -1,8 +1,8 @@
 # pugdon Privacy Policy
 
-*Effective 2026-10-05 · [Português abaixo](#política-de-privacidade-do-pugdon)*
+*Effective 2026-10-26 · [Português abaixo](#política-de-privacidade-do-pugdon)*
 
-pugdon is an open-source app for Mastodon and the fediverse. **pugdon has no servers of its own and collects no data about you.** There are no ads, no analytics, no tracking and no crash reporting.
+pugdon is an open-source app for Mastodon and the fediverse. **pugdon collects no data about you.** Its only server is a small push relay that stores nothing (see Push notifications). There are no ads, no analytics, no tracking and no crash reporting.
 
 ## Your Mastodon server
 
@@ -37,6 +37,10 @@ The fediverse is made of many servers, so some content loads directly from other
 
 Like any website, those servers can see your device's IP address when they send content.
 
+## Push notifications
+
+When push notifications are on, pugdon asks each of your Mastodon servers to send your notifications to pugdon's push relay, a small program on Cloudflare Workers whose code is in this repository (`relay/`). Your server encrypts each notification for the relay. The relay decrypts it and passes its title and short text (for example "Ana mentioned you" and the start of the post) to Expo's push service, which delivers it to your phone through Apple or Google. The relay keeps no database and no logs, and never passes on your sign-in token. Turning push notifications off, or signing out of an account, removes that account's subscription from its server.
+
 ## App updates
 
 pugdon checks for app updates through Expo's update service (EAS Update). These requests include standard technical details such as the app version, the platform and your IP address. They contain no account or personal content.
@@ -53,9 +57,9 @@ If this policy changes, the new version will be published here with a new date. 
 
 # Política de Privacidade do pugdon
 
-*Em vigor desde 05/10/2026*
+*Em vigor desde 26/10/2026*
 
-O pugdon é um app de código aberto para o Mastodon e o fediverso. **O pugdon não tem servidores próprios e não coleta nenhum dado sobre você.** Não há anúncios, análises de uso, rastreamento nem relatórios de falhas.
+O pugdon é um app de código aberto para o Mastodon e o fediverso. **O pugdon não coleta nenhum dado sobre você.** O único servidor dele é um pequeno relay de notificações push que não guarda nada (veja Notificações push). Não há anúncios, análises de uso, rastreamento nem relatórios de falhas.
 
 ## O seu servidor Mastodon
 
@@ -89,6 +93,10 @@ O fediverso é feito de muitos servidores, então alguns conteúdos vêm direto 
 - os links que você abre carregam no navegador
 
 Como qualquer site, esses servidores podem ver o endereço IP do seu aparelho quando enviam conteúdo.
+
+## Notificações push
+
+Com as notificações push ativadas, o pugdon pede a cada um dos seus servidores Mastodon que envie as suas notificações para o relay de push do pugdon, um pequeno programa no Cloudflare Workers cujo código está neste repositório (`relay/`). O seu servidor criptografa cada notificação para o relay. O relay a descriptografa e repassa o título e o texto curto (por exemplo, "Ana mencionou você" e o começo da publicação) para o serviço de push da Expo, que a entrega no seu celular pela Apple ou pelo Google. O relay não tem banco de dados nem registros, e nunca repassa o seu token de acesso. Desativar as notificações push, ou sair de uma conta, apaga a inscrição dessa conta no servidor dela.
 
 ## Atualizações do app
 
