@@ -43,6 +43,9 @@ jobs:
       - name: Unit tests
         run: yarn test --ci --cacheDirectory .jest-cache
 
+      - name: Push relay tests
+        run: node --test relay/test.mjs
+
       # Native modules must match the Expo SDK (flash-list is excluded in package.json: it's JS-only)
       - name: Expo dependency check
         run: npx expo install --check
