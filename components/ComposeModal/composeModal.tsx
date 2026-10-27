@@ -27,11 +27,12 @@ import { Suggestion, SuggestionRow } from './suggestionRow';
 import { completeToken, tokenAtCursor } from './autocomplete';
 import { search } from '../../services/mastodon/search';
 import { useDebounced } from '../../hooks/useSearch';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { searchEmojis } from './emojiPicker';
 import { useCustomEmojis } from '../../hooks/useCustomEmojis';
 import { canSchedule } from '../../services/mastodon/scheduledStatuses';
 import type { SharedContent } from '../../services/sharedContent';
+import { Draft, DraftMedia, deleteDraft, draftsQueryKey, saveDraft } from '../../services/drafts';
 import { Account, Status } from '../../services/mastodon/types';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
 import { replyMentionsText } from '../../services/mastodon/mentions';
@@ -151,6 +152,10 @@ interface ComposeModalProps {
     existingPost?: ExistingPost | null;
     // Text and media another app shared with pugdon
     shared?: SharedContent | null;
+    // Shared while already open (a keyboard's GIF), added to the draft
+    incoming?: SharedContent | null;
+    // A draft put aside on this phone, reopened
+    draft?: Draft | null;
     closeCompose: () => void;
 }
 
@@ -162,13 +167,17 @@ const unchangedPoll = (poll: NonNullable<Status['poll']>) => ({
     expires_in: Math.max(300, Math.round(((poll.expires_at ? new Date(poll.expires_at).getTime() : Date.now()) - Date.now()) / 1000)),
 });
 
-const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quoteStatus = null, existingPost = null, shared = null, closeCompose }) => {
+const WOOF_CHANCE = 0.1;
+
+const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quoteStatus = null, existingPost = null, shared = null, incoming = null, draft = null, closeCompose }) => {
     const { user } = useAuth();
     const { colors, type } = useTheme();
     const i18n = useI18n();
     const { t, locale } = i18n;
     const styles = useThemedStyles(makeStyles);
     const insets = useSafeAreaInsets();
+    // Now and then the post button barks; rolled once per opening so it doesn't flicker
+    const woof = useMemo(() => isOpen && Math.random() < WOOF_CHANCE, [isOpen]);
     const { height: windowHeight } = useWindowDimensions();
     // Compose covers the whole screen, navigation bar included, so the keyboard is measured against the screen.
     // On Android the window can end above a 3-button navigation bar: measured against it, the toolbar sat under the keyboard.
@@ -224,7 +233,9 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
         staleTime: 60_000,
     });
 
-    const { mounted, progress } = useSheetTransition(isOpen);
+    // The keyboard comes up once the sheet is in place: Android shows none for a focus before its window is
+    // ready, and React Native then skips later focus calls, thinking the field already has it
+    const { mounted, progress } = useSheetTransition(isOpen, () => inputRef.current?.focus());
     // The text the sheet opened with (reply mentions), to tell whether there's a draft to lose
     const initialText = useRef('');
     // closeCompose clears the reply right away; keep showing it while the sheet slides out
@@ -239,17 +250,64 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
     const lockedPoll = editing ? existing.status.poll ?? null : null;
     const updateCachedStatus = useUpdateCachedStatus();
 
-    // Swiping the sheet down closes it, asking first if there's a draft
-    const { drag, panHandlers } = useDragToDismiss(cancel => {
-        if (!hasDraft({ text, initialText: initialText.current, showPoll, spoilerText, hasMedia: media.attachments.length > 0 })) {
+    const queryClient = useQueryClient();
+
+    // Puts the post aside on this phone (a reopened draft is replaced), then closes
+    const saveAsDraft = async () => {
+        if (!user) return;
+        try {
+            await saveDraft(
+                user.id,
+                {
+                    text,
+                    spoilerText,
+                    sensitive,
+                    visibility,
+                    language,
+                    quotePolicy,
+                    scheduledAt: scheduledAt?.toISOString() ?? null,
+                    poll: showPoll ? { options: pollOptions, duration: pollDuration, multiple: pollMultiple } : null,
+                    replyTo: reply,
+                    quote,
+                    media: media.attachments.map((attachment): DraftMedia => {
+                        const picked = media.pickedFor(attachment.key);
+                        return picked
+                            ? { image: picked, description: attachment.description, focus: attachment.focus }
+                            : { existing: attachment, description: attachment.description, focus: attachment.focus };
+                    }),
+                },
+                draft?.id
+            );
+            queryClient.invalidateQueries({ queryKey: draftsQueryKey(user.id) });
+            dialog.toast(t('compose.draftSaved'));
+            closeCompose();
+        } catch (error) {
+            console.warn('Saving the draft failed:', error);
+            dialog.alert(t('compose.draftSaveFailed'), t('compose.draftSaveFailedMessage'));
+        }
+    };
+
+    // Cancel and swiping the sheet down close it, asking first if there's something to lose: a reopened
+    // draft always asks, so it can be saved again. Edits of a published post can't become drafts.
+    const requestClose = (cancel = () => {}) => {
+        if (!draft && !hasDraft({ text, initialText: initialText.current, showPoll, spoilerText, hasMedia: media.attachments.length > 0 })) {
             closeCompose();
             return;
         }
-        dialog.alert(t('compose.discardTitle'), t('compose.discardMessage'), [
+        if (editing) {
+            dialog.alert(t('compose.discardTitle'), t('compose.discardMessage'), [
+                { text: t('compose.keepEditing'), style: 'cancel', onPress: cancel },
+                { text: t('compose.discard'), style: 'destructive', onPress: closeCompose },
+            ], { cancelable: true, onDismiss: cancel });
+            return;
+        }
+        dialog.alert(t('compose.draftTitle'), t('compose.draftMessage'), [
             { text: t('compose.keepEditing'), style: 'cancel', onPress: cancel },
             { text: t('compose.discard'), style: 'destructive', onPress: closeCompose },
+            { text: t('compose.saveDraft'), onPress: () => void saveAsDraft() },
         ], { cancelable: true, onDismiss: cancel });
-    });
+    };
+    const { drag, panHandlers } = useDragToDismiss(requestClose);
 
     // Adds what was picked, shot or shared, saying when a video had to be left out. Declared before the
     // effect below: compose renders nothing until mounted, so a later declaration isn't there yet when it runs
@@ -326,16 +384,44 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 }
             }
 
-            // Focus once the sheet is in place
-            const timer = setTimeout(() => {
-                inputRef.current?.focus();
-            }, 150);
+            // A draft put aside earlier, as it was left
+            if (draft) {
+                initialText.current = draft.text;
+                setText(draft.text);
+                cursor.current = draft.text.length;
+                setSensitive(draft.sensitive);
+                setSpoilerText(draft.spoilerText);
+                setVisibility(draft.visibility);
+                setLanguage(draft.language);
+                setQuotePolicy(draft.quotePolicy);
+                setScheduledAt(draft.scheduledAt ? new Date(draft.scheduledAt) : null);
+                if (draft.poll) {
+                    setShowPoll(true);
+                    setPollOptions(draft.poll.options);
+                    setPollDuration(draft.poll.duration);
+                    setPollMultiple(draft.poll.multiple);
+                }
+                const picked = draft.media.flatMap(item => (item.image ? [{ ...item.image, description: item.description, focus: item.focus }] : []));
+                if (picked.length) addPicked(picked);
+                media.addReady(draft.media.flatMap(item => (item.existing ? [{ ...item.existing, description: item.description, focus: item.focus }] : [])));
+            }
+
             return () => {
                 current = false;
-                clearTimeout(timer);
             };
         }
-    }, [isOpen, replyToStatus, quoteStatus, existingPost, shared, drag]);
+    }, [isOpen, replyToStatus, quoteStatus, existingPost, shared, draft, drag]);
+
+    // What arrives while composing joins the draft: its media, its words at the cursor
+    useEffect(() => {
+        if (!incoming) return;
+        if (incoming.media.length) addPicked(incoming.media);
+        if (incoming.text) {
+            const next = insertAt(text, cursor.current, incoming.text);
+            setText(next.text);
+            cursor.current = next.cursor;
+        }
+    }, [incoming]);
 
     // Closing stops uploads that are still going
     const cancelUploads = media.cancel;
@@ -523,6 +609,11 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
             } else {
                 DeviceEventEmitter.emit('status_published');
             }
+            if (draft && user) {
+                deleteDraft(user.id, draft.id)
+                    .then(() => queryClient.invalidateQueries({ queryKey: draftsQueryKey(user.id) }))
+                    .catch(error => console.warn('Removing the posted draft failed:', error));
+            }
             closeCompose();
         } catch (error: any) {
             console.error('Failed to post status:', error);
@@ -549,6 +640,8 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
 
     const translateY = Animated.add(progress.interpolate({ inputRange: [0, 1], outputRange: [windowHeight, 0] }), drag);
 
+    const submitLabel = editing ? t('compose.save') : scheduledAt ? t('schedule.confirm') : t('compose.post');
+
     const sheet = (
         <Animated.View
             accessibilityViewIsModal
@@ -562,15 +655,18 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 </View>
 
                 <View style={styles.header}>
-                    <View style={styles.headerSide}>
-                        <PillButton
-                            label={t('common.cancel')}
-                            variant="ghost"
-                            onPress={altEditing ? () => setAltEditing(null) : closeCompose}
-                            style={styles.cancel}
-                        />
-                    </View>
-                    <Text accessibilityRole="header" style={[type.sheetTitle, styles.headerTitle]} numberOfLines={1}>
+                    <PillButton
+                        label={t('common.cancel')}
+                        variant="subtle"
+                        onPress={altEditing ? () => setAltEditing(null) : () => requestClose()}
+                    />
+                    <Text
+                        accessibilityRole="header"
+                        style={[type.sheetTitle, styles.headerTitle]}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.8}
+                    >
                         {altEditing
                             ? t('compose.describeTitle')
                             : editing
@@ -581,18 +677,17 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                                   ? t('compose.quotePost')
                                   : t('compose.newPost')}
                     </Text>
-                    <View style={[styles.headerSide, styles.headerSideEnd]}>
-                        {altEditing ? (
-                            <PillButton label={t('compose.done')} onPress={saveDescription} disabled={altOverLimit} />
-                        ) : (
-                            <PillButton
-                                label={editing ? t('compose.save') : scheduledAt ? t('schedule.confirm') : t('compose.post')}
-                                onPress={() => handlePublish()}
-                                disabled={isPublishDisabled && !loading}
-                                loading={loading}
-                            />
-                        )}
-                    </View>
+                    {altEditing ? (
+                        <PillButton label={t('compose.done')} onPress={saveDescription} disabled={altOverLimit} />
+                    ) : (
+                        <PillButton
+                            label={woof && !editing && !scheduledAt ? t('compose.postWoof') : submitLabel}
+                            accessibilityLabel={submitLabel}
+                            onPress={() => handlePublish()}
+                            disabled={isPublishDisabled && !loading}
+                            loading={loading}
+                        />
+                    )}
                 </View>
             </View>
 

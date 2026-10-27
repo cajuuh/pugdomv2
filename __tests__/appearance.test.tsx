@@ -48,7 +48,7 @@ const renderAppearance = async () => {
     await render(
         <QueryClientProvider client={createTestQueryClient()}>
             <ThemeProvider>
-                <Settings onBack={jest.fn()} onScheduledPosts={jest.fn()} />
+                <Settings onBack={jest.fn()} onScheduledPosts={jest.fn()} onDrafts={jest.fn()} />
             </ThemeProvider>
         </QueryClientProvider>
     );
@@ -113,7 +113,7 @@ describe('Clear notifications help', () => {
         await render(
             <QueryClientProvider client={createTestQueryClient()}>
                 <ThemeProvider>
-                    <Settings onBack={jest.fn()} onScheduledPosts={jest.fn()} />
+                    <Settings onBack={jest.fn()} onScheduledPosts={jest.fn()} onDrafts={jest.fn()} />
                 </ThemeProvider>
             </QueryClientProvider>
         );

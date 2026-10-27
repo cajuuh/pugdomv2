@@ -96,9 +96,18 @@ describe('ComposeModal', () => {
         await renderCompose();
 
         await fireEvent.changeText(composer(), 'Olá');
-        await fireEvent.press(screen.getByText('Post'));
+        await fireEvent.press(screen.getByRole('button', { name: 'Post' }));
 
         expect(mockedCreateStatus).toHaveBeenCalledWith(expect.objectContaining({ status: 'Olá', language: 'pt' }));
+    });
+
+    it('sometimes barks on the post button, still read as Post', async () => {
+        const random = jest.spyOn(Math, 'random').mockReturnValue(0);
+        await renderCompose();
+        random.mockRestore();
+
+        expect(screen.getByText('Woof!')).toBeTruthy();
+        expect(screen.getByRole('button', { name: 'Post' })).toBeTruthy();
     });
 
     it('counts URLs as 23 characters against the instance limit', async () => {
@@ -118,7 +127,7 @@ describe('ComposeModal', () => {
         await fireEvent.changeText(screen.getByPlaceholderText('Choice 1'), 'Tea');
 
         expect(screen.getByText('Add at least 2 choices')).toBeTruthy();
-        await fireEvent.press(screen.getByText('Post'));
+        await fireEvent.press(screen.getByRole('button', { name: 'Post' }));
         expect(mockedCreateStatus).not.toHaveBeenCalled();
     });
 
@@ -132,7 +141,7 @@ describe('ComposeModal', () => {
         expect(screen.getByText('Choices must be different')).toBeTruthy();
 
         await fireEvent.changeText(screen.getByPlaceholderText('Choice 2'), 'Coffee');
-        await fireEvent.press(screen.getByText('Post'));
+        await fireEvent.press(screen.getByRole('button', { name: 'Post' }));
         expect(mockedCreateStatus).toHaveBeenCalledWith(
             expect.objectContaining({ poll: expect.objectContaining({ options: ['Tea', 'Coffee'] }) })
         );
@@ -145,7 +154,7 @@ describe('ComposeModal', () => {
         await fireEvent.press(screen.getByRole('radio', { name: /^Followers/ }));
         expect(screen.getByRole('button', { name: 'Visibility: Followers' })).toBeTruthy();
 
-        await fireEvent.press(screen.getByText('Post'));
+        await fireEvent.press(screen.getByRole('button', { name: 'Post' }));
         expect(mockedCreateStatus).toHaveBeenCalledWith(expect.objectContaining({ visibility: 'private' }));
     });
 
@@ -153,7 +162,7 @@ describe('ComposeModal', () => {
         await renderCompose({ ...replyTarget, visibility: 'unlisted' } as Status);
 
         expect(screen.getByRole('button', { name: 'Visibility: Unlisted' })).toBeTruthy();
-        await fireEvent.press(screen.getByText('Post'));
+        await fireEvent.press(screen.getByRole('button', { name: 'Post' }));
         expect(mockedCreateStatus).toHaveBeenCalledWith(expect.objectContaining({ visibility: 'unlisted', in_reply_to_id: 's1' }));
     });
 
@@ -175,7 +184,7 @@ describe('ComposeModal', () => {
         expect(screen.getByText('12 over')).toBeTruthy();
         expect(screen.getByLabelText('12 characters over the limit')).toBeTruthy();
         expect(screen.getByRole('button', { name: 'Post' })).toBeDisabled();
-        await fireEvent.press(screen.getByText('Post'));
+        await fireEvent.press(screen.getByRole('button', { name: 'Post' }));
         expect(mockedCreateStatus).not.toHaveBeenCalled();
     });
 
@@ -293,7 +302,7 @@ describe('ComposeModal', () => {
         await fireEvent.press(screen.getByRole('radio', { name: '3 days' }));
 
         expect(screen.getByText('Ends in 3 days')).toBeTruthy();
-        await fireEvent.press(screen.getByText('Post'));
+        await fireEvent.press(screen.getByRole('button', { name: 'Post' }));
         expect(mockedCreateStatus).toHaveBeenCalledWith(
             expect.objectContaining({ poll: expect.objectContaining({ expires_in: 259200 }) })
         );

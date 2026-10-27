@@ -2,15 +2,18 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, PanResponder } from 'react-native';
 
 // Drives a sheet's open/close: progress goes 0 → 1 (backdrop opacity, sheet slide),
-// and the sheet stays mounted until it has slid away
-export const useSheetTransition = (open: boolean) => {
+// and the sheet stays mounted until it has slid away. onOpened runs once it's in place.
+export const useSheetTransition = (open: boolean, onOpened?: () => void) => {
     const [mounted, setMounted] = useState(open);
     const progress = useRef(new Animated.Value(0)).current;
+    const opened = useRef(onOpened);
+    opened.current = onOpened;
 
     useEffect(() => {
         if (open) {
             setMounted(true);
-            Animated.timing(progress, { toValue: 1, duration: 280, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+            Animated.timing(progress, { toValue: 1, duration: 280, easing: Easing.out(Easing.cubic), useNativeDriver: true })
+                .start(({ finished }) => finished && opened.current?.());
         } else {
             Animated.timing(progress, { toValue: 0, duration: 200, easing: Easing.in(Easing.cubic), useNativeDriver: true })
                 .start(({ finished }) => finished && setMounted(false));

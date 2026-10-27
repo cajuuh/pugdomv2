@@ -83,7 +83,8 @@ export const useMediaAttachments = (limits: Limits) => {
     }, [update]);
 
     // Adds what fits in the remaining slots. A video only goes on its own, into an empty post.
-    const add = useCallback((images: PickedImage[]): AddResult => {
+    // A reopened draft's media come with their descriptions and focal points
+    const add = useCallback((images: (PickedImage & { description?: string; focus?: Point })[]): AddResult => {
         const videos = images.filter(isVideoPick);
         const video = videos[0];
         const videoNotAlone = videos.length > 0 && (count.current > 0 || images.length > 1);
@@ -102,8 +103,9 @@ export const useMediaAttachments = (limits: Limits) => {
             duration: image.duration ? image.duration / 1000 : undefined,
             status: 'uploading',
             progress: 0,
-            description: '',
+            description: image.description ?? '',
             savedDescription: '',
+            focus: image.focus,
         }));
         count.current += added.length;
         setAttachments(list => [...list, ...added]);
@@ -118,15 +120,22 @@ export const useMediaAttachments = (limits: Limits) => {
         start(key, upload.image, upload);
     }, [start, update]);
 
+    // Media already on the server, as they were
+    const addReady = useCallback((ready: ComposeAttachment[]) => {
+        count.current += ready.length;
+        setAttachments(list => [...list, ...ready.map(attachment => ({ ...attachment, key: `media-${nextKey.current++}` }))]);
+    }, []);
+
     // A post's media, already uploaded: ready, with their descriptions and focal points
     const addExisting = useCallback((existing: Attachment[]) => {
-        const added: ComposeAttachment[] = existing
+        addReady(existing
             .filter(item => item.type === 'image' || item.type === 'gifv' || item.type === 'video')
             .map(item => {
                 const size = item.meta?.original ?? item.meta?.small;
                 const focus = item.meta?.focus ? fromMastodonFocus(item.meta.focus) : undefined;
                 return {
-                    key: `media-${nextKey.current++}`,
+                    // addReady numbers them
+                    key: '',
                     uri: item.preview_url || item.url,
                     width: size?.width ?? 0,
                     height: size?.height ?? 0,
@@ -141,10 +150,11 @@ export const useMediaAttachments = (limits: Limits) => {
                     savedFocus: focus,
                     existing: true,
                 };
-            });
-        count.current += added.length;
-        setAttachments(list => [...list, ...added]);
-    }, []);
+            }));
+    }, [addReady]);
+
+    // The picked image (as edited) behind an attachment, for saving it with a draft
+    const pickedFor = useCallback((key: string) => uploads.current.get(key)?.image ?? null, []);
 
     // The picked image and the edits so far, for the editor to start from
     const editsFor = useCallback((key: string) => {
@@ -233,6 +243,8 @@ export const useMediaAttachments = (limits: Limits) => {
         attachments,
         add,
         addExisting,
+        addReady,
+        pickedFor,
         editAttributes,
         retry,
         remove,
