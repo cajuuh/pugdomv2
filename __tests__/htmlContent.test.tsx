@@ -29,3 +29,11 @@ describe('StatusHtmlContent emoji', () => {
         expect(screen.getByText(/morning/)).toBeTruthy();
     });
 });
+
+describe('StatusHtmlContent text', () => {
+    it('can be selected and copied', async () => {
+        await renderPost('<p>copy me</p>', []);
+
+        expect(screen.getByText('copy me')).toHaveProp('selectable', true);
+    });
+});

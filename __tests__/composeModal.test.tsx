@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { Dimensions, Keyboard, Platform, StyleSheet } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
-import ComposeModal, { defaultVisibility, hasDraft } from '../components/ComposeModal/composeModal';
+import ComposeModal, { defaultLanguage, defaultVisibility, hasDraft } from '../components/ComposeModal/composeModal';
 import { keyboardInset } from '../hooks/useKeyboard';
 import { OptionSheet } from '../components/ComposeModal/optionSheet';
 import { shouldDismiss } from '../components/ComposeModal/sheetTransition';
@@ -170,6 +170,14 @@ describe('ComposeModal', () => {
         expect(defaultVisibility({ ...me, source: { privacy: 'private' } }, null)).toBe('private');
         expect(defaultVisibility(me, null)).toBe('public');
         expect(defaultVisibility({ ...me, source: { privacy: 'private' } }, { ...replyTarget, visibility: 'direct' } as Status)).toBe('direct');
+    });
+
+    it("defaults the post language to the account's, else the app's", () => {
+        expect(defaultLanguage({ ...me, source: { language: 'de' } }, 'pt-BR')).toBe('de');
+        // Akkoma and Pleroma send no posting language
+        expect(defaultLanguage(me, 'pt-BR')).toBe('pt');
+        expect(defaultLanguage({ ...me, source: { language: 'pt-BR' } }, 'en')).toBe('pt');
+        expect(defaultLanguage(null, undefined)).toBe('en');
     });
 
     it('warns near the limit and blocks posting over it', async () => {

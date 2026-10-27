@@ -8,6 +8,7 @@ const AVATAR_SIZE = 44;
 const ROW_GAP = space.md;
 const FAVOURITE_SIZE = 34;
 const STACKED_AVATAR = 30;
+const THUMBNAIL_SIZE = 72;
 
 export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     container: {
@@ -197,6 +198,22 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         color: colors.textPrimary,
         fontSize: 15,
         lineHeight: 21,
+    },
+    thumbnails: {
+        flexDirection: 'row',
+        gap: space.xs,
+        marginTop: space.xs,
+    },
+    thumbnail: {
+        width: THUMBNAIL_SIZE,
+        height: THUMBNAIL_SIZE,
+        borderRadius: radii.input / 2,
+        overflow: 'hidden',
+        backgroundColor: colors.inputBackground,
+    },
+    thumbnailImage: {
+        width: '100%',
+        height: '100%',
     },
     snippet: {
         paddingVertical: space.sm,

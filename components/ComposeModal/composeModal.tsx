@@ -96,17 +96,12 @@ export const visibilities = ({ t }: Translator): VisibilityOption[] => [
     { value: 'direct', label: t('compose.mentioned'), description: t('compose.mentionedDescription'), icon: 'at' },
 ];
 
-const deviceLanguage = () => {
-    try {
-        return Intl.DateTimeFormat().resolvedOptions().locale.split('-')[0];
-    } catch {
-        return undefined;
-    }
-};
-
-// The account's default posting language, else the device language, else English
-export const defaultLanguage = (user: Account | null) =>
-    [user?.source?.language, deviceLanguage()].find(code => code && LANGUAGES.some(l => l.code === code)) ?? 'en';
+// The account's default posting language (Akkoma and Pleroma have none), else the app's, else English.
+// A regional code like pt-BR counts as its language.
+export const defaultLanguage = (user: Account | null, appLanguage?: string) =>
+    [user?.source?.language, appLanguage]
+        .map(code => code?.split('-')[0])
+        .find(code => code && LANGUAGES.some(l => l.code === code)) ?? 'en';
 
 // Replies keep the parent's visibility; new posts use the account's default. Quoting a followers-only
 // post makes the quote followers-only too (Mastodon enforces it).
@@ -173,7 +168,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
     const { user } = useAuth();
     const { colors, type } = useTheme();
     const i18n = useI18n();
-    const { t, locale } = i18n;
+    const { t, locale, language: appLanguage } = i18n;
     const styles = useThemedStyles(makeStyles);
     const insets = useSafeAreaInsets();
     // Now and then the post button barks; rolled once per opening so it doesn't flicker
@@ -189,7 +184,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
     const [sensitive, setSensitive] = useState(false);
     const [spoilerText, setSpoilerText] = useState('');
     const [loading, setLoading] = useState(false);
-    const [language, setLanguage] = useState(() => defaultLanguage(user));
+    const [language, setLanguage] = useState(() => defaultLanguage(user, appLanguage));
     const [visibility, setVisibility] = useState<Visibility>(() => defaultVisibility(user, replyToStatus, quoteStatus));
     const [picker, setPicker] = useState<'language' | 'visibility' | 'emoji' | 'quotePolicy' | 'camera' | 'schedule' | null>(null);
     // Publish later: the server posts it then (not for edits)
@@ -331,7 +326,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
             cursor.current = withShared.length;
             setSensitive(false);
             setSpoilerText('');
-            setLanguage(defaultLanguage(user));
+            setLanguage(defaultLanguage(user, appLanguage));
             setVisibility(defaultVisibility(user, replyToStatus, quoteStatus));
             setQuote(quoteStatus);
             setQuotePolicy(user?.source?.quote_policy ?? 'public');
