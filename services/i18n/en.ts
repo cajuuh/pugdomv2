@@ -324,6 +324,7 @@ export const en = {
         newPost: 'New post',
         reply: 'Reply',
         post: 'Post',
+        postWoof: 'Woof!',
         placeholder: "What's on your mind?",
         replyPlaceholder: 'Write your reply...',
         textLabel: 'Post text',

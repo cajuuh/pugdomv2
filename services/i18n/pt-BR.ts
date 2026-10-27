@@ -317,6 +317,7 @@ export const ptBR: Dictionary = {
         newPost: 'Nova publicação',
         reply: 'Responder',
         post: 'Publicar',
+        postWoof: 'Au! Au!',
         placeholder: 'No que você está pensando?',
         replyPlaceholder: 'Escreva sua resposta...',
         textLabel: 'Texto da publicação',

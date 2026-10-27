@@ -162,6 +162,8 @@ const unchangedPoll = (poll: NonNullable<Status['poll']>) => ({
     expires_in: Math.max(300, Math.round(((poll.expires_at ? new Date(poll.expires_at).getTime() : Date.now()) - Date.now()) / 1000)),
 });
 
+const WOOF_CHANCE = 0.1;
+
 const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quoteStatus = null, existingPost = null, shared = null, closeCompose }) => {
     const { user } = useAuth();
     const { colors, type } = useTheme();
@@ -169,6 +171,8 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
     const { t, locale } = i18n;
     const styles = useThemedStyles(makeStyles);
     const insets = useSafeAreaInsets();
+    // Now and then the post button barks; rolled once per opening so it doesn't flicker
+    const woof = useMemo(() => isOpen && Math.random() < WOOF_CHANCE, [isOpen]);
     const { height: windowHeight } = useWindowDimensions();
     // Compose covers the whole screen, navigation bar included, so the keyboard is measured against the screen.
     // On Android the window can end above a 3-button navigation bar: measured against it, the toolbar sat under the keyboard.
@@ -549,6 +553,8 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
 
     const translateY = Animated.add(progress.interpolate({ inputRange: [0, 1], outputRange: [windowHeight, 0] }), drag);
 
+    const submitLabel = editing ? t('compose.save') : scheduledAt ? t('schedule.confirm') : t('compose.post');
+
     const sheet = (
         <Animated.View
             accessibilityViewIsModal
@@ -588,7 +594,8 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                         <PillButton label={t('compose.done')} onPress={saveDescription} disabled={altOverLimit} />
                     ) : (
                         <PillButton
-                            label={editing ? t('compose.save') : scheduledAt ? t('schedule.confirm') : t('compose.post')}
+                            label={woof && !editing && !scheduledAt ? t('compose.postWoof') : submitLabel}
+                            accessibilityLabel={submitLabel}
                             onPress={() => handlePublish()}
                             disabled={isPublishDisabled && !loading}
                             loading={loading}
