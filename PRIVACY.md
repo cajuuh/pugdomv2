@@ -1,6 +1,6 @@
 # pugdon Privacy Policy
 
-*Effective 2026-10-26 · [Português abaixo](#política-de-privacidade-do-pugdon)*
+*Effective 2026-10-27 · [Português abaixo](#política-de-privacidade-do-pugdon)*
 
 pugdon is an open-source app for Mastodon and the fediverse. **pugdon collects no data about you.** Its only server is a small push relay that stores nothing (see Push notifications). There are no ads, no analytics, no tracking and no crash reporting.
 
@@ -57,7 +57,7 @@ If this policy changes, the new version will be published here with a new date. 
 
 # Política de Privacidade do pugdon
 
-*Em vigor desde 26/10/2026*
+*Em vigor desde 27/10/2026*
 
 O pugdon é um app de código aberto para o Mastodon e o fediverso. **O pugdon não coleta nenhum dado sobre você.** O único servidor dele é um pequeno relay de notificações push que não guarda nada (veja Notificações push). Não há anúncios, análises de uso, rastreamento nem relatórios de falhas.
 
