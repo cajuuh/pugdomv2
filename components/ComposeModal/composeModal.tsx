@@ -151,6 +151,8 @@ interface ComposeModalProps {
     existingPost?: ExistingPost | null;
     // Text and media another app shared with pugdon
     shared?: SharedContent | null;
+    // Shared while already open (a keyboard's GIF), added to the draft
+    incoming?: SharedContent | null;
     closeCompose: () => void;
 }
 
@@ -164,7 +166,7 @@ const unchangedPoll = (poll: NonNullable<Status['poll']>) => ({
 
 const WOOF_CHANCE = 0.1;
 
-const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quoteStatus = null, existingPost = null, shared = null, closeCompose }) => {
+const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quoteStatus = null, existingPost = null, shared = null, incoming = null, closeCompose }) => {
     const { user } = useAuth();
     const { colors, type } = useTheme();
     const i18n = useI18n();
@@ -340,6 +342,17 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
             };
         }
     }, [isOpen, replyToStatus, quoteStatus, existingPost, shared, drag]);
+
+    // What arrives while composing joins the draft: its media, its words at the cursor
+    useEffect(() => {
+        if (!incoming) return;
+        if (incoming.media.length) addPicked(incoming.media);
+        if (incoming.text) {
+            const next = insertAt(text, cursor.current, incoming.text);
+            setText(next.text);
+            cursor.current = next.cursor;
+        }
+    }, [incoming]);
 
     // Closing stops uploads that are still going
     const cancelUploads = media.cancel;
