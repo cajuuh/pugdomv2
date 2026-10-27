@@ -233,7 +233,9 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
         staleTime: 60_000,
     });
 
-    const { mounted, progress } = useSheetTransition(isOpen);
+    // The keyboard comes up once the sheet is in place: Android shows none for a focus before its window is
+    // ready, and React Native then skips later focus calls, thinking the field already has it
+    const { mounted, progress } = useSheetTransition(isOpen, () => inputRef.current?.focus());
     // The text the sheet opened with (reply mentions), to tell whether there's a draft to lose
     const initialText = useRef('');
     // closeCompose clears the reply right away; keep showing it while the sheet slides out
@@ -404,13 +406,8 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 media.addReady(draft.media.flatMap(item => (item.existing ? [{ ...item.existing, description: item.description, focus: item.focus }] : [])));
             }
 
-            // Focus once the sheet is in place
-            const timer = setTimeout(() => {
-                inputRef.current?.focus();
-            }, 150);
             return () => {
                 current = false;
-                clearTimeout(timer);
             };
         }
     }, [isOpen, replyToStatus, quoteStatus, existingPost, shared, draft, drag]);
