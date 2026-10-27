@@ -562,15 +562,18 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 </View>
 
                 <View style={styles.header}>
-                    <View style={styles.headerSide}>
-                        <PillButton
-                            label={t('common.cancel')}
-                            variant="ghost"
-                            onPress={altEditing ? () => setAltEditing(null) : closeCompose}
-                            style={styles.cancel}
-                        />
-                    </View>
-                    <Text accessibilityRole="header" style={[type.sheetTitle, styles.headerTitle]} numberOfLines={1}>
+                    <PillButton
+                        label={t('common.cancel')}
+                        variant="subtle"
+                        onPress={altEditing ? () => setAltEditing(null) : closeCompose}
+                    />
+                    <Text
+                        accessibilityRole="header"
+                        style={[type.sheetTitle, styles.headerTitle]}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.8}
+                    >
                         {altEditing
                             ? t('compose.describeTitle')
                             : editing
@@ -581,18 +584,16 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                                   ? t('compose.quotePost')
                                   : t('compose.newPost')}
                     </Text>
-                    <View style={[styles.headerSide, styles.headerSideEnd]}>
-                        {altEditing ? (
-                            <PillButton label={t('compose.done')} onPress={saveDescription} disabled={altOverLimit} />
-                        ) : (
-                            <PillButton
-                                label={editing ? t('compose.save') : scheduledAt ? t('schedule.confirm') : t('compose.post')}
-                                onPress={() => handlePublish()}
-                                disabled={isPublishDisabled && !loading}
-                                loading={loading}
-                            />
-                        )}
-                    </View>
+                    {altEditing ? (
+                        <PillButton label={t('compose.done')} onPress={saveDescription} disabled={altOverLimit} />
+                    ) : (
+                        <PillButton
+                            label={editing ? t('compose.save') : scheduledAt ? t('schedule.confirm') : t('compose.post')}
+                            onPress={() => handlePublish()}
+                            disabled={isPublishDisabled && !loading}
+                            loading={loading}
+                        />
+                    )}
                 </View>
             </View>
 
