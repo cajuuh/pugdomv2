@@ -8,6 +8,8 @@ export type Route =
     | { name: 'settings' }
     // Posts waiting to be published
     | { name: 'scheduledPosts' }
+    // Posts put aside on this phone
+    | { name: 'drafts' }
     | { name: 'account'; accountId: string; account?: Account }
     | { name: 'hashtag'; tag: string }
     | { name: 'link'; url: string; title?: string }

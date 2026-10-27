@@ -36,24 +36,16 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        gap: space.lg,
         paddingTop: space.sm,
         paddingHorizontal: space.lg,
     },
-    // Keeps the title centered whatever the button widths
-    headerSide: {
-        flex: 1,
-        flexDirection: 'row',
-    },
-    headerSideEnd: {
-        justifyContent: 'flex-end',
-    },
-    // The sides share what the title leaves, so titles stay short (one line) to leave room for the buttons
+    // The buttons keep their width and the title takes what is left (shrinking to fit), so the
+    // gaps on both sides of the title are equal and a long title never squeezes a button
     headerTitle: {
+        flex: 1,
+        textAlign: 'center',
         color: colors.textPrimary,
-    },
-    cancel: {
-        paddingHorizontal: 6,
     },
     scroll: {
         flex: 1,

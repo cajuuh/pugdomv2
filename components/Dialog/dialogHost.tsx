@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { Animated, BackHandler, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Animated, BackHandler, Keyboard, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useTheme } from '../../services/themeContext';
 import { useI18n } from '../../services/i18n/i18nContext';
 import {
@@ -63,9 +63,10 @@ export const DialogHost: React.FC<DialogHostProps> = ({ active = true }) => {
         if (hostId !== null) updateHost(hostId, active);
     }, [hostId, active]);
 
-    // Each dialog fades and grows in
+    // Each dialog fades and grows in. Dialogs have no text fields, so the keyboard goes: it would cover the buttons
     useEffect(() => {
         if (!current) return;
+        Keyboard.dismiss();
         appear.setValue(0);
         Animated.timing(appear, { toValue: 1, duration: 160, useNativeDriver: true }).start();
     }, [current?.id, appear]);
@@ -112,13 +113,14 @@ export const DialogHost: React.FC<DialogHostProps> = ({ active = true }) => {
                                 { opacity: appear, transform: [{ scale: appear.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }] },
                             ]}
                         >
+                            {/* Stacked buttons span the card, so the words above are centered over them */}
                             <View style={styles.heading}>
-                                <Text accessibilityRole="header" style={[type.sheetTitle, { color: colors.textPrimary }]}>{current.title}</Text>
+                                <Text accessibilityRole="header" style={[type.sheetTitle, stacked && styles.centered, { color: colors.textPrimary }]}>{current.title}</Text>
                                 {!!current.subtitle && (
-                                    <Text style={[type.name, { color: colors.textSecondary }]} numberOfLines={2}>{current.subtitle}</Text>
+                                    <Text style={[type.name, stacked && styles.centered, { color: colors.textSecondary }]} numberOfLines={2}>{current.subtitle}</Text>
                                 )}
                             </View>
-                            {!!current.message && <Text style={[type.body, { color: colors.textSecondary }]}>{current.message}</Text>}
+                            {!!current.message && <Text style={[type.body, stacked && styles.centered, { color: colors.textSecondary }]}>{current.message}</Text>}
                             <View style={[styles.buttons, stacked && styles.buttonsStacked]}>
                                 {(stacked ? [...ordered].reverse() : ordered).map((button, index) => (
                                     <PillButton
@@ -126,7 +128,6 @@ export const DialogHost: React.FC<DialogHostProps> = ({ active = true }) => {
                                         label={button.text}
                                         variant={variantFor(button, button === firstDefault)}
                                         onPress={() => pressDialogButton(current.id, button)}
-                                        style={stacked ? styles.buttonStacked : undefined}
                                     />
                                 ))}
                             </View>
@@ -178,12 +179,14 @@ const styles = StyleSheet.create({
         gap: space.sm,
         marginTop: space.xs,
     },
+    // Full width: wrapping would size the column to its widest button
     buttonsStacked: {
         flexDirection: 'column',
+        flexWrap: 'nowrap',
         alignItems: 'stretch',
     },
-    buttonStacked: {
-        alignSelf: 'stretch',
+    centered: {
+        textAlign: 'center',
     },
     // Above the dock
     toastRow: {
