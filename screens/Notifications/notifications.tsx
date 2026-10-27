@@ -32,6 +32,7 @@ import { dialog } from '../../services/dialog';
 import { useMediaViewer } from '../../components/MediaViewer/mediaViewer';
 import { FocusedImage } from '../../components/TootCard/focusedImage';
 import { mediaLabel } from '../../components/TootCard/tootCard';
+import { useReadDirectMentions } from '../../hooks/useConversations';
 
 interface NotificationsProps {
     onStatusPress?: (id: string) => void;
@@ -459,6 +460,12 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
     useEffect(() => {
         if (newestId) markSeen(newestId);
     }, [newestId, markSeen]);
+    // Direct messages read here clear the envelope's dot too
+    const directMentionIds = useMemo(
+        () => notifications.flatMap(group => (group.type === 'mention' && group.status?.visibility === 'direct' ? [group.status.id] : [])),
+        [notifications]
+    );
+    useReadDirectMentions(directMentionIds);
 
     const handleMarkRead = async () => {
         if (!newestId) return;

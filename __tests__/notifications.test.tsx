@@ -9,6 +9,7 @@ import { dialog } from '../services/dialog';
 import { authorizeFollowRequest, followAccount, getRelationships } from '../services/mastodon/accounts';
 import { favouriteStatus } from '../services/mastodon/statuses';
 import { markNotificationsRead } from '../services/mastodon/markers';
+import { getConversations, markConversationRead } from '../services/mastodon/conversations';
 import { Account, Notification } from '../services/mastodon/types';
 import { actorsText, buildListItems, notificationTime, plainText, withoutLeadingMentions } from '../screens/Notifications/rows';
 
@@ -42,6 +43,7 @@ jest.mock('../services/themeContext', () => ({
 }));
 const mockOpenMedia = jest.fn();
 jest.mock('../components/MediaViewer/mediaViewer', () => ({ useMediaViewer: () => ({ openMedia: mockOpenMedia }) }));
+jest.mock('../services/mastodon/conversations', () => ({ getConversations: jest.fn(), markConversationRead: jest.fn() }));
 const mockOpenCompose = jest.fn();
 jest.mock('../services/composeContext', () => ({
     useCompose: () => ({ openCompose: mockOpenCompose }),
@@ -80,6 +82,7 @@ describe('Notifications', () => {
         jest.clearAllMocks();
         queryClient = createTestQueryClient();
         mockedRelationships.mockResolvedValue([]);
+        (getConversations as jest.Mock).mockResolvedValue({ conversations: [] });
     });
 
     it('asks the server only for the types it can render', async () => {
@@ -153,6 +156,21 @@ describe('Notifications', () => {
         await renderScreen();
 
         expect(await screen.findByText(/privately mentioned you/)).toBeTruthy();
+    });
+
+    it('marks a direct message read when it shows here, so the envelope dot goes', async () => {
+        const dm = notification('1', 'mention', account('a', 'alice'));
+        mockedFetch.mockResolvedValue([{ ...dm, status: { ...dm.status, visibility: 'direct' } }]);
+        (getConversations as jest.Mock).mockResolvedValue({
+            conversations: [
+                { id: 'c1', unread: true, accounts: [], last_status: { id: 's-1' } },
+                { id: 'c2', unread: true, accounts: [], last_status: { id: 's-other' } },
+            ],
+        });
+        await renderScreen();
+
+        await waitFor(() => expect(markConversationRead).toHaveBeenCalledWith('c1'));
+        expect(markConversationRead).not.toHaveBeenCalledWith('c2');
     });
 
     it('shows the pictures in a reply, which open the viewer', async () => {
