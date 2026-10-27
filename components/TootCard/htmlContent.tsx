@@ -31,6 +31,9 @@ const renderers = {
     }
 };
 
+// Holding the text selects it, to copy (tester request); links and taps on the card still work
+const defaultTextProps = { selectable: true };
+
 // RenderHtml ignores font families it wasn't told about
 const systemFonts = [...defaultSystemFonts, ...Object.values(fontFamilies)];
 
@@ -110,6 +113,7 @@ export const StatusHtmlContent = React.memo(({ content, emojis, colors, bodyFont
             renderersProps={renderersProps}
             customHTMLElementModels={customHTMLElementModels}
             renderers={renderers}
+            defaultTextProps={defaultTextProps}
         />
     );
 });

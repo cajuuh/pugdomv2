@@ -99,6 +99,20 @@ describe('fetchInstanceConfiguration', () => {
         await expect(fetchInstanceConfiguration()).resolves.toMatchObject({ supportsQuotes: false });
     });
 
+    it('reads Akkoma and Pleroma limits from v1 when there is no v2', async () => {
+        mockedGet.mockImplementation(async (url: string) => {
+            if (url.endsWith('/api/v2/instance')) throw new Error('Not implemented');
+            return { data: { max_toot_chars: 65536, poll_limits: { max_options: 20, max_option_chars: 200 }, description_limit: 5000 } };
+        });
+        await expect(fetchInstanceConfiguration()).resolves.toMatchObject({
+            maxCharacters: 65536,
+            maxPollOptions: 20,
+            maxCharactersPerPollOption: 200,
+            descriptionLimit: 5000,
+        });
+        expect(mockedGet).toHaveBeenCalledWith('https://one.social/api/v1/instance');
+    });
+
     it("falls back to Mastodon's defaults for missing fields", async () => {
         mockedGet.mockResolvedValue({ data: {} });
         await expect(fetchInstanceConfiguration()).resolves.toEqual(DEFAULT_INSTANCE_CONFIGURATION);

@@ -131,6 +131,15 @@ describe('Thread', () => {
         expect(onStatusPress).toHaveBeenCalledWith('reply');
     });
 
+    it("doesn't make the open post a button, so its text can be held to select", async () => {
+        const onStatusPress = jest.fn();
+        await renderThread(onStatusPress);
+
+        await fireEvent.press(await screen.findByText(/status main/));
+        expect(onStatusPress).not.toHaveBeenCalled();
+        expect(screen.getByText(/status main/)).toHaveProp('selectable', true);
+    });
+
     it('puts the newest posts first when asked, and remembers it', async () => {
         mockedGetContext.mockResolvedValue({ ancestors: [makeStatus('parent')], descendants: [reply('older', 'main', 1), reply('newer', 'main', 2)] });
         await renderThread();

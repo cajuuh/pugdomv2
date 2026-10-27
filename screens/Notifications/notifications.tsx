@@ -29,6 +29,10 @@ import { TKey, Translator } from '../../services/i18n/translate';
 import { useOpenAccount } from '../../hooks/useOpenAccount';
 import { useMarkNotificationsSeen } from '../../hooks/useUnreadNotifications';
 import { dialog } from '../../services/dialog';
+import { useMediaViewer } from '../../components/MediaViewer/mediaViewer';
+import { FocusedImage } from '../../components/TootCard/focusedImage';
+import { mediaLabel } from '../../components/TootCard/tootCard';
+import { useReadDirectMentions } from '../../hooks/useConversations';
 
 interface NotificationsProps {
     onStatusPress?: (id: string) => void;
@@ -146,6 +150,35 @@ const MentionActions = ({ status }: { status: Status }) => {
     );
 };
 
+// A mention's pictures and videos as small thumbnails, so a reply that's only a picture isn't just a name.
+// Tapping one opens the viewer; sensitive ones stay blurred.
+const MediaThumbnails = ({ status, onOpenPost }: { status: Status; onOpenPost?: () => void }) => {
+    const styles = useThemedStyles(makeStyles);
+    const i18n = useI18n();
+    const { openMedia } = useMediaViewer();
+    const attachments = status.media_attachments ?? [];
+    const visual = attachments.filter(attachment => attachment.type !== 'unknown');
+    if (!visual.length) return null;
+    return (
+        <View style={styles.thumbnails}>
+            {visual.map(attachment => {
+                const index = attachments.indexOf(attachment);
+                return (
+                    <Pressable
+                        key={attachment.id}
+                        onPress={() => openMedia(attachments, index, onOpenPost)}
+                        accessibilityRole="imagebutton"
+                        accessibilityLabel={mediaLabel(attachment, index, attachments.length, i18n)}
+                        style={styles.thumbnail}
+                    >
+                        <FocusedImage attachment={attachment} style={styles.thumbnailImage} blurred={status.sensitive} />
+                    </Pressable>
+                );
+            })}
+        </View>
+    );
+};
+
 // The two most recent people in a group, overlapping, with the type badge
 const StackedAvatars = ({ accounts, badge }: { accounts: Account[]; badge: React.ComponentProps<typeof Ionicons>['name'] }) => {
     const styles = useThemedStyles(makeStyles);
@@ -252,7 +285,10 @@ const NotificationRow = ({ group, relationship, onStatusPress, onLongPress }: No
                 <Text style={[type.meta, styles.time]}>{time}</Text>
             </View>
             {group.type === 'mention' ? (
-                !!text && renderTextWithEmojis(text, status?.emojis || [], [type.body, styles.mentionText])
+                <>
+                    {!!text && renderTextWithEmojis(text, status?.emojis || [], [type.body, styles.mentionText])}
+                    {status && <MediaThumbnails status={status} onOpenPost={openStatus} />}
+                </>
             ) : (
                 !!text && (
                     <Well style={styles.snippet}>
@@ -424,6 +460,12 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
     useEffect(() => {
         if (newestId) markSeen(newestId);
     }, [newestId, markSeen]);
+    // Direct messages read here clear the envelope's dot too
+    const directMentionIds = useMemo(
+        () => notifications.flatMap(group => (group.type === 'mention' && group.status?.visibility === 'direct' ? [group.status.id] : [])),
+        [notifications]
+    );
+    useReadDirectMentions(directMentionIds);
 
     const handleMarkRead = async () => {
         if (!newestId) return;
