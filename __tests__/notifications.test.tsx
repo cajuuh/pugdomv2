@@ -40,6 +40,8 @@ jest.mock('../services/mastodon/markers', () => ({ markNotificationsRead: jest.f
 jest.mock('../services/themeContext', () => ({
     useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
 }));
+const mockOpenMedia = jest.fn();
+jest.mock('../components/MediaViewer/mediaViewer', () => ({ useMediaViewer: () => ({ openMedia: mockOpenMedia }) }));
 const mockOpenCompose = jest.fn();
 jest.mock('../services/composeContext', () => ({
     useCompose: () => ({ openCompose: mockOpenCompose }),
@@ -151,6 +153,16 @@ describe('Notifications', () => {
         await renderScreen();
 
         expect(await screen.findByText(/privately mentioned you/)).toBeTruthy();
+    });
+
+    it('shows the pictures in a reply, which open the viewer', async () => {
+        const reply = notification('1', 'mention', account('a', 'alice'));
+        const picture = { id: 'm1', type: 'image', url: 'u', preview_url: 'p', description: 'A pug on a sofa' };
+        mockedFetch.mockResolvedValue([{ ...reply, status: { ...reply.status, content: '<p>@me</p>', media_attachments: [picture] } }]);
+        await renderScreen();
+
+        await fireEvent.press(await screen.findByRole('imagebutton', { name: 'A pug on a sofa' }));
+        expect(mockOpenMedia).toHaveBeenCalledWith([picture], 0, undefined);
     });
 
     it('shows when someone quotes your post, with what they wrote', async () => {
