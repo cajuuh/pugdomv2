@@ -29,9 +29,10 @@ const PRIVACY_URL = 'https://github.com/cajuuh/pugdomv2/blob/main/PRIVACY.md';
 interface SettingsProps {
     onBack: () => void;
     onScheduledPosts: () => void;
+    onDrafts: () => void;
 }
 
-const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts }) => {
+const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts }) => {
     const { user, logout, savedAccounts, switchAccount, setAddingAccount, updateUser } = useAuth();
     const { colors, type, coat } = useTheme();
     const styles = useThemedStyles(makeStyles);
@@ -220,6 +221,12 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts }) => {
                     <Pressable style={styles.row} onPress={onScheduledPosts} accessibilityRole="button">
                         <Ionicons name="calendar-outline" size={20} color={colors.accentText} />
                         <Text style={[labelStyle, styles.rowText]}>{t('scheduled.title')}</Text>
+                        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                    </Pressable>
+                    <View style={styles.divider} />
+                    <Pressable style={styles.row} onPress={onDrafts} accessibilityRole="button">
+                        <Ionicons name="document-text-outline" size={20} color={colors.accentText} />
+                        <Text style={[labelStyle, styles.rowText]}>{t('drafts.title')}</Text>
                         <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
                     </Pressable>
                     <View style={styles.divider} />

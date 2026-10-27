@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useRef, useState } from 'react';
 import { Status } from './mastodon/types';
 import { SharedContent } from './sharedContent';
+import type { Draft } from './drafts';
 import ComposeModal from '../components/ComposeModal/composeModal';
 
 interface ComposeContextType {
@@ -12,6 +13,8 @@ interface ComposeContextType {
     existingPost: ExistingPost | null;
     // Text and media another app shared with pugdon
     shared: SharedContent | null;
+    // A draft put aside on this phone, reopened
+    draft: Draft | null;
     openCompose: (params?: ComposeParams) => void;
     closeCompose: () => void;
 }
@@ -27,6 +30,7 @@ interface ComposeParams {
     quoteStatus?: Status;
     existingPost?: ExistingPost;
     shared?: SharedContent;
+    draft?: Draft;
 }
 
 const ComposeContext = createContext<ComposeContextType | undefined>(undefined);
@@ -37,6 +41,7 @@ export const ComposeProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const [quoteStatus, setQuoteStatus] = useState<Status | null>(null);
     const [existingPost, setExistingPost] = useState<ExistingPost | null>(null);
     const [shared, setShared] = useState<SharedContent | null>(null);
+    const [draft, setDraft] = useState<Draft | null>(null);
     // Shared while compose was already open, to add to the draft
     const [incoming, setIncoming] = useState<SharedContent | null>(null);
     const open = useRef(false);
@@ -53,6 +58,7 @@ export const ComposeProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setQuoteStatus(params?.quoteStatus ?? null);
         setExistingPost(params?.existingPost ?? null);
         setShared(params?.shared ?? null);
+        setDraft(params?.draft ?? null);
         setIncoming(null);
         setIsOpen(true);
     };
@@ -64,11 +70,12 @@ export const ComposeProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setQuoteStatus(null);
         setExistingPost(null);
         setShared(null);
+        setDraft(null);
         setIncoming(null);
     };
 
     return (
-        <ComposeContext.Provider value={{ isOpen, replyToStatus, quoteStatus, existingPost, shared, openCompose, closeCompose }}>
+        <ComposeContext.Provider value={{ isOpen, replyToStatus, quoteStatus, existingPost, shared, draft, openCompose, closeCompose }}>
             {children}
             <ComposeModal
                 isOpen={isOpen}
@@ -77,6 +84,7 @@ export const ComposeProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 existingPost={existingPost}
                 shared={shared}
                 incoming={incoming}
+                draft={draft}
                 closeCompose={closeCompose}
             />
         </ComposeContext.Provider>
