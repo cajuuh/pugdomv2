@@ -51,25 +51,39 @@ interface InstanceV2 {
     };
 }
 
+// Akkoma and Pleroma name their limits differently, in v1 only
+interface InstanceV1 extends Pick<InstanceV2, 'configuration'> {
+    max_toot_chars?: number;
+    poll_limits?: { max_options?: number; max_option_chars?: number };
+    description_limit?: number;
+}
+
 export async function fetchInstanceConfiguration(): Promise<InstanceConfiguration> {
     // apiClient's base URL is /api/v1, so the v2 endpoint needs the full URL
     const { instanceUrl } = await getCredentials();
     if (!instanceUrl) {
         throw new Error('No active instance');
     }
-    const response = await apiClient.get<InstanceV2>(`${instanceUrl}/api/v2/instance`);
-    const { statuses, polls, media_attachments: media } = response.data.configuration ?? {};
+    const v2 = await apiClient
+        .get<InstanceV2>(`${instanceUrl}/api/v2/instance`)
+        .then(response => response.data)
+        .catch(() => null);
+    // Servers without v2 (Akkoma and Pleroma answer "Not implemented") report their limits in v1
+    const v1 = v2?.configuration?.statuses?.max_characters
+        ? null
+        : (await apiClient.get<InstanceV1>(`${instanceUrl}/api/v1/instance`)).data;
+    const { statuses, polls, media_attachments: media } = v2?.configuration ?? v1?.configuration ?? {};
     const defaults = DEFAULT_INSTANCE_CONFIGURATION;
     return {
-        maxCharacters: statuses?.max_characters ?? DEFAULT_INSTANCE_CONFIGURATION.maxCharacters,
-        maxPollOptions: polls?.max_options ?? DEFAULT_INSTANCE_CONFIGURATION.maxPollOptions,
-        maxCharactersPerPollOption: polls?.max_characters_per_option ?? DEFAULT_INSTANCE_CONFIGURATION.maxCharactersPerPollOption,
+        maxCharacters: statuses?.max_characters ?? v1?.max_toot_chars ?? defaults.maxCharacters,
+        maxPollOptions: polls?.max_options ?? v1?.poll_limits?.max_options ?? defaults.maxPollOptions,
+        maxCharactersPerPollOption: polls?.max_characters_per_option ?? v1?.poll_limits?.max_option_chars ?? defaults.maxCharactersPerPollOption,
         maxMediaAttachments: statuses?.max_media_attachments ?? defaults.maxMediaAttachments,
         imageSizeLimit: media?.image_size_limit ?? defaults.imageSizeLimit,
         imageMatrixLimit: media?.image_matrix_limit ?? defaults.imageMatrixLimit,
         videoSizeLimit: media?.video_size_limit ?? defaults.videoSizeLimit,
-        descriptionLimit: media?.description_limit ?? defaults.descriptionLimit,
+        descriptionLimit: media?.description_limit ?? v1?.description_limit ?? defaults.descriptionLimit,
         supportedMimeTypes: media?.supported_mime_types ?? defaults.supportedMimeTypes,
-        supportsQuotes: (response.data.api_versions?.mastodon ?? 0) >= QUOTES_API_VERSION,
+        supportsQuotes: (v2?.api_versions?.mastodon ?? 0) >= QUOTES_API_VERSION,
     };
 }
