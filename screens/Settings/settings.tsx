@@ -13,6 +13,7 @@ import { appVersionLabel, codeVersionLabel } from '../../services/appVersion';
 import Appearance from './appearance';
 import ClearNotificationsHelp from './clearNotificationsHelp';
 import PushAlerts from './pushAlerts';
+import { Esmeralda, useEsmeraldaTaps } from './esmeralda';
 import { requestPushPermission } from '../../services/push';
 import { SettingsHeader } from './header';
 import { makeStyles } from './styles';
@@ -63,6 +64,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts 
     // Appearance and the clear-notifications help are a second level inside Settings
     const [page, setPage] = useState<'main' | 'appearance' | 'clearNotifications' | 'pushAlerts'>('main');
     const { t, language, setLanguage, dict } = useI18n();
+    const esmeralda = useEsmeraldaTaps();
     const [languageSheetVisible, setLanguageSheetVisible] = useState(false);
     const [quoteSheetVisible, setQuoteSheetVisible] = useState(false);
     // Only servers with quote posts have a default for who can quote
@@ -279,11 +281,12 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts 
 
                 <SectionLabel style={styles.sectionLabel}>{t('settings.about')}</SectionLabel>
                 <Card style={styles.group}>
-                    <View style={styles.row}>
+                    {/* Tapped 7 times: Esmeralda */}
+                    <Pressable style={styles.row} onPress={esmeralda.tap}>
                         <Ionicons name="information-circle-outline" size={20} color={colors.accentText} />
                         <Text style={[labelStyle, styles.rowText]}>{t('settings.version')}</Text>
                         <Text style={[type.meta, styles.rowValue]}>{appVersionLabel()}</Text>
-                    </View>
+                    </Pressable>
                     <View style={styles.divider} />
                     <View style={styles.row}>
                         <Ionicons name="code-slash-outline" size={20} color={colors.accentText} />
@@ -311,6 +314,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts 
                 </Pressable>
             </ScrollView>
 
+            <Esmeralda visible={esmeralda.open} onClose={esmeralda.close} />
             <OptionSheet<QuotePolicy>
                 visible={quoteSheetVisible}
                 title={t('settings.quotePolicy')}

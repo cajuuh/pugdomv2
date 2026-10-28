@@ -821,6 +821,11 @@ export const ptBR: Dictionary = {
         deniedTitle: 'As notificações do pugdon estão desativadas',
         deniedText: 'Permita as notificações do pugdon nas configurações do celular e ative de novo aqui.',
     },
+    esmeralda: {
+        photo: 'Esmeralda, uma pug bege, sentada num piso de cerâmica olhando para a câmera',
+        text: 'A pug que é o motivo de o pugdon existir.',
+        close: 'Fechar',
+    },
     clearHelp: {
         title: 'Limpar notificações',
         back: 'Voltar para configurações',

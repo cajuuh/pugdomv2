@@ -835,6 +835,12 @@ export const en = {
         deniedTitle: 'Notifications are off for pugdon',
         deniedText: "Allow notifications for pugdon in your phone's settings, then turn this on again.",
     },
+    // The easter egg behind Settings → App Version
+    esmeralda: {
+        photo: 'Esmeralda, a fawn pug, sitting on a tiled floor and looking up at the camera',
+        text: 'The pug who is the reason pugdon exists.',
+        close: 'Close',
+    },
     clearHelp: {
         title: 'Clear notifications',
         back: 'Back to settings',
