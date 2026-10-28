@@ -120,7 +120,8 @@ describe('Profile', () => {
         await screen.findByText('post 1');
 
         await fireEvent.press(screen.getByRole('tab', { name: 'Media' }));
-        await screen.findAllByRole('imagebutton');
+        // Both tiles, not just any image button: on a slow runner the grid is still loading
+        await waitFor(() => expect(screen.getAllByRole('imagebutton', { name: 'Video 1 of 1' })).toHaveLength(2));
 
         // The open video gets the thumbnail's play button only; the veiled one, blurred, keeps the grid's badge
         const hidden = { includeHiddenElements: true };
