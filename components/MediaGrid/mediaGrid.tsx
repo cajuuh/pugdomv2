@@ -80,8 +80,9 @@ export const MediaGridRow: React.FC<MediaGridRowProps> = ({ row, onStatusPress }
                                     <Text style={[type.label, styles.countText, { color: colors.textPrimary }]}>{count}</Text>
                                 </View>
                             ) : (
-                                attachment.type !== 'image' && (
-                                    <View style={[styles.badge, { backgroundColor: colors.veilStrong }]}>
+                                // The thumbnail already puts a play button on a video it shows; this one covers GIFs and veiled videos
+                                (attachment.type === 'gifv' || (attachment.type === 'video' && status.sensitive)) && (
+                                    <View testID="grid-play-badge" style={[styles.badge, { backgroundColor: colors.veilStrong }]}>
                                         <Ionicons name="play" size={14} color={colors.textPrimary} />
                                     </View>
                                 )

@@ -113,6 +113,21 @@ describe('Profile', () => {
         expect(onStatusPress).toHaveBeenCalledWith('2');
     });
 
+    it('puts one play button on a video in the Media tab', async () => {
+        const video = (id: string) => ({ id, type: 'video', url: `https://x/${id}.mp4`, preview_url: `https://x/${id}.png` });
+        mockedStatuses.mockResolvedValue([status('1', { media_attachments: [video('a')] as any }), status('2', { media_attachments: [video('b')] as any, sensitive: true })]);
+        await renderProfile();
+        await screen.findByText('post 1');
+
+        await fireEvent.press(screen.getByRole('tab', { name: 'Media' }));
+        await screen.findAllByRole('imagebutton');
+
+        // The open video gets the thumbnail's play button only; the veiled one, blurred, keeps the grid's badge
+        const hidden = { includeHiddenElements: true };
+        expect(screen.getAllByTestId('video-badge', hidden)).toHaveLength(1);
+        expect(screen.getAllByTestId('grid-play-badge', hidden)).toHaveLength(1);
+    });
+
     it("shows the roles the server highlights, with a happy pug for supporters", async () => {
         mockUser = { ...me, roles: [{ id: '1', name: 'Server supporter', color: '' }, { id: '2', name: 'Moderator', color: '#7A1F1F' }] };
         await renderProfile();
