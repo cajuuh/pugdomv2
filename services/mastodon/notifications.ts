@@ -19,6 +19,12 @@ export async function fetchNotifications(maxId?: string, types?: Notification['t
     return response.data;
 }
 
+// One notification, e.g. the one a tapped push is about
+export async function getNotification(id: string): Promise<Notification> {
+    const response = await apiClient.get<Notification>(`/notifications/${id}`);
+    return response.data;
+}
+
 // Snowflake ids: a longer id is newer, and equal lengths compare as strings
 export const isNewerId = (a: string, b: string) => (a.length !== b.length ? a.length > b.length : a > b);
 
@@ -35,6 +41,7 @@ export const groupsFromNotifications = (notifications: Notification[], grouped =
         created_at: notification.created_at,
         newestId: notification.id,
         partial: true,
+        ids: [notification.id],
     })));
 
 export const groupsFromV2 = (data: GroupedNotificationsResponse): NotificationGroup[] => {
@@ -63,6 +70,7 @@ export const mergeGroups = (groups: NotificationGroup[]): NotificationGroup[] =>
             const known = new Set(existing.accounts.map(account => account.id));
             existing.accounts = [...existing.accounts, ...group.accounts.filter(account => !known.has(account.id))];
             existing.count += group.count;
+            existing.ids = [...(existing.ids ?? []), ...(group.ids ?? [])];
         }
     });
     return [...merged.values()];
@@ -106,4 +114,21 @@ export async function fetchNotificationGroups(maxId?: string, types?: Notificati
 export async function getNewestNotificationId(types: Notification['type'][]): Promise<string | null> {
     const response = await apiClient.get<Notification[]>('/notifications', { params: { limit: 1, types } });
     return response.data[0]?.id ?? null;
+}
+
+// Deletes every notification from the account, for all its apps: POST /api/v1/notifications/clear
+export async function clearNotifications(): Promise<void> {
+    await apiClient.post('/notifications/clear');
+}
+
+// Deletes one row's notifications: a server group (Mastodon 4.3+) by its key, or each notification of a group
+// built here from v1 pages
+export async function dismissNotificationGroup(group: NotificationGroup): Promise<void> {
+    if (group.ids) {
+        await Promise.all(group.ids.map(id => apiClient.post(`/notifications/${id}/dismiss`)));
+        return;
+    }
+    // apiClient's base URL is /api/v1, so the v2 endpoint needs the full URL
+    const { instanceUrl } = await getCredentials();
+    await apiClient.post(`${instanceUrl}/api/v2/notifications/${encodeURIComponent(group.key)}/dismiss`);
 }

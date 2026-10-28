@@ -8,6 +8,7 @@ const AVATAR_SIZE = 44;
 const ROW_GAP = space.md;
 const FAVOURITE_SIZE = 34;
 const STACKED_AVATAR = 30;
+const THUMBNAIL_SIZE = 72;
 
 export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     container: {
@@ -24,6 +25,11 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     },
     title: {
         color: colors.textPrimary,
+    },
+    headerActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.sm,
     },
     markRead: {
         backgroundColor: colors.inputBackground,
@@ -102,6 +108,32 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     rowPressed: {
         backgroundColor: colors.inputBackground,
     },
+    // A swiped row covers the Remove action behind it
+    swipeRow: {
+        backgroundColor: colors.cardBackground,
+    },
+    removeAction: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.sm,
+        paddingLeft: ROW_PADDING,
+        backgroundColor: colors.dangerColor,
+    },
+    removeText: {
+        color: colors.cardBackground,
+    },
+    selectable: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingLeft: ROW_PADDING,
+    },
+    selectableOn: {
+        backgroundColor: colors.accentSoft,
+    },
+    selectableContent: {
+        flex: 1,
+    },
     stack44: {
         width: AVATAR_SIZE,
         height: AVATAR_SIZE,
@@ -166,6 +198,22 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         color: colors.textPrimary,
         fontSize: 15,
         lineHeight: 21,
+    },
+    thumbnails: {
+        flexDirection: 'row',
+        gap: space.xs,
+        marginTop: space.xs,
+    },
+    thumbnail: {
+        width: THUMBNAIL_SIZE,
+        height: THUMBNAIL_SIZE,
+        borderRadius: radii.input / 2,
+        overflow: 'hidden',
+        backgroundColor: colors.inputBackground,
+    },
+    thumbnailImage: {
+        width: '100%',
+        height: '100%',
     },
     snippet: {
         paddingVertical: space.sm,

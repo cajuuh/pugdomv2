@@ -4,6 +4,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StyleSheet, ActivityIndicator, BackHandler, DeviceEventEmitter, TouchableOpacity, Platform, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider, useAuth } from './services/authContext';
 import { SettingsProvider } from './services/settingsContext';
 import { ThemeProvider, useTheme } from './services/themeContext';
@@ -36,6 +37,7 @@ import Quotes from './screens/Quotes/quotes';
 import Conversations from './screens/Conversations/conversations';
 import ConversationGroup from './screens/Conversations/conversationGroup';
 import ScheduledPosts from './screens/Scheduled/scheduledPosts';
+import Drafts from './screens/Drafts/drafts';
 import Reactions from './screens/Reactions/reactions';
 import EditProfile from './screens/EditProfile/editProfile';
 import { useUnreadConversations } from './hooks/useUnreadConversations';
@@ -43,6 +45,7 @@ import { useServerPreferences } from './hooks/useExpandSpoilers';
 import { useUnreadNotifications } from './hooks/useUnreadNotifications';
 import { DialogHost } from './components/Dialog/dialogHost';
 import { useAppUpdates } from './hooks/useAppUpdates';
+import { usePushNotifications } from './hooks/usePushNotifications';
 
 // Keep the pug splash up until the fonts and the saved account are loaded
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -101,9 +104,11 @@ function NavigationRoot() {
         // (Messages, a profile, the tabs...); Android's back button steps through the posts one by one
         return <Thread statusId={route.statusId} onBack={closeThreads} onStatusPress={openThread} />;
       case 'settings':
-        return <Settings onBack={pop} onScheduledPosts={() => push({ name: 'scheduledPosts' })} />;
+        return <Settings onBack={pop} onScheduledPosts={() => push({ name: 'scheduledPosts' })} onDrafts={() => push({ name: 'drafts' })} />;
       case 'scheduledPosts':
         return <ScheduledPosts onBack={pop} />;
+      case 'drafts':
+        return <Drafts onBack={pop} />;
       // Back from a profile returns to the post or notification it was opened from
       case 'account':
         return <Account accountId={route.accountId} account={route.account} onBack={pop} onStatusPress={openThread} onSettingsPress={openSettings} />;
@@ -126,7 +131,9 @@ function NavigationRoot() {
       case 'conversationGroup':
         return <ConversationGroup groupKey={route.groupKey} onBack={pop} onStatusPress={openThread} />;
       case 'reactions':
-        return <Reactions statusId={route.statusId} reaction={route.reaction} onBack={pop} />;
+        return <Reactions id={route.statusId} kind={route.reaction} onBack={pop} />;
+      case 'follows':
+        return <Reactions id={route.accountId} kind={route.list} onBack={pop} />;
       case 'editProfile':
         return <EditProfile onBack={pop} />;
     }
@@ -134,6 +141,11 @@ function NavigationRoot() {
 
   const statusBarStyle = isDark ? 'light' : 'dark';
   const ready = !loading && fontsReady && languageReady;
+  // Push subscriptions, and a tapped push opens its post or profile (or Notifications)
+  usePushNotifications(ready && !!user && !isAddingAccount && !needsSetup, () => {
+    reset();
+    setActiveTab('notifications');
+  });
 
   useEffect(() => {
     if (ready) {
@@ -218,6 +230,8 @@ function NavigationRoot() {
 
 export default function App() {
   return (
+    // Gesture handler's swipes (notification rows) need a root view; the image viewer's modal has its own
+    <GestureHandlerRootView style={styles.container}>
     <SafeAreaProvider>
       {/* Above AuthProvider so it can reset cached server state when the account changes */}
       <QueryClientProvider client={queryClient}>
@@ -240,6 +254,7 @@ export default function App() {
         </ThemeProvider>
       </QueryClientProvider>
     </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 

@@ -6,7 +6,7 @@ import { createTestQueryClient } from '../testUtils/queryClient';
 import apiClient from '../services/api/client';
 import { getReactions } from '../services/mastodon/statuses';
 import { MediaViewerProvider } from '../components/MediaViewer/mediaViewer';
-import Reactions from '../screens/Reactions/reactions';
+import Reactions, { matchesSearch } from '../screens/Reactions/reactions';
 import Thread from '../screens/Thread/thread';
 import { TootCard } from '../components/TootCard/tootCard';
 import { NavigationProvider, useNavigator } from '../services/navigationContext';
@@ -143,7 +143,7 @@ describe('Reactions', () => {
             if (url === '/accounts/relationships') return { data: [{ id: 'ana', following: false, requested: false, followed_by: false }] };
             return { data: [], headers: {} };
         });
-        await render(wrap(<Reactions statusId="p1" reaction="favourites" onBack={jest.fn()} />));
+        await render(wrap(<Reactions id="p1" kind="favourites" onBack={jest.fn()} />));
 
         expect(screen.getByRole('header', { name: 'Favourited by' })).toBeTruthy();
         expect(await screen.findByText('@ana@art.social')).toBeTruthy();
@@ -152,9 +152,74 @@ describe('Reactions', () => {
         expect(await screen.findAllByRole('button', { name: /Follow/ })).toHaveLength(1);
     });
 
+    it("lists someone's followers, a page at a time", async () => {
+        api.get.mockImplementation(async (url: string, config?: { params?: { max_id?: string } }) => {
+            if (url === '/accounts/ana/followers') {
+                return config?.params?.max_id === '77'
+                    ? { data: [{ ...me, id: 'bo', username: 'bo', acct: 'bo' }], headers: {} }
+                    : { data: [ana], headers: { link: '<https://home.social/api/v1/accounts/ana/followers?max_id=77>; rel="next"' } };
+            }
+            return { data: [], headers: {} };
+        });
+        await render(wrap(<Reactions id="ana" kind="followers" onBack={jest.fn()} />));
+
+        expect(screen.getByRole('header', { name: 'Followers' })).toBeTruthy();
+        expect(await screen.findByText('@ana@art.social')).toBeTruthy();
+        expect(api.get).toHaveBeenCalledWith('/accounts/ana/followers', { params: { max_id: undefined, limit: 80 } });
+    });
+
+    it('searches the whole list by name or handle, loading the rest of it first', async () => {
+        const jose = { ...me, id: 'jose', username: 'jose', acct: 'jose@bolha.one', display_name: 'José Pug' };
+        api.get.mockImplementation(async (url: string, config?: { params?: { max_id?: string } }) => {
+            if (url === '/accounts/ana/following') {
+                return config?.params?.max_id === '77'
+                    ? { data: [jose], headers: {} }
+                    : { data: [ana], headers: { link: '<https://home.social/api/v1/accounts/ana/following?max_id=77>; rel="next"' } };
+            }
+            return { data: [], headers: {} };
+        });
+        await render(wrap(<Reactions id="ana" kind="following" onBack={jest.fn()} />));
+        expect(await screen.findByText('@ana@art.social')).toBeTruthy();
+
+        // José is on the second page, not loaded yet
+        await fireEvent.changeText(screen.getByLabelText('Search following'), 'jose');
+        expect(await screen.findByText('@jose@bolha.one')).toBeTruthy();
+        expect(screen.queryByText('@ana@art.social')).toBeNull();
+        expect(api.get).toHaveBeenCalledWith('/accounts/ana/following', { params: { max_id: '77', limit: 80 } });
+
+        await fireEvent.changeText(screen.getByLabelText('Search following'), 'nobody');
+        expect(await screen.findByText('Nobody here matches that name.')).toBeTruthy();
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Clear search' }));
+        expect(screen.getByText('@ana@art.social')).toBeTruthy();
+    });
+
+    it('matches names and handles without caring about case or accents', () => {
+        const jose = { display_name: 'José Pug', username: 'jose', acct: 'jose@bolha.one' };
+        expect(matchesSearch(jose, 'JOSE')).toBe(true);
+        expect(matchesSearch(jose, ' pug ')).toBe(true);
+        expect(matchesSearch(jose, 'bolha')).toBe(true);
+        expect(matchesSearch(jose, 'ana')).toBe(false);
+    });
+
+    it("doesn't offer a search on favourites and boosts", async () => {
+        api.get.mockResolvedValue({ data: [ana], headers: {} });
+        await render(wrap(<Reactions id="p1" kind="favourites" onBack={jest.fn()} />));
+        expect(await screen.findByText('@ana@art.social')).toBeTruthy();
+        expect(screen.queryByLabelText(/Search/)).toBeNull();
+    });
+
+    it('says when the list is empty or hidden', async () => {
+        api.get.mockResolvedValue({ data: [], headers: {} });
+        await render(wrap(<Reactions id="ana" kind="following" onBack={jest.fn()} />));
+
+        expect(screen.getByRole('header', { name: 'Following' })).toBeTruthy();
+        expect(await screen.findByText(/Some people hide who they follow/)).toBeTruthy();
+    });
+
     it('says when nobody has yet', async () => {
         api.get.mockResolvedValue({ data: [], headers: {} });
-        await render(wrap(<Reactions statusId="p1" reaction="boosts" onBack={jest.fn()} />));
+        await render(wrap(<Reactions id="p1" kind="boosts" onBack={jest.fn()} />));
 
         expect(screen.getByRole('header', { name: 'Boosted by' })).toBeTruthy();
         expect(await screen.findByText('Nobody yet.')).toBeTruthy();

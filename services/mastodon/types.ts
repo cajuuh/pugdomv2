@@ -226,6 +226,8 @@ export interface NotificationGroup {
     newestId: string;
     // Built on the client from v1 pages, so the same post on a later page adds to it
     partial?: boolean;
+    // A client-built group's notification ids (a server group is removed by its key)
+    ids?: string[];
 }
 
 // GET /api/v2/notifications (Mastodon 4.3+)

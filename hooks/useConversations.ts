@@ -1,7 +1,8 @@
+import { useEffect } from 'react';
 import { InfiniteData, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useOptionalAuth } from '../services/authContext';
 import { Conversation, ConversationsPage, getConversations, markConversationRead } from '../services/mastodon/conversations';
-import { unreadConversationsKey } from './useUnreadConversations';
+import { unreadConversationsKey, useUnreadConversations } from './useUnreadConversations';
 
 export const conversationsKey = (accountId: string) => ['conversations', accountId];
 
@@ -60,4 +61,28 @@ export const useConversations = () => {
     };
 
     return { query, conversations, markRead, open, me };
+};
+
+// Direct messages shown on the notifications screen have been read: their conversations are marked read
+// too, so the envelope's dot goes. Mastodon doesn't link a post to its conversation, so a conversation
+// counts when its newest post is one of them.
+export const useReadDirectMentions = (statusIds: string[]) => {
+    const queryClient = useQueryClient();
+    const accountId = useOptionalAuth()?.user?.id;
+    const unread = useUnreadConversations();
+    const ids = statusIds.join(',');
+
+    useEffect(() => {
+        if (!unread || !accountId || !ids) return;
+        const shown = ids.split(',');
+        getConversations()
+            .then(async ({ conversations }) => {
+                const read = conversations.filter(item => item.unread && item.last_status && shown.includes(item.last_status.id));
+                if (!read.length) return;
+                await Promise.allSettled(read.map(item => markConversationRead(item.id)));
+                queryClient.invalidateQueries({ queryKey: unreadConversationsKey(accountId) });
+                queryClient.invalidateQueries({ queryKey: conversationsKey(accountId) });
+            })
+            .catch(error => console.warn('Marking direct messages read failed:', error));
+    }, [unread, accountId, ids, queryClient]);
 };

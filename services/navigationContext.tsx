@@ -8,6 +8,8 @@ export type Route =
     | { name: 'settings' }
     // Posts waiting to be published
     | { name: 'scheduledPosts' }
+    // Posts put aside on this phone
+    | { name: 'drafts' }
     | { name: 'account'; accountId: string; account?: Account }
     | { name: 'hashtag'; tag: string }
     | { name: 'link'; url: string; title?: string }
@@ -24,6 +26,8 @@ export type Route =
     | { name: 'conversationGroup'; groupKey: string }
     // Who favourited or boosted a post
     | { name: 'reactions'; statusId: string; reaction: 'favourites' | 'boosts' }
+    // Who follows someone, or whom they follow
+    | { name: 'follows'; accountId: string; list: 'followers' | 'following' }
     | { name: 'editProfile' };
 
 // Each entry gets its own key, so the same screen can sit in the stack twice (thread → other → same thread)

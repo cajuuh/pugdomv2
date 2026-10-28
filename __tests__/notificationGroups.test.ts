@@ -1,9 +1,9 @@
 import apiClient from '../services/api/client';
 import { getCredentials } from '../services/storage';
-import { fetchNotificationGroups, mergeGroups } from '../services/mastodon/notifications';
+import { dismissNotificationGroup, fetchNotificationGroups, groupsFromNotifications, mergeGroups } from '../services/mastodon/notifications';
 import { Account, GroupedNotificationsResponse, NotificationGroup } from '../services/mastodon/types';
 
-jest.mock('../services/api/client', () => ({ __esModule: true, default: { get: jest.fn() } }));
+jest.mock('../services/api/client', () => ({ __esModule: true, default: { get: jest.fn(), post: jest.fn() } }));
 jest.mock('../services/storage', () => ({ getCredentials: jest.fn() }));
 
 const mockedGet = apiClient.get as jest.Mock;
@@ -153,5 +153,28 @@ describe('mergeGroups', () => {
         const merged = mergeGroups([group('favourite-s1', ['a', 'b'], 6), group('favourite-s1', ['c'], 6)]);
 
         expect(merged).toEqual([group('favourite-s1', ['a', 'b'], 6)]);
+    });
+});
+
+describe('dismissNotificationGroup', () => {
+    const mockedPost = apiClient.post as jest.Mock;
+    beforeEach(() => mockedPost.mockReset().mockResolvedValue({}));
+
+    it("removes a server group by its key, through v2", async () => {
+        useInstance('https://dismiss-v2.social');
+        await dismissNotificationGroup({ key: 'favourite-s1 1', type: 'favourite', accounts: [], count: 3, created_at: '', newestId: '9' });
+        expect(mockedPost).toHaveBeenCalledWith('https://dismiss-v2.social/api/v2/notifications/favourite-s1%201/dismiss');
+    });
+
+    it('removes each notification of a group built here, through v1', async () => {
+        const [group] = mergeGroups(
+            groupsFromNotifications([
+                { id: '7', type: 'favourite', account: account('a'), status, created_at: '' } as any,
+                { id: '5', type: 'favourite', account: account('b'), status, created_at: '' } as any,
+            ])
+        );
+        expect(group.ids).toEqual(['7', '5']);
+        await dismissNotificationGroup(group);
+        expect(mockedPost.mock.calls.map(call => call[0])).toEqual(['/notifications/7/dismiss', '/notifications/5/dismiss']);
     });
 });

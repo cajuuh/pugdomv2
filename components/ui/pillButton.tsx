@@ -6,6 +6,8 @@ import { hitSlopFor, radii } from '../../services/theme/shape';
 
 interface PillButtonProps {
     label: string;
+    // What screen readers say, when the label alone isn't clear
+    accessibilityLabel?: string;
     onPress: () => void;
     // danger: for destructive choices (delete, block)
     variant?: 'primary' | 'secondary' | 'subtle' | 'ghost' | 'danger';
@@ -20,6 +22,7 @@ const HEIGHTS = { small: 34, medium: 38 } as const;
 
 export const PillButton: React.FC<PillButtonProps> = ({
     label,
+    accessibilityLabel = label,
     onPress,
     variant = 'primary',
     size = 'medium',
@@ -45,7 +48,7 @@ export const PillButton: React.FC<PillButtonProps> = ({
             onPress={onPress}
             disabled={inactive}
             accessibilityRole="button"
-            accessibilityLabel={label}
+            accessibilityLabel={accessibilityLabel}
             accessibilityState={{ disabled: inactive, busy: loading }}
             hitSlop={hitSlopFor(0, height)}
             style={({ pressed }) => [

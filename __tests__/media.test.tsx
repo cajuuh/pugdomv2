@@ -12,6 +12,7 @@ import { PickedImage, prepareImage, preparePlan } from '../services/media/prepar
 import { pickImages, takePhoto } from '../services/media/pick';
 import { createStatus } from '../services/mastodon/statuses';
 import ComposeModal from '../components/ComposeModal/composeModal';
+import { ComposeProvider, useCompose } from '../services/composeContext';
 import { Account, Status } from '../services/mastodon/types';
 
 jest.mock('../services/api/client', () => ({
@@ -195,6 +196,29 @@ describe('Compose with images', () => {
 
         expect(await screen.findByRole('button', { name: 'Describe image 1' })).toBeTruthy();
         expect(screen.getByLabelText('Post text').props.value).toBe('From the gallery');
+    });
+
+    it('adds a share that arrives while composing to the draft, instead of starting over', async () => {
+        // Keyboards that can't put a GIF into the text field share it with the app
+        let compose!: ReturnType<typeof useCompose>;
+        const Grab = () => {
+            compose = useCompose();
+            return null;
+        };
+        await render(
+            <QueryClientProvider client={createTestQueryClient()}>
+                <ComposeProvider>
+                    <Grab />
+                </ComposeProvider>
+            </QueryClientProvider>
+        );
+        await act(async () => compose.openCompose());
+        await fireEvent.changeText(screen.getByLabelText('Post text'), 'My draft');
+
+        await act(async () => compose.openCompose({ shared: { text: '', media: [photo('keyboard.gif', { mimeType: 'image/gif' })] } }));
+
+        expect(await screen.findByRole('button', { name: 'Describe image 1' })).toBeTruthy();
+        expect(screen.getByLabelText('Post text').props.value).toBe('My draft');
     });
 
     it('uploads picked images and posts them, even without text', async () => {

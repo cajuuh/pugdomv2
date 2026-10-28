@@ -162,15 +162,17 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ visible, image, initia
         <Modal visible={visible} animationType="fade" statusBarTranslucent navigationBarTranslucent onRequestClose={onCancel}>
             <View style={[styles.root, { paddingTop: insets.top + space.sm, paddingBottom: insets.bottom + space.md }]}>
                 <View style={styles.header}>
-                    <View style={styles.headerSide}>
-                        <PillButton label={t('common.cancel')} variant="ghost" onPress={onCancel} />
-                    </View>
-                    <Text accessibilityRole="header" style={[type.sheetTitle, styles.title]} numberOfLines={1}>
+                    <PillButton label={t('common.cancel')} variant="ghost" onPress={onCancel} />
+                    <Text
+                        accessibilityRole="header"
+                        style={[type.sheetTitle, styles.title]}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.8}
+                    >
                         {t('editor.title')}
                     </Text>
-                    <View style={[styles.headerSide, styles.headerSideEnd]}>
-                        <PillButton label={t('compose.done')} onPress={done} loading={saving} disabled={!size} />
-                    </View>
+                    <PillButton label={t('compose.done')} onPress={done} loading={saving} disabled={!size} />
                 </View>
 
                 <View style={styles.stage} onLayout={onStageLayout} testID="image-editor-stage">
@@ -268,17 +270,13 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
+        gap: space.md,
         paddingHorizontal: space.lg,
     },
-    // Equal sides keep the title centered
-    headerSide: {
-        flex: 1,
-        flexDirection: 'row',
-    },
-    headerSideEnd: {
-        justifyContent: 'flex-end',
-    },
+    // Same layout as the compose header: buttons keep their width, the title takes the rest
     title: {
+        flex: 1,
+        textAlign: 'center',
         color: mediaColors.ink,
     },
     stage: {

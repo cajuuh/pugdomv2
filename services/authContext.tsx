@@ -8,6 +8,7 @@ import { Account } from './mastodon/types';
 import { getCredentials, clearCredentials, saveCredentials, getSavedAccounts, addSavedAccount, removeSavedAccount, SavedAccount } from './storage';
 import { useI18n } from './i18n/i18nContext';
 import { dialog } from './dialog';
+import { unsubscribe as unsubscribePush } from './push';
 
 interface AuthContextType {
     user: Account | null;
@@ -135,6 +136,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             let remaining = accounts;
             if (idToRemove) {
+                // Stop its pushes; not awaited, so signing out doesn't wait on the server
+                const removed = accounts.find(a => a.id === idToRemove);
+                if (removed) unsubscribePush(removed).catch(() => {});
                 await removeSavedAccount(idToRemove);
                 remaining = await getSavedAccounts();
                 setSavedAccounts(remaining);

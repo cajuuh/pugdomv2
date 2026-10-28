@@ -43,7 +43,7 @@ jobs:
 
       # Closed testing: every merge goes straight to the testers' store builds of this version, for fast feedback.
       # Only when nothing native changed since that version's release, or the update could crash those builds.
-      # ponytail: compares app.json, eas.json, yarn.lock and dependencies, so a JavaScript-only dependency change
+      # ponytail: compares app.json, app.config.js, eas.json, yarn.lock and dependencies, so a JavaScript-only dependency change
       # also holds updates back until the next release; use @expo/fingerprint if that gets in the way.
       - name: Check the testers' builds can take this update
         id: testers
@@ -53,7 +53,7 @@ jobs:
           if ! git rev-parse -q --verify "refs/tags/$TAG" > /dev/null; then
             echo "::notice::$TAG isn't released yet, so the testers get this with the $TAG build."
             echo "publish=false" >> "$GITHUB_OUTPUT"
-          elif ! git diff --quiet "$TAG" HEAD -- app.json eas.json yarn.lock || [ "$(deps "$TAG")" != "$(deps HEAD)" ]; then
+          elif ! git diff --quiet "$TAG" HEAD -- app.json app.config.js eas.json yarn.lock || [ "$(deps "$TAG")" != "$(deps HEAD)" ]; then
             echo "::warning::Native config or dependencies changed since $TAG, so an update could break its builds: bump expo.version and release."
             echo "publish=false" >> "$GITHUB_OUTPUT"
           else

@@ -1,10 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, Text, View, useWindowDimensions } from 'react-native';
 import { FlashList, useRecyclingState } from '@shopify/flash-list';
+import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { InfiniteData, useQueryClient } from '@tanstack/react-query';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Account, Notification, NotificationGroup, Relationship, Status } from '../../services/mastodon/types';
-import { NotificationGroupsPage, isNewerId, mergeGroups } from '../../services/mastodon/notifications';
+import { NotificationGroupsPage, clearNotifications, dismissNotificationGroup, isNewerId, mergeGroups } from '../../services/mastodon/notifications';
+import { ActionSheet } from '../../components/ComposeModal/optionSheet';
 import { favouriteStatus, unfavouriteStatus } from '../../services/mastodon/statuses';
 import { markNotificationsRead } from '../../services/mastodon/markers';
 import { useTheme } from '../../services/themeContext';
@@ -26,6 +29,11 @@ import { TKey, Translator } from '../../services/i18n/translate';
 import { useOpenAccount } from '../../hooks/useOpenAccount';
 import { useMarkNotificationsSeen } from '../../hooks/useUnreadNotifications';
 import { dialog } from '../../services/dialog';
+import { useMediaViewer } from '../../components/MediaViewer/mediaViewer';
+import { FocusedImage } from '../../components/TootCard/focusedImage';
+import { mediaLabel } from '../../components/TootCard/tootCard';
+import { useReadDirectMentions } from '../../hooks/useConversations';
+import { Poll, optionPercent } from '../../components/Poll/poll';
 
 interface NotificationsProps {
     onStatusPress?: (id: string) => void;
@@ -143,6 +151,35 @@ const MentionActions = ({ status }: { status: Status }) => {
     );
 };
 
+// A mention's pictures and videos as small thumbnails, so a reply that's only a picture isn't just a name.
+// Tapping one opens the viewer; sensitive ones stay blurred.
+const MediaThumbnails = ({ status, onOpenPost }: { status: Status; onOpenPost?: () => void }) => {
+    const styles = useThemedStyles(makeStyles);
+    const i18n = useI18n();
+    const { openMedia } = useMediaViewer();
+    const attachments = status.media_attachments ?? [];
+    const visual = attachments.filter(attachment => attachment.type !== 'unknown');
+    if (!visual.length) return null;
+    return (
+        <View style={styles.thumbnails}>
+            {visual.map(attachment => {
+                const index = attachments.indexOf(attachment);
+                return (
+                    <Pressable
+                        key={attachment.id}
+                        onPress={() => openMedia(attachments, index, onOpenPost)}
+                        accessibilityRole="imagebutton"
+                        accessibilityLabel={mediaLabel(attachment, index, attachments.length, i18n)}
+                        style={styles.thumbnail}
+                    >
+                        <FocusedImage attachment={attachment} style={styles.thumbnailImage} blurred={status.sensitive} />
+                    </Pressable>
+                );
+            })}
+        </View>
+    );
+};
+
 // The two most recent people in a group, overlapping, with the type badge
 const StackedAvatars = ({ accounts, badge }: { accounts: Account[]; badge: React.ComponentProps<typeof Ionicons>['name'] }) => {
     const styles = useThemedStyles(makeStyles);
@@ -162,9 +199,11 @@ interface NotificationRowProps {
     group: NotificationGroup;
     relationship?: Relationship;
     onStatusPress?: (id: string) => void;
+    // Holding a row starts picking notifications to remove, with this one ticked
+    onLongPress?: () => void;
 }
 
-const NotificationRow = ({ group, relationship, onStatusPress }: NotificationRowProps) => {
+const NotificationRow = ({ group, relationship, onStatusPress, onLongPress }: NotificationRowProps) => {
     const { type } = useTheme();
     const styles = useThemedStyles(makeStyles);
     const i18n = useI18n();
@@ -206,6 +245,7 @@ const NotificationRow = ({ group, relationship, onStatusPress }: NotificationRow
     const avatar = (
         <Pressable
             onPress={account ? () => openAccount(account) : undefined}
+            onLongPress={onLongPress}
             disabled={!account}
             accessibilityRole="link"
             accessibilityLabel={t('post.openProfile', { name })}
@@ -223,6 +263,7 @@ const NotificationRow = ({ group, relationship, onStatusPress }: NotificationRow
                 {/* The whole name block opens the new follower's profile */}
                 <Pressable
                     onPress={() => openAccount(account)}
+                    onLongPress={onLongPress}
                     accessibilityRole="link"
                     accessibilityLabel={t('post.openProfile', { name })}
                     style={[styles.content, styles.followContent]}
@@ -245,33 +286,45 @@ const NotificationRow = ({ group, relationship, onStatusPress }: NotificationRow
                 <Text style={[type.meta, styles.time]}>{time}</Text>
             </View>
             {group.type === 'mention' ? (
-                !!text && renderTextWithEmojis(text, status?.emojis || [], [type.body, styles.mentionText])
+                <>
+                    {!!text && renderTextWithEmojis(text, status?.emojis || [], [type.body, styles.mentionText])}
+                    {status && <MediaThumbnails status={status} onOpenPost={openStatus} />}
+                </>
             ) : (
-                !!text && (
-                    <Well style={styles.snippet}>
-                        <Text style={[type.body, styles.snippetText]} numberOfLines={3}>
-                            {renderTextWithEmojis(text, status?.emojis || [], [type.body, styles.snippetText], 14)}
-                        </Text>
-                    </Well>
-                )
+                <>
+                    {!!text && (
+                        <Well style={styles.snippet}>
+                            <Text style={[type.body, styles.snippetText]} numberOfLines={3}>
+                                {renderTextWithEmojis(text, status?.emojis || [], [type.body, styles.snippetText], 14)}
+                            </Text>
+                        </Well>
+                    )}
+                    {/* An ended poll: its results, as on the post */}
+                    {group.type === 'poll' && status?.poll && <Poll initialPoll={status.poll} readOnly />}
+                </>
             )}
         </>
     );
-    const label = t(text ? 'notifications.rowWithText' : 'notifications.row', {
+    // The row is read as one element, so a poll's results go in its label
+    const results = group.type === 'poll' && status?.poll
+        ? status.poll.options.map(option => t('poll.option', { title: option.title, percent: optionPercent(status.poll!, option) })).join(', ')
+        : '';
+    const spoken = [text, results].filter(Boolean).join('. ');
+    const label = t(spoken ? 'notifications.rowWithText' : 'notifications.row', {
         actors: pollSentence ? '' : actors,
         action: pollSentence || action,
         time,
-        text,
+        text: spoken,
     }).trim();
 
     if (group.type === 'mention' && status) {
         // The row isn't one accessible element here, or screen readers couldn't reach Reply and Favourite;
         // the text block is its own button instead
         return (
-            <Pressable onPress={openStatus} disabled={!openStatus} accessible={false} style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}>
+            <Pressable onPress={openStatus} onLongPress={onLongPress} disabled={!openStatus && !onLongPress} accessible={false} style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}>
                 {avatar}
                 <View style={styles.content}>
-                    <Pressable onPress={openStatus} disabled={!openStatus} accessibilityRole="button" accessibilityLabel={label} style={styles.stack}>
+                    <Pressable onPress={openStatus} onLongPress={onLongPress} disabled={!openStatus && !onLongPress} accessibilityRole="button" accessibilityLabel={label} style={styles.stack}>
                         {body}
                     </Pressable>
                     <MentionActions status={status} />
@@ -283,7 +336,8 @@ const NotificationRow = ({ group, relationship, onStatusPress }: NotificationRow
     return (
         <Pressable
             onPress={openStatus}
-            disabled={!openStatus}
+            onLongPress={onLongPress}
+            disabled={!openStatus && !onLongPress}
             accessibilityRole={openStatus ? 'button' : undefined}
             accessibilityLabel={label}
             style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
@@ -294,16 +348,98 @@ const NotificationRow = ({ group, relationship, onStatusPress }: NotificationRow
     );
 };
 
+// Behind a row swiped to the right: letting go past it removes the notification
+const RemoveAction = () => {
+    const { colors, type } = useTheme();
+    const styles = useThemedStyles(makeStyles);
+    const { t } = useI18n();
+    return (
+        <View style={styles.removeAction}>
+            <Ionicons name="trash-outline" size={20} color={colors.cardBackground} />
+            <Text style={[type.label, styles.removeText]}>{t('notifications.remove')}</Text>
+        </View>
+    );
+};
+
+// Card-toss timing: the row flies off while the swipe finishes, then the gap closes
+const FLY_MS = 220;
+const COLLAPSE_MS = 200;
+
+// A row swiped most of the way to the right flies off, tilting and fading, then its space closes and
+// only then it leaves the list, so the rows below slide up instead of jumping
+const SwipeToRemove = ({ threshold, onRemove, children }: { threshold: number; onRemove: () => void; children: React.ReactNode }) => {
+    const styles = useThemedStyles(makeStyles);
+    const flying = useSharedValue(0);
+    const height = useSharedValue(-1);
+    const measured = useRef(0);
+    const card = useAnimatedStyle(() => ({
+        opacity: 1 - flying.value * 0.7,
+        transform: [{ rotate: `${flying.value * 8}deg` }, { translateY: -flying.value * 16 }],
+    }));
+    const cell = useAnimatedStyle(() => (height.value < 0 ? {} : { height: height.value, overflow: 'hidden' }));
+    const collapse = () => {
+        height.value = measured.current;
+        height.value = withTiming(0, { duration: COLLAPSE_MS }, finished => {
+            if (finished) runOnJS(onRemove)();
+        });
+    };
+    return (
+        <Animated.View style={cell} onLayout={event => (measured.current = event.nativeEvent.layout.height)}>
+            <ReanimatedSwipeable
+                renderLeftActions={() => <RemoveAction />}
+                // Removes only when dragged most of the way across, and only after a clear sideways drag
+                leftThreshold={threshold}
+                dragOffsetFromLeftEdge={24}
+                overshootLeft={false}
+                animationOptions={{ duration: FLY_MS }}
+                onSwipeableWillOpen={() => {
+                    flying.value = withTiming(1, { duration: FLY_MS });
+                }}
+                onSwipeableOpen={collapse}
+            >
+                <Animated.View style={[styles.swipeRow, card]}>{children}</Animated.View>
+            </ReanimatedSwipeable>
+        </Animated.View>
+    );
+};
+
+// A row while picking which to remove: tapping it ticks it, its buttons and links rest
+const SelectableRow = ({ group, selected, onToggle, children }: { group: NotificationGroup; selected: boolean; onToggle: () => void; children: React.ReactNode }) => {
+    const { colors } = useTheme();
+    const styles = useThemedStyles(makeStyles);
+    const i18n = useI18n();
+    const label = `${actorsText(group.accounts.map(nameOf), group.count, i18n)} ${i18n.t(TYPE_CONFIG[group.type].action)}`;
+    return (
+        <Pressable
+            onPress={onToggle}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: selected }}
+            accessibilityLabel={label}
+            style={[styles.selectable, selected && styles.selectableOn]}
+        >
+            <Ionicons name={selected ? 'checkmark-circle' : 'ellipse-outline'} size={24} color={selected ? colors.accentText : colors.textMuted} />
+            <View style={styles.selectableContent} pointerEvents="none" importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+                {children}
+            </View>
+        </Pressable>
+    );
+};
+
 const Notifications = ({ onStatusPress }: NotificationsProps) => {
     const { colors, type } = useTheme();
     const i18n = useI18n();
-    const { t } = i18n;
+    const { t, tn } = i18n;
     const filters: SegmentOption<NotificationFilter>[] = FILTERS.map(value => ({ value, label: t(`notifications.${value}`) }));
     const styles = useThemedStyles(makeStyles);
     const queryClient = useQueryClient();
     const [activeFilter, setActiveFilter] = useState<NotificationFilter>('all');
     const [isPullRefreshing, setIsPullRefreshing] = useState(false);
     const [markedReadId, setMarkedReadId] = useState<string | null>(null);
+    // Picking notifications to remove: the keys of the ticked rows
+    const [selecting, setSelecting] = useState(false);
+    const [selected, setSelected] = useState<Set<string>>(() => new Set());
+    const [clearMenuOpen, setClearMenuOpen] = useState(false);
+    const removeThreshold = useWindowDimensions().width * 0.65;
 
     const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage, refetch } = useNotifications(activeFilter);
 
@@ -334,6 +470,12 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
     useEffect(() => {
         if (newestId) markSeen(newestId);
     }, [newestId, markSeen]);
+    // Direct messages read here clear the envelope's dot too
+    const directMentionIds = useMemo(
+        () => notifications.flatMap(group => (group.type === 'mention' && group.status?.visibility === 'direct' ? [group.status.id] : [])),
+        [notifications]
+    );
+    useReadDirectMentions(directMentionIds);
 
     const handleMarkRead = async () => {
         if (!newestId) return;
@@ -345,6 +487,81 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
         }
     };
     const allRead = !!newestId && markedReadId === newestId;
+
+    // Removed rows go at once, from every filter's list; a failure brings them back with a refetch
+    const removeFromCache = useCallback(
+        (keys: Set<string>) =>
+            queryClient.setQueriesData<InfiniteData<NotificationGroupsPage>>({ queryKey: ['notifications'] }, cached =>
+                cached && { ...cached, pages: cached.pages.map(page => ({ ...page, groups: page.groups.filter(group => !keys.has(group.key)) })) }
+            ),
+        [queryClient]
+    );
+
+    const removeOne = async (group: NotificationGroup) => {
+        removeFromCache(new Set([group.key]));
+        try {
+            await dismissNotificationGroup(group);
+        } catch (error) {
+            dialog.toast(t('notifications.removeFailed'));
+            refetch();
+        }
+    };
+
+    const startSelecting = (key: string) => {
+        setSelected(new Set([key]));
+        setSelecting(true);
+    };
+    const stopSelecting = () => {
+        setSelecting(false);
+        setSelected(new Set());
+    };
+    const toggle = (key: string) =>
+        setSelected(current => {
+            const next = new Set(current);
+            if (next.has(key)) next.delete(key);
+            else next.add(key);
+            return next;
+        });
+
+    // Removing deletes them from the account, in every app, so it asks first
+    const removeSelected = () =>
+        dialog.alert(tn('notifications.removeSelectedTitle', selected.size), t('notifications.removeSelectedMessage'), [
+            { text: t('common.cancel'), style: 'cancel' },
+            {
+                text: t('notifications.remove'),
+                style: 'destructive',
+                onPress: async () => {
+                    const groups = notifications.filter(group => selected.has(group.key));
+                    const results = await Promise.allSettled(groups.map(dismissNotificationGroup));
+                    const removed = new Set(groups.filter((_, index) => results[index].status === 'fulfilled').map(group => group.key));
+                    removeFromCache(removed);
+                    const failed = groups.length - removed.size;
+                    dialog.toast(failed > 0 ? tn('notifications.removeSelectedFailed', failed) : tn('notifications.removedSelected', removed.size));
+                    stopSelecting();
+                },
+            },
+        ]);
+
+    // Clearing deletes them from the account (every app, not just pugdon), so it asks first
+    const handleClear = () =>
+        dialog.alert(t('notifications.clearTitle'), t('notifications.clearMessage'), [
+            { text: t('common.cancel'), style: 'cancel' },
+            {
+                text: t('notifications.clear'),
+                style: 'destructive',
+                onPress: async () => {
+                    try {
+                        await clearNotifications();
+                        queryClient.setQueriesData<InfiniteData<NotificationGroupsPage>>({ queryKey: ['notifications'] }, cached =>
+                            cached && { ...cached, pages: cached.pages.map(page => ({ ...page, groups: [] })) }
+                        );
+                        dialog.toast(t('notifications.cleared'));
+                    } catch (error) {
+                        dialog.toast(t('notifications.clearFailed'));
+                    }
+                },
+            },
+        ]);
 
     // Track pull-to-refresh separately so background refetches (e.g. returning to the tab) don't show the spinner
     const handleRefresh = useCallback(async () => {
@@ -366,17 +583,33 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
         if (item.kind === 'section') {
             return <SectionLabel style={[styles.sectionLabel, index > 0 && styles.sectionLabelSpaced]}>{item.label}</SectionLabel>;
         }
+        const row = (
+            <NotificationRow
+                group={item.group}
+                relationship={item.group.accounts[0] && relationships.get(item.group.accounts[0].id)}
+                onStatusPress={onStatusPress}
+                onLongPress={selecting ? undefined : () => startSelecting(item.group.key)}
+            />
+        );
         return (
             <View style={[styles.segment, item.first && styles.segmentFirst, item.last && styles.segmentLast]}>
                 {!item.first && <View style={styles.separator} />}
-                <NotificationRow
-                    group={item.group}
-                    relationship={item.group.accounts[0] && relationships.get(item.group.accounts[0].id)}
-                    onStatusPress={onStatusPress}
-                />
+                {selecting ? (
+                    <SelectableRow group={item.group} selected={selected.has(item.group.key)} onToggle={() => toggle(item.group.key)}>
+                        {row}
+                    </SelectableRow>
+                ) : (
+                    // Keyed by the notification so a recycled cell never comes back half swiped or collapsed
+                    <SwipeToRemove key={item.group.key} threshold={removeThreshold} onRemove={() => removeOne(item.group)}>
+                        {row}
+                    </SwipeToRemove>
+                )}
             </View>
         );
     };
+
+    // Rows read follow state and the selection from outside `data`, so re-render them when either changes
+    const rowState = useMemo(() => ({ relationships, selecting, selected }), [relationships, selecting, selected]);
 
     const renderFooter = () => {
         if (!isFetchingNextPage) return null;
@@ -398,20 +631,45 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
 
     return (
         <View style={styles.container}>
-            <View style={styles.header}>
-                <Text accessibilityRole="header" style={[type.title, styles.title]}>{t('notifications.title')}</Text>
-                <IconButton
-                    icon="checkmark-done"
-                    accessibilityLabel={t('notifications.markAllRead')}
-                    onPress={handleMarkRead}
-                    selected={allRead}
-                    disabled={!newestId}
-                    color={allRead ? colors.accentText : colors.textSecondary}
-                    style={styles.markRead}
-                />
-            </View>
+            {selecting ? (
+                <View style={styles.header}>
+                    <PillButton label={t('common.cancel')} variant="ghost" size="small" onPress={stopSelecting} />
+                    <Text accessibilityRole="header" style={[type.name, styles.title]}>{tn('notifications.selectedCount', selected.size)}</Text>
+                    <PillButton
+                        label={t('notifications.remove')}
+                        icon="trash-outline"
+                        variant="danger"
+                        size="small"
+                        onPress={removeSelected}
+                        disabled={selected.size === 0}
+                    />
+                </View>
+            ) : (
+                <View style={styles.header}>
+                    <Text accessibilityRole="header" style={[type.title, styles.title]}>{t('notifications.title')}</Text>
+                    <View style={styles.headerActions}>
+                        <PillButton
+                            label={t('notifications.clear')}
+                            icon="trash-outline"
+                            size="small"
+                            variant="subtle"
+                            onPress={() => setClearMenuOpen(true)}
+                            disabled={notifications.length === 0}
+                        />
+                        <IconButton
+                            icon="checkmark-done"
+                            accessibilityLabel={t('notifications.markAllRead')}
+                            onPress={handleMarkRead}
+                            selected={allRead}
+                            disabled={!newestId}
+                            color={allRead ? colors.accentText : colors.textSecondary}
+                            style={styles.markRead}
+                        />
+                    </View>
+                </View>
+            )}
             <View style={styles.filters}>
-                <SegmentedPill variant="chips" options={filters} value={activeFilter} onChange={setActiveFilter} />
+                <SegmentedPill variant="chips" options={filters} value={activeFilter} onChange={filter => { setActiveFilter(filter); stopSelecting(); }} />
             </View>
             {isLoading && notifications.length === 0 ? (
                 <View style={styles.loadingContainer}>
@@ -423,8 +681,7 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
                     keyExtractor={(item) => item.key}
                     getItemType={(item) => (item.kind === 'section' ? 'section' : `${item.group.type}${item.group.count > 1 ? '-grouped' : ''}`)}
                     renderItem={renderItem}
-                    // Rows read follow state from outside `data`, so re-render them when it changes
-                    extraData={relationships}
+                    extraData={rowState}
                     onEndReached={handleLoadMore}
                     onEndReachedThreshold={0.5}
                     refreshControl={
@@ -441,6 +698,15 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
                     showsVerticalScrollIndicator={false}
                 />
             )}
+            <ActionSheet
+                visible={clearMenuOpen}
+                title={t('notifications.clearMenuTitle')}
+                onClose={() => setClearMenuOpen(false)}
+                actions={[
+                    { key: 'select', icon: 'checkmark-circle-outline', label: t('notifications.select'), onPress: () => setSelecting(true) },
+                    { key: 'clearAll', icon: 'trash-outline', label: t('notifications.clearAllAction'), description: t('notifications.clearAllHint'), onPress: handleClear },
+                ]}
+            />
         </View>
     );
 };

@@ -209,3 +209,53 @@ export const makeAppearanceStyles = (colors: ThemeColors) => StyleSheet.create({
         color: colors.textMuted,
     },
 });
+
+// Settings → Clear notifications: an intro, a card per way to remove them, and a closing note
+export const makeClearHelpStyles = (colors: ThemeColors) => StyleSheet.create({
+    content: {
+        paddingHorizontal: space.lg,
+        paddingTop: 6,
+        paddingBottom: TAB_BAR_CLEARANCE, // the dock floats over Settings
+        gap: space.sm,
+    },
+    intro: {
+        color: colors.textSecondary,
+        marginHorizontal: space.xs,
+        marginBottom: space.xs,
+    },
+    way: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: space.md,
+        padding: space.md,
+    },
+    icon: {
+        width: 40,
+        height: 40,
+        borderRadius: radii.pill,
+        backgroundColor: colors.accentSoft,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    wayText: {
+        flex: 1,
+        gap: 2,
+    },
+    wayTitle: {
+        color: colors.textPrimary,
+    },
+    wayBody: {
+        color: colors.textSecondary,
+    },
+    note: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: space.sm,
+        marginTop: space.xs,
+        marginHorizontal: space.xs,
+    },
+    noteText: {
+        flex: 1,
+        color: colors.textMuted,
+    },
+});

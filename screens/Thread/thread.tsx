@@ -278,7 +278,9 @@ export default function Thread({
                                 >
                                     <TootCard
                                         status={item}
-                                        onPress={onStatusPress}
+                                        // The open post isn't a button: tapping it would only open it again, and on Android a
+                                        // pressable card takes the touch from its text, which then can't be held to select
+                                        onPress={isMain ? undefined : onStatusPress}
                                         threadMode={true}
                                         showReactions={isMain}
                                         // The avatar line links what the post answers down to it, and a reply to its branch

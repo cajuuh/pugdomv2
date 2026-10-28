@@ -4,10 +4,12 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
 import Notifications from '../screens/Notifications/notifications';
-import { groupsFromNotifications } from '../services/mastodon/notifications';
+import { clearNotifications, dismissNotificationGroup, groupsFromNotifications } from '../services/mastodon/notifications';
+import { dialog } from '../services/dialog';
 import { authorizeFollowRequest, followAccount, getRelationships } from '../services/mastodon/accounts';
 import { favouriteStatus } from '../services/mastodon/statuses';
 import { markNotificationsRead } from '../services/mastodon/markers';
+import { getConversations, markConversationRead } from '../services/mastodon/conversations';
 import { Account, Notification } from '../services/mastodon/types';
 import { actorsText, buildListItems, notificationTime, plainText, withoutLeadingMentions } from '../screens/Notifications/rows';
 
@@ -22,6 +24,8 @@ jest.mock('../services/mastodon/notifications', () => {
             groups: actual.groupsFromNotifications(await mockV1(maxId, types)),
             nextMaxId: undefined,
         })),
+        clearNotifications: jest.fn(),
+        dismissNotificationGroup: jest.fn(),
     };
 });
 jest.mock('../services/settingsContext', () => ({ useSettings: () => ({ groupNotifications: true }) }));
@@ -37,6 +41,9 @@ jest.mock('../services/mastodon/markers', () => ({ markNotificationsRead: jest.f
 jest.mock('../services/themeContext', () => ({
     useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
 }));
+const mockOpenMedia = jest.fn();
+jest.mock('../components/MediaViewer/mediaViewer', () => ({ useMediaViewer: () => ({ openMedia: mockOpenMedia }) }));
+jest.mock('../services/mastodon/conversations', () => ({ getConversations: jest.fn(), markConversationRead: jest.fn() }));
 const mockOpenCompose = jest.fn();
 jest.mock('../services/composeContext', () => ({
     useCompose: () => ({ openCompose: mockOpenCompose }),
@@ -75,6 +82,7 @@ describe('Notifications', () => {
         jest.clearAllMocks();
         queryClient = createTestQueryClient();
         mockedRelationships.mockResolvedValue([]);
+        (getConversations as jest.Mock).mockResolvedValue({ conversations: [] });
     });
 
     it('asks the server only for the types it can render', async () => {
@@ -129,6 +137,21 @@ describe('Notifications', () => {
         expect(screen.getByText('Your poll has ended')).toBeTruthy();
     });
 
+    it('shows the results of an ended poll, and reads them out', async () => {
+        const ended = notification('5', 'poll', account('c', 'carol'));
+        ended.status!.poll = {
+            id: 'p1', expires_at: null, expired: true, multiple: false, votes_count: 4, voters_count: 4, voted: true, own_votes: [1], emojis: [],
+            options: [{ title: 'Tea', votes_count: 1 }, { title: 'Coffee', votes_count: 3 }],
+        } as any;
+        mockedFetch.mockResolvedValue([ended]);
+        await renderScreen();
+
+        expect(await screen.findByText('Coffee')).toBeTruthy();
+        expect(screen.getByText('75%')).toBeTruthy();
+        expect(screen.getByText('25%')).toBeTruthy();
+        expect(screen.getByLabelText(/Tea, 25 percent, Coffee, 75 percent/)).toBeTruthy();
+    });
+
     it('accepts a follow request from the row', async () => {
         (authorizeFollowRequest as jest.Mock).mockResolvedValue(undefined);
         mockedFetch.mockResolvedValue([notification('1', 'follow_request', account('a', 'alice'))]);
@@ -148,6 +171,31 @@ describe('Notifications', () => {
         await renderScreen();
 
         expect(await screen.findByText(/privately mentioned you/)).toBeTruthy();
+    });
+
+    it('marks a direct message read when it shows here, so the envelope dot goes', async () => {
+        const dm = notification('1', 'mention', account('a', 'alice'));
+        mockedFetch.mockResolvedValue([{ ...dm, status: { ...dm.status, visibility: 'direct' } }]);
+        (getConversations as jest.Mock).mockResolvedValue({
+            conversations: [
+                { id: 'c1', unread: true, accounts: [], last_status: { id: 's-1' } },
+                { id: 'c2', unread: true, accounts: [], last_status: { id: 's-other' } },
+            ],
+        });
+        await renderScreen();
+
+        await waitFor(() => expect(markConversationRead).toHaveBeenCalledWith('c1'));
+        expect(markConversationRead).not.toHaveBeenCalledWith('c2');
+    });
+
+    it('shows the pictures in a reply, which open the viewer', async () => {
+        const reply = notification('1', 'mention', account('a', 'alice'));
+        const picture = { id: 'm1', type: 'image', url: 'u', preview_url: 'p', description: 'A pug on a sofa' };
+        mockedFetch.mockResolvedValue([{ ...reply, status: { ...reply.status, content: '<p>@me</p>', media_attachments: [picture] } }]);
+        await renderScreen();
+
+        await fireEvent.press(await screen.findByRole('imagebutton', { name: 'A pug on a sofa' }));
+        expect(mockOpenMedia).toHaveBeenCalledWith([picture], 0, undefined);
     });
 
     it('shows when someone quotes your post, with what they wrote', async () => {
@@ -307,6 +355,97 @@ describe('Notifications', () => {
 
         expect(mockedMarkRead).toHaveBeenCalledWith('110');
         expect(screen.getByRole('button', { name: 'Mark all as read' })).toBeSelected();
+    });
+
+    describe('clear all', () => {
+        // Presses the confirmation's destructive button, as the user would
+        const confirmClear = async () => {
+            const alert = jest.spyOn(dialog, 'alert');
+            await fireEvent.press(screen.getByRole('button', { name: 'Clear' }));
+            await fireEvent.press(await screen.findByRole('button', { name: /Clear all/ }));
+            const [title, , buttons] = alert.mock.calls[alert.mock.calls.length - 1];
+            expect(title).toBe('Clear all notifications?');
+            await waitFor(async () => buttons!.find(button => button.style === 'destructive')!.onPress!());
+        };
+
+        it('asks first, then deletes them and empties the list', async () => {
+            mockedFetch.mockResolvedValue([notification('110', 'mention', account('a', 'alice'))]);
+            (clearNotifications as jest.Mock).mockResolvedValue(undefined);
+            const toast = jest.spyOn(dialog, 'toast');
+            await renderScreen();
+            await screen.findByText(/mentioned you/);
+
+            await confirmClear();
+
+            expect(clearNotifications).toHaveBeenCalledTimes(1);
+            await waitFor(() => expect(screen.queryByText(/mentioned you/)).toBeNull());
+            expect(toast).toHaveBeenCalledWith('Notifications cleared');
+        });
+
+        it('keeps the list and says so when clearing fails', async () => {
+            mockedFetch.mockResolvedValue([notification('110', 'mention', account('a', 'alice'))]);
+            (clearNotifications as jest.Mock).mockRejectedValue(new Error('offline'));
+            const toast = jest.spyOn(dialog, 'toast');
+            await renderScreen();
+            await screen.findByText(/mentioned you/);
+
+            await confirmClear();
+
+            await waitFor(() => expect(toast).toHaveBeenCalledWith("Couldn't clear notifications. Try again."));
+            expect(screen.getByText(/mentioned you/)).toBeTruthy();
+        });
+
+        it('removes only the notifications you tick', async () => {
+            mockedFetch.mockResolvedValue([
+                notification('110', 'mention', account('a', 'alice')),
+                notification('99', 'mention', account('b', 'bob')),
+            ]);
+            (dismissNotificationGroup as jest.Mock).mockResolvedValue(undefined);
+            const alert = jest.spyOn(dialog, 'alert');
+            await renderScreen();
+            await screen.findAllByText(/mentioned you/);
+
+            await fireEvent.press(screen.getByRole('button', { name: 'Clear' }));
+            await fireEvent.press(await screen.findByRole('button', { name: 'Select notifications' }));
+            const remove = screen.getByRole('button', { name: 'Remove' });
+            expect(remove).toBeDisabled();
+
+            // While picking, a row ticks instead of opening
+            await fireEvent.press(screen.getByRole('checkbox', { name: /bob/ }));
+            expect(screen.getByText('1 selected')).toBeTruthy();
+            await fireEvent.press(remove);
+            const [title, , buttons] = alert.mock.calls[alert.mock.calls.length - 1];
+            expect(title).toBe('Remove 1 notification?');
+            await waitFor(async () => buttons!.find(button => button.style === 'destructive')!.onPress!());
+
+            expect(dismissNotificationGroup).toHaveBeenCalledTimes(1);
+            expect((dismissNotificationGroup as jest.Mock).mock.calls[0][0]).toMatchObject({ ids: ['99'] });
+            await waitFor(() => expect(screen.getAllByText(/mentioned you/)).toHaveLength(1));
+            // Done: back to the normal header
+            expect(screen.getByRole('button', { name: 'Clear' })).toBeTruthy();
+        });
+
+        it('starts picking with the notification you hold ticked', async () => {
+            mockedFetch.mockResolvedValue([
+                notification('110', 'mention', account('a', 'alice')),
+                notification('99', 'mention', account('b', 'bob')),
+            ]);
+            await renderScreen();
+            const [, bobs] = await screen.findAllByText(/mentioned you/);
+
+            await fireEvent(bobs, 'longPress');
+
+            expect(screen.getByText('1 selected')).toBeTruthy();
+            expect(screen.getByRole('checkbox', { name: /bob/ })).toBeChecked();
+            expect(screen.getByRole('checkbox', { name: /alice/ })).not.toBeChecked();
+            expect(screen.getByRole('button', { name: 'Remove' })).toBeEnabled();
+        });
+
+        it('is off while there is nothing to clear', async () => {
+            mockedFetch.mockResolvedValue([]);
+            await renderScreen();
+            await waitFor(() => expect(screen.getByRole('button', { name: 'Clear' })).toBeDisabled());
+        });
     });
 
     describe('grouped rows', () => {

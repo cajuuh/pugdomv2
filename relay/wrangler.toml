@@ -1,0 +1,13 @@
+# Deploy from this folder:
+#   npx wrangler login
+#   npx wrangler secret put SEAL_KEY   # 32 random bytes, base64url: node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
+#   npx wrangler deploy
+# Changing SEAL_KEY breaks every existing subscription (the app re-registers on its next start).
+name = "pugdom-relay"
+main = "index.js"
+compatibility_date = "2026-10-01"
+workers_dev = true
+preview_urls = false
+
+[observability]
+enabled = false
