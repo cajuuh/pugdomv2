@@ -35,6 +35,12 @@ export const pollTimeLeft = (poll: Pick<PollType, 'expired' | 'expires_at'>, now
     return t('poll.daysLeft', { count: Math.floor(hours / 24) });
 };
 
+// An option's share, as the result bars show it: of voters for multiple-choice polls, else of votes
+export const optionPercent = (poll: Pick<PollType, 'voters_count' | 'votes_count'>, option: PollOption) => {
+    const total = poll.voters_count || poll.votes_count || 0;
+    return total > 0 ? Math.round(((option.votes_count || 0) / total) * 100) : 0;
+};
+
 // Past this width the winner's bar sits under its label, so the label can use the on-accent ink
 // (which is light for black pug and would vanish on the surface beyond a short bar)
 const ON_ACCENT_LABEL_MIN_PERCENT = 60;
@@ -102,7 +108,7 @@ export const Poll: React.FC<PollProps> = ({ initialPoll, onPollUpdated, readOnly
 
     const renderResult = (option: PollOption, index: number) => {
         const votesCount = option.votes_count || 0;
-        const percent = totalVotes > 0 ? Math.round((votesCount / totalVotes) * 100) : 0;
+        const percent = optionPercent(poll, option);
         const isWinner = totalVotes > 0 && votesCount === topVotes;
         const isOwnVote = poll.own_votes?.includes(index);
         const labelOnAccent = isWinner && percent >= ON_ACCENT_LABEL_MIN_PERCENT;
