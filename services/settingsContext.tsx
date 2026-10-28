@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getSetting, getStringSetting, saveSetting, saveStringSetting } from './storage';
+import { DEFAULT_PUSH_ALERTS, PushAlerts, PushAlertType } from './push';
 
 interface SettingsContextType {
     notifications: boolean;
@@ -14,6 +15,9 @@ interface SettingsContextType {
     // Hidden sensitive media gets a cover over the blur; off, it's only blurred
     coverSensitiveMedia: boolean;
     setNotifications: (value: boolean) => Promise<void>;
+    // Which kinds of notifications are pushed (when `notifications` is on)
+    pushAlerts: PushAlerts;
+    setPushAlert: (type: PushAlertType, value: boolean) => Promise<void>;
     setMediaAutoplay: (value: boolean) => Promise<void>;
     setCompactMode: (value: boolean) => Promise<void>;
     setHideCounts: (value: boolean) => Promise<void>;
@@ -32,6 +36,7 @@ interface SettingsContextType {
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export const NOTIFICATIONS_KEY = 'pugdom_settings_notifications';
+export const PUSH_ALERTS_KEY = 'pugdom_settings_push_alerts';
 export const AUTOPLAY_KEY = 'pugdom_settings_autoplay';
 export const COMPACT_KEY = 'pugdom_settings_compact';
 export const HIDE_COUNTS_KEY = 'pugdom_settings_hide_counts';
@@ -43,6 +48,7 @@ export const COVER_SENSITIVE_KEY = 'pugdom_settings_cover_sensitive';
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [notifications, setNotificationsState] = useState(true);
+    const [pushAlerts, setPushAlertsState] = useState<PushAlerts>(DEFAULT_PUSH_ALERTS);
     const [mediaAutoplay, setMediaAutoplayState] = useState(false);
     const [compactMode, setCompactModeState] = useState(false);
     const [hideCounts, setHideCountsState] = useState(false);
@@ -57,6 +63,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const loadSettings = async () => {
             try {
                 const notify = await getSetting(NOTIFICATIONS_KEY, true);
+                const alerts = await getStringSetting(PUSH_ALERTS_KEY, '');
                 const autoplay = await getSetting(AUTOPLAY_KEY, false);
                 const compact = await getSetting(COMPACT_KEY, false);
                 const counts = await getSetting(HIDE_COUNTS_KEY, false);
@@ -66,6 +73,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 const sensitive = await getStringSetting(SHOW_SENSITIVE_KEY, '');
                 const cover = await getSetting(COVER_SENSITIVE_KEY, true);
                 setNotificationsState(notify);
+                // Types added in later versions start on
+                setPushAlertsState({ ...DEFAULT_PUSH_ALERTS, ...(alerts ? JSON.parse(alerts) : {}) });
                 setMediaAutoplayState(autoplay);
                 setCompactModeState(compact);
                 setHideCountsState(counts);
@@ -86,6 +95,12 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const setNotifications = async (value: boolean) => {
         setNotificationsState(value);
         await saveSetting(NOTIFICATIONS_KEY, value);
+    };
+
+    const setPushAlert = async (type: PushAlertType, value: boolean) => {
+        const next = { ...pushAlerts, [type]: value };
+        setPushAlertsState(next);
+        await saveStringSetting(PUSH_ALERTS_KEY, JSON.stringify(next));
     };
 
     const setMediaAutoplay = async (value: boolean) => {
@@ -139,6 +154,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 showSensitiveMedia,
                 coverSensitiveMedia,
                 setNotifications,
+                pushAlerts,
+                setPushAlert,
                 setMediaAutoplay,
                 setCompactMode,
                 setHideCounts,

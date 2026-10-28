@@ -12,6 +12,9 @@ import { Avatar, Card, IconButton, PugMark, SectionLabel, ThemedSwitch } from '.
 import { appVersionLabel, codeVersionLabel } from '../../services/appVersion';
 import Appearance from './appearance';
 import ClearNotificationsHelp from './clearNotificationsHelp';
+import PushAlerts from './pushAlerts';
+import { Esmeralda, useEsmeraldaTaps } from './esmeralda';
+import { requestPushPermission } from '../../services/push';
 import { SettingsHeader } from './header';
 import { makeStyles } from './styles';
 import { useI18n } from '../../services/i18n/i18nContext';
@@ -59,8 +62,9 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts 
     // On when the app or the account shows sensitive media as it is
     const showSensitive = useMediaDisplay() === 'show_all';
     // Appearance and the clear-notifications help are a second level inside Settings
-    const [page, setPage] = useState<'main' | 'appearance' | 'clearNotifications'>('main');
+    const [page, setPage] = useState<'main' | 'appearance' | 'clearNotifications' | 'pushAlerts'>('main');
     const { t, language, setLanguage, dict } = useI18n();
+    const esmeralda = useEsmeraldaTaps();
     const [languageSheetVisible, setLanguageSheetVisible] = useState(false);
     const [quoteSheetVisible, setQuoteSheetVisible] = useState(false);
     // Only servers with quote posts have a default for who can quote
@@ -88,6 +92,14 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts 
         );
     }
 
+    if (page === 'pushAlerts') {
+        return (
+            <SafeAreaView style={styles.safeArea}>
+                <PushAlerts onBack={() => setPage('main')} />
+            </SafeAreaView>
+        );
+    }
+
     if (page === 'clearNotifications') {
         return (
             <SafeAreaView style={styles.safeArea}>
@@ -97,6 +109,15 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts 
     }
 
     const labelStyle = [type.name, styles.rowLabel];
+
+    // Turning push on asks for the system permission first; once refused, only the phone's settings can allow it
+    const changePush = async (value: boolean) => {
+        if (value && !(await requestPushPermission(t('push.channel')))) {
+            dialog.alert(t('push.deniedTitle'), t('push.deniedText'));
+            return;
+        }
+        setNotifications(value);
+    };
 
     const switchRow = (icon: React.ComponentProps<typeof Ionicons>['name'], label: string, value: boolean, onChange: (value: boolean) => void) => (
         <View style={styles.row}>
@@ -205,7 +226,17 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts 
                         </>
                     )}
                     <View style={styles.divider} />
-                    {switchRow('notifications-outline', t('settings.pushNotifications'), notifications, setNotifications)}
+                    {switchRow('notifications-outline', t('settings.pushNotifications'), notifications, changePush)}
+                    {notifications && (
+                        <>
+                            <View style={styles.divider} />
+                            <Pressable style={styles.row} onPress={() => setPage('pushAlerts')} accessibilityRole="button" accessibilityLabel={t('settings.pushAlerts')}>
+                                <Ionicons name="options-outline" size={20} color={colors.accentText} />
+                                <Text style={[labelStyle, styles.rowText]}>{t('settings.pushAlerts')}</Text>
+                                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                            </Pressable>
+                        </>
+                    )}
                     <View style={styles.divider} />
                     {switchRow('layers-outline', t('settings.groupNotifications'), groupNotifications, setGroupNotifications)}
                     <View style={styles.divider} />
@@ -250,11 +281,12 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts 
 
                 <SectionLabel style={styles.sectionLabel}>{t('settings.about')}</SectionLabel>
                 <Card style={styles.group}>
-                    <View style={styles.row}>
+                    {/* Tapped 7 times: Esmeralda */}
+                    <Pressable style={styles.row} onPress={esmeralda.tap}>
                         <Ionicons name="information-circle-outline" size={20} color={colors.accentText} />
                         <Text style={[labelStyle, styles.rowText]}>{t('settings.version')}</Text>
                         <Text style={[type.meta, styles.rowValue]}>{appVersionLabel()}</Text>
-                    </View>
+                    </Pressable>
                     <View style={styles.divider} />
                     <View style={styles.row}>
                         <Ionicons name="code-slash-outline" size={20} color={colors.accentText} />
@@ -282,6 +314,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts 
                 </Pressable>
             </ScrollView>
 
+            <Esmeralda visible={esmeralda.open} onClose={esmeralda.close} />
             <OptionSheet<QuotePolicy>
                 visible={quoteSheetVisible}
                 title={t('settings.quotePolicy')}

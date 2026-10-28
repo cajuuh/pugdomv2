@@ -801,6 +801,7 @@ export const en = {
         quotePolicyLabel: 'Who can quote your posts: {{value}}',
         languageLabel: 'Language, {{value}}',
         pushNotifications: 'Push Notifications',
+        pushAlerts: 'Push notification types',
         autoplay: 'Autoplay Media',
         compactMode: 'Compact Mode',
         hideCounts: 'Hide numbers on posts',
@@ -822,6 +823,31 @@ export const en = {
     languageNames: {
         'pt-BR': 'Português (Brasil)',
         en: 'English',
+    },
+    push: {
+        // Android's name for pugdon's notification channel (system settings)
+        channel: 'Notifications',
+        title: 'Push notification types',
+        back: 'Back to settings',
+        intro: 'Choose what reaches your phone while pugdon is closed. This applies to every account signed in here.',
+        mention: 'Mentions and replies',
+        status: 'New posts from people you get notified about',
+        reblog: 'Boosts of your posts',
+        favourite: 'Favourites of your posts',
+        follow: 'New followers',
+        follow_request: 'Follow requests',
+        poll: 'Polls that ended',
+        update: 'Edits to posts you boosted',
+        quote: 'Quotes of your posts',
+        privacy: "On its way to your phone, a notification's text passes through pugdon's relay and Expo's push service. Neither stores it.",
+        deniedTitle: 'Notifications are off for pugdon',
+        deniedText: "Allow notifications for pugdon in your phone's settings, then turn this on again.",
+    },
+    // The easter egg behind Settings → App Version
+    esmeralda: {
+        photo: 'Esmeralda, a fawn pug, sitting on a tiled floor and looking up at the camera',
+        text: 'The pug who is the reason pugdon exists.',
+        close: 'Close',
     },
     clearHelp: {
         title: 'Clear notifications',

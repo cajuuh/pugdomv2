@@ -55,3 +55,16 @@ jest.mock('expo-image-manipulator', () => {
         FlipType: { Horizontal: 'horizontal', Vertical: 'vertical' },
     };
 });
+
+// Native push: permission granted, a fixed Expo token, no tapped notification
+jest.mock('expo-notifications', () => ({
+    setNotificationHandler: jest.fn(),
+    setNotificationChannelAsync: jest.fn(async () => null),
+    getPermissionsAsync: jest.fn(async () => ({ granted: true })),
+    requestPermissionsAsync: jest.fn(async () => ({ granted: true })),
+    getExpoPushTokenAsync: jest.fn(async () => ({ type: 'expo', data: 'ExponentPushToken[test]' })),
+    useLastNotificationResponse: jest.fn(() => null),
+    clearLastNotificationResponse: jest.fn(),
+    DEFAULT_ACTION_IDENTIFIER: 'expo.modules.notifications.actions.DEFAULT',
+    AndroidImportance: { HIGH: 5 },
+}));

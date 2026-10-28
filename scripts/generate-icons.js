@@ -23,6 +23,8 @@ const files = {
     'icon-tinted.png': svg({ box: ICON, ground: '#000000', body: pugStencil('#FFFFFF') }),
     'android-icon-foreground.png': svg({ box: ADAPTIVE, body: pugMark({ mode: 'light' }) }),
     'android-icon-monochrome.png': svg({ box: ADAPTIVE, body: pugStencil('#FFFFFF') }),
+    // Android's status-bar icon for push notifications: white on transparent, 96px
+    'notification-icon.png': svg({ size: 96, box: 88, body: pugStencil('#FFFFFF') }),
     'splash-icon.png': svg({ box: SPLASH, body: pugMark({ mode: 'light' }) }),
     'splash-icon-dark.png': svg({ box: SPLASH, body: pugMark({ mode: 'dark' }) }),
     'favicon.png': svg({ size: 48, box: 48, body: pugMark({ mode: 'light', wrinkle: false }) }),

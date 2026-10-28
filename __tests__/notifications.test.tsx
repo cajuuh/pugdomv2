@@ -137,6 +137,21 @@ describe('Notifications', () => {
         expect(screen.getByText('Your poll has ended')).toBeTruthy();
     });
 
+    it('shows the results of an ended poll, and reads them out', async () => {
+        const ended = notification('5', 'poll', account('c', 'carol'));
+        ended.status!.poll = {
+            id: 'p1', expires_at: null, expired: true, multiple: false, votes_count: 4, voters_count: 4, voted: true, own_votes: [1], emojis: [],
+            options: [{ title: 'Tea', votes_count: 1 }, { title: 'Coffee', votes_count: 3 }],
+        } as any;
+        mockedFetch.mockResolvedValue([ended]);
+        await renderScreen();
+
+        expect(await screen.findByText('Coffee')).toBeTruthy();
+        expect(screen.getByText('75%')).toBeTruthy();
+        expect(screen.getByText('25%')).toBeTruthy();
+        expect(screen.getByLabelText(/Tea, 25 percent, Coffee, 75 percent/)).toBeTruthy();
+    });
+
     it('accepts a follow request from the row', async () => {
         (authorizeFollowRequest as jest.Mock).mockResolvedValue(undefined);
         mockedFetch.mockResolvedValue([notification('1', 'follow_request', account('a', 'alice'))]);

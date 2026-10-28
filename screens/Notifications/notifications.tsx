@@ -33,6 +33,7 @@ import { useMediaViewer } from '../../components/MediaViewer/mediaViewer';
 import { FocusedImage } from '../../components/TootCard/focusedImage';
 import { mediaLabel } from '../../components/TootCard/tootCard';
 import { useReadDirectMentions } from '../../hooks/useConversations';
+import { Poll, optionPercent } from '../../components/Poll/poll';
 
 interface NotificationsProps {
     onStatusPress?: (id: string) => void;
@@ -290,21 +291,30 @@ const NotificationRow = ({ group, relationship, onStatusPress, onLongPress }: No
                     {status && <MediaThumbnails status={status} onOpenPost={openStatus} />}
                 </>
             ) : (
-                !!text && (
-                    <Well style={styles.snippet}>
-                        <Text style={[type.body, styles.snippetText]} numberOfLines={3}>
-                            {renderTextWithEmojis(text, status?.emojis || [], [type.body, styles.snippetText], 14)}
-                        </Text>
-                    </Well>
-                )
+                <>
+                    {!!text && (
+                        <Well style={styles.snippet}>
+                            <Text style={[type.body, styles.snippetText]} numberOfLines={3}>
+                                {renderTextWithEmojis(text, status?.emojis || [], [type.body, styles.snippetText], 14)}
+                            </Text>
+                        </Well>
+                    )}
+                    {/* An ended poll: its results, as on the post */}
+                    {group.type === 'poll' && status?.poll && <Poll initialPoll={status.poll} readOnly />}
+                </>
             )}
         </>
     );
-    const label = t(text ? 'notifications.rowWithText' : 'notifications.row', {
+    // The row is read as one element, so a poll's results go in its label
+    const results = group.type === 'poll' && status?.poll
+        ? status.poll.options.map(option => t('poll.option', { title: option.title, percent: optionPercent(status.poll!, option) })).join(', ')
+        : '';
+    const spoken = [text, results].filter(Boolean).join('. ');
+    const label = t(spoken ? 'notifications.rowWithText' : 'notifications.row', {
         actors: pollSentence ? '' : actors,
         action: pollSentence || action,
         time,
-        text,
+        text: spoken,
     }).trim();
 
     if (group.type === 'mention' && status) {
