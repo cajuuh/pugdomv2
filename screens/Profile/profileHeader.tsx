@@ -9,7 +9,7 @@ import { StatusHtmlContent, openLink } from '../../components/TootCard/htmlConte
 import { Avatar, IconButton, PillButton, PugMark, RoleBadge, SegmentOption, SegmentedPill } from '../../components/ui';
 import { FollowButton } from '../../components/FollowButton/followButton';
 import { useOpenAccount } from '../../hooks/useOpenAccount';
-import { hitSlopFor, space } from '../../services/theme/shape';
+import { MIN_TOUCH, hitSlopFor, space } from '../../services/theme/shape';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { AVATAR_SIZE, BANNER_HEIGHT, SHARE_SIZE, makeStyles } from './styles';
@@ -94,6 +94,17 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
         <Text style={[type.body, styles.stat]}>
             <Text style={[type.name, styles.statNumber]}>{(count ?? 0).toLocaleString(locale)}</Text> {label}
         </Text>
+    );
+    // Following and followers open the list of those people
+    const followStat = (list: 'following' | 'followers', count: number | undefined, label: string) => (
+        <Pressable
+            onPress={() => push({ name: 'follows', accountId: user.id, list })}
+            accessibilityRole="button"
+            accessibilityLabel={`${(count ?? 0).toLocaleString(locale)} ${label}`}
+            hitSlop={hitSlopFor(MIN_TOUCH, 19)}
+        >
+            {stat(count, label)}
+        </Pressable>
     );
 
     return (
@@ -244,8 +255,8 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
 
                 <View style={styles.stats}>
                     {stat(user.statuses_count, t('profile.statPosts'))}
-                    {stat(user.following_count, t('profile.statFollowing'))}
-                    {stat(user.followers_count, t('profile.statFollowers'))}
+                    {followStat('following', user.following_count, t('profile.statFollowing'))}
+                    {followStat('followers', user.followers_count, t('profile.statFollowers'))}
                 </View>
             </View>
 

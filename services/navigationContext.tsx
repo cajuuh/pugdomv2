@@ -26,6 +26,8 @@ export type Route =
     | { name: 'conversationGroup'; groupKey: string }
     // Who favourited or boosted a post
     | { name: 'reactions'; statusId: string; reaction: 'favourites' | 'boosts' }
+    // Who follows someone, or whom they follow
+    | { name: 'follows'; accountId: string; list: 'followers' | 'following' }
     | { name: 'editProfile' };
 
 // Each entry gets its own key, so the same screen can sit in the stack twice (thread → other → same thread)

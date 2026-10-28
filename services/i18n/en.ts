@@ -473,6 +473,14 @@ export const en = {
     reactions: {
         favouritesTitle: 'Favourited by',
         boostsTitle: 'Boosted by',
+        followersTitle: 'Followers',
+        followingTitle: 'Following',
+        followsNone: 'Nobody to show. Some people hide who they follow and who follows them.',
+        searchFollowers: 'Search followers',
+        searchFollowing: 'Search following',
+        searchNone: 'Nobody here matches that name.',
+        // While a search loads the rest of the list
+        searchLoading: 'Looking through {{count}} people…',
         favouritesCount_one: '{{count}} favourite',
         favouritesCount_other: '{{count}} favourites',
         boostsCount_one: '{{count}} boost',

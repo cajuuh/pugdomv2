@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert } from 'react-native';
+import { Alert, Text } from 'react-native';
 import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import * as WebBrowser from 'expo-web-browser';
@@ -115,6 +115,23 @@ describe('Account screen', () => {
 
         await fireEvent.press(screen.getByRole('link', { name: 'See on art.social' }));
         expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith('https://art.social/@ana');
+    });
+
+    it('opens who they follow and who follows them from the counts', async () => {
+        const Stack = () => <Text testID="stack">{JSON.stringify(useNavigator().stack.map(entry => entry.route))}</Text>;
+        await render(
+            <NavigationProvider>
+                {withQuery(<Account accountId="ana" account={ana} onBack={jest.fn()} onStatusPress={jest.fn()} onSettingsPress={jest.fn()} />)}
+                <Stack />
+            </NavigationProvider>
+        );
+        const stack = () => JSON.parse(String(screen.getByTestId('stack').props.children));
+
+        await fireEvent.press(screen.getByRole('button', { name: '3 following' }));
+        expect(stack()).toEqual([{ name: 'follows', accountId: 'ana', list: 'following' }]);
+
+        await fireEvent.press(screen.getByRole('button', { name: '40 followers' }));
+        expect(stack()[1]).toEqual({ name: 'follows', accountId: 'ana', list: 'followers' });
     });
 
     it('goes back with its arrow', async () => {

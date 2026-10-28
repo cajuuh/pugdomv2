@@ -42,3 +42,6 @@ yarn-error.*
 
 # jest transform cache (CI)
 .jest-cache/
+
+# Firebase config for Android push: EAS builds get it from the GOOGLE_SERVICES_JSON file variable (app.config.js)
+google-services.json
