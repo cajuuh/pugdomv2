@@ -1,6 +1,8 @@
 import apiClient from "../api/client";
 import { Account, Relationship, Status } from './types';
 import { UploadFile } from './media';
+import { nextMaxIdFromLink } from './bookmarks';
+import type { ReactionsPage } from './statuses';
 
 export async function getCurrentAccount(): Promise<Account> {
     const response = await apiClient.get<Account>('accounts/verify_credentials');
@@ -17,6 +19,15 @@ export interface AccountStatusesFilter {
 export async function getAccountStatuses(accountId: string, maxId?: string, filter: AccountStatusesFilter = {}): Promise<Status[]> {
     const response = await apiClient.get<Status[]>(`/accounts/${accountId}/statuses`, { params: { max_id: maxId, ...filter } });
     return response.data;
+}
+
+// Who follows an account, or whom it follows, newest first, paged with the Link header.
+// Empty when the person hides them; for someone on another server, only the ones this server knows.
+export type FollowList = 'followers' | 'following';
+export async function getFollows(accountId: string, list: FollowList, maxId?: string): Promise<ReactionsPage> {
+    // 80 is Mastodon's most per page: fewer requests when a search loads the whole list
+    const response = await apiClient.get<Account[]>(`/accounts/${accountId}/${list}`, { params: { max_id: maxId, limit: 80 } });
+    return { accounts: response.data, nextMaxId: nextMaxIdFromLink(response.headers?.link) };
 }
 
 export async function getAccount(accountId: string): Promise<Account> {

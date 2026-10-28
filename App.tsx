@@ -131,7 +131,9 @@ function NavigationRoot() {
       case 'conversationGroup':
         return <ConversationGroup groupKey={route.groupKey} onBack={pop} onStatusPress={openThread} />;
       case 'reactions':
-        return <Reactions statusId={route.statusId} reaction={route.reaction} onBack={pop} />;
+        return <Reactions id={route.statusId} kind={route.reaction} onBack={pop} />;
+      case 'follows':
+        return <Reactions id={route.accountId} kind={route.list} onBack={pop} />;
       case 'editProfile':
         return <EditProfile onBack={pop} />;
     }

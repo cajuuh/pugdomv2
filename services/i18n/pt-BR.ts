@@ -464,6 +464,13 @@ export const ptBR: Dictionary = {
     reactions: {
         favouritesTitle: 'Favoritado por',
         boostsTitle: 'Boosts de',
+        followersTitle: 'Seguidores',
+        followingTitle: 'Seguindo',
+        followsNone: 'Ninguém para mostrar. Algumas pessoas escondem quem seguem e quem as segue.',
+        searchFollowers: 'Buscar seguidores',
+        searchFollowing: 'Buscar em seguindo',
+        searchNone: 'Ninguém aqui tem esse nome.',
+        searchLoading: 'Procurando entre {{count}} pessoas…',
         favouritesCount_one: '{{count}} favorito',
         favouritesCount_other: '{{count}} favoritos',
         boostsCount_one: '{{count}} boost',
