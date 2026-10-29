@@ -1,4 +1,4 @@
-import { ScrollView } from 'react-native';
+import { DeviceEventEmitter, ScrollView } from 'react-native';
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { act } from '@testing-library/react-native';
@@ -95,6 +95,23 @@ describe('Timeline new posts pill', () => {
         expect(mockedHome).toHaveBeenLastCalledWith(undefined);
         // The pill stops loading once the list has scrolled up
         await waitFor(() => expect(screen.getByRole('button', { name: '1 new post' })).not.toBeBusy());
+    });
+
+    it('loads the newest posts and goes to the top when Home is tapped on Home', async () => {
+        mockNewPosts = { count: 0, more: false, accounts: [] };
+        const scrollTo = jest.spyOn(ScrollView.prototype as any, 'scrollTo');
+        await renderTimeline();
+        await screen.findByText('post 10');
+        mockedHome.mockResolvedValue([post('11'), post('10')]);
+        scrollTo.mockClear();
+
+        await act(async () => {
+            DeviceEventEmitter.emit('scroll_to_top_home');
+        });
+
+        await waitFor(() => expect(screen.getByText('post 11')).toBeTruthy());
+        await waitFor(() => expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ y: 0 })));
+        scrollTo.mockRestore();
     });
 
     it('goes back to the top when the feed you are on is tapped again, and switches on another', async () => {

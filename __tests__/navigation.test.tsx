@@ -56,13 +56,19 @@ jest.mock('../components/TopBar/topBar', () => {
     };
 });
 
+// Counts its mounts, so a test can tell the timeline was kept rather than rebuilt
+const mockTimelineMounts = jest.fn();
 jest.mock('../screens/Timeline/timeline', () => {
+    const { useEffect } = require('react');
     const { Pressable, Text } = require('react-native');
-    return ({ onStatusPress }: { onStatusPress: (id: string) => void }) => (
-        <Pressable accessibilityRole="button" accessibilityLabel="Open post" onPress={() => onStatusPress('42')}>
-            <Text>Home screen</Text>
-        </Pressable>
-    );
+    return ({ onStatusPress }: { onStatusPress: (id: string) => void }) => {
+        useEffect(() => mockTimelineMounts(), []);
+        return (
+            <Pressable accessibilityRole="button" accessibilityLabel="Open post" onPress={() => onStatusPress('42')}>
+                <Text>Home screen</Text>
+            </Pressable>
+        );
+    };
 });
 jest.mock('../screens/Search/search', () => () => {
     const { Text } = require('react-native');
@@ -145,6 +151,25 @@ describe('App navigation', () => {
         expect(screen.getByText('Search screen')).toBeTruthy();
     });
 
+    it('keeps the timeline mounted behind the other tabs, so Home comes back to where you were', async () => {
+        mockTimelineMounts.mockClear();
+        await render(<App />);
+        await screen.findByText('Home screen');
+
+        await fireEvent.press(screen.getByRole('tab', { name: 'Notifications' }));
+        expect(screen.queryByText('Home screen')).toBeNull();
+        expect(screen.getByText('Notifications screen')).toBeTruthy();
+
+        const emit = jest.spyOn(DeviceEventEmitter, 'emit');
+        await fireEvent.press(screen.getByRole('tab', { name: 'Home' }));
+
+        expect(screen.getByText('Home screen')).toBeTruthy();
+        expect(mockTimelineMounts).toHaveBeenCalledTimes(1);
+        // Coming back from another tab isn't a tap on Home: no reload, no jump to the top
+        expect(emit).not.toHaveBeenCalledWith('scroll_to_top_home');
+        emit.mockRestore();
+    });
+
     it('still scrolls to the top when Home is pressed on Home', async () => {
         const emit = jest.spyOn(DeviceEventEmitter, 'emit');
         await render(<App />);
@@ -217,6 +242,20 @@ describe('Settings dock clearance', () => {
                 expect(backPress?.()).toBe(true);
             });
             expect(screen.getByText('Home screen')).toBeTruthy();
+            expect(backPress?.()).toBe(false);
+        });
+
+        it("takes Android's back button from another tab to Home, then lets it leave the app", async () => {
+            await render(<App />);
+            await screen.findByText('Home screen');
+            await fireEvent.press(screen.getByRole('tab', { name: 'Notifications' }));
+
+            await act(async () => {
+                expect(backPress?.()).toBe(true);
+            });
+
+            expect(screen.getByText('Home screen')).toBeTruthy();
+            expect(screen.queryByText('Notifications screen')).toBeNull();
             expect(backPress?.()).toBe(false);
         });
 
