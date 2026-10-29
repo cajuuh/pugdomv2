@@ -129,6 +129,24 @@ describe('Profile', () => {
         expect(screen.getAllByTestId('grid-play-badge', hidden)).toHaveLength(1);
     });
 
+    it('shows the profile fields under the bio, ticking a verified link', async () => {
+        mockUser = {
+            ...me,
+            fields: [
+                { name: 'Pronouns', value: 'he/him', verified_at: null },
+                { name: 'Site', value: '<a href="https://caju.dev" rel="me">caju.dev</a>', verified_at: '2026-10-01T00:00:00Z' },
+            ],
+        };
+        await renderProfile();
+
+        expect(await screen.findByText('Pronouns')).toBeTruthy();
+        expect(screen.getByText('he/him')).toBeTruthy();
+        expect(screen.getByText('caju.dev')).toBeTruthy();
+        expect(screen.getAllByTestId('profile-field')).toHaveLength(1);
+        expect(screen.getAllByTestId('profile-field-verified')).toHaveLength(1);
+        expect(screen.getByLabelText('Verified link')).toBeTruthy();
+    });
+
     it("shows the roles the server highlights, with a happy pug for supporters", async () => {
         mockUser = { ...me, roles: [{ id: '1', name: 'Server supporter', color: '' }, { id: '2', name: 'Moderator', color: '#7A1F1F' }] };
         await renderProfile();

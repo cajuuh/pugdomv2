@@ -253,6 +253,41 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
                     />
                 )}
 
+                {/* The profile's fields (pronouns, links...): a verified link (rel="me") is ticked in the coat accent */}
+                {!!user.fields?.length && (
+                    <View style={styles.fields}>
+                        {user.fields.map((field, i) => (
+                            <View
+                                key={`${field.name}-${i}`}
+                                testID={field.verified_at ? 'profile-field-verified' : 'profile-field'}
+                                style={[styles.field, i > 0 && styles.fieldDivider, !!field.verified_at && { backgroundColor: colors.accentSoft }]}
+                            >
+                                <Text style={[type.label, styles.fieldName]}>
+                                    {renderTextWithEmojis(field.name, user.emojis || [], [type.label, styles.fieldName], 16)}
+                                </Text>
+                                <View style={styles.fieldValue}>
+                                    {!!field.verified_at && (
+                                        <Ionicons name="checkmark-circle" size={16} color={colors.accentText} accessibilityLabel={t('profile.verifiedLink')} />
+                                    )}
+                                    <View style={styles.fieldValueText}>
+                                        <StatusHtmlContent
+                                            content={field.value}
+                                            emojis={user.emojis}
+                                            colors={colors}
+                                            bodyFont={type.body}
+                                            compactMode={false}
+                                            width={width - 40 - 2 * space.md - (field.verified_at ? 16 + space.xs : 0)}
+                                            onPressMention={openMention}
+                                            onPressHashtag={openHashtag}
+                                            onPressLink={openLinkInApp}
+                                        />
+                                    </View>
+                                </View>
+                            </View>
+                        ))}
+                    </View>
+                )}
+
                 <View style={styles.stats}>
                     {stat(user.statuses_count, t('profile.statPosts'))}
                     {followStat('following', user.following_count, t('profile.statFollowing'))}

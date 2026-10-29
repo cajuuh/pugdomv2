@@ -725,6 +725,7 @@ export const en = {
     },
     profile: {
         role: 'Role: {{name}}',
+        verifiedLink: 'Verified link',
         posts: 'Posts',
         replies: 'Replies',
         media: 'Media',

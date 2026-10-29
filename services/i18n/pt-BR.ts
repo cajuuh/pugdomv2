@@ -712,6 +712,7 @@ export const ptBR: Dictionary = {
     },
     profile: {
         role: 'Função: {{name}}',
+        verifiedLink: 'Link verificado',
         posts: 'Publicações',
         replies: 'Respostas',
         media: 'Mídia',
