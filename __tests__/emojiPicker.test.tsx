@@ -57,6 +57,14 @@ describe('EmojiPicker', () => {
         expect(screen.queryByRole('button', { name: ':hidden:' })).toBeNull();
     });
 
+    it('shows animated emoji moving, from their original image rather than the still one', async () => {
+        mockedFetch.mockResolvedValue([{ ...emoji('blobdance'), url: 'https://x/blobdance.gif', static_url: 'https://x/blobdance-still.png' }]);
+        await renderPicker();
+        await screen.findByRole('button', { name: ':blobdance:' });
+
+        expect(screen.getByTestId('emoji-image').props.source).toEqual({ uri: 'https://x/blobdance.gif' });
+    });
+
     it('keeps a server category literally named "Other" apart from the uncategorized group', async () => {
         mockedFetch.mockResolvedValue([emoji('blobcat', 'Other'), emoji('pug')]);
         await renderPicker();

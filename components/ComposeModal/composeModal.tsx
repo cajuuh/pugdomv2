@@ -469,7 +469,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
         token?.trigger === ':'
             ? emojiMatches.map(emoji => ({
                   key: emoji.shortcode,
-                  image: emoji.static_url || emoji.url,
+                  image: emoji.url || emoji.static_url,
                   title: `:${emoji.shortcode}:`,
                   onPick: () => complete(`:${emoji.shortcode}:`),
               }))

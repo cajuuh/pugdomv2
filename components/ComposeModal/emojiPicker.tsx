@@ -112,7 +112,8 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ visible, onPick, onClo
             accessibilityLabel={`:${emoji.shortcode}:`}
             style={({ pressed }) => [styles.emojiCell, pressed && styles.optionSelected]}
         >
-            <Image source={{ uri: emoji.static_url || emoji.url }} style={styles.emojiImage} resizeMode="contain" />
+            {/* The original, so animated emoji play here as they will in the post */}
+            <Image testID="emoji-image" source={{ uri: emoji.url || emoji.static_url }} style={styles.emojiImage} resizeMode="contain" />
         </Pressable>
     );
 

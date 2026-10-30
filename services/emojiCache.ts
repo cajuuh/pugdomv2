@@ -43,7 +43,7 @@ export async function prefetchEmojiImages(
     onProgress?: (done: number, total: number) => void,
     concurrency = 8
 ) {
-    const urls = emojis.filter(emoji => emoji.visible_in_picker).map(emoji => emoji.static_url || emoji.url);
+    const urls = emojis.filter(emoji => emoji.visible_in_picker).map(emoji => emoji.url || emoji.static_url);
     let done = 0;
     let next = 0;
     onProgress?.(0, urls.length);
