@@ -613,6 +613,7 @@ export const en = {
         title: 'Custom emoji',
         all: 'All',
         other: 'Other',
+        recent: 'Recent',
         loadFailed: "Couldn't load this server's emoji",
         none: 'This server has no custom emoji',
     },

@@ -602,6 +602,7 @@ export const ptBR: Dictionary = {
         title: 'Emoji personalizado',
         all: 'Todos',
         other: 'Outros',
+        recent: 'Recentes',
         loadFailed: 'Não foi possível carregar os emojis deste servidor',
         none: 'Este servidor não tem emojis personalizados',
     },
