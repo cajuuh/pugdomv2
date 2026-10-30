@@ -8,11 +8,14 @@ import { SegmentedPill, SegmentOption } from '../ui';
 import { BottomSheet } from './optionSheet';
 import { makeStyles } from './styles';
 import { useI18n } from '../../services/i18n/i18nContext';
+import { getRecentEmojis } from '../../services/recentEmojis';
 
 const COLUMNS = 7;
 // Internal ids, shown as "All" / "Other" in the user's language; not valid category names on a server
 export const ALL_CATEGORIES = '\u0000all';
 export const UNCATEGORIZED = '\u0000other';
+// The emoji you used last, above the rest in All
+export const RECENT = '\u0000recent';
 
 export interface EmojiGroup {
     category: string;
@@ -56,14 +59,16 @@ interface EmojiPickerProps {
     visible: boolean;
     onPick: (shortcode: string) => void;
     onClose: () => void;
+    // Whose recent emoji to show
+    accountId?: string;
 }
 
 // The instance's custom emoji; picking one inserts its :shortcode:
-export const EmojiPicker: React.FC<EmojiPickerProps> = ({ visible, onPick, onClose }) => {
+export const EmojiPicker: React.FC<EmojiPickerProps> = ({ visible, onPick, onClose, accountId }) => {
     const { colors, type } = useTheme();
     const { t } = useI18n();
     const categoryLabel = (value: string) =>
-        value === ALL_CATEGORIES ? t('emoji.all') : value === UNCATEGORIZED ? t('emoji.other') : value;
+        value === ALL_CATEGORIES ? t('emoji.all') : value === UNCATEGORIZED ? t('emoji.other') : value === RECENT ? t('emoji.recent') : value;
     const styles = useThemedStyles(makeStyles);
     const [category, setCategory] = useState(ALL_CATEGORIES);
     const [query, setQuery] = useState('');
@@ -73,10 +78,25 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ visible, onPick, onClo
     const searching = query.trim().length > 0;
     const matches = useMemo(() => searchEmojis(pickable, query), [pickable, query]);
 
-    // Each opening starts with no search
+    const [recentCodes, setRecentCodes] = useState<string[]>([]);
+    // Ones the server has since removed drop out
+    const recent = useMemo(
+        () => recentCodes.flatMap(code => pickable.filter(emoji => emoji.shortcode === code)),
+        [recentCodes, pickable]
+    );
+
+    // Each opening starts with no search, and the latest recent emoji
     useEffect(() => {
-        if (!visible) setQuery('');
-    }, [visible]);
+        if (!visible) {
+            setQuery('');
+            return;
+        }
+        let cancelled = false;
+        getRecentEmojis(accountId).then(codes => !cancelled && setRecentCodes(codes));
+        return () => {
+            cancelled = true;
+        };
+    }, [visible, accountId]);
     // Servers without categories keep the plain grid: no chips, no headers
     const categorized = groups.length > 1;
 
@@ -89,9 +109,15 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ visible, onPick, onClo
     );
     const sections = useMemo(() => {
         if (searching) return matches.length ? [{ title: '', data: toRows(matches) }] : [];
-        const shown = activeCategory === ALL_CATEGORIES ? groups : groups.filter(group => group.category === activeCategory);
-        return shown.map(group => ({ title: group.category, data: toRows(group.emojis) }));
-    }, [groups, activeCategory, searching, matches]);
+        if (activeCategory !== ALL_CATEGORIES) {
+            return groups.filter(group => group.category === activeCategory).map(group => ({ title: group.category, data: toRows(group.emojis) }));
+        }
+        const all = groups.map(group => ({ title: group.category, data: toRows(group.emojis) }));
+        return recent.length ? [{ title: RECENT, data: toRows(recent) }, ...all] : all;
+    }, [groups, activeCategory, searching, matches, recent]);
+    // Headers in All when there's more than one section; a server without categories has its emoji under "All"
+    const headers = activeCategory === ALL_CATEGORIES && !searching && (categorized || recent.length > 0);
+    const sectionLabel = (title: string) => (title === UNCATEGORIZED && !categorized ? t('emoji.all') : categoryLabel(title));
 
     const status = isLoading
         ? <ActivityIndicator color={colors.accentColor} />
@@ -112,7 +138,8 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ visible, onPick, onClo
             accessibilityLabel={`:${emoji.shortcode}:`}
             style={({ pressed }) => [styles.emojiCell, pressed && styles.optionSelected]}
         >
-            <Image source={{ uri: emoji.static_url || emoji.url }} style={styles.emojiImage} resizeMode="contain" />
+            {/* The original, so animated emoji play here as they will in the post */}
+            <Image testID="emoji-image" source={{ uri: emoji.url || emoji.static_url }} style={styles.emojiImage} resizeMode="contain" />
         </Pressable>
     );
 
@@ -149,8 +176,8 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ visible, onPick, onClo
                             searching ? <Text style={[type.meta, styles.emojiStatusText]}>{t('emoji.noMatches', { query: query.trim() })}</Text> : null
                         }
                         renderSectionHeader={({ section }) =>
-                            categorized && activeCategory === ALL_CATEGORIES && !searching ? (
-                                <Text accessibilityRole="header" style={[type.label, styles.emojiSectionTitle]}>{categoryLabel(section.title)}</Text>
+                            headers ? (
+                                <Text accessibilityRole="header" style={[type.label, styles.emojiSectionTitle]}>{sectionLabel(section.title)}</Text>
                             ) : null
                         }
                         renderItem={({ item: row }) => (

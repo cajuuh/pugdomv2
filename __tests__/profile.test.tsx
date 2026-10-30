@@ -113,6 +113,40 @@ describe('Profile', () => {
         expect(onStatusPress).toHaveBeenCalledWith('2');
     });
 
+    it('puts one play button on a video in the Media tab', async () => {
+        const video = (id: string) => ({ id, type: 'video', url: `https://x/${id}.mp4`, preview_url: `https://x/${id}.png` });
+        mockedStatuses.mockResolvedValue([status('1', { media_attachments: [video('a')] as any }), status('2', { media_attachments: [video('b')] as any, sensitive: true })]);
+        await renderProfile();
+        await screen.findByText('post 1');
+
+        await fireEvent.press(screen.getByRole('tab', { name: 'Media' }));
+        // Both tiles, not just any image button: on a slow runner the grid is still loading
+        await waitFor(() => expect(screen.getAllByRole('imagebutton', { name: 'Video 1 of 1' })).toHaveLength(2));
+
+        // The open video gets the thumbnail's play button only; the veiled one, blurred, keeps the grid's badge
+        const hidden = { includeHiddenElements: true };
+        expect(screen.getAllByTestId('video-badge', hidden)).toHaveLength(1);
+        expect(screen.getAllByTestId('grid-play-badge', hidden)).toHaveLength(1);
+    });
+
+    it('shows the profile fields under the bio, ticking a verified link', async () => {
+        mockUser = {
+            ...me,
+            fields: [
+                { name: 'Pronouns', value: 'he/him', verified_at: null },
+                { name: 'Site', value: '<a href="https://caju.dev" rel="me">caju.dev</a>', verified_at: '2026-10-01T00:00:00Z' },
+            ],
+        };
+        await renderProfile();
+
+        expect(await screen.findByText('Pronouns')).toBeTruthy();
+        expect(screen.getByText('he/him')).toBeTruthy();
+        expect(screen.getByText('caju.dev')).toBeTruthy();
+        expect(screen.getAllByTestId('profile-field')).toHaveLength(1);
+        expect(screen.getAllByTestId('profile-field-verified')).toHaveLength(1);
+        expect(screen.getByLabelText('Verified link')).toBeTruthy();
+    });
+
     it("shows the roles the server highlights, with a happy pug for supporters", async () => {
         mockUser = { ...me, roles: [{ id: '1', name: 'Server supporter', color: '' }, { id: '2', name: 'Moderator', color: '#7A1F1F' }] };
         await renderProfile();

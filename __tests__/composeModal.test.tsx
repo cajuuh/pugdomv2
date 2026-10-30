@@ -1,5 +1,7 @@
 import React from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getRecentEmojis } from '../services/recentEmojis';
 import { Dimensions, Keyboard, Platform, StyleSheet } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
@@ -68,8 +70,9 @@ describe('ComposeModal', () => {
 
     const composer = () => screen.getByPlaceholderText(/What's on your mind\?|Write your reply/);
 
-    beforeEach(() => {
+    beforeEach(async () => {
         jest.clearAllMocks();
+        await AsyncStorage.clear();
         mockedCreateStatus.mockResolvedValue({} as Status);
         mockedInstance.mockResolvedValue({ ...DEFAULT_INSTANCE_CONFIGURATION, maxCharacters: 500, maxPollOptions: 4, maxCharactersPerPollOption: 50 });
     });
@@ -375,6 +378,8 @@ describe('ComposeModal', () => {
         await fireEvent.press(screen.getByRole('button', { name: ':blobfox:' }));
 
         expect(composer().props.value).toBe('hi :blobfox: ');
+        // Remembered for the picker's Recent row
+        await waitFor(async () => expect(await getRecentEmojis('1')).toContain('blobfox'));
         expect(screen.queryByRole('button', { name: ':blobcat:' })).toBeNull();
     });
 
@@ -410,5 +415,6 @@ describe('ComposeModal', () => {
 
         expect(screen.queryByRole('button', { name: ':hidden:' })).toBeNull();
         expect(composer().props.value).toBe('hello :blobcat: world');
+        await waitFor(async () => expect(await getRecentEmojis('1')).toEqual(['blobcat']));
     });
 });

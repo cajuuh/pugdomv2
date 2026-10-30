@@ -16,7 +16,7 @@ import { useTheme } from '../../services/themeContext';
 import { FEED_PILL_HEIGHT, makeStyles } from './styles';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { useI18n } from '../../services/i18n/i18nContext';
-import { autoplayViewability } from '../../services/media/autoplay';
+import { autoplayViewability, setAutoplayPost } from '../../services/media/autoplay';
 import { useNewPosts } from '../../hooks/useNewPosts';
 import { NewPostsPill } from './newPostsPill';
 
@@ -31,9 +31,11 @@ export const scrollListToTop = async (list: Pick<FlashListRef<Status>, 'scrollTo
 
 interface TimelineProps {
     onStatusPress?: (id: string) => void;
+    // False while another tab is open over it (it stays mounted to keep its place)
+    active?: boolean;
 }
 
-const Timeline = ({ onStatusPress }: TimelineProps) => {
+const Timeline = ({ onStatusPress, active = true }: TimelineProps) => {
     const { colors, type } = useTheme();
     const styles = useThemedStyles(makeStyles);
     const i18n = useI18n();
@@ -152,15 +154,19 @@ const Timeline = ({ onStatusPress }: TimelineProps) => {
             queryClient.invalidateQueries({ queryKey: ['timeline', 'home'] });
         });
 
-        const scrollSub = DeviceEventEmitter.addListener('scroll_to_top_home', () => {
-            scrollListToTop(listRef.current);
-        });
+        // Home tapped on Home: the newest posts, from the top
+        const scrollSub = DeviceEventEmitter.addListener('scroll_to_top_home', showNewPosts);
 
         return () => {
             subscription.remove();
             scrollSub.remove();
         };
-    }, [queryClient]);
+    }, [queryClient, showNewPosts]);
+
+    // Hidden behind another tab, its video stops; scrolling back on Home starts it again
+    useEffect(() => {
+        if (!active) setAutoplayPost(null);
+    }, [active]);
 
     // The spinner is only for a pull: background reloads (switching feeds back, the new posts pill,
     // following someone) don't show it

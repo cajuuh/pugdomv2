@@ -1,11 +1,13 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
 import { EmojiPicker, groupByCategory, searchEmojis, UNCATEGORIZED } from '../components/ComposeModal/emojiPicker';
 import { fetchCustomEmojis } from '../services/mastodon/customEmojis';
 import { CustomEmoji } from '../services/mastodon/types';
+import { addRecentEmoji, getRecentEmojis, MAX_RECENT_EMOJIS } from '../services/recentEmojis';
 
 jest.mock('../services/themeContext', () => ({
     useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
@@ -32,6 +34,23 @@ const renderPicker = (onPick = jest.fn()) =>
         </QueryClientProvider>
     );
 
+describe('recent emoji', () => {
+    beforeEach(() => AsyncStorage.clear());
+
+    it('keeps the newest first, without repeats, up to two rows, per account', async () => {
+        await addRecentEmoji('a', 'me');
+        await addRecentEmoji('b', 'me');
+        await addRecentEmoji('a', 'me');
+        expect(await getRecentEmojis('me')).toEqual(['a', 'b']);
+        expect(await getRecentEmojis('other')).toEqual([]);
+
+        for (let i = 0; i < 20; i++) await addRecentEmoji(`e${i}`, 'me');
+        const recent = await getRecentEmojis('me');
+        expect(recent).toHaveLength(MAX_RECENT_EMOJIS);
+        expect(recent[0]).toBe('e19');
+    });
+});
+
 describe('groupByCategory', () => {
     it('sorts categories A–Z and puts uncategorized emoji last under Other', () => {
         const groups = groupByCategory([emoji('blobcat', 'Blobs'), emoji('pug'), emoji('ablobwave', 'Blobs'), emoji('flag_br', 'Flags'), emoji('x', '  ')]);
@@ -43,7 +62,41 @@ describe('groupByCategory', () => {
 });
 
 describe('EmojiPicker', () => {
-    beforeEach(() => jest.clearAllMocks());
+    beforeEach(async () => {
+        jest.clearAllMocks();
+        await AsyncStorage.clear();
+    });
+
+    it('shows the emoji you used last first, under Recent, leaving out ones the server removed', async () => {
+        mockedFetch.mockResolvedValue([emoji('blobcat', 'Blobs'), emoji('flag_br', 'Flags'), emoji('pug', 'Blobs')]);
+        await addRecentEmoji('pug', 'me');
+        await addRecentEmoji('gone', 'me');
+        await addRecentEmoji('flag_br', 'me');
+        await render(
+            <QueryClientProvider client={createTestQueryClient()}>
+                <EmojiPicker visible onPick={jest.fn()} onClose={jest.fn()} accountId="me" />
+            </QueryClientProvider>
+        );
+
+        expect(await screen.findByRole('header', { name: 'Recent' })).toBeTruthy();
+        const headers = screen.getAllByRole('header').map(header => header.props.children);
+        // After the sheet's title
+        expect(headers).toEqual(['Custom emoji', 'Recent', 'Blobs', 'Flags']);
+        // Each recent one shows twice: under Recent and in its own category
+        expect(screen.getAllByRole('button', { name: ':flag_br:' })).toHaveLength(2);
+        expect(screen.getAllByRole('button', { name: ':pug:' })).toHaveLength(2);
+        expect(screen.getAllByRole('button', { name: ':blobcat:' })).toHaveLength(1);
+        expect(screen.queryByRole('button', { name: ':gone:' })).toBeNull();
+    });
+
+    it('gives a server without categories a Recent row above All', async () => {
+        mockedFetch.mockResolvedValue([emoji('pug'), emoji('blobcat')]);
+        await addRecentEmoji('blobcat');
+        await renderPicker();
+
+        expect(await screen.findByRole('header', { name: 'Recent' })).toBeTruthy();
+        expect(screen.getByRole('header', { name: 'All' })).toBeTruthy();
+    });
 
     it('shows every category under its own header, with a chip for each', async () => {
         mockedFetch.mockResolvedValue([emoji('blobcat', 'Blobs'), emoji('flag_br', 'Flags'), emoji('pug'), emoji('hidden', 'Blobs', false)]);
@@ -55,6 +108,14 @@ describe('EmojiPicker', () => {
         expect(screen.getByRole('header', { name: 'Other' })).toBeTruthy();
         expect(screen.getByRole('button', { name: 'All' })).toBeSelected();
         expect(screen.queryByRole('button', { name: ':hidden:' })).toBeNull();
+    });
+
+    it('shows animated emoji moving, from their original image rather than the still one', async () => {
+        mockedFetch.mockResolvedValue([{ ...emoji('blobdance'), url: 'https://x/blobdance.gif', static_url: 'https://x/blobdance-still.png' }]);
+        await renderPicker();
+        await screen.findByRole('button', { name: ':blobdance:' });
+
+        expect(screen.getByTestId('emoji-image').props.source).toEqual({ uri: 'https://x/blobdance.gif' });
     });
 
     it('keeps a server category literally named "Other" apart from the uncategorized group', async () => {

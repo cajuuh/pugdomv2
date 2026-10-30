@@ -43,6 +43,7 @@ import { hitSlopFor, space } from '../../services/theme/shape';
 import { Avatar, IconButton, PillButton, Well } from '../ui';
 import { CharacterCounter } from './characterCounter';
 import { EmojiPicker } from './emojiPicker';
+import { addRecentEmoji } from '../../services/recentEmojis';
 import { ActionSheet, OptionSheet, SheetOption } from './optionSheet';
 import { DEFAULT_POLL_DURATION, PollEditor } from './pollEditor';
 import { useKeyboard } from '../../hooks/useKeyboard';
@@ -451,6 +452,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
     };
 
     const insertEmoji = (shortcode: string) => {
+        addRecentEmoji(shortcode, user?.id);
         const next = insertAt(text, cursor.current, `:${shortcode}:`);
         setText(next.text);
         cursor.current = next.cursor;
@@ -469,9 +471,12 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
         token?.trigger === ':'
             ? emojiMatches.map(emoji => ({
                   key: emoji.shortcode,
-                  image: emoji.static_url || emoji.url,
+                  image: emoji.url || emoji.static_url,
                   title: `:${emoji.shortcode}:`,
-                  onPick: () => complete(`:${emoji.shortcode}:`),
+                  onPick: () => {
+                      addRecentEmoji(emoji.shortcode, user?.id);
+                      complete(`:${emoji.shortcode}:`);
+                  },
               }))
             : token?.trigger === '@'
               ? (mentionMatches ?? []).map(account => ({
@@ -957,7 +962,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 onSelect={setQuotePolicy}
                 onClose={() => setPicker(null)}
             />
-            <EmojiPicker visible={picker === 'emoji'} onPick={insertEmoji} onClose={() => setPicker(null)} />
+            <EmojiPicker visible={picker === 'emoji'} onPick={insertEmoji} onClose={() => setPicker(null)} accountId={user?.id} />
             <ActionSheet
                 visible={picker === 'camera'}
                 title={t('compose.camera')}

@@ -131,6 +131,32 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         fontSize: 14,
         lineHeight: 19,
     },
+    fields: {
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: colors.borderColor,
+        borderRadius: radii.input,
+        overflow: 'hidden',
+    },
+    field: {
+        paddingHorizontal: space.md,
+        paddingVertical: space.sm,
+        gap: 2,
+    },
+    fieldDivider: {
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderTopColor: colors.borderColor,
+    },
+    fieldName: {
+        color: colors.textMuted,
+    },
+    fieldValue: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.xs,
+    },
+    fieldValueText: {
+        flex: 1,
+    },
     stats: {
         flexDirection: 'row',
         flexWrap: 'wrap',

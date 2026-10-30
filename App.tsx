@@ -87,15 +87,17 @@ function NavigationRoot() {
     reset();
   }, [user?.id, reset]);
 
-  // Android's back button closes the top screen; with none open it leaves the app as usual
+  // Android's back button closes the top screen; with none open another tab goes back to Home,
+  // where it leaves the app as usual
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (stack.length === 0) return false;
-      pop();
+      if (stack.length > 0) pop();
+      else if (activeTab !== 'home') setActiveTab('home');
+      else return false;
       return true;
     });
     return () => subscription.remove();
-  }, [stack.length, pop]);
+  }, [stack.length, pop, activeTab]);
 
   const renderScreen = ({ route }: StackEntry) => {
     switch (route.name) {
@@ -202,7 +204,14 @@ function NavigationRoot() {
 
         {/* Screen content area */}
         <View style={styles.container}>
-          {activeTab === 'home' && <Timeline onStatusPress={openThread} />}
+          {/* Home stays mounted behind the other tabs, so coming back finds your place in the timeline */}
+          <View
+            style={[styles.container, activeTab !== 'home' && styles.hidden]}
+            importantForAccessibility={activeTab !== 'home' ? 'no-hide-descendants' : 'auto'}
+            accessibilityElementsHidden={activeTab !== 'home'}
+          >
+            <Timeline onStatusPress={openThread} active={activeTab === 'home'} />
+          </View>
           {activeTab === 'search' && <Search onStatusPress={openThread} />}
           {activeTab === 'notifications' && <Notifications onStatusPress={openThread} />}
           {activeTab === 'profile' && <Profile onStatusPress={openThread} />}
