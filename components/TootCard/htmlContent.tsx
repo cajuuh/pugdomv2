@@ -5,7 +5,7 @@ import RenderHtml, { HTMLElementModel, HTMLContentModel, defaultSystemFonts } fr
 import { CustomEmoji } from '../../services/mastodon/types';
 import { fontFamilies } from '../../services/theme/typography';
 import { tagFromHref } from '../../services/mastodon/tags';
-import { withoutQuoteInline } from '../../services/htmlText';
+import { breakLongRuns, withoutQuoteInline } from '../../services/htmlText';
 
 // Post (and bio) HTML: custom emoji inline, mentions / hashtags / links routed to the handlers
 
@@ -101,7 +101,7 @@ export const StatusHtmlContent = React.memo(({ content, emojis, colors, bodyFont
                 html = html.replace(regex, `<emoji src="${emoji.url}"></emoji>`);
             });
         }
-        return html;
+        return breakLongRuns(html);
     }, [content, emojis]);
 
     return (

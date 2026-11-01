@@ -294,6 +294,8 @@ export const ptBR: Dictionary = {
         hideMedia: 'Ocultar mídia',
         contentWarning: 'Aviso de conteúdo',
         cwTitle: 'AC · {{text}}',
+        showMore: 'Mostrar mais',
+        veryLong: 'Post muito longo · {{count}} caracteres',
         boosted: '{{name}} deu boost',
         privateMention: 'Menção privada',
         opensThread: 'Abre a conversa',

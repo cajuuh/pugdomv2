@@ -12,3 +12,19 @@ export const plainText = (html?: string) =>
         .replace(/<[^>]*>/g, '')
         .replace(/&(amp|lt|gt|quot|apos|#39|nbsp);/g, (_, entity: string) => ENTITIES[entity])
         .trim();
+
+// Long posts fold in timelines behind "Show more". Past HUGE_POST characters (posts made to choke apps)
+// the timeline doesn't draw their HTML at all, only the start as plain text, until asked.
+export const LONG_POST = 800;
+export const HUGE_POST = 5000;
+const LONG_POST_LINES = 15;
+export const postSize = (text: string): 'normal' | 'long' | 'huge' => {
+    if (text.length > HUGE_POST) return 'huge';
+    if (text.length > LONG_POST || (text.match(/\n/g)?.length ?? 0) >= LONG_POST_LINES) return 'long';
+    return 'normal';
+};
+
+// A run with no spaces ("AAAA…" or a long URL) gets a zero-width space every 40 characters, so it wraps
+// the same way on iOS and Android. Only text between tags; entities like &amp; and emoji stay whole.
+export const breakLongRuns = (html: string) =>
+    html.replace(/(^|>)([^<]+)/g, (_, open: string, text: string) => open + text.replace(/(?:&#?\w+;|(?!&#?\w+;)\S){40}(?=\S)/gu, '$&\u200B'));

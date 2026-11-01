@@ -740,3 +740,55 @@ describe('TootCard autoplay', () => {
         expect(isB.result.current).toBe(false);
     });
 });
+
+describe('TootCard long posts', () => {
+    const renderCard = (status: Status, fullText?: boolean) =>
+        render(
+            <QueryClientProvider client={createTestQueryClient()}>
+                <MediaViewerProvider>
+                    <TootCard status={status} fullText={fullText} />
+                </MediaViewerProvider>
+            </QueryClientProvider>
+        );
+
+    const long = { ...statusA, content: `<p>${'word '.repeat(200)}the end</p>` };
+    // A chain of characters made to choke apps
+    const huge = { ...statusA, content: `<p>${'A'.repeat(20000)}</p>` };
+
+    it('leaves short posts as they are', async () => {
+        await renderCard(statusA);
+
+        expect(screen.queryByRole('button', { name: 'Show more' })).toBeNull();
+    });
+
+    it('folds a long post behind Show more and opens it in place', async () => {
+        await renderCard(long);
+
+        expect(screen.getByText(/the end/)).toBeTruthy();
+        await fireEvent.press(screen.getByRole('button', { name: 'Show more' }));
+        expect(screen.queryByRole('button', { name: 'Show more' })).toBeNull();
+        expect(screen.getByText(/the end/)).toBeTruthy();
+    });
+
+    it("shows only the start of a huge post as plain text, with its length, until it's opened", async () => {
+        await renderCard(huge);
+
+        // Plain text (the post's HTML draws selectable text) and only its first 1,000 characters
+        const preview = screen.getByText(/^A+$/);
+        expect(preview.props.children).toHaveLength(1000);
+        expect(preview).not.toHaveProp('selectable', true);
+        expect(screen.getByText(`Very long post · ${(20000).toLocaleString('en')} characters`)).toBeTruthy();
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Show more' }));
+        expect(screen.queryByText(/Very long post/)).toBeNull();
+        // The whole post now, drawn from its HTML (selectable) with the run broken up to wrap
+        expect(screen.getByText(/^A{40}\u200B/)).toHaveProp('selectable', true);
+    });
+
+    it("shows the whole text of a thread's main post", async () => {
+        await renderCard(huge, true);
+
+        expect(screen.queryByRole('button', { name: 'Show more' })).toBeNull();
+        expect(screen.queryByText(/Very long post/)).toBeNull();
+    });
+});

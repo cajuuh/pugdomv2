@@ -145,6 +145,31 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         marginTop: 10,
         gap: space.md,
     },
+    // A long post folded in a timeline: about 12 lines of it, then "Show more"
+    textFold: {
+        maxHeight: 270,
+        overflow: 'hidden',
+    },
+    textFoldCompact: {
+        maxHeight: 216,
+    },
+    foldedText: {
+        color: colors.textPrimary,
+    },
+    foldedTextCompact: {
+        fontSize: 13,
+        lineHeight: 18,
+    },
+    foldRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: space.sm,
+    },
+    foldMeta: {
+        flexShrink: 1,
+        color: colors.textSecondary,
+    },
     // Content warning, collapsed
     cwRibbon: {
         marginTop: space.md,

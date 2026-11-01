@@ -301,6 +301,9 @@ export const en = {
         hideMedia: 'Hide media',
         contentWarning: 'Content warning',
         cwTitle: 'CW · {{text}}',
+        // A long post folded in a timeline; past 5,000 characters it also says how long
+        showMore: 'Show more',
+        veryLong: 'Very long post · {{count}} characters',
         boosted: '{{name}} boosted',
         privateMention: 'Private mention',
         opensThread: 'Opens the thread',
