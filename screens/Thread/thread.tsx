@@ -283,6 +283,7 @@ export default function Thread({
                                         onPress={isMain ? undefined : onStatusPress}
                                         threadMode={true}
                                         showReactions={isMain}
+                                        fullText={isMain}
                                         // The avatar line links what the post answers down to it, and a reply to its branch
                                         hasThreadLineTop={depth === 0 && shown[index - 1]?.depth === 0}
                                         hasThreadLineBottom={(depth === 0 && nextDepth === 0) || (depth === 1 && inBranch)}

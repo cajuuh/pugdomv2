@@ -48,6 +48,7 @@ import { useModeration } from '../../hooks/useModeration';
 import { usePostActions } from '../../hooks/usePostActions';
 import { EditHistorySheet } from './editHistorySheet';
 import { dialog } from '../../services/dialog';
+import { plainText, postSize } from '../../services/htmlText';
 import { useIsAutoplayPost } from '../../services/media/autoplay';
 
 export const getRelativeTime = (dateString: string, { t }: Translator) => {
@@ -134,9 +135,11 @@ interface TootCardProps {
     // A post read from another server (its ids aren't ours): no buttons that act on it here; tapping it,
     // its author or "open to interact" finds it through our server first
     remote?: boolean;
+    // The whole text however long (a thread's main post); elsewhere long posts fold behind "Show more"
+    fullText?: boolean;
 }
 
-export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPressHashtag, onPress, threadMode, showReactions, hasThreadLineTop, hasThreadLineBottom, indent = 0, replyingTo, remote }) => {
+export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPressHashtag, onPress, threadMode, showReactions, hasThreadLineTop, hasThreadLineBottom, indent = 0, replyingTo, remote, fullText }) => {
     const { compactMode, hideCounts, coverSensitiveMedia, uncroppedMedia, mediaAutoplay } = useSettings();
     const { colors, type } = useTheme();
     const styles = useThemedStyles(makeStyles);
@@ -166,7 +169,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     );
     const openPerson = (account: Status['account']) => (remote && account.url ? openLinkInApp(account.url) : openAccount(account));
     const i18n = useI18n();
-    const { t, tn } = i18n;
+    const { t, tn, locale } = i18n;
 
     // FlashList reuses this component for other statuses, so all per-status state resets when the status changes
     const recyclingDeps = [targetStatus.id];
@@ -181,6 +184,10 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const [boostCount, setBoostCount] = useRecyclingState(targetStatus.reblogs_count, recyclingDeps);
     const [isBookmarked, setIsBookmarked] = useRecyclingState(!!targetStatus.bookmarked, recyclingDeps);
     const [isMediaRevealed, setIsMediaRevealed] = useRecyclingState(false, recyclingDeps);
+    const plain = React.useMemo(() => plainText(targetStatus.content), [targetStatus.content]);
+    const textSize = fullText ? 'normal' : postSize(plain);
+    const [isTextExpanded, setIsTextExpanded] = useRecyclingState(false, recyclingDeps);
+    const isTextFolded = textSize !== 'normal' && !isTextExpanded;
     const mediaDisplay = useMediaDisplay();
     // The carousel's page; its width is layout, not per-post state
     const [mediaPage, setMediaPage] = useRecyclingState(0, recyclingDeps);
@@ -476,18 +483,34 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
 
     const body = (
         <>
-            {hasText(targetStatus.content) && (
-                <StatusHtmlContent
-                    content={targetStatus.content}
-                    emojis={targetStatus.emojis}
-                    colors={colors}
-                    bodyFont={type.body}
-                    compactMode={compactMode}
-                    width={contentWidth}
-                    onPressMention={onPressMention ?? handleMention}
-                    onPressHashtag={onPressHashtag ?? openHashtag}
-                    onPressLink={openLinkInApp}
-                />
+            {hasText(targetStatus.content) && (isTextFolded && textSize === 'huge' ? (
+                // Not even parsed as HTML until asked: only the start, as plain text
+                <Text style={[type.body, styles.foldedText, compactMode && styles.foldedTextCompact]} numberOfLines={12}>
+                    {renderTextWithEmojis(plain.slice(0, 1000), targetStatus.emojis, null)}
+                </Text>
+            ) : (
+                // The same wrapper folded or not, so "Show more" doesn't rebuild the post's HTML
+                <View style={isTextFolded ? [styles.textFold, compactMode && styles.textFoldCompact] : undefined}>
+                    <StatusHtmlContent
+                        content={targetStatus.content}
+                        emojis={targetStatus.emojis}
+                        colors={colors}
+                        bodyFont={type.body}
+                        compactMode={compactMode}
+                        width={contentWidth}
+                        onPressMention={onPressMention ?? handleMention}
+                        onPressHashtag={onPressHashtag ?? openHashtag}
+                        onPressLink={openLinkInApp}
+                    />
+                </View>
+            ))}
+            {isTextFolded && (
+                <View style={styles.foldRow}>
+                    {textSize === 'huge' && (
+                        <Text style={[type.meta, styles.foldMeta]}>{t('post.veryLong', { count: plain.length.toLocaleString(locale) })}</Text>
+                    )}
+                    <PillButton label={t('post.showMore')} size="small" variant="subtle" onPress={() => setIsTextExpanded(true)} />
+                </View>
             )}
             {targetStatus.poll && (
                 <Poll
