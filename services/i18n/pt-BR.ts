@@ -670,6 +670,7 @@ export const ptBR: Dictionary = {
         favouriteAction: 'Favoritar',
         empty: 'Nenhuma notificação ainda!',
         markAllRead: 'Marcar todas como lidas',
+        new: 'Novas',
         today: 'Hoje',
         earlier: 'Anteriores',
         row: '{{actors}} {{action}}, {{time}}',

@@ -9,7 +9,8 @@ import { Account, Notification, NotificationGroup, Relationship, Status } from '
 import { NotificationGroupsPage, clearNotifications, dismissNotificationGroup, isNewerId, mergeGroups } from '../../services/mastodon/notifications';
 import { ActionSheet } from '../../components/ComposeModal/optionSheet';
 import { favouriteStatus, unfavouriteStatus } from '../../services/mastodon/statuses';
-import { markNotificationsRead } from '../../services/mastodon/markers';
+import { getNotificationsMarker, markNotificationsRead } from '../../services/mastodon/markers';
+import { getSeenNotificationId } from '../../services/notificationsSeen';
 import { useTheme } from '../../services/themeContext';
 import { useCompose } from '../../services/composeContext';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
@@ -435,6 +436,21 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
     const [activeFilter, setActiveFilter] = useState<NotificationFilter>('all');
     const [isPullRefreshing, setIsPullRefreshing] = useState(false);
     const [markedReadId, setMarkedReadId] = useState<string | null>(null);
+    // Where you'd read up to when the tab opened (the newer of the server's marker and what this phone
+    // last showed): rows past it are "New" while you're here, though opening the tab clears the bell.
+    // Undefined while it loads.
+    const accountId = useOptionalAuth()?.user?.id;
+    const [readPoint, setReadPoint] = useState<string | null | undefined>(undefined);
+    useEffect(() => {
+        if (!accountId) return;
+        let cancelled = false;
+        Promise.all([getNotificationsMarker().catch(() => null), getSeenNotificationId(accountId)]).then(([marker, seen]) => {
+            if (!cancelled) setReadPoint(marker && seen ? (isNewerId(marker, seen) ? marker : seen) : marker ?? seen);
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [accountId]);
     // Picking notifications to remove: the keys of the ticked rows
     const [selecting, setSelecting] = useState(false);
     const [selected, setSelected] = useState<Set<string>>(() => new Set());
@@ -448,7 +464,7 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
         () => mergeGroups(data?.pages.flatMap(page => page.groups) ?? []).filter(g => SUPPORTED_NOTIFICATION_TYPES.includes(g.type)),
         [data]
     );
-    const listItems = useMemo(() => buildListItems(notifications, new Date(), i18n), [notifications, i18n]);
+    const listItems = useMemo(() => buildListItems(notifications, new Date(), i18n, readPoint), [notifications, i18n, readPoint]);
 
     const followerIds = useMemo(
         () => notifications.filter(g => g.type === 'follow' && g.accounts[0]).map(g => g.accounts[0].id),
@@ -465,11 +481,13 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
         return ids.reduce<string | null>((newest, id) => (!newest || isNewerId(id, newest) ? id : newest), null);
     }, [queryClient, data]);
 
-    // Showing them counts as seeing them: the bell's dot goes away (the server's marker stays)
+    // Showing them counts as seeing them: the bell's dot goes away (the server's marker stays). After the
+    // read point is read, or it would already count them as seen.
     const markSeen = useMarkNotificationsSeen();
+    const readPointLoaded = readPoint !== undefined;
     useEffect(() => {
-        if (newestId) markSeen(newestId);
-    }, [newestId, markSeen]);
+        if (newestId && readPointLoaded) markSeen(newestId);
+    }, [newestId, readPointLoaded, markSeen]);
     // Direct messages read here clear the envelope's dot too
     const directMentionIds = useMemo(
         () => notifications.flatMap(group => (group.type === 'mention' && group.status?.visibility === 'direct' ? [group.status.id] : [])),
@@ -482,6 +500,7 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
         try {
             await markNotificationsRead(newestId);
             setMarkedReadId(newestId);
+            setReadPoint(newestId);
         } catch (error) {
             dialog.toast(t('notifications.markReadFailed'));
         }
@@ -583,7 +602,7 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
         if (item.kind === 'section') {
             return <SectionLabel style={[styles.sectionLabel, index > 0 && styles.sectionLabelSpaced]}>{item.label}</SectionLabel>;
         }
-        const row = (
+        const notificationRow = (
             <NotificationRow
                 group={item.group}
                 relationship={item.group.accounts[0] && relationships.get(item.group.accounts[0].id)}
@@ -591,6 +610,13 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
                 onLongPress={selecting ? undefined : () => startSelecting(item.group.key)}
             />
         );
+        // A new row gets a coat dot by its avatar (screen readers hear the "New" section title instead)
+        const row = item.unread ? (
+            <View>
+                {notificationRow}
+                <View testID="unread-row-dot" style={styles.unreadDot} />
+            </View>
+        ) : notificationRow;
         return (
             <View style={[styles.segment, item.first && styles.segmentFirst, item.last && styles.segmentLast]}>
                 {!item.first && <View style={styles.separator} />}
