@@ -610,13 +610,15 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
                 onLongPress={selecting ? undefined : () => startSelecting(item.group.key)}
             />
         );
-        // A new row gets a coat dot by its avatar (screen readers hear the "New" section title instead)
-        const row = item.unread ? (
+        // A new row gets a coat dot by its avatar (screen readers hear the "New" section title instead).
+        // Every row has the wrapper, so marking read only drops the dot: swapping what sits inside the
+        // swipeable left the row blank on Android
+        const row = (
             <View>
                 {notificationRow}
-                <View testID="unread-row-dot" style={styles.unreadDot} />
+                {item.unread && <View testID="unread-row-dot" style={styles.unreadDot} />}
             </View>
-        ) : notificationRow;
+        );
         return (
             <View style={[styles.segment, item.first && styles.segmentFirst, item.last && styles.segmentLast]}>
                 {!item.first && <View style={styles.separator} />}
