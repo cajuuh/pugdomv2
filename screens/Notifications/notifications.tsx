@@ -481,12 +481,15 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
         return ids.reduce<string | null>((newest, id) => (!newest || isNewerId(id, newest) ? id : newest), null);
     }, [queryClient, data]);
 
-    // Showing them counts as seeing them: the bell's dot goes away (the server's marker stays). After the
-    // read point is read, or it would already count them as seen.
+    // Showing them counts as reading them: the bell's dot goes away, and the server's read marker moves so
+    // the web and other apps stop counting them too (if that fails, the next visit tries again). After the
+    // read point is read, or it would already count them as read.
     const markSeen = useMarkNotificationsSeen();
     const readPointLoaded = readPoint !== undefined;
     useEffect(() => {
-        if (newestId && readPointLoaded) markSeen(newestId);
+        if (!newestId || !readPointLoaded) return;
+        markSeen(newestId);
+        markNotificationsRead(newestId).catch(() => {});
     }, [newestId, readPointLoaded, markSeen]);
     // Direct messages read here clear the envelope's dot too
     const directMentionIds = useMemo(

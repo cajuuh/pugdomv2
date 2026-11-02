@@ -39,7 +39,7 @@ jest.mock('../services/mastodon/accounts', () => ({
 }));
 jest.mock('../services/authContext', () => ({ useOptionalAuth: () => ({ user: { id: 'me' } }) }));
 jest.mock('../services/mastodon/statuses', () => ({ favouriteStatus: jest.fn(), unfavouriteStatus: jest.fn() }));
-jest.mock('../services/mastodon/markers', () => ({ markNotificationsRead: jest.fn(), getNotificationsMarker: jest.fn(async () => mockMarker) }));
+jest.mock('../services/mastodon/markers', () => ({ markNotificationsRead: jest.fn(async () => {}), getNotificationsMarker: jest.fn(async () => mockMarker) }));
 // The server's read marker; null: nothing read yet
 let mockMarker: string | null = null;
 jest.mock('../services/themeContext', () => ({
@@ -389,6 +389,30 @@ describe('Notifications', () => {
 
         expect(await screen.findByText('CW: spoilers')).toBeTruthy();
         expect(screen.queryByText(/the ending/)).toBeNull();
+    });
+
+    it("moves the server's read marker when it shows them, so the web stops counting them too", async () => {
+        mockedFetch.mockResolvedValue([
+            notification('110', 'mention', account('a', 'alice')),
+            notification('99', 'favourite', account('b', 'bob')),
+        ]);
+        await renderScreen();
+
+        await screen.findByText(/mentioned you/);
+        await waitFor(() => expect(mockedMarkRead).toHaveBeenCalledWith('110'));
+        // Still new on screen while you look
+        expect(screen.getAllByTestId('unread-row-dot')).toHaveLength(2);
+    });
+
+    it("stays quiet when the marker can't be saved", async () => {
+        mockedFetch.mockResolvedValue([notification('2', 'favourite', account('a', 'alice'))]);
+        mockedMarkRead.mockRejectedValueOnce(new Error('offline'));
+        const toast = jest.spyOn(dialog, 'toast');
+        await renderScreen();
+
+        await screen.findByText(/favourited your post/);
+        await waitFor(() => expect(mockedMarkRead).toHaveBeenCalled());
+        expect(toast).not.toHaveBeenCalled();
     });
 
     it('marks everything up to the newest notification as read', async () => {
