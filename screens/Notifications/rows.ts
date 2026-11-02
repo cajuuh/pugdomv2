@@ -1,19 +1,25 @@
 import { NotificationGroup } from '../../services/mastodon/types';
 import { defaultTranslator, Translator } from '../../services/i18n/translate';
+import { isNewerId } from '../../services/mastodon/notifications';
 
 // One entry in the list: a section label, or a notification row inside that section's inset group
 export type ListItem =
     | { kind: 'section'; key: string; label: string }
-    | { kind: 'row'; key: string; group: NotificationGroup; first: boolean; last: boolean };
+    | { kind: 'row'; key: string; group: NotificationGroup; first: boolean; last: boolean; unread: boolean };
 
 const isSameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
 
-// Splits rows (newest first) into "Today" and "Earlier" sections
-export const buildListItems = (groups: NotificationGroup[], now = new Date(), { t }: Translator = defaultTranslator()): ListItem[] => {
-    const today = groups.filter(g => isSameDay(new Date(g.created_at), now));
-    const earlier = groups.filter(g => !isSameDay(new Date(g.created_at), now));
+// Splits rows (newest first) into "New", "Today" and "Earlier" sections. New: newer than `readPoint`, where
+// you'd read up to (null: nothing read yet); while it's still loading (undefined) there's no "New"
+export const buildListItems = (groups: NotificationGroup[], now = new Date(), { t }: Translator = defaultTranslator(), readPoint?: string | null): ListItem[] => {
+    const isNew = (g: NotificationGroup) => readPoint !== undefined && (readPoint === null || isNewerId(g.newestId, readPoint));
+    const unread = groups.filter(isNew);
+    const read = groups.filter(g => !isNew(g));
+    const today = read.filter(g => isSameDay(new Date(g.created_at), now));
+    const earlier = read.filter(g => !isSameDay(new Date(g.created_at), now));
 
     return [
+        { id: 'new', label: t('notifications.new'), items: unread },
         { id: 'today', label: t('notifications.today'), items: today },
         { id: 'earlier', label: t('notifications.earlier'), items: earlier },
     ].flatMap(({ id, label, items }): ListItem[] =>
@@ -27,6 +33,7 @@ export const buildListItems = (groups: NotificationGroup[], now = new Date(), { 
                     group,
                     first: index === 0,
                     last: index === items.length - 1,
+                    unread: id === 'new',
                 })),
             ]
     );

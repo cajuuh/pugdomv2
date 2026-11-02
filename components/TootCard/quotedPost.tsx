@@ -152,9 +152,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: space.xs,
     },
+    // Doesn't shrink (the handle does): on Android a name shrunk after measuring wraps its custom emoji
+    // onto a line the box doesn't have, so the emoji lands over the post's text
     name: {
         fontSize: 13,
-        flexShrink: 1,
     },
     handle: {
         flexShrink: 1,

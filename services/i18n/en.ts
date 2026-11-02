@@ -683,6 +683,8 @@ export const en = {
         favouriteAction: 'Favourite',
         empty: 'No notifications yet!',
         markAllRead: 'Mark all as read',
+        // Newer than where you'd read up to when you opened the tab
+        new: 'New',
         today: 'Today',
         earlier: 'Earlier',
         // Screen reader text for a row: "Ana favourited your post, 3h: hello"

@@ -9,6 +9,8 @@ import { dialog } from '../services/dialog';
 import { authorizeFollowRequest, followAccount, getRelationships } from '../services/mastodon/accounts';
 import { favouriteStatus } from '../services/mastodon/statuses';
 import { markNotificationsRead } from '../services/mastodon/markers';
+import { getSeenNotificationId, setSeenNotificationId } from '../services/notificationsSeen';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getConversations, markConversationRead } from '../services/mastodon/conversations';
 import { Account, Notification } from '../services/mastodon/types';
 import { actorsText, buildListItems, notificationTime, plainText, withoutLeadingMentions } from '../screens/Notifications/rows';
@@ -37,7 +39,9 @@ jest.mock('../services/mastodon/accounts', () => ({
 }));
 jest.mock('../services/authContext', () => ({ useOptionalAuth: () => ({ user: { id: 'me' } }) }));
 jest.mock('../services/mastodon/statuses', () => ({ favouriteStatus: jest.fn(), unfavouriteStatus: jest.fn() }));
-jest.mock('../services/mastodon/markers', () => ({ markNotificationsRead: jest.fn() }));
+jest.mock('../services/mastodon/markers', () => ({ markNotificationsRead: jest.fn(), getNotificationsMarker: jest.fn(async () => mockMarker) }));
+// The server's read marker; null: nothing read yet
+let mockMarker: string | null = null;
 jest.mock('../services/themeContext', () => ({
     useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
 }));
@@ -83,6 +87,9 @@ describe('Notifications', () => {
         queryClient = createTestQueryClient();
         mockedRelationships.mockResolvedValue([]);
         (getConversations as jest.Mock).mockResolvedValue({ conversations: [] });
+        mockMarker = null;
+        // What earlier tests showed would count as seen
+        return AsyncStorage.clear();
     });
 
     it('asks the server only for the types it can render', async () => {
@@ -276,10 +283,52 @@ describe('Notifications', () => {
             notification('2', 'favourite', account('a', 'alice')),
             notification('1', 'reblog', account('b', 'bob'), lastWeek),
         ]);
+        mockMarker = '2';
         await renderScreen();
 
         await screen.findByText(/favourited your post/);
         expect(screen.getAllByRole('header').map(header => header.props.children)).toEqual(['Notifications', 'Today', 'Earlier']);
+    });
+
+    it('puts what came after your last read under New, each with a dot, until you mark all as read', async () => {
+        mockedFetch.mockResolvedValue([
+            notification('3', 'favourite', account('a', 'alice')),
+            notification('2', 'reblog', account('b', 'bob')),
+            notification('1', 'follow', account('c', 'carol')),
+        ]);
+        mockMarker = '1';
+        await renderScreen();
+
+        await screen.findByText(/favourited your post/);
+        expect(screen.getAllByRole('header').map(header => header.props.children)).toEqual(['Notifications', 'New', 'Today']);
+        expect(screen.getAllByTestId('unread-row-dot')).toHaveLength(2);
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Mark all as read' }));
+        expect(screen.getAllByRole('header').map(header => header.props.children)).toEqual(['Notifications', 'Today']);
+        expect(screen.queryByTestId('unread-row-dot')).toBeNull();
+    });
+
+    it('keeps them New while you look, though opening the tab clears the bell', async () => {
+        mockedFetch.mockResolvedValue([notification('2', 'favourite', account('a', 'alice'))]);
+        mockMarker = '1';
+        await renderScreen();
+
+        await screen.findByText(/favourited your post/);
+        await waitFor(async () => expect(await getSeenNotificationId('me')).toBe('2'));
+        expect(screen.getByTestId('unread-row-dot')).toBeTruthy();
+    });
+
+    it("counts what this phone already showed you as read, even if the server's marker is older", async () => {
+        mockedFetch.mockResolvedValue([
+            notification('3', 'favourite', account('a', 'alice')),
+            notification('2', 'reblog', account('b', 'bob')),
+        ]);
+        mockMarker = '1';
+        await setSeenNotificationId('me', '2');
+        await renderScreen();
+
+        await screen.findByText(/favourited your post/);
+        await waitFor(() => expect(screen.getAllByTestId('unread-row-dot')).toHaveLength(1));
     });
 
     it('marks each type with a glyph badge instead of a colored pill', async () => {
@@ -506,6 +555,20 @@ describe('notification rows', () => {
         expect(items.map(item => (item.kind === 'section' ? item.label : `${item.first ? 'F' : ''}${item.last ? 'L' : ''}`))).toEqual([
             'Today', 'F', 'L', 'Earlier', 'FL',
         ]);
+    });
+
+    it('puts groups newer than the read point first, under New, comparing ids by length first', () => {
+        const groups = groupsFromNotifications([
+            notification('100', 'favourite', account('a', 'alice'), new Date(2026, 8, 29, 14)),
+            notification('99', 'reblog', account('b', 'bob'), new Date(2026, 8, 29, 13)),
+        ]);
+        const labels = (readPoint?: string | null) =>
+            buildListItems(groups, now, undefined, readPoint).map(item => (item.kind === 'section' ? item.label : item.unread ? 'unread' : 'read'));
+
+        expect(labels('99')).toEqual(['New', 'unread', 'Today', 'read']);
+        expect(labels(null)).toEqual(['New', 'unread', 'unread']);
+        // Still loading: no New yet
+        expect(labels(undefined)).toEqual(['Today', 'read', 'read']);
     });
 
     it('leaves out empty sections', () => {

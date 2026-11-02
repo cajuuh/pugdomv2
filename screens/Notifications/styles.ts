@@ -5,6 +5,7 @@ import { radii, space } from '../../services/theme/shape';
 
 const ROW_PADDING = space.lg;
 const AVATAR_SIZE = 44;
+const UNREAD_DOT = 8;
 const ROW_GAP = space.md;
 const FAVOURITE_SIZE = 34;
 const STACKED_AVATAR = 30;
@@ -88,6 +89,16 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         borderBottomWidth: StyleSheet.hairlineWidth,
         borderBottomLeftRadius: radii.card,
         borderBottomRightRadius: radii.card,
+    },
+    // A new row's dot, in the padding left of the avatar, level with its middle
+    unreadDot: {
+        position: 'absolute',
+        left: (ROW_PADDING - UNREAD_DOT) / 2,
+        top: 14 + AVATAR_SIZE / 2 - UNREAD_DOT / 2,
+        width: UNREAD_DOT,
+        height: UNREAD_DOT,
+        borderRadius: UNREAD_DOT / 2,
+        backgroundColor: colors.accentColor,
     },
     // Hairline indented to where the text starts
     separator: {
