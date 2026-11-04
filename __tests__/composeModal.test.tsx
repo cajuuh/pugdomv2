@@ -12,7 +12,7 @@ import { shouldDismiss } from '../components/ComposeModal/sheetTransition';
 import { counterState } from '../components/ComposeModal/characterCounter';
 import { fetchCustomEmojis } from '../services/mastodon/customEmojis';
 import { createStatus } from '../services/mastodon/statuses';
-import { search } from '../services/mastodon/search';
+import { searchAccountNames } from '../services/mastodon/search';
 import { dialog } from '../services/dialog';
 import { DEFAULT_INSTANCE_CONFIGURATION, fetchInstanceConfiguration } from '../services/mastodon/instance';
 import { Account, Status } from '../services/mastodon/types';
@@ -31,7 +31,7 @@ jest.mock('../services/mastodon/statuses', () => ({
     createStatus: jest.fn(),
 }));
 
-jest.mock('../services/mastodon/search', () => ({ search: jest.fn() }));
+jest.mock('../services/mastodon/search', () => ({ searchAccountNames: jest.fn() }));
 
 jest.mock('../services/mastodon/customEmojis', () => ({
     fetchCustomEmojis: jest.fn(),
@@ -384,19 +384,27 @@ describe('ComposeModal', () => {
     });
 
     it('suggests people while typing a mention, and completes the one picked', async () => {
-        (search as jest.Mock).mockResolvedValue({
-            accounts: [{ id: '1', username: 'ana', acct: 'ana@pug.social', display_name: 'Ana', avatar: '', emojis: [] }],
-            hashtags: [],
-            statuses: [],
-        });
+        const person = (id: string, acct: string, display_name: string) => ({ id, username: acct, acct, display_name, avatar: '', emojis: [] });
+        const followed = person('2', 'ana@pug.social', 'Ana');
+        (searchAccountNames as jest.Mock).mockImplementation(async (_q: string, options: { following?: boolean }) =>
+            options.following ? [followed] : [person('3', 'anabel@far.social', 'Anabel'), followed, person('4', 'anita', 'Anita')]
+        );
         await renderCompose();
 
         await fireEvent.changeText(composer(), 'oi @an');
         await fireEvent(composer(), 'selectionChange', { nativeEvent: { selection: { start: 6, end: 6 } } });
 
-        await fireEvent.press(await screen.findByRole('button', { name: 'Ana, @ana@pug.social' }));
+        const picked = await screen.findByRole('button', { name: 'Ana, @ana@pug.social' });
+        // Who you follow, then your server, then everyone else
+        expect(screen.getAllByRole('button', { name: /, @/ }).map(button => button.props.accessibilityLabel)).toEqual([
+            'Ana, @ana@pug.social',
+            'Anita, @anita',
+            'Anabel, @anabel@far.social',
+        ]);
+        await fireEvent.press(picked);
 
-        expect(search).toHaveBeenCalledWith({ q: 'an', type: 'accounts', limit: 8, resolve: false });
+        expect(searchAccountNames).toHaveBeenCalledWith('an', { following: true, limit: 20 });
+        expect(searchAccountNames).toHaveBeenCalledWith('an', { resolve: false, limit: 40 });
         expect(composer().props.value).toBe('oi @ana@pug.social ');
     });
 

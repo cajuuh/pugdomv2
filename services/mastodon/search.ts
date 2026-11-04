@@ -33,6 +33,15 @@ export async function search({ q, type, resolve, limit, offset }: SearchParams):
     return { ...EMPTY, ...response.data };
 }
 
+// People by username and display name, for completing a mention: what Mastodon's own composer asks. The v2
+// search above also looks in bios, so its people often have nothing like the query in their name.
+export async function searchAccountNames(q: string, options: { following?: boolean; resolve?: boolean; limit?: number } = {}): Promise<Account[]> {
+    const response = await apiClient.get<Account[]>('/accounts/search', {
+        params: { q, following: options.following || undefined, resolve: options.resolve || undefined, limit: options.limit },
+    });
+    return response.data;
+}
+
 // Finds the account behind a profile URL or @user@server, asking our server to look it up (WebFinger)
 // if it doesn't know it yet. Null when nothing matches.
 export async function resolveAccount(query: string): Promise<Account | null> {
