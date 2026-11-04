@@ -481,12 +481,15 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
         return ids.reduce<string | null>((newest, id) => (!newest || isNewerId(id, newest) ? id : newest), null);
     }, [queryClient, data]);
 
-    // Showing them counts as seeing them: the bell's dot goes away (the server's marker stays). After the
-    // read point is read, or it would already count them as seen.
+    // Showing them counts as reading them: the bell's dot goes away, and the server's read marker moves so
+    // the web and other apps stop counting them too (if that fails, the next visit tries again). After the
+    // read point is read, or it would already count them as read.
     const markSeen = useMarkNotificationsSeen();
     const readPointLoaded = readPoint !== undefined;
     useEffect(() => {
-        if (newestId && readPointLoaded) markSeen(newestId);
+        if (!newestId || !readPointLoaded) return;
+        markSeen(newestId);
+        markNotificationsRead(newestId).catch(() => {});
     }, [newestId, readPointLoaded, markSeen]);
     // Direct messages read here clear the envelope's dot too
     const directMentionIds = useMemo(
@@ -610,13 +613,15 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
                 onLongPress={selecting ? undefined : () => startSelecting(item.group.key)}
             />
         );
-        // A new row gets a coat dot by its avatar (screen readers hear the "New" section title instead)
-        const row = item.unread ? (
+        // A new row gets a coat dot by its avatar (screen readers hear the "New" section title instead).
+        // Every row has the wrapper, so marking read only drops the dot: swapping what sits inside the
+        // swipeable left the row blank on Android
+        const row = (
             <View>
                 {notificationRow}
-                <View testID="unread-row-dot" style={styles.unreadDot} />
+                {item.unread && <View testID="unread-row-dot" style={styles.unreadDot} />}
             </View>
-        ) : notificationRow;
+        );
         return (
             <View style={[styles.segment, item.first && styles.segmentFirst, item.last && styles.segmentLast]}>
                 {!item.first && <View style={styles.separator} />}

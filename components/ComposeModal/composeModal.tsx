@@ -24,8 +24,8 @@ import { STATUS_UPDATED_EVENT, useUpdateCachedStatus } from '../../hooks/useUpda
 import type { ExistingPost } from '../../services/composeContext';
 import { ScheduleSheet, formatScheduleTime } from './scheduleSheet';
 import { Suggestion, SuggestionRow } from './suggestionRow';
-import { completeToken, tokenAtCursor } from './autocomplete';
-import { search } from '../../services/mastodon/search';
+import { completeToken, rankMentions, tokenAtCursor } from './autocomplete';
+import { searchAccountNames } from '../../services/mastodon/search';
 import { useDebounced } from '../../hooks/useSearch';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { searchEmojis } from './emojiPicker';
@@ -223,8 +223,15 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
     // People, once typing pauses; the server only looks up unknown accounts for a full @user@server
     const mentionQuery = useDebounced(token?.trigger === '@' ? token.query : '', 250);
     const { data: mentionMatches } = useQuery({
-        queryKey: ['mentionSuggestions', mentionQuery],
-        queryFn: async () => (await search({ q: mentionQuery, type: 'accounts', limit: 8, resolve: mentionQuery.includes('@') })).accounts,
+        queryKey: ['mentionSuggestions', user?.id, mentionQuery],
+        queryFn: async () => {
+            const [following, everyone] = await Promise.all([
+                // Without it the list still works, just not with those you follow first
+                searchAccountNames(mentionQuery, { following: true, limit: 20 }).catch(() => []),
+                searchAccountNames(mentionQuery, { resolve: mentionQuery.includes('@'), limit: 40 }),
+            ]);
+            return rankMentions(following, everyone, user?.id);
+        },
         enabled: isOpen && mentionQuery.length > 0,
         staleTime: 60_000,
     });

@@ -1,4 +1,4 @@
-import { completeToken, tokenAtCursor } from '../components/ComposeModal/autocomplete';
+import { completeToken, rankMentions, tokenAtCursor } from '../components/ComposeModal/autocomplete';
 
 describe('tokenAtCursor', () => {
     const at = (text: string, cursor = text.length) => tokenAtCursor(text, cursor);
@@ -43,5 +43,26 @@ describe('completeToken', () => {
 
     it('keeps the text after the cursor, without doubling a space', () => {
         expect(completeToken(':neo and more', 0, 4, ':neofox:')).toEqual({ text: ':neofox: and more', cursor: 8 });
+    });
+});
+
+describe('rankMentions', () => {
+    const person = (id: string, acct: string) => ({ id, acct });
+    const followed = person('1', 'isadora@far.social');
+    const local = person('2', 'isa');
+    const remote = person('3', 'isabel@far.social');
+
+    it('puts who you follow first, then your server, then everyone else, once each', () => {
+        expect(rankMentions([followed], [remote, followed, local])).toEqual([followed, local, remote]);
+    });
+
+    it('keeps the server order inside each group', () => {
+        const other = person('4', 'isaac');
+        expect(rankMentions([], [other, remote, local])).toEqual([other, local, remote]);
+    });
+
+    it('leaves you out, since your server counts you among those you follow', () => {
+        const me = person('9', 'isa_me');
+        expect(rankMentions([me, followed], [me, local], '9')).toEqual([followed, local]);
     });
 });

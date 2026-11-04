@@ -373,6 +373,23 @@ describe('TootCard content', () => {
         }
     });
 
+    it('shows the media, not the post, when the Sensitive label is tapped', async () => {
+        const onPress = jest.fn();
+        await render(
+            <QueryClientProvider client={createTestQueryClient()}>
+                <MediaViewerProvider>
+                    <TootCard status={withMedia({ ...statusA, sensitive: true })} onPress={onPress} />
+                </MediaViewerProvider>
+            </QueryClientProvider>
+        );
+
+        await fireEvent.press(screen.getByText(/^Sensitive/));
+
+        expect(screen.queryByTestId('media-veil')).toBeNull();
+        expect(screen.getByRole('button', { name: 'Hide media' })).toBeTruthy();
+        expect(onPress).not.toHaveBeenCalled();
+    });
+
     it('shows sensitive media on request and can hide it again', async () => {
         await renderCard(withMedia({ ...statusA, sensitive: true }));
 

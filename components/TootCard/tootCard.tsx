@@ -425,13 +425,15 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 </View>
                 {veiled ? (
                     <View style={StyleSheet.absoluteFill}>
-                        <View testID="media-veil" style={[styles.veil, !coverSensitiveMedia && styles.veilBare]}>
+                        {/* A tap anywhere on it shows the media, not the post. Not one accessible element, so
+                            screen readers still reach its label and Show button */}
+                        <Pressable testID="media-veil" accessible={false} onPress={() => setIsMediaRevealed(true)} style={[styles.veil, !coverSensitiveMedia && styles.veilBare]}>
                             <View style={styles.veilLabel}>
                                 <Ionicons name="eye-off-outline" size={16} color={colors.textPrimary} />
                                 <Text style={[type.name, styles.veilText]}>{t(targetStatus.sensitive ? 'post.sensitive' : 'post.hiddenMedia', { media: countMedia(attachments, i18n) })}</Text>
                             </View>
                             <PillButton label={t('common.show')} size="small" variant="secondary" onPress={() => setIsMediaRevealed(true)} />
-                        </View>
+                        </Pressable>
                     </View>
                 ) : (
                     <Pressable
