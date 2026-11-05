@@ -323,6 +323,7 @@ export const en = {
         share: 'Share',
         favouriteFailed: 'Failed to update the favourite. Please try again.',
         boostFailed: 'Failed to update the boost. Please try again.',
+        boostNotAllowed: "Can't boost: this post is only for followers or mentioned people",
         bookmarkFailed: 'Failed to update the bookmark. Please try again.',
     },
     poll: {

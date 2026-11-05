@@ -281,6 +281,10 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     // On servers with quote posts, boost opens a menu to boost or quote; elsewhere it boosts at once
     const quoting = quotePermission(targetStatus);
     const pressBoost = () => {
+        if (boostLocked) {
+            dialog.toast(t('post.boostNotAllowed'));
+            return;
+        }
         if (quoting === null) {
             toggleReblog();
             return;
@@ -299,6 +303,10 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     // delete; other people's, report, mute and block.
     const showPostMenu = !remote && !!auth?.user;
     const ownPost = !!auth?.user && auth.user.id === targetStatus.account.id;
+    // The server's rule: followers-only posts can only be boosted by their author, private mentions by nobody
+    const boostAllowed = targetStatus.visibility !== 'direct' && (targetStatus.visibility !== 'private' || ownPost);
+    // A follower may still be allowed to quote a followers-only post: the menu then stays, with Boost disabled in it
+    const boostLocked = !boostAllowed && (quoting === null || quoting === 'denied');
     const author = targetStatus.account;
     const quotesCount = targetStatus.quotes_count ?? 0;
     const viewQuotes = { key: 'quotes', icon: 'chatbox-ellipses-outline' as const, label: tn('quotes.viewQuotes', quotesCount), onPress: () => push({ name: 'quotes', status: targetStatus }) };
@@ -659,14 +667,14 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 {!hideCounts && <Text style={[type.meta, styles.actionCount]}>{targetStatus.replies_count || 0}</Text>}
             </Pressable>
             <Pressable
-                style={actionButtonStyle}
+                style={[actionButtonStyle, boostLocked && styles.actionLocked]}
                 hitSlop={actionHitSlop}
                 onPress={pressBoost}
                 accessibilityRole="button"
-                accessibilityLabel={tn(isReblogged ? 'post.boostedCount' : 'post.boost', boostCount || 0)}
-                accessibilityState={{ selected: isReblogged }}
+                accessibilityLabel={boostLocked ? t('post.boostNotAllowed') : tn(isReblogged ? 'post.boostedCount' : 'post.boost', boostCount || 0)}
+                accessibilityState={{ selected: isReblogged, disabled: boostLocked }}
             >
-                <Ionicons name="repeat" size={actionIcon} color={isReblogged ? colors.accentText : colors.textMuted} />
+                <Ionicons name={boostLocked ? 'lock-closed-outline' : 'repeat'} size={actionIcon} color={isReblogged ? colors.accentText : colors.textMuted} />
                 {!hideCounts && <Text style={[type.meta, styles.actionCount, isReblogged && styles.actionCountActive]}>{boostCount || 0}</Text>}
             </Pressable>
             <Pressable
@@ -784,9 +792,10 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     actions={[
                         {
                             key: 'boost',
-                            icon: 'repeat',
+                            icon: boostAllowed ? 'repeat' : 'lock-closed-outline',
                             label: isReblogged ? t('quotes.undoBoost') : t('quotes.boost'),
-                            description: isReblogged ? undefined : t('quotes.boostHint'),
+                            description: !boostAllowed ? t('post.boostNotAllowed') : isReblogged ? undefined : t('quotes.boostHint'),
+                            disabled: !boostAllowed,
                             onPress: toggleReblog,
                         },
                         {

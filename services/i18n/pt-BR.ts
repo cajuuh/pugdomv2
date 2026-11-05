@@ -315,6 +315,7 @@ export const ptBR: Dictionary = {
         share: 'Compartilhar',
         favouriteFailed: 'Não foi possível favoritar. Tente de novo.',
         boostFailed: 'Não foi possível dar boost. Tente de novo.',
+        boostNotAllowed: 'Não dá para dar boost: esta publicação é só para seguidores ou pessoas mencionadas',
         bookmarkFailed: 'Não foi possível salvar. Tente de novo.',
     },
     poll: {
