@@ -327,9 +327,12 @@ export const ptBR: Dictionary = {
         openToVote: 'Abra a publicação para votar',
         option: '{{title}}, {{percent}} por cento',
         optionYourVote: '{{title}}, {{percent}} por cento, seu voto',
+        optionYourVoteNoCount: '{{title}}, seu voto',
         votes_one: '{{count}} voto',
         votes_other: '{{count}} votos',
         vote: 'Votar',
+        seeResults: 'Ver resultados',
+        backToVote: 'Voltar a votar',
     },
     compose: {
         newPost: 'Nova publicação',

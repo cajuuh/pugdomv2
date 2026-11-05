@@ -335,9 +335,12 @@ export const en = {
         openToVote: 'Open the post to vote',
         option: '{{title}}, {{percent}} percent',
         optionYourVote: '{{title}}, {{percent}} percent, your vote',
+        optionYourVoteNoCount: '{{title}}, your vote',
         votes_one: '{{count}} vote',
         votes_other: '{{count}} votes',
         vote: 'Vote',
+        seeResults: 'See results',
+        backToVote: 'Back to voting',
     },
     compose: {
         newPost: 'New post',

@@ -89,6 +89,7 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     },
     footer: {
         flexDirection: 'row',
+        flexWrap: 'wrap',
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: space.sm,
@@ -97,5 +98,12 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     },
     footerText: {
         color: colors.textMuted,
+    },
+    // Wraps below the vote count on narrow phones, and stays on the right
+    footerActions: {
+        marginLeft: 'auto',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.xs,
     },
 });
