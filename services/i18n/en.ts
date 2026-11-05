@@ -321,6 +321,8 @@ export const en = {
         bookmark: 'Bookmark',
         bookmarked: 'Bookmarked',
         share: 'Share',
+        openInBrowser: 'Open in browser',
+        openInBrowserHint: "On your server's site",
         favouriteFailed: 'Failed to update the favourite. Please try again.',
         boostFailed: 'Failed to update the boost. Please try again.',
         boostNotAllowed: "Can't boost: this post is only for followers or mentioned people",

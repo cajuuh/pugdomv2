@@ -313,6 +313,8 @@ export const ptBR: Dictionary = {
         bookmark: 'Salvar',
         bookmarked: 'Salvo',
         share: 'Compartilhar',
+        openInBrowser: 'Abrir no navegador',
+        openInBrowserHint: 'No site do seu servidor',
         favouriteFailed: 'Não foi possível favoritar. Tente de novo.',
         boostFailed: 'Não foi possível dar boost. Tente de novo.',
         boostNotAllowed: 'Não dá para dar boost: esta publicação é só para seguidores ou pessoas mencionadas',
