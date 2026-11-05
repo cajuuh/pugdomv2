@@ -47,6 +47,8 @@ const VideoModal = ({ attachment, onClose, onOpenPost }: { attachment: Attachmen
     const player = useVideoPlayer(attachment.url, player => {
         // gifv attachments are silent looping GIFs converted to video
         player.loop = attachment.type === 'gifv';
+        // Android starts with this off, whatever the docs say, so the speed menu shifted the pitch
+        player.preservesPitch = true;
         player.play();
     });
 
