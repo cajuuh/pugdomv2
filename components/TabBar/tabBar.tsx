@@ -1,5 +1,5 @@
-import React from 'react';
-import { Pressable, View } from 'react-native';
+import React, { RefObject } from 'react';
+import { Platform, Pressable, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../../services/themeContext';
@@ -15,6 +15,8 @@ interface TabBarProps {
     onComposePress: () => void;
     // A dot on the bell for notifications you haven't seen
     unreadNotifications?: boolean;
+    // The BlurTargetView around what scrolls behind the dock: Android can't blur without one
+    blurTarget?: RefObject<View | null>;
 }
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -27,8 +29,8 @@ const TABS: Record<Tab, { icon: IconName; activeIcon: IconName }> = {
     profile: { icon: 'person-outline', activeIcon: 'person' },
 };
 
-export const TabBar: React.FC<TabBarProps> = ({ activeTab, onTabPress, onComposePress, unreadNotifications = false }) => {
-    const { colors, isDark } = useTheme();
+export const TabBar: React.FC<TabBarProps> = ({ activeTab, onTabPress, onComposePress, unreadNotifications = false, blurTarget }) => {
+    const { colors, isDark, dockBlur } = useTheme();
     const styles = useThemedStyles(makeStyles);
     const { t } = useI18n();
 
@@ -55,9 +57,20 @@ export const TabBar: React.FC<TabBarProps> = ({ activeTab, onTabPress, onCompose
         );
     };
 
+    // Without a blur method Android draws the intensity as a flat tint, so blur off is its old look there;
+    // iOS would still blur, so it needs the intensity gone. Android 11 and older can't blur cheaply and keep the tint.
+    const intensity = dockBlur || Platform.OS === 'android' ? (isDark ? 30 : 60) : 0;
+
     return (
         <View style={[styles.dockWrapper, { shadowOpacity: isDark ? 0.5 : 0.14 }]} pointerEvents="box-none">
-            <BlurView intensity={isDark ? 30 : 60} tint={isDark ? 'dark' : 'light'} style={styles.dock} accessibilityRole="tablist">
+            <BlurView
+                intensity={intensity}
+                tint={isDark ? 'dark' : 'light'}
+                blurMethod={dockBlur ? 'dimezisBlurViewSdk31Plus' : 'none'}
+                blurTarget={blurTarget}
+                style={styles.dock}
+                accessibilityRole="tablist"
+            >
                 {tab('home')}
                 {tab('search')}
                 <Pressable

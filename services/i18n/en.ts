@@ -323,6 +323,7 @@ export const en = {
         share: 'Share',
         favouriteFailed: 'Failed to update the favourite. Please try again.',
         boostFailed: 'Failed to update the boost. Please try again.',
+        boostNotAllowed: "Can't boost: this post is only for followers or mentioned people",
         bookmarkFailed: 'Failed to update the bookmark. Please try again.',
     },
     poll: {
@@ -335,9 +336,12 @@ export const en = {
         openToVote: 'Open the post to vote',
         option: '{{title}}, {{percent}} percent',
         optionYourVote: '{{title}}, {{percent}} percent, your vote',
+        optionYourVoteNoCount: '{{title}}, your vote',
         votes_one: '{{count}} vote',
         votes_other: '{{count}} votes',
         vote: 'Vote',
+        seeResults: 'See results',
+        backToVote: 'Back to voting',
     },
     compose: {
         newPost: 'New post',
@@ -885,6 +889,8 @@ export const en = {
         tintHint: 'Warms the background and cards, not only buttons',
         trueBlack: 'True black',
         trueBlackHint: 'Dark mode on a pure black background, for OLED screens',
+        dockBlur: 'Blur the bottom menu',
+        dockBlurHint: 'Keeps text behind the menu from getting in the way',
     },
     coats: {
         apricot: 'Apricot',

@@ -21,6 +21,9 @@ interface ThemeContextType {
     // Dark mode on a pure black background
     trueBlack: boolean;
     setTrueBlack: (trueBlack: boolean) => Promise<void>;
+    // Blur what scrolls behind the floating dock
+    dockBlur: boolean;
+    setDockBlur: (dockBlur: boolean) => Promise<void>;
     colors: ThemeColors;
     type: TypeScale;
     // Fonts finished loading, or failed and the type scale fell back to the system font
@@ -34,6 +37,7 @@ const THEME_KEY = 'pugdom_settings_theme';
 const COAT_KEY = 'pugdom_settings_coat';
 const TINT_KEY = 'pugdom_settings_tint';
 const TRUE_BLACK_KEY = 'pugdom_settings_true_black';
+const DOCK_BLUR_KEY = 'pugdom_settings_dock_blur';
 
 export const lightColors: ThemeColors = buildColors(DEFAULT_COAT, false, true);
 export const darkColors: ThemeColors = buildColors(DEFAULT_COAT, true, true);
@@ -43,22 +47,25 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const [coat, setCoatState] = useState<CoatKey>(DEFAULT_COAT);
     const [tint, setTintState] = useState(true);
     const [trueBlack, setTrueBlackState] = useState(false);
+    const [dockBlur, setDockBlurState] = useState(true);
     const systemColorScheme = useColorScheme();
     const [fontsLoaded, fontError] = useFonts(fontAssets);
 
     useEffect(() => {
         const loadTheme = async () => {
             try {
-                const [storedTheme, storedCoat, storedTint, storedTrueBlack] = await Promise.all([
+                const [storedTheme, storedCoat, storedTint, storedTrueBlack, storedDockBlur] = await Promise.all([
                     getStringSetting(THEME_KEY, 'system'),
                     getStringSetting(COAT_KEY, DEFAULT_COAT),
                     getSetting(TINT_KEY, true),
                     getSetting(TRUE_BLACK_KEY, false),
+                    getSetting(DOCK_BLUR_KEY, true),
                 ]);
                 setThemeState(storedTheme as ThemeType);
                 setCoatState(isCoatKey(storedCoat) ? storedCoat : DEFAULT_COAT);
                 setTintState(storedTint);
                 setTrueBlackState(storedTrueBlack);
+                setDockBlurState(storedDockBlur);
             } catch (error) {
                 console.error('Failed to load theme:', error);
             }
@@ -92,13 +99,18 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         await saveSetting(TRUE_BLACK_KEY, newTrueBlack);
     };
 
+    const setDockBlur = async (newDockBlur: boolean) => {
+        setDockBlurState(newDockBlur);
+        await saveSetting(DOCK_BLUR_KEY, newDockBlur);
+    };
+
     const isDark = theme === 'system' ? systemColorScheme === 'dark' : theme === 'dark';
     const colors = useMemo(() => buildColors(coat, isDark, tint, trueBlack), [coat, isDark, tint, trueBlack]);
     const type = useMemo(() => buildType(fontsLoaded), [fontsLoaded]);
     const fontsReady = fontsLoaded || !!fontError;
 
     return (
-        <ThemeContext.Provider value={{ theme, setTheme, coat, setCoat, tint, setTint, trueBlack, setTrueBlack, colors, type, fontsReady, isDark }}>
+        <ThemeContext.Provider value={{ theme, setTheme, coat, setCoat, tint, setTint, trueBlack, setTrueBlack, dockBlur, setDockBlur, colors, type, fontsReady, isDark }}>
             {children}
         </ThemeContext.Provider>
     );

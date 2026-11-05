@@ -176,6 +176,14 @@ describe('shared media viewer', () => {
         expect(screen.queryByText(/playing/)).toBeNull();
     });
 
+    it('keeps the audio pitch when the speed changes', async () => {
+        await renderCards(makeStatus('1', [attachment('v1', 'video')]));
+
+        await fireEvent.press(screen.getByLabelText('Video 1 of 1'));
+
+        expect((useVideoPlayer as jest.Mock).mock.results.at(-1)?.value.preservesPitch).toBe(true);
+    });
+
     it('loops gifv attachments', async () => {
         await renderCards(makeStatus('1', [attachment('g1', 'gifv')]));
 

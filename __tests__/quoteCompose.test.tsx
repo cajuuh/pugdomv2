@@ -5,6 +5,7 @@ import { createTestQueryClient } from '../testUtils/queryClient';
 import { effectiveQuotePolicy, quotePermission } from '../services/mastodon/quotes';
 import { DEFAULT_INSTANCE_CONFIGURATION, fetchInstanceConfiguration } from '../services/mastodon/instance';
 import { createStatus, reblogStatus } from '../services/mastodon/statuses';
+import { dialog } from '../services/dialog';
 import ComposeModal, { defaultVisibility } from '../components/ComposeModal/composeModal';
 import { TootCard } from '../components/TootCard/tootCard';
 import { MediaViewerProvider } from '../components/MediaViewer/mediaViewer';
@@ -109,6 +110,7 @@ describe('Boost menu', () => {
             </QueryClientProvider>
         );
     const boostButton = () => screen.getByRole('button', { name: /^Boost, 2 boosts/ });
+    const NOT_ALLOWED = "Can't boost: this post is only for followers or mentioned people";
 
     it('boosts straight away on servers without quotes', async () => {
         await renderCard(post());
@@ -137,6 +139,57 @@ describe('Boost menu', () => {
         await fireEvent.press(await screen.findByRole('button', { name: 'Boost' }));
 
         expect(reblogStatus).toHaveBeenCalledWith('p1');
+    });
+
+    it.each([
+        ['a followers-only post', { visibility: 'private' }],
+        ['a private mention', { visibility: 'direct' }],
+        ['a followers-only post that quoting is denied on', { visibility: 'private', quote_approval: approval('denied') }],
+        ['your own private mention', { visibility: 'direct', account: me }],
+    ] as [string, Partial<Status>][])('locks the button on %s, and says why when pressed', async (_, extra) => {
+        const toast = jest.spyOn(dialog, 'toast').mockImplementation(() => {});
+        await renderCard(post(extra));
+
+        const locked = screen.getByRole('button', { name: NOT_ALLOWED });
+        expect(locked).toBeDisabled();
+        await fireEvent.press(locked);
+
+        expect(toast).toHaveBeenCalledWith(NOT_ALLOWED);
+        expect(reblogStatus).not.toHaveBeenCalled();
+        expect(screen.queryByRole('header', { name: 'Boost or quote' })).toBeNull();
+    });
+
+    it("lets you boost your own followers-only post, and a boost of someone's public post", async () => {
+        const { rerender } = await renderCard(post({ visibility: 'private', account: me }));
+        await fireEvent.press(boostButton());
+        expect(reblogStatus).toHaveBeenLastCalledWith('p1');
+
+        await rerender(
+            <QueryClientProvider client={createTestQueryClient()}>
+                <MediaViewerProvider>
+                    <TootCard status={post({ id: 'wrapper', visibility: 'private', account: me, reblog: post({ id: 'p2' }) })} />
+                </MediaViewerProvider>
+            </QueryClientProvider>
+        );
+        await fireEvent.press(boostButton());
+        expect(reblogStatus).toHaveBeenLastCalledWith('p2');
+    });
+
+    it("locks a follower's view of a followers-only post the author boosted", async () => {
+        await renderCard(post({ id: 'wrapper', account: ana, visibility: 'private', reblog: post({ id: 'p2', visibility: 'private' }) }));
+
+        expect(screen.getByRole('button', { name: NOT_ALLOWED })).toBeDisabled();
+    });
+
+    it('keeps the menu when a followers-only post can still be quoted, with Boost disabled in it', async () => {
+        await renderCard(post({ visibility: 'private', quote_approval: approval('automatic') }));
+
+        await fireEvent.press(boostButton());
+        const boost = await screen.findByRole('button', { name: 'Boost' });
+
+        expect(boost).toBeDisabled();
+        expect(boost.props.accessibilityHint).toBe(NOT_ALLOWED);
+        expect(screen.getByRole('button', { name: 'Quote' })).toBeEnabled();
     });
 
     it('explains when the author has to approve, or does not allow it', async () => {

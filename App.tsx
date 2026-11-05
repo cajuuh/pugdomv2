@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { BlurTargetView } from 'expo-blur';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { StyleSheet, ActivityIndicator, BackHandler, DeviceEventEmitter, TouchableOpacity, Platform, View } from 'react-native';
@@ -56,6 +57,7 @@ function NavigationRoot() {
   const { colors, isDark, fontsReady } = useTheme();
   const { languageReady } = useI18n();
   const [activeTab, setActiveTab] = useState<'home' | 'search' | 'notifications' | 'profile'>('home');
+  const dockBlurTarget = useRef<View>(null);
   const unreadNotifications = useUnreadNotifications();
   // New over-the-air code: checks on returning to the app, offers a restart once it's downloaded
   useAppUpdates();
@@ -186,9 +188,11 @@ function NavigationRoot() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar style={statusBarStyle} />
 
+      {/* Everything that can sit behind the dock, which Android blurs from here. The dock stays outside it */}
+      <BlurTargetView ref={dockBlurTarget} style={styles.container}>
       {/* The tabs, always mounted. Hidden from screen readers while a screen is open over them */}
       <View
-        style={styles.container}
+        style={[styles.container, { backgroundColor: colors.background }]}
         importantForAccessibility={stack.length > 0 ? 'no-hide-descendants' : 'auto'}
         accessibilityElementsHidden={stack.length > 0}
       >
@@ -230,9 +234,10 @@ function NavigationRoot() {
               {renderScreen(entry)}
           </View>
       ))}
+      </BlurTargetView>
 
       {/* Custom Tab Bar, last so it stays on top of the overlays on both platforms */}
-      <TabBar activeTab={activeTab} onTabPress={handleTabPress} onComposePress={openCompose} unreadNotifications={unreadNotifications} />
+      <TabBar activeTab={activeTab} onTabPress={handleTabPress} onComposePress={openCompose} unreadNotifications={unreadNotifications} blurTarget={dockBlurTarget} />
     </View>
   );
 }

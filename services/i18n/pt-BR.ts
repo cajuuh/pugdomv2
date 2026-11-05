@@ -315,6 +315,7 @@ export const ptBR: Dictionary = {
         share: 'Compartilhar',
         favouriteFailed: 'Não foi possível favoritar. Tente de novo.',
         boostFailed: 'Não foi possível dar boost. Tente de novo.',
+        boostNotAllowed: 'Não dá para dar boost: esta publicação é só para seguidores ou pessoas mencionadas',
         bookmarkFailed: 'Não foi possível salvar. Tente de novo.',
     },
     poll: {
@@ -327,9 +328,12 @@ export const ptBR: Dictionary = {
         openToVote: 'Abra a publicação para votar',
         option: '{{title}}, {{percent}} por cento',
         optionYourVote: '{{title}}, {{percent}} por cento, seu voto',
+        optionYourVoteNoCount: '{{title}}, seu voto',
         votes_one: '{{count}} voto',
         votes_other: '{{count}} votos',
         vote: 'Votar',
+        seeResults: 'Ver resultados',
+        backToVote: 'Voltar a votar',
     },
     compose: {
         newPost: 'Nova publicação',
@@ -867,6 +871,8 @@ export const ptBR: Dictionary = {
         tintHint: 'Aquece o fundo e os cartões, não só os botões',
         trueBlack: 'Preto puro',
         trueBlackHint: 'Modo escuro com fundo totalmente preto, para telas OLED',
+        dockBlur: 'Desfocar o menu inferior',
+        dockBlurHint: 'Evita que o texto atrás do menu atrapalhe a leitura',
     },
     coats: {
         apricot: 'Damasco',

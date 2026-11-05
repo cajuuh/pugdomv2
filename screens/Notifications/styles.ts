@@ -78,6 +78,11 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         borderColor: colors.borderColor,
         borderLeftWidth: StyleSheet.hairlineWidth,
         borderRightWidth: StyleSheet.hairlineWidth,
+        // Set here so segmentFirst/Last only change them, never unset them: on Android an unset border
+        // width is NaN, which on a card that's still rounded clips the whole row away (a lone "New" row
+        // turned blank when Mark all as read took its bottom border and corners but left the top ones)
+        borderTopWidth: 0,
+        borderBottomWidth: 0,
         overflow: 'hidden',
     },
     segmentFirst: {

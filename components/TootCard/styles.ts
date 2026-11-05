@@ -394,6 +394,9 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         gap: 6,
         paddingHorizontal: space.sm,
     },
+    actionLocked: {
+        opacity: 0.5,
+    },
     actionCount: {
         fontSize: 13,
         color: colors.textMuted,
