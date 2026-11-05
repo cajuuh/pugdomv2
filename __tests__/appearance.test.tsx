@@ -108,6 +108,25 @@ describe('Appearance settings', () => {
     });
 });
 
+describe('Bottom menu blur', () => {
+    it('is on by default, and turning it off is saved', async () => {
+        await renderAppearance();
+        const blur = screen.getByRole('switch', { name: 'Blur the bottom menu' });
+        expect(blur).toBeChecked();
+
+        await fireEvent(blur, 'valueChange', false);
+
+        expect(screen.getByRole('switch', { name: 'Blur the bottom menu' })).not.toBeChecked();
+        await waitFor(async () => expect(await AsyncStorage.getItem('pugdom_settings_dock_blur')).toBe('false'));
+    });
+
+    it('stays off after a restart', async () => {
+        await AsyncStorage.setItem('pugdom_settings_dock_blur', 'false');
+        await renderAppearance();
+        await waitFor(() => expect(screen.getByRole('switch', { name: 'Blur the bottom menu' })).not.toBeChecked());
+    });
+});
+
 describe('Clear notifications help', () => {
     it('opens from Settings, explains the three ways and goes back', async () => {
         await render(

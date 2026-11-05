@@ -885,6 +885,8 @@ export const en = {
         tintHint: 'Warms the background and cards, not only buttons',
         trueBlack: 'True black',
         trueBlackHint: 'Dark mode on a pure black background, for OLED screens',
+        dockBlur: 'Blur the bottom menu',
+        dockBlurHint: 'Keeps text behind the menu from getting in the way',
     },
     coats: {
         apricot: 'Apricot',

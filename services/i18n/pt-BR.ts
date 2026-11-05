@@ -867,6 +867,8 @@ export const ptBR: Dictionary = {
         tintHint: 'Aquece o fundo e os cartões, não só os botões',
         trueBlack: 'Preto puro',
         trueBlackHint: 'Modo escuro com fundo totalmente preto, para telas OLED',
+        dockBlur: 'Desfocar o menu inferior',
+        dockBlurHint: 'Evita que o texto atrás do menu atrapalhe a leitura',
     },
     coats: {
         apricot: 'Damasco',
