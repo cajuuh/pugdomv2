@@ -29,74 +29,33 @@ export const scrollListToTop = async (list: Pick<FlashListRef<Status>, 'scrollTo
     list.scrollToOffset({ offset: 0, animated: true });
 };
 
-interface TimelineProps {
+// The pill for the feed you're already on: back to its top
+const SCROLL_FEED_TO_TOP = 'scroll_feed_to_top';
+
+interface FeedListProps {
+    feed: FeedDescriptor;
+    // The feed picked in the pills. The others stay mounted, hidden, to keep their place
+    current: boolean;
+    // Current, and its tab is showing
+    visible: boolean;
     onStatusPress?: (id: string) => void;
-    // False while another tab is open over it (it stays mounted to keep its place)
-    active?: boolean;
 }
 
-const Timeline = ({ onStatusPress, active = true }: TimelineProps) => {
-    const { colors, type } = useTheme();
+const FeedList = ({ feed, current, visible, onStatusPress }: FeedListProps) => {
+    const { colors } = useTheme();
     const styles = useThemedStyles(makeStyles);
-    const i18n = useI18n();
-    const { t } = i18n;
-    const { push } = useNavigator();
-    const { pinnedFeeds, pinFeed } = usePinnedFeeds();
-
-    const [activeFeed, setActiveFeed] = useState<FeedDescriptor>(DEFAULT_PINNED_FEEDS[0]);
-    // Opened from the Feeds sheet or the server screen: it may not be pinned, and then shows as a
-    // preview pill until you switch to a pinned one
-    const [previewing, setPreviewing] = useState(false);
-    const [feedsSheetOpen, setFeedsSheetOpen] = useState(false);
+    const { t } = useI18n();
     const queryClient = useQueryClient();
     const listRef = useRef<FlashListRef<Status>>(null);
-    const pillsRef = useRef<ScrollView>(null);
 
-    const openFeed = useCallback((feed: FeedDescriptor) => {
-        setActiveFeed(feed);
-        setPreviewing(true);
-        // The preview pill comes first
-        pillsRef.current?.scrollTo({ x: 0, animated: true });
-    }, []);
-
-    // Another feed switches to it; the one you're on goes back to its top, like Home in the dock
-    const selectPinned = (feed: FeedDescriptor) => {
-        if (feed.id === activeFeed.id) {
-            scrollListToTop(listRef.current);
-            return;
-        }
-        setActiveFeed(feed);
-        setPreviewing(false);
-    };
-
-    // A feed made in the editor, or one picked elsewhere, opens straight away
-    useEffect(() => {
-        const created = DeviceEventEmitter.addListener(FEED_CREATED_EVENT, openFeed);
-        const opened = DeviceEventEmitter.addListener(FEED_OPEN_EVENT, openFeed);
-        return () => {
-            created.remove();
-            opened.remove();
-        };
-    }, [openFeed]);
-
-    const activeIsPinned = pinnedFeeds.some(f => f.id === activeFeed.id);
-    const previewFeed = previewing && !activeIsPinned ? activeFeed : null;
-
-    // If the open feed gets unpinned (or its list deleted), go back to the first pinned one (Home)
-    useEffect(() => {
-        if (!activeIsPinned && !previewing) {
-            setActiveFeed(pinnedFeeds[0] || DEFAULT_PINNED_FEEDS[0]);
-        }
-    }, [pinnedFeeds, activeIsPinned, previewing]);
-
-    const resolveEmptyMessage = useCallback((feed: FeedDescriptor) => {
+    const resolveEmptyMessage = () => {
         if (feed.kind === 'home') return t('timeline.emptyHome');
         if (feed.kind === 'local') return t('timeline.emptyLocal');
         if (feed.kind === 'federated') return t('timeline.emptyFederated');
         if (feed.kind === 'trending') return t('timeline.emptyTrending');
         if (feed.kind === 'hashtag') return t('timeline.emptyHashtag');
         return t('timeline.emptyHome');
-    }, [t]);
+    };
 
     const {
         data,
@@ -105,13 +64,13 @@ const Timeline = ({ onStatusPress, active = true }: TimelineProps) => {
         hasNextPage,
         fetchNextPage,
         refetch,
-    } = useFeed(activeFeed);
+    } = useFeed(feed);
 
     const statuses = useMemo(() => {
         return data?.pages.flatMap(page => page) || [];
     }, [data]);
 
-    const newPosts = useNewPosts(activeFeed, statuses[0]?.id);
+    const newPosts = useNewPosts(feed, statuses[0]?.id, current);
     const [loadingNewPosts, setLoadingNewPosts] = useState(false);
     // The newest post the list has drawn, and a wait for the reloaded one to be drawn
     const drawnTopId = useRef<string | undefined>(undefined);
@@ -133,7 +92,7 @@ const Timeline = ({ onStatusPress, active = true }: TimelineProps) => {
     const showNewPosts = useCallback(async () => {
         setLoadingNewPosts(true);
         try {
-            queryClient.setQueryData<InfiniteData<Status[], string | undefined>>(['timeline', activeFeed.id], current =>
+            queryClient.setQueryData<InfiniteData<Status[], string | undefined>>(['timeline', feed.id], current =>
                 current && { pages: current.pages.slice(0, 1), pageParams: current.pageParams.slice(0, 1) }
             );
             const { data: fresh } = await refetch();
@@ -147,29 +106,26 @@ const Timeline = ({ onStatusPress, active = true }: TimelineProps) => {
         } finally {
             setLoadingNewPosts(false);
         }
-    }, [queryClient, activeFeed.id, refetch]);
+    }, [queryClient, feed.id, refetch]);
 
     useEffect(() => {
-        const subscription = DeviceEventEmitter.addListener('status_published', () => {
-            queryClient.invalidateQueries({ queryKey: ['timeline', 'home'] });
-        });
-
+        if (!current) return;
         // Home tapped on Home: the newest posts, from the top
-        const scrollSub = DeviceEventEmitter.addListener('scroll_to_top_home', showNewPosts);
-
+        const newest = DeviceEventEmitter.addListener('scroll_to_top_home', showNewPosts);
+        const top = DeviceEventEmitter.addListener(SCROLL_FEED_TO_TOP, () => scrollListToTop(listRef.current));
         return () => {
-            subscription.remove();
-            scrollSub.remove();
+            newest.remove();
+            top.remove();
         };
-    }, [queryClient, showNewPosts]);
+    }, [current, showNewPosts]);
 
-    // Hidden behind another tab, its video stops; scrolling back on Home starts it again
+    // Hidden, its video stops; scrolling it again starts it again
     useEffect(() => {
-        if (!active) setAutoplayPost(null);
-    }, [active]);
+        if (!visible) setAutoplayPost(null);
+    }, [visible]);
 
-    // The spinner is only for a pull: background reloads (switching feeds back, the new posts pill,
-    // following someone) don't show it
+    // The spinner is only for a pull: background reloads (the new posts pill, following someone)
+    // don't show it
     const [pulling, setPulling] = useState(false);
     const handleRefresh = useCallback(async () => {
         setPulling(true);
@@ -204,11 +160,122 @@ const Timeline = ({ onStatusPress, active = true }: TimelineProps) => {
         return (
             <View style={styles.emptyContainer}>
                 <Text style={styles.emptyText}>
-                    {resolveEmptyMessage(activeFeed)}
+                    {resolveEmptyMessage()}
                 </Text>
             </View>
         );
     };
+
+    return (
+        <View style={[styles.list, !current && styles.hidden]}>
+            {isLoading && statuses.length === 0 ? (
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size={'large'} color={colors.accentColor} />
+                </View>
+            ) : (
+                <>
+                    {newPosts.count > 0 && <NewPostsPill newPosts={newPosts} loading={loadingNewPosts} onPress={showNewPosts} />}
+                    <FlashList
+                        {...autoplayViewability}
+                        ref={listRef}
+                        data={statuses}
+                        keyExtractor={(item) => item.id}
+                        renderItem={({ item }) => <TootCard status={item} onPress={onStatusPress} remote={feed.kind === 'server'} />}
+                        onEndReached={handleLoadMore}
+                        onEndReachedThreshold={0.5}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={pulling}
+                                onRefresh={handleRefresh}
+                                tintColor={colors.accentColor}
+                                colors={[colors.accentColor]}
+                                progressBackgroundColor={colors.cardBackground}
+                            />
+                        }
+                        ListFooterComponent={renderFooter}
+                        ListEmptyComponent={renderEmpty}
+                        contentContainerStyle={styles.listContent}
+                        showsVerticalScrollIndicator={false}
+                    />
+                </>
+            )}
+        </View>
+    );
+};
+
+interface TimelineProps {
+    onStatusPress?: (id: string) => void;
+    // False while another tab is open over it (it stays mounted to keep its place)
+    active?: boolean;
+}
+
+const Timeline = ({ onStatusPress, active = true }: TimelineProps) => {
+    const { colors, type } = useTheme();
+    const styles = useThemedStyles(makeStyles);
+    const i18n = useI18n();
+    const { t } = i18n;
+    const { push } = useNavigator();
+    const { pinnedFeeds, pinFeed } = usePinnedFeeds();
+
+    const [activeFeed, setActiveFeed] = useState<FeedDescriptor>(DEFAULT_PINNED_FEEDS[0]);
+    // Opened from the Feeds sheet or the server screen: it may not be pinned, and then shows as a
+    // preview pill until you switch to a pinned one
+    const [previewing, setPreviewing] = useState(false);
+    const [feedsSheetOpen, setFeedsSheetOpen] = useState(false);
+    const queryClient = useQueryClient();
+    const pillsRef = useRef<ScrollView>(null);
+
+    const openFeed = useCallback((feed: FeedDescriptor) => {
+        setActiveFeed(feed);
+        setPreviewing(true);
+        // The preview pill comes first
+        pillsRef.current?.scrollTo({ x: 0, animated: true });
+    }, []);
+
+    // Another feed switches to it; the one you're on goes back to its top, like Home in the dock
+    const selectPinned = (feed: FeedDescriptor) => {
+        if (feed.id === activeFeed.id) {
+            DeviceEventEmitter.emit(SCROLL_FEED_TO_TOP);
+            return;
+        }
+        setActiveFeed(feed);
+        setPreviewing(false);
+    };
+
+    // A feed made in the editor, or one picked elsewhere, opens straight away
+    useEffect(() => {
+        const created = DeviceEventEmitter.addListener(FEED_CREATED_EVENT, openFeed);
+        const opened = DeviceEventEmitter.addListener(FEED_OPEN_EVENT, openFeed);
+        return () => {
+            created.remove();
+            opened.remove();
+        };
+    }, [openFeed]);
+
+    const activeIsPinned = pinnedFeeds.some(f => f.id === activeFeed.id);
+    const previewFeed = previewing && !activeIsPinned ? activeFeed : null;
+
+    // If the open feed gets unpinned (or its list deleted), go back to the first pinned one (Home)
+    useEffect(() => {
+        if (!activeIsPinned && !previewing) {
+            setActiveFeed(pinnedFeeds[0] || DEFAULT_PINNED_FEEDS[0]);
+        }
+    }, [pinnedFeeds, activeIsPinned, previewing]);
+
+    // Each pinned feed you've opened keeps its own mounted list, so coming back finds your place. A
+    // preview goes when you leave it.
+    // ponytail: no limit but the pinned feeds, drop the least recently used if memory ever matters
+    const visited = useRef(new Set<string>());
+    visited.current.add(activeFeed.id);
+    const visitedPinned = pinnedFeeds.filter(feed => visited.current.has(feed.id));
+    const mountedFeeds = activeIsPinned ? visitedPinned : [activeFeed, ...visitedPinned];
+
+    useEffect(() => {
+        const subscription = DeviceEventEmitter.addListener('status_published', () => {
+            queryClient.invalidateQueries({ queryKey: ['timeline', 'home'] });
+        });
+        return () => subscription.remove();
+    }, [queryClient]);
 
     return (
         <View style={styles.container}>
@@ -280,37 +347,15 @@ const Timeline = ({ onStatusPress, active = true }: TimelineProps) => {
                 </ScrollView>
             </View>
 
-            {isLoading && statuses.length === 0 ? (
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size={'large'} color={colors.accentColor} />
-                </View>
-            ) : (
-                <View style={styles.list}>
-                    {newPosts.count > 0 && <NewPostsPill newPosts={newPosts} loading={loadingNewPosts} onPress={showNewPosts} />}
-                    <FlashList
-                        {...autoplayViewability}
-                        ref={listRef}
-                        data={statuses}
-                        keyExtractor={(item) => item.id}
-                        renderItem={({ item }) => <TootCard status={item} onPress={onStatusPress} remote={activeFeed.kind === 'server'} />}
-                        onEndReached={handleLoadMore}
-                        onEndReachedThreshold={0.5}
-                        refreshControl={
-                            <RefreshControl
-                                refreshing={pulling}
-                                onRefresh={handleRefresh}
-                                tintColor={colors.accentColor}
-                                colors={[colors.accentColor]}
-                                progressBackgroundColor={colors.cardBackground}
-                            />
-                        }
-                        ListFooterComponent={renderFooter}
-                        ListEmptyComponent={renderEmpty}
-                        contentContainerStyle={styles.listContent}
-                        showsVerticalScrollIndicator={false}
-                    />
-                </View>
-            )}
+            {mountedFeeds.map(feed => (
+                <FeedList
+                    key={feed.id}
+                    feed={feed}
+                    current={feed.id === activeFeed.id}
+                    visible={active && feed.id === activeFeed.id}
+                    onStatusPress={onStatusPress}
+                />
+            ))}
 
             <FeedsSheet
                 visible={feedsSheetOpen}

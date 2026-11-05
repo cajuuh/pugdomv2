@@ -33,7 +33,8 @@ export const summarizeNewPosts = (fetched: Status[]): NewPosts => {
 // Only pause in the background: at launch the state can still be 'unknown'
 const isForeground = (state: AppStateStatus | null) => state !== 'background';
 
-export const useNewPosts = (feed: FeedType | FeedDescriptor, newestId: string | undefined): NewPosts => {
+// `checking` is off for a feed kept mounted behind the one on screen
+export const useNewPosts = (feed: FeedType | FeedDescriptor, newestId: string | undefined, checking = true): NewPosts => {
     const [active, setActive] = useState(isForeground(AppState.currentState));
     const descriptor: FeedDescriptor = typeof feed === 'string' ? { id: feed, kind: feed } : feed;
 
@@ -45,12 +46,12 @@ export const useNewPosts = (feed: FeedType | FeedDescriptor, newestId: string | 
     const { data } = useQuery({
         queryKey: ['newPosts', descriptor.id, newestId],
         queryFn: () => fetchFeedNewer(descriptor, newestId!),
-        enabled: !!newestId && active && descriptor.kind !== 'trending',
+        enabled: !!newestId && active && checking && descriptor.kind !== 'trending',
         // The list was just loaded, so the first check waits a full interval
         initialData: [],
         initialDataUpdatedAt: () => Date.now(),
         staleTime: NEW_POSTS_INTERVAL_MS,
-        refetchInterval: active ? NEW_POSTS_INTERVAL_MS : false,
+        refetchInterval: active && checking ? NEW_POSTS_INTERVAL_MS : false,
         select: summarizeNewPosts,
     });
 

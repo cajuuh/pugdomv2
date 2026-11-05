@@ -129,4 +129,52 @@ describe('Timeline new posts pill', () => {
         await waitFor(() => expect(fetchPublicTimeline).toHaveBeenCalled());
         scrollTo.mockRestore();
     });
+
+    it('keeps a feed in place behind the others, without reloading it', async () => {
+        mockNewPosts = { count: 0, more: false, accounts: [] };
+        (fetchPublicTimeline as jest.Mock).mockResolvedValue([post('local')]);
+        await renderTimeline();
+        const homeRow = await screen.findByText('post 10');
+
+        await fireEvent.press(screen.getByRole('tab', { name: 'Local' }));
+        await screen.findByText('post local');
+        expect(screen.queryByText('post 10')).toBeNull();
+        // Hidden, but the same row: unmounting it is what lost the place
+        expect(screen.getByText('post 10', { includeHiddenElements: true })).toBe(homeRow);
+
+        await fireEvent.press(screen.getByRole('tab', { name: 'Home' }));
+        expect(screen.getByText('post 10')).toBe(homeRow);
+        expect(screen.queryByText('post local')).toBeNull();
+        expect(mockedHome).toHaveBeenCalledTimes(1);
+    });
+
+    it('opens a feed from its own top, not where the last one was', async () => {
+        mockNewPosts = { count: 0, more: false, accounts: [] };
+        (fetchPublicTimeline as jest.Mock).mockResolvedValue([post('local')]);
+        await renderTimeline();
+        const homeRow = await screen.findByText('post 10');
+
+        await fireEvent.press(screen.getByRole('tab', { name: 'Local' }));
+        const localRow = await screen.findByText('post local');
+
+        expect(localRow).not.toBe(homeRow);
+        expect(screen.getAllByText(/^post /, { includeHiddenElements: true })).toHaveLength(3);
+    });
+
+    it('sends Home in the dock only to the feed on screen', async () => {
+        mockNewPosts = { count: 0, more: false, accounts: [] };
+        (fetchPublicTimeline as jest.Mock).mockResolvedValue([post('local')]);
+        await renderTimeline();
+        await screen.findByText('post 10');
+        await fireEvent.press(screen.getByRole('tab', { name: 'Local' }));
+        await screen.findByText('post local');
+        (fetchPublicTimeline as jest.Mock).mockClear();
+
+        await act(async () => {
+            DeviceEventEmitter.emit('scroll_to_top_home');
+        });
+
+        await waitFor(() => expect(fetchPublicTimeline).toHaveBeenCalled());
+        expect(mockedHome).toHaveBeenCalledTimes(1);
+    });
 });

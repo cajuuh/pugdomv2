@@ -87,9 +87,9 @@ describe('useNewPosts', () => {
         jest.restoreAllMocks();
     });
 
-    const renderNewPosts = (newestId: string | undefined) => {
+    const renderNewPosts = (newestId: string | undefined, checking?: boolean) => {
         const queryClient = createTestQueryClient();
-        return renderHook(() => useNewPosts('home', newestId), {
+        return renderHook(() => useNewPosts('home', newestId, checking), {
             wrapper: ({ children }) => <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>,
         });
     };
@@ -110,6 +110,16 @@ describe('useNewPosts', () => {
     it('stops checking while the app is in the background', async () => {
         await renderNewPosts('199');
         await act(async () => appStateListener?.('background'));
+
+        await act(async () => {
+            await jest.advanceTimersByTimeAsync(NEW_POSTS_INTERVAL_MS * 3);
+        });
+
+        expect(mockedGet).not.toHaveBeenCalled();
+    });
+
+    it('stops checking for a feed hidden behind another', async () => {
+        await renderNewPosts('199', false);
 
         await act(async () => {
             await jest.advanceTimersByTimeAsync(NEW_POSTS_INTERVAL_MS * 3);

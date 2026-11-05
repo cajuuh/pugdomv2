@@ -37,6 +37,9 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     list: {
         flex: 1,
     },
+    hidden: {
+        display: 'none',
+    },
     // The "N new posts" pill floats over the top of the list
     newPostsWrap: {
         position: 'absolute',
