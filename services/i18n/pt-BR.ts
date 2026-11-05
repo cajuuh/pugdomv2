@@ -847,7 +847,7 @@ export const ptBR: Dictionary = {
         back: 'Voltar para configurações',
         intro: 'Há três jeitos de remover notificações, todos na tela de Notificações.',
         swipeTitle: 'Deslize para tirar uma',
-        swipeText: 'Arraste uma notificação quase toda para a direita e solte: ela sai voando e é removida. Um arrasto curto a devolve ao lugar.',
+        swipeText: 'Arraste uma notificação até o fim para a direita e solte: ela sai voando e é removida. Se soltar antes, ela volta ao lugar.',
         selectTitle: 'Selecione as que quiser',
         selectText: 'Segure uma notificação para começar a selecionar, já com ela marcada. Toque em outras para marcar ou desmarcar e depois em Remover. Também dá para começar em Limpar → Selecionar notificações.',
         allTitle: 'Limpe todas',

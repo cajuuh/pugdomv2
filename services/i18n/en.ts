@@ -865,7 +865,7 @@ export const en = {
         back: 'Back to settings',
         intro: 'There are three ways to remove notifications, all on the Notifications screen.',
         swipeTitle: 'Swipe one away',
-        swipeText: "Drag a notification most of the way to the right and let go: it flies off and is removed. A short drag puts it back.",
+        swipeText: 'Drag a notification all the way to the right and let go: it flies off and is removed. Let go sooner and it goes back.',
         selectTitle: 'Select the ones you want',
         selectText: 'Hold a notification to start selecting, with it ticked. Tap others to tick or untick them, then tap Remove. You can also start from Clear → Select notifications.',
         allTitle: 'Clear them all',
