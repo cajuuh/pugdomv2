@@ -26,6 +26,13 @@ const account = (id: string): Account => ({ id, username: `user${id}`, acct: `us
 const post = (id: string, accountId = id) => ({ id, content: `post ${id}`, account: account(accountId) } as Status);
 
 let mockNewPosts: NewPosts = { count: 0, more: false, accounts: [] };
+jest.mock('../components/ui', () => {
+    const { Text: MockText } = jest.requireActual('react-native');
+    return {
+        ...jest.requireActual('../components/ui'),
+        Avatar: ({ uri }: { uri?: string }) => <MockText testID="avatar">{uri}</MockText>,
+    };
+});
 jest.mock('../hooks/useNewPosts', () => ({
     ...jest.requireActual('../hooks/useNewPosts'),
     useNewPosts: () => mockNewPosts,
@@ -74,6 +81,76 @@ describe('Timeline new posts pill', () => {
             </QueryClientProvider>
         );
         expect(screen.getByRole('button', { name: '40+ new posts' })).toBeTruthy();
+    });
+
+    describe('collapsing', () => {
+        const drag = () => fireEvent(screen.getByText('post 10'), 'scrollBeginDrag');
+        const rerenderWith = async (rerender: (ui: React.ReactElement) => unknown, newPosts: NewPosts) => {
+            mockNewPosts = newPosts;
+            await rerender(
+                <QueryClientProvider client={queryClient}>
+                    <Timeline />
+                </QueryClientProvider>
+            );
+        };
+
+        it('shrinks to the arrow and the count once you scroll, still telling screen readers it all', async () => {
+            mockNewPosts = { count: 3, more: false, accounts: [account('a')] };
+            await renderTimeline();
+            await screen.findByText('post 10');
+            await screen.findByText('3 new posts');
+            expect(screen.getAllByTestId('avatar')).toHaveLength(1);
+
+            await drag();
+
+            expect(screen.getByText('3')).toBeTruthy();
+            expect(screen.queryByText('3 new posts')).toBeNull();
+            expect(screen.queryAllByTestId('avatar')).toHaveLength(0);
+            expect(screen.getByRole('button', { name: '3 new posts' })).toBeTruthy();
+        });
+
+        it('keeps the "+" for a full page', async () => {
+            mockNewPosts = { count: 40, more: true, accounts: [] };
+            await renderTimeline();
+            await screen.findByText('post 10');
+            await screen.findByText('40+ new posts');
+
+            await drag();
+
+            expect(screen.getByText('40+')).toBeTruthy();
+        });
+
+        it('opens again for the next new posts', async () => {
+            mockNewPosts = { count: 3, more: false, accounts: [] };
+            const { rerender } = await renderTimeline();
+            await screen.findByText('post 10');
+            await screen.findByText('3 new posts');
+            await drag();
+
+            await rerenderWith(rerender, { count: 0, more: false, accounts: [] });
+            await rerenderWith(rerender, { count: 2, more: false, accounts: [] });
+
+            expect(screen.getByText('2 new posts')).toBeTruthy();
+        });
+
+        it('starts open when you scrolled before it appeared', async () => {
+            mockNewPosts = { count: 0, more: false, accounts: [] };
+            const { rerender } = await renderTimeline();
+            await screen.findByText('post 10');
+            await drag();
+
+            await rerenderWith(rerender, { count: 3, more: false, accounts: [] });
+
+            expect(screen.getByText('3 new posts')).toBeTruthy();
+        });
+
+        it('shows the still picture of an animated avatar', async () => {
+            mockNewPosts = { count: 1, more: false, accounts: [{ ...account('a'), avatar: 'moving.gif', avatar_static: 'still.png' }] };
+            await renderTimeline();
+            await screen.findByText('1 new post');
+
+            expect(screen.getByTestId('avatar')).toHaveTextContent('still.png');
+        });
     });
 
     it('reloads only the first page when tapped', async () => {

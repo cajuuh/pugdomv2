@@ -72,6 +72,11 @@ const FeedList = ({ feed, current, visible, onStatusPress }: FeedListProps) => {
 
     const newPosts = useNewPosts(feed, statuses[0]?.id, current);
     const [loadingNewPosts, setLoadingNewPosts] = useState(false);
+    // Open again for the next new posts, once these are loaded
+    const [newPostsCollapsed, setNewPostsCollapsed] = useState(false);
+    useEffect(() => {
+        if (newPosts.count === 0) setNewPostsCollapsed(false);
+    }, [newPosts.count]);
     // The newest post the list has drawn, and a wait for the reloaded one to be drawn
     const drawnTopId = useRef<string | undefined>(undefined);
     const waitingForTop = useRef<{ id: string; drawn: () => void } | null>(null);
@@ -174,10 +179,13 @@ const FeedList = ({ feed, current, visible, onStatusPress }: FeedListProps) => {
                 </View>
             ) : (
                 <>
-                    {newPosts.count > 0 && <NewPostsPill newPosts={newPosts} loading={loadingNewPosts} onPress={showNewPosts} />}
+                    {newPosts.count > 0 && <NewPostsPill newPosts={newPosts} loading={loadingNewPosts} collapsed={newPostsCollapsed} onPress={showNewPosts} />}
                     <FlashList
                         {...autoplayViewability}
                         ref={listRef}
+                        onScrollBeginDrag={() => {
+                            if (newPosts.count > 0) setNewPostsCollapsed(true);
+                        }}
                         data={statuses}
                         keyExtractor={(item) => item.id}
                         renderItem={({ item }) => <TootCard status={item} onPress={onStatusPress} remote={feed.kind === 'server'} />}
