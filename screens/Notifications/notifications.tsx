@@ -613,9 +613,7 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
                 onLongPress={selecting ? undefined : () => startSelecting(item.group.key)}
             />
         );
-        // A new row gets a coat dot by its avatar (screen readers hear the "New" section title instead).
-        // Every row has the wrapper, so marking read only drops the dot: swapping what sits inside the
-        // swipeable left the row blank on Android
+        // A new row gets a coat dot by its avatar (screen readers hear the "New" section title instead)
         const row = (
             <View>
                 {notificationRow}

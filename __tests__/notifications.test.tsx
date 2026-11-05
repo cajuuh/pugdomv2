@@ -14,6 +14,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getConversations, markConversationRead } from '../services/mastodon/conversations';
 import { Account, Notification } from '../services/mastodon/types';
 import { actorsText, buildListItems, notificationTime, plainText, withoutLeadingMentions } from '../screens/Notifications/rows';
+import { makeStyles } from '../screens/Notifications/styles';
+import { ThemeColors } from '../services/themeContext';
 
 // Tests give v1-shaped lists; the screen gets them as rows, grouped the way the v1 fallback groups them.
 // The v2 shape is covered in notificationGroups.test.ts.
@@ -306,6 +308,14 @@ describe('Notifications', () => {
         await fireEvent.press(screen.getByRole('button', { name: 'Mark all as read' }));
         expect(screen.getAllByRole('header').map(header => header.props.children)).toEqual(['Notifications', 'Today']);
         expect(screen.queryByTestId('unread-row-dot')).toBeNull();
+    });
+
+    // On Android an unset border width is NaN, and a rounded card clipped with it paints nothing, so a lone
+    // "New" row went blank on Mark all as read. Only a device shows the blank; this keeps the widths set.
+    it('keeps the top and bottom border widths set on every row, so changing section cannot unset them', () => {
+        const { segment } = makeStyles({} as ThemeColors);
+        expect(segment.borderTopWidth).toBe(0);
+        expect(segment.borderBottomWidth).toBe(0);
     });
 
     it('keeps them New while you look, though opening the tab clears the bell', async () => {
