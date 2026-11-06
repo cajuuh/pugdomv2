@@ -20,11 +20,13 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
+        gap: space.md,
         paddingTop: 6,
         paddingLeft: 20,
         paddingRight: space.lg,
     },
     title: {
+        flexShrink: 1,
         color: colors.textPrimary,
     },
     headerActions: {

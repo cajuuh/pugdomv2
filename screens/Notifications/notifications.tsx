@@ -688,7 +688,7 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
                 </View>
             ) : (
                 <View style={styles.header}>
-                    <Text accessibilityRole="header" style={[type.title, styles.title]}>{t('notifications.title')}</Text>
+                    <Text accessibilityRole="header" numberOfLines={1} adjustsFontSizeToFit style={[type.title, styles.title]}>{t('notifications.title')}</Text>
                     <View style={styles.headerActions}>
                         <PillButton
                             label={t('notifications.clear')}
