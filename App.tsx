@@ -121,7 +121,7 @@ function NavigationRoot() {
       case 'link':
         return <LinkTimeline url={route.url} title={route.title} onBack={pop} onStatusPress={openThread} />;
       case 'feedEditor':
-        return <FeedEditor onBack={pop} />;
+        return <FeedEditor feed={route.feed} onBack={pop} />;
       case 'listEditor':
         return <ListEditor listId={route.listId} onBack={pop} />;
       case 'serverPicker':

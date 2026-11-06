@@ -7,6 +7,7 @@ import {
     getCustomFeeds,
     saveCustomFeed as saveCustomFeedStorage,
     deleteCustomFeed as deleteCustomFeedStorage,
+    replaceCustomFeed as replaceCustomFeedStorage,
     isFeedPinned,
     updatePinnedFeed as updatePinnedFeedStorage,
 } from '../services/pinnedFeeds';
@@ -70,6 +71,14 @@ export const usePinnedFeeds = () => {
         },
     });
 
+    const replaceCustomFeedMutation = useMutation({
+        mutationFn: ({ oldId, feed }: { oldId: string; feed: FeedDescriptor }) => replaceCustomFeedStorage(accountId, oldId, feed),
+        onSuccess: (pinnedUpdated) => {
+            queryClient.invalidateQueries({ queryKey: ['customFeeds', accountId] });
+            queryClient.setQueryData(['pinnedFeeds', accountId], pinnedUpdated);
+        },
+    });
+
     const removeCustomFeedMutation = useMutation({
         mutationFn: async (feedId: string) => {
             return deleteCustomFeedStorage(accountId, feedId);
@@ -89,6 +98,7 @@ export const usePinnedFeeds = () => {
         unpinFeed: unpinMutation.mutateAsync,
         updatePinnedFeed: updatePinnedMutation.mutateAsync,
         addCustomFeed: addCustomFeedMutation.mutateAsync,
+        replaceCustomFeed: replaceCustomFeedMutation.mutateAsync,
         removeCustomFeed: removeCustomFeedMutation.mutateAsync,
         isPinned: (feedId: string) => isFeedPinned(pinnedQuery.data ?? DEFAULT_PINNED_FEEDS, feedId),
     };

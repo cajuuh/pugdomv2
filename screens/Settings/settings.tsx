@@ -48,6 +48,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts 
         setCompactMode,
         hideCounts,
         setHideCounts,
+        swipeFeeds,
+        setSwipeFeeds,
         groupNotifications,
         setGroupNotifications,
         uncroppedMedia,
@@ -266,6 +268,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts 
                     {switchRow('stats-chart-outline', t('settings.hideCounts'), hideCounts, setHideCounts)}
                     <View style={styles.divider} />
                     {switchRow('warning-outline', t('settings.expandSpoilers'), expandSpoilers, setExpandSpoilers)}
+                    <View style={styles.divider} />
+                    {switchRow('swap-horizontal-outline', t('settings.swipeFeeds'), swipeFeeds, setSwipeFeeds)}
                 </Card>
 
                 <SectionLabel style={styles.sectionLabel}>{t('settings.media')}</SectionLabel>

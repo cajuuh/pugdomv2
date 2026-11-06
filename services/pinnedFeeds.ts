@@ -87,6 +87,19 @@ export async function saveCustomFeed(accountId: string, feed: FeedDescriptor): P
     return updated;
 }
 
+// An edited feed gets a new id, so a new timeline cache: it takes the old one's place in both lists
+export async function replaceCustomFeed(accountId: string, oldId: string, feed: FeedDescriptor): Promise<FeedDescriptor[]> {
+    const swap = (feeds: FeedDescriptor[]) => feeds.map(f => (f.id === oldId ? feed : f));
+    try {
+        await AsyncStorage.setItem(getCustomStorageKey(accountId), JSON.stringify(swap(await getCustomFeeds(accountId))));
+    } catch {
+        // ignore
+    }
+    const pinned = swap(await getPinnedFeeds(accountId));
+    await savePinnedFeeds(accountId, pinned);
+    return pinned;
+}
+
 export async function deleteCustomFeed(accountId: string, feedId: string): Promise<FeedDescriptor[]> {
     const current = await getCustomFeeds(accountId);
     const updated = current.filter(f => f.id !== feedId);

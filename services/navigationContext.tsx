@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { Account, Status } from './mastodon/types';
+import { FeedDescriptor } from './mastodon/feedTypes';
 
 // Screens that open on top of the tabs. Links and lists join in later phases.
 // An account route can carry the account we already have, so its profile shows at once.
@@ -13,7 +14,7 @@ export type Route =
     | { name: 'account'; accountId: string; account?: Account }
     | { name: 'hashtag'; tag: string }
     | { name: 'link'; url: string; title?: string }
-    | { name: 'feedEditor' }
+    | { name: 'feedEditor'; feed?: FeedDescriptor }
     | { name: 'listEditor'; listId?: string }
     | { name: 'serverPicker' }
     // Reporting an account to the server's moderators, about one of their posts when given
