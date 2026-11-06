@@ -19,6 +19,7 @@ import {
 import { deleteCustomFeed, getCustomFeeds, getPinnedFeeds, getPinnedStorageKey, pinFeed, replaceCustomFeed, saveCustomFeed, unpinFeed } from '../services/pinnedFeeds';
 import { createTranslator } from '../services/i18n/translate';
 import { FeedsSheet } from '../components/FeedsSheet/feedsSheet';
+import { dropIndex, slotOffset } from '../components/FeedsSheet/pinnedRows';
 import FeedEditor, { FEED_CREATED_EVENT, parseTags } from '../screens/FeedEditor/feedEditor';
 import Timeline from '../screens/Timeline/timeline';
 import { NavigationProvider, useNavigator } from '../services/navigationContext';
@@ -201,6 +202,134 @@ describe('Feeds sheet', () => {
 
         expect(onEditFeed).toHaveBeenCalledWith(pets);
         expect(onClose).toHaveBeenCalled();
+    });
+
+    describe('rearranging pinned feeds', () => {
+        const pinnedIds = async () => (await getPinnedFeeds('me')).map(feed => feed.id);
+        const drag = (id: string, translationY: number, last: State = State.END) =>
+            act(async () => {
+                fireGestureHandler(getByGestureTestId(`drag-${id}`), [
+                    { state: State.BEGAN, translationY: 0 },
+                    { state: State.ACTIVE, translationY: 0 },
+                    { state: State.ACTIVE, translationY },
+                    { state: last, translationY },
+                ]);
+            });
+        // Once the sheet's queries settle: Reanimated's mock makes new shared values on every render
+        const measureRows = async () => {
+            await act(async () => {
+                await new Promise(resolve => setTimeout(resolve, 0));
+            });
+            for (const name of ['Home', 'Local', 'Federated']) {
+                await fireEvent(screen.getByRole('button', { name: `Open ${name}` }), 'layout', { nativeEvent: { layout: { height: 60 } } });
+            }
+        };
+
+        it('moves a feed with the arrows, one tap after another', async () => {
+            await renderSheet();
+
+            await fireEvent.press(screen.getByRole('button', { name: 'Move Federated up' }));
+            await fireEvent.press(screen.getByRole('button', { name: 'Move Federated up' }));
+
+            await waitFor(async () => expect(await pinnedIds()).toEqual(['federated', 'home', 'local']));
+        });
+
+        it('has nowhere to go past either end', async () => {
+            await renderSheet();
+
+            expect(screen.getByRole('button', { name: 'Move Home up' })).toBeDisabled();
+            expect(screen.getByRole('button', { name: 'Move Federated down' })).toBeDisabled();
+        });
+
+        it('moves a feed held and dragged', async () => {
+            await renderSheet();
+            await measureRows();
+
+            await drag('home', 100);
+
+            await waitFor(async () => expect(await pinnedIds()).toEqual(['local', 'federated', 'home']));
+        });
+
+        it('keeps the order after a short or cancelled drag', async () => {
+            await renderSheet();
+            await measureRows();
+
+            await drag('home', 20);
+            await drag('home', 100, State.CANCELLED);
+
+            expect(await pinnedIds()).toEqual(['home', 'local', 'federated']);
+        });
+
+        it('works out where a dragged row lands', () => {
+            const heights = [60, 60, 80];
+            expect(dropIndex(heights, 0, 20)).toBe(0);
+            expect(dropIndex(heights, 0, 31)).toBe(1);
+            expect(dropIndex(heights, 0, 100)).toBe(1);
+            expect(dropIndex(heights, 0, 101)).toBe(2);
+            expect(dropIndex(heights, 0, 900)).toBe(2);
+            expect(dropIndex(heights, 2, -31)).toBe(1);
+            expect(dropIndex(heights, 1, -900)).toBe(0);
+            expect(slotOffset(heights, 0, 2)).toBe(140);
+            expect(slotOffset(heights, 2, 0)).toBe(-120);
+            expect(slotOffset(heights, 1, 1)).toBe(0);
+        });
+
+        it('falls back to Home, not the first pill, when the open feed is unpinned', async () => {
+            await pinFeed('me', TRENDING_FEED);
+            await render(withQuery(<Timeline />));
+            await fireEvent.press(await screen.findByRole('tab', { name: 'Trending' }));
+            await fireEvent.press(screen.getByRole('button', { name: 'Feeds' }));
+            await fireEvent.press(screen.getByRole('button', { name: 'Move Local up' }));
+            await waitFor(async () => expect((await pinnedIds())[0]).toBe('local'));
+
+            await fireEvent.press(screen.getAllByRole('button', { name: 'Pinned' }).slice(-1)[0]);
+
+            await waitFor(() => expect(screen.getByRole('tab', { name: 'Home' })).toBeSelected());
+        });
+    });
+
+    describe('unfollowing a hashtag', () => {
+        const post = apiClient.post as jest.Mock;
+        const pressUnfollow = async () => {
+            await fireEvent.press(await screen.findByRole('button', { name: 'Unfollow #pugs' }));
+            expect(post).not.toHaveBeenCalled();
+            await fireEvent.press(await screen.findByRole('button', { name: 'Unfollow' }));
+        };
+
+        it('asks first, then unfollows and drops the row', async () => {
+            serve([{ name: 'pugs' }]);
+            post.mockResolvedValue({ data: { name: 'pugs', following: false } });
+            await renderSheet();
+
+            await pressUnfollow();
+
+            await waitFor(() => expect(post).toHaveBeenCalledWith('/tags/pugs/unfollow'));
+            await waitFor(() => expect(screen.queryByRole('button', { name: 'Open #pugs' })).toBeNull());
+        });
+
+        it('keeps a pinned hashtag pinned', async () => {
+            serve([{ name: 'pugs' }]);
+            await pinFeed('me', createHashtagFeed('pugs'));
+            post.mockResolvedValue({ data: { name: 'pugs', following: false } });
+            await renderSheet();
+            await screen.findAllByRole('button', { name: 'Open #pugs' });
+
+            await pressUnfollow();
+
+            await waitFor(() => expect(screen.getAllByRole('button', { name: 'Open #pugs' })).toHaveLength(1));
+            expect((await getPinnedFeeds('me')).some(feed => feed.id === 'tag:pugs')).toBe(true);
+        });
+
+        it('keeps the row when the request fails', async () => {
+            serve([{ name: 'pugs' }]);
+            post.mockRejectedValue(new Error('offline'));
+            await renderSheet();
+
+            await pressUnfollow();
+
+            expect(await screen.findByText("Couldn't update this hashtag. Please try again.")).toBeTruthy();
+            expect(screen.getByRole('button', { name: 'Open #pugs' })).toBeTruthy();
+        });
     });
 });
 

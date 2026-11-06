@@ -4,6 +4,7 @@ import { useOptionalMediaViewer } from '../components/MediaViewer/mediaViewer';
 import { StatusHtmlContent } from '../components/TootCard/htmlContent';
 import { mockTheme } from '../testUtils/theme';
 import { CustomEmoji } from '../services/mastodon/types';
+import { renderTextWithEmojis } from '../services/emojiHelper';
 import { HUGE_POST, LONG_POST, breakLongRuns, postSize, splitTrailingHashtags } from '../services/htmlText';
 
 jest.mock('../components/MediaViewer/mediaViewer', () => ({ useOptionalMediaViewer: jest.fn(() => undefined) }));
@@ -93,6 +94,18 @@ describe('trailing hashtags', () => {
     it('takes accented hashtags, and handles a post with no paragraphs', () => {
         expect(splitTrailingHashtags(`<p>oi</p><p>${tag('São_Paulo')}</p>`).tags).toEqual(['São_Paulo']);
         expect(splitTrailingHashtags('')).toEqual({ html: '', tags: [] });
+    });
+});
+
+describe('an emoji in a line of text', () => {
+    it('sits lowered in post text, by a share of its size', async () => {
+        const { toJSON } = await renderPost('<p>hi :pug:</p>', [emoji('pug')]);
+        expect(JSON.stringify(toJSON())).toContain('"translateY":3.2');
+    });
+
+    it('sits lowered in names too', async () => {
+        const { toJSON } = await render(renderTextWithEmojis('Pug :pug:', [emoji('pug')], null, 15)!);
+        expect(JSON.stringify(toJSON())).toContain('"translateY":3');
     });
 });
 

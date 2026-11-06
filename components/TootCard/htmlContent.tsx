@@ -4,6 +4,7 @@ import * as WebBrowser from 'expo-web-browser';
 import RenderHtml, { HTMLElementModel, HTMLContentModel, defaultSystemFonts } from 'react-native-render-html';
 import { useOptionalMediaViewer } from '../MediaViewer/mediaViewer';
 import { CustomEmoji } from '../../services/mastodon/types';
+import { inlineEmojiStyle } from '../../services/emojiHelper';
 import { fontFamilies } from '../../services/theme/typography';
 import { tagFromHref } from '../../services/mastodon/tags';
 import { breakLongRuns, withoutQuoteInline } from '../../services/htmlText';
@@ -33,7 +34,7 @@ const InlineEmoji = ({ src, shortcode }: { src: string; shortcode: string }) => 
             accessibilityRole="imagebutton"
             accessibilityLabel={label}
         >
-            <Image source={{ uri: src }} style={{ width: 16, height: 16, resizeMode: 'contain', marginHorizontal: 2 }} />
+            <Image source={{ uri: src }} style={[inlineEmojiStyle(16), { marginHorizontal: 2 }]} />
         </Pressable>
     );
 };

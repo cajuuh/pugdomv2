@@ -3,7 +3,7 @@ import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-quer
 import { followTag, getTag, getTagTimeline, Tag, TagTimelineOptions, unfollowTag } from '../services/mastodon/tags';
 import { Status } from '../services/mastodon/types';
 
-const tagKey = (name: string) => ['tag', name.toLowerCase()];
+export const tagKey = (name: string) => ['tag', name.toLowerCase()];
 
 // Under ['timeline'] so favourites, boosts, bookmarks and votes update it (useUpdateCachedStatus)
 export const tagTimelineKey = (tag: string) => ['timeline', 'tag', tag.toLowerCase()];
@@ -28,6 +28,8 @@ export const useToggleFollowTag = (name: string) => {
         queryClient.setQueryData<Tag>(key, current => current && { ...current, following: follow });
         try {
             queryClient.setQueryData(key, await (follow ? followTag(name) : unfollowTag(name)));
+            // The Feeds sheet lists them
+            queryClient.invalidateQueries({ queryKey: ['followedTags'] });
         } catch (error) {
             queryClient.setQueryData(key, previous);
             throw error;
