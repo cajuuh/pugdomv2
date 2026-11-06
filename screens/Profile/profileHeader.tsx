@@ -5,7 +5,7 @@ import { useTheme } from '../../services/themeContext';
 import { useNavigator } from '../../services/navigationContext';
 import { Account, Attachment, Relationship } from '../../services/mastodon/types';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
-import { StatusHtmlContent, openLink } from '../../components/TootCard/htmlContent';
+import { PARAGRAPH_GAP, StatusHtmlContent, openLink } from '../../components/TootCard/htmlContent';
 import { Avatar, IconButton, PillButton, PugMark, RoleBadge, SegmentOption, SegmentedPill } from '../../components/ui';
 import { FollowButton } from '../../components/FollowButton/followButton';
 import { useOpenAccount } from '../../hooks/useOpenAccount';
@@ -240,17 +240,20 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
                 )}
 
                 {!!user.note && (
-                    <StatusHtmlContent
-                        content={user.note}
-                        emojis={user.emojis}
-                        colors={colors}
-                        bodyFont={type.body}
-                        compactMode={false}
-                        width={width - 40}
-                        onPressMention={openMention}
-                        onPressHashtag={openHashtag}
-                        onPressLink={openLinkInApp}
-                    />
+                    // Takes back the last paragraph's margin, so the space below the bio is the same as elsewhere
+                    <View style={{ marginBottom: -PARAGRAPH_GAP }}>
+                        <StatusHtmlContent
+                            content={user.note}
+                            emojis={user.emojis}
+                            colors={colors}
+                            bodyFont={type.body}
+                            compactMode={false}
+                            width={width - 40}
+                            onPressMention={openMention}
+                            onPressHashtag={openHashtag}
+                            onPressLink={openLinkInApp}
+                        />
+                    </View>
                 )}
 
                 {/* The profile's fields (pronouns, links...): a verified link (rel="me") is ticked in the coat accent */}

@@ -31,6 +31,9 @@ const renderers = {
     }
 };
 
+// Below each paragraph, the last one included
+export const PARAGRAPH_GAP = 10;
+
 // Holding the text selects it, to copy (tester request); links and taps on the card still work
 const defaultTextProps = { selectable: true };
 
@@ -81,7 +84,7 @@ export const StatusHtmlContent = React.memo(({ content, emojis, colors, bodyFont
         },
         p: {
             marginTop: 0,
-            marginBottom: 10,
+            marginBottom: PARAGRAPH_GAP,
         }
     }), [colors, bodyFont, compactMode]);
 
