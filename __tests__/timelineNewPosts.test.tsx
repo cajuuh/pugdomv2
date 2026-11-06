@@ -153,6 +153,15 @@ describe('Timeline new posts pill', () => {
         });
     });
 
+    it("doesn't let focus move the list: a post's text keeps it after a tap, and the list would jump there", async () => {
+        mockNewPosts = { count: 0, more: false, accounts: [] };
+        await renderTimeline();
+        let node: any = await screen.findByText('post 10');
+        while (node && node.props.scrollsChildToFocus === undefined) node = node.parent;
+
+        expect(node?.props.scrollsChildToFocus).toBe(false);
+    });
+
     it('reloads only the first page when tapped', async () => {
         mockNewPosts = { count: 1, more: false, accounts: [] };
         await renderTimeline();

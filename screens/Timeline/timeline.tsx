@@ -16,7 +16,7 @@ import { useTheme } from '../../services/themeContext';
 import { FEED_PILL_HEIGHT, makeStyles } from './styles';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { useI18n } from '../../services/i18n/i18nContext';
-import { autoplayViewability, setAutoplayPost } from '../../services/media/autoplay';
+import { postListProps, setAutoplayPost } from '../../services/media/autoplay';
 import { useNewPosts } from '../../hooks/useNewPosts';
 import { NewPostsPill } from './newPostsPill';
 
@@ -181,7 +181,7 @@ const FeedList = ({ feed, current, visible, onStatusPress }: FeedListProps) => {
                 <>
                     {newPosts.count > 0 && <NewPostsPill newPosts={newPosts} loading={loadingNewPosts} collapsed={newPostsCollapsed} onPress={showNewPosts} />}
                     <FlashList
-                        {...autoplayViewability}
+                        {...postListProps}
                         ref={listRef}
                         onScrollBeginDrag={() => {
                             if (newPosts.count > 0) setNewPostsCollapsed(true);
