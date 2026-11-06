@@ -200,7 +200,10 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
     const [pollDuration, setPollDuration] = useState<number>(DEFAULT_POLL_DURATION);
     const [pollMultiple, setPollMultiple] = useState(false);
 
-    const media = useMediaAttachments(instanceConfiguration);
+    // Publishing waits for a failed upload to be retried or removed, so say what went wrong
+    const media = useMediaAttachments(instanceConfiguration, reason => {
+        dialog.toast(reason ? t('attachments.failedBecause', { reason }) : t('attachments.failedNoReason'));
+    });
     // The image whose description (and focal point) is being edited, shown in place of the post
     const [altEditing, setAltEditing] = useState<{ key: string; draft: string; focus?: Point } | null>(null);
     const [reminderOpen, setReminderOpen] = useState(false);

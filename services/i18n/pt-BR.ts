@@ -423,6 +423,8 @@ export const ptBR: Dictionary = {
         retry: 'Enviar a imagem {{index}} de novo',
         uploading: 'Enviando imagem {{index}}',
         failed: 'Falhou',
+        failedBecause: 'O envio falhou: {{reason}}',
+        failedNoReason: 'O envio falhou. Confira sua conexão e toque na miniatura para tentar de novo.',
         altLabel: 'Descrição',
         altPlaceholder: 'Descreva o que tem na imagem',
         altHint: 'Quem usa leitor de tela ouve essa descrição, e ela aparece quando a imagem não carrega.',

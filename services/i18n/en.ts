@@ -431,6 +431,8 @@ export const en = {
         retry: 'Upload image {{index}} again',
         uploading: 'Uploading image {{index}}',
         failed: 'Failed',
+        failedBecause: 'Upload failed: {{reason}}',
+        failedNoReason: 'Upload failed. Check your connection and tap the thumbnail to try again.',
         altLabel: 'Description',
         altPlaceholder: "Describe what's in the image",
         altHint: "People who use screen readers hear this, and it shows when the image doesn't load.",
