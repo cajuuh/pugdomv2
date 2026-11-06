@@ -738,7 +738,10 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                         t('post.boosted', { name: status.account.display_name || status.account.username }),
                         status.account.emojis || [],
                         [type.meta, styles.boostText],
-                        12.5
+                        12.5,
+                        // Android measures some text a hair too narrow ("Tilt deu boost", not "Lilt deu boost"), and
+                        // the last word then wraps out of sight. On one line it stays.
+                        1
                     )}
                 </Pressable>
             )}

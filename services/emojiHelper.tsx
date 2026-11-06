@@ -6,18 +6,19 @@ export const renderTextWithEmojis = (
     text: string,
     emojis: CustomEmoji[],
     textStyle: any,
-    emojiSize: number = 16
+    emojiSize: number = 16,
+    numberOfLines?: number
 ) => {
     if (!text) {
         return null;
     } else if (!emojis || emojis.length === 0) {
-        return <Text style={textStyle}>{text}</Text>;
+        return <Text style={textStyle} numberOfLines={numberOfLines}>{text}</Text>;
     }
 
     const parts = text.split(/(:\w+:)/g);
 
     return (
-        <Text style={textStyle}>
+        <Text style={textStyle} numberOfLines={numberOfLines}>
             {parts.map((part, index) => {
                 if (part.startsWith(':') && part.endsWith(':')) {
                     const shortcode = part.slice(1, -1);
