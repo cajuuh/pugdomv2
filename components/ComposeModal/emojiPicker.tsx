@@ -27,7 +27,9 @@ export const groupByCategory = (emojis: CustomEmoji[]): EmojiGroup[] => {
     const groups = new Map<string, CustomEmoji[]>();
     for (const emoji of emojis) {
         const category = emoji.category?.trim() || UNCATEGORIZED;
-        groups.set(category, [...(groups.get(category) ?? []), emoji]);
+        const group = groups.get(category);
+        if (group) group.push(emoji);
+        else groups.set(category, [emoji]);
     }
     return [...groups.entries()]
         .map(([category, list]) => ({ category, emojis: list }))
@@ -171,6 +173,11 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ visible, onPick, onClo
                         keyExtractor={row => row[0].shortcode}
                         style={styles.emojiGrid}
                         stickySectionHeadersEnabled
+                        // Each row is seven images, and animated ones are costly: only keep about what's on screen
+                        initialNumToRender={8}
+                        maxToRenderPerBatch={4}
+                        windowSize={3}
+                        removeClippedSubviews
                         keyboardShouldPersistTaps="handled"
                         ListEmptyComponent={
                             searching ? <Text style={[type.meta, styles.emojiStatusText]}>{t('emoji.noMatches', { query: query.trim() })}</Text> : null
