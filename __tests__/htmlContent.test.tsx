@@ -1,9 +1,12 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
+import { useOptionalMediaViewer } from '../components/MediaViewer/mediaViewer';
 import { StatusHtmlContent } from '../components/TootCard/htmlContent';
 import { mockTheme } from '../testUtils/theme';
 import { CustomEmoji } from '../services/mastodon/types';
 import { HUGE_POST, LONG_POST, breakLongRuns, postSize, splitTrailingHashtags } from '../services/htmlText';
+
+jest.mock('../components/MediaViewer/mediaViewer', () => ({ useOptionalMediaViewer: jest.fn(() => undefined) }));
 
 const emoji = (shortcode: string): CustomEmoji => ({
     shortcode,
@@ -90,5 +93,23 @@ describe('trailing hashtags', () => {
     it('takes accented hashtags, and handles a post with no paragraphs', () => {
         expect(splitTrailingHashtags(`<p>oi</p><p>${tag('São_Paulo')}</p>`).tags).toEqual(['São_Paulo']);
         expect(splitTrailingHashtags('')).toEqual({ html: '', tags: [] });
+    });
+});
+
+describe('tapping an emoji', () => {
+    it('shows it bigger, in the media viewer', async () => {
+        const openMedia = jest.fn();
+        (useOptionalMediaViewer as jest.Mock).mockReturnValueOnce({ openMedia }).mockReturnValue({ openMedia });
+        await renderPost('<p>hi :pug:</p>', [emoji('pug')]);
+
+        await fireEvent.press(screen.getByRole('imagebutton', { name: ':pug:' }));
+
+        expect(openMedia).toHaveBeenCalledWith([expect.objectContaining({ type: 'image', url: 'https://x/pug.png', description: ':pug:' })], 0);
+        (useOptionalMediaViewer as jest.Mock).mockReturnValue(undefined);
+    });
+
+    it('still draws it outside the viewer', async () => {
+        const { toJSON } = await renderPost('<p>:pug:</p>', [emoji('pug')]);
+        expect(shownEmoji(toJSON())).toEqual(['https://x/pug.png']);
     });
 });
