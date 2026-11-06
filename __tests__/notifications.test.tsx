@@ -15,7 +15,7 @@ import { getSeenNotificationId, setSeenNotificationId } from '../services/notifi
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getConversations, markConversationRead } from '../services/mastodon/conversations';
 import { Account, Notification } from '../services/mastodon/types';
-import { actorsText, buildListItems, notificationTime, plainText, withoutLeadingMentions } from '../screens/Notifications/rows';
+import { actorsText, buildListItems, notificationTime, plainText, withoutOwnMention } from '../screens/Notifications/rows';
 import { makeStyles } from '../screens/Notifications/styles';
 import { ThemeColors } from '../services/themeContext';
 
@@ -676,8 +676,12 @@ describe('notification rows', () => {
         expect(actorsText(names, count)).toBe(expected);
     });
 
-    it('drops the handles a reply starts with, unless that is the whole post', () => {
-        expect(withoutLeadingMentions('@me @bob@floss.social apricot, obviously')).toBe('apricot, obviously');
-        expect(withoutLeadingMentions('@me ')).toBe('@me ');
+    it('drops your own handle from the start of a mention and keeps who else it is for', () => {
+        expect(withoutOwnMention('@me @bob@floss.social apricot, obviously', 'me')).toBe('@bob@floss.social apricot, obviously');
+        expect(withoutOwnMention('@bob @ME @ana bom dia', 'me')).toBe('@bob @ana bom dia');
+        expect(withoutOwnMention('@me apricot', 'me')).toBe('apricot');
+        expect(withoutOwnMention('apricot @me', 'me')).toBe('apricot @me');
+        expect(withoutOwnMention('@me ', 'me')).toBe('@me ');
+        expect(withoutOwnMention('@me hi', undefined)).toBe('@me hi');
     });
 });
