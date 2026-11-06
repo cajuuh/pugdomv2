@@ -4,6 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRecyclingState } from '@shopify/flash-list';
 import { Status, Attachment, PreviewCard } from '../../services/mastodon/types';
 import { StatusHtmlContent } from './htmlContent';
+import { PostHashtags } from './postHashtags';
 import { useSettings } from '../../services/settingsContext';
 import { useExpandSpoilers, useMediaDisplay } from '../../hooks/useExpandSpoilers';
 import { useTheme } from '../../services/themeContext';
@@ -49,7 +50,7 @@ import { useModeration } from '../../hooks/useModeration';
 import { usePostActions } from '../../hooks/usePostActions';
 import { EditHistorySheet } from './editHistorySheet';
 import { dialog } from '../../services/dialog';
-import { plainText, postSize } from '../../services/htmlText';
+import { plainText, postSize, splitTrailingHashtags } from '../../services/htmlText';
 import { useIsAutoplayPost } from '../../services/media/autoplay';
 
 export const getRelativeTime = (dateString: string, { t }: Translator) => {
@@ -185,7 +186,8 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const [boostCount, setBoostCount] = useRecyclingState(targetStatus.reblogs_count, recyclingDeps);
     const [isBookmarked, setIsBookmarked] = useRecyclingState(!!targetStatus.bookmarked, recyclingDeps);
     const [isMediaRevealed, setIsMediaRevealed] = useRecyclingState(false, recyclingDeps);
-    const plain = React.useMemo(() => plainText(targetStatus.content), [targetStatus.content]);
+    const { html: bodyHtml, tags: trailingTags } = React.useMemo(() => splitTrailingHashtags(targetStatus.content), [targetStatus.content]);
+    const plain = React.useMemo(() => plainText(bodyHtml), [bodyHtml]);
     const textSize = fullText ? 'normal' : postSize(plain);
     const [isTextExpanded, setIsTextExpanded] = useRecyclingState(false, recyclingDeps);
     const isTextFolded = textSize !== 'normal' && !isTextExpanded;
@@ -504,7 +506,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 // The same wrapper folded or not, so "Show more" doesn't rebuild the post's HTML
                 <View style={isTextFolded ? [styles.textFold, compactMode && styles.textFoldCompact] : undefined}>
                     <StatusHtmlContent
-                        content={targetStatus.content}
+                        content={bodyHtml}
                         emojis={targetStatus.emojis}
                         colors={colors}
                         bodyFont={type.body}
@@ -536,6 +538,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             {targetStatus.quote && (
                 <QuotedPost quote={targetStatus.quote} onOpen={openQuoted} timeOf={createdAt => getRelativeTime(createdAt, i18n)} />
             )}
+            <PostHashtags tags={trailingTags} onPress={onPressHashtag ?? openHashtag} />
         </>
     );
 

@@ -778,6 +778,20 @@ describe('TootCard long posts', () => {
         expect(screen.queryByRole('button', { name: 'Show more' })).toBeNull();
     });
 
+    it('shows the hashtags a post ends with below its media, five until asked', async () => {
+        const tag = (name: string) => `<a href="https://x/tags/${name}" class="mention hashtag" rel="tag">#<span>${name}</span></a>`;
+        const names = ['a1', 'b2', 'c3', 'd4', 'e5', 'f6', 'g7'];
+        await renderCard({ ...statusA, content: `<p>hello</p><p>${names.map(tag).join(' ')}</p>` } as Status);
+
+        expect(screen.getAllByRole('link', { name: /^#/ })).toHaveLength(5);
+        expect(screen.queryByText('#f6')).toBeNull();
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Show more' }));
+
+        expect(screen.getAllByRole('link', { name: /^#/ })).toHaveLength(7);
+        expect(screen.queryByRole('button', { name: 'Show more' })).toBeNull();
+    });
+
     it('folds a long post behind Show more and opens it in place', async () => {
         await renderCard(long);
 
