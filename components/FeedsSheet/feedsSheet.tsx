@@ -15,8 +15,8 @@ interface FeedsSheetProps {
     onClose: () => void;
     // Opens a feed (closing the sheet)
     onSelectFeed: (feed: FeedDescriptor) => void;
-    // Opens the screen to make a new hashtag feed
-    onCreateFeed: () => void;
+    // Opens the hashtag feed editor: an existing feed, or a new one without a feed
+    onEditFeed: (feed?: FeedDescriptor) => void;
     // Opens the list editor: an existing list, or a new one without an id
     onEditList: (listId?: string) => void;
     // Opens the screen to add another server's timeline
@@ -25,7 +25,7 @@ interface FeedsSheetProps {
 
 // Every feed you can pin above the timeline: what's pinned, trending posts, lists, followed hashtags,
 // your own hashtag feeds and other servers' timelines. Tapping a row opens that feed; the pill on the right pins or unpins it.
-export const FeedsSheet: React.FC<FeedsSheetProps> = ({ visible, onClose, onSelectFeed, onCreateFeed, onEditList, onAddServer }) => {
+export const FeedsSheet: React.FC<FeedsSheetProps> = ({ visible, onClose, onSelectFeed, onEditFeed, onEditList, onAddServer }) => {
     const { colors, type } = useTheme();
     const i18n = useI18n();
     const { t } = i18n;
@@ -84,6 +84,11 @@ export const FeedsSheet: React.FC<FeedsSheetProps> = ({ visible, onClose, onSele
         onEditList(listId);
     };
 
+    const editFeed = (feed?: FeedDescriptor) => {
+        onClose();
+        onEditFeed(feed);
+    };
+
     // A dashed "make something new" row
     const createButton = (title: string, subtitle: string, onPress: () => void) => (
         <Pressable
@@ -134,11 +139,8 @@ export const FeedsSheet: React.FC<FeedsSheetProps> = ({ visible, onClose, onSele
                 )}
 
                 <SectionLabel style={styles.section}>{t('feeds.customFeeds')}</SectionLabel>
-                {customFeeds.map(feed => row(feed, { subtitle: describeCriteria(feed.criteria), onDelete: () => removeCustomFeed(feed.id) }))}
-                {createButton(t('feeds.createCustom'), t('feeds.createCustomSubtitle'), () => {
-                    onClose();
-                    onCreateFeed();
-                })}
+                {customFeeds.map(feed => row(feed, { subtitle: describeCriteria(feed.criteria), onEdit: () => editFeed(feed), onDelete: () => removeCustomFeed(feed.id) }))}
+                {createButton(t('feeds.createCustom'), t('feeds.createCustomSubtitle'), () => editFeed())}
 
                 <SectionLabel style={styles.section}>{t('servers.title')}</SectionLabel>
                 {serverFeeds.map(feed => row(feed, { subtitle: subtitleFor(feed) }))}

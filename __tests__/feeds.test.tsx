@@ -14,7 +14,7 @@ import {
     feedLabel,
     TRENDING_FEED,
 } from '../services/mastodon/feedTypes';
-import { deleteCustomFeed, getCustomFeeds, getPinnedFeeds, getPinnedStorageKey, pinFeed, saveCustomFeed, unpinFeed } from '../services/pinnedFeeds';
+import { deleteCustomFeed, getCustomFeeds, getPinnedFeeds, getPinnedStorageKey, pinFeed, replaceCustomFeed, saveCustomFeed, unpinFeed } from '../services/pinnedFeeds';
 import { createTranslator } from '../services/i18n/translate';
 import { FeedsSheet } from '../components/FeedsSheet/feedsSheet';
 import FeedEditor, { FEED_CREATED_EVENT, parseTags } from '../screens/FeedEditor/feedEditor';
@@ -116,11 +116,36 @@ describe('pinned feeds storage', () => {
         expect(await getCustomFeeds('me')).toEqual([]);
         expect((await getPinnedFeeds('me')).some(feed => feed.id === pets.id)).toBe(false);
     });
+
+    it('puts an edited feed in the old one\'s place', async () => {
+        const pets = createCustomHashtagFeed('Pets', 'cats');
+        const birds = createCustomHashtagFeed('Birds', 'owls');
+        const edited = createCustomHashtagFeed('Animals', 'dogs');
+        await saveCustomFeed('me', pets);
+        await saveCustomFeed('me', birds);
+        await pinFeed('me', pets);
+        await pinFeed('me', TRENDING_FEED);
+
+        await replaceCustomFeed('me', pets.id, edited);
+
+        expect((await getCustomFeeds('me')).map(feed => feed.id)).toEqual([edited.id, birds.id]);
+        expect((await getPinnedFeeds('me')).map(feed => feed.id)).toEqual(['home', 'local', 'federated', edited.id, 'trending']);
+    });
+
+    it('keeps an unpinned feed unpinned when it is edited', async () => {
+        const pets = createCustomHashtagFeed('Pets', 'cats');
+        const edited = createCustomHashtagFeed('Animals', 'dogs');
+        await saveCustomFeed('me', pets);
+
+        await replaceCustomFeed('me', pets.id, edited);
+
+        expect((await getPinnedFeeds('me')).some(feed => feed.id === edited.id)).toBe(false);
+    });
 });
 
 describe('Feeds sheet', () => {
     const renderSheet = (props: Partial<React.ComponentProps<typeof FeedsSheet>> = {}) =>
-        render(withQuery(<FeedsSheet visible onClose={jest.fn()} onSelectFeed={jest.fn()} onCreateFeed={jest.fn()} onEditList={jest.fn()} onAddServer={jest.fn()} {...props} />));
+        render(withQuery(<FeedsSheet visible onClose={jest.fn()} onSelectFeed={jest.fn()} onEditFeed={jest.fn()} onEditList={jest.fn()} onAddServer={jest.fn()} {...props} />));
 
     it('lists pinned feeds, trending and followed hashtags', async () => {
         serve([{ name: 'pugs' }]);
@@ -152,12 +177,25 @@ describe('Feeds sheet', () => {
     });
 
     it('starts a new hashtag feed', async () => {
-        const onCreateFeed = jest.fn();
-        await renderSheet({ onCreateFeed });
+        const onEditFeed = jest.fn();
+        await renderSheet({ onEditFeed });
 
         await fireEvent.press(screen.getByRole('button', { name: /New hashtag feed/ }));
 
-        expect(onCreateFeed).toHaveBeenCalled();
+        expect(onEditFeed).toHaveBeenCalledWith(undefined);
+    });
+
+    it('edits one of your hashtag feeds', async () => {
+        const pets = createCustomHashtagFeed('Pets', 'cats');
+        await saveCustomFeed('me', pets);
+        const onEditFeed = jest.fn();
+        const onClose = jest.fn();
+        await renderSheet({ onEditFeed, onClose });
+
+        await fireEvent.press(await screen.findByRole('button', { name: 'Edit Pets' }));
+
+        expect(onEditFeed).toHaveBeenCalledWith(pets);
+        expect(onClose).toHaveBeenCalled();
     });
 });
 
@@ -184,6 +222,53 @@ describe('Feed editor', () => {
     it('needs at least one hashtag', async () => {
         await render(withQuery(<FeedEditor onBack={jest.fn()} />));
         expect(screen.getByRole('button', { name: 'Save and pin' })).toBeDisabled();
+    });
+
+    it('changes a feed\'s name and hashtags', async () => {
+        const pets = createCustomHashtagFeed('Pets', 'cats', ['pugs'], [], ['dogs']);
+        await saveCustomFeed('me', pets);
+        const created = jest.fn();
+        const subscription = DeviceEventEmitter.addListener(FEED_CREATED_EVENT, created);
+        const onBack = jest.fn();
+        await render(withQuery(<FeedEditor feed={pets} onBack={onBack} />));
+
+        expect(screen.getByLabelText('Hashtags').props.value).toBe('#cats #pugs');
+        expect(screen.getByLabelText('Leave out').props.value).toBe('#dogs');
+        expect(screen.getByLabelText('Name (optional)').props.value).toBe('Pets');
+
+        await fireEvent.changeText(screen.getByLabelText('Hashtags'), '#cats #birds');
+        await fireEvent.changeText(screen.getByLabelText('Name (optional)'), 'Animals');
+        await fireEvent.press(screen.getByRole('button', { name: 'Save' }));
+
+        await waitFor(() => expect(onBack).toHaveBeenCalled());
+        const feeds = await getCustomFeeds('me');
+        expect(feeds).toHaveLength(1);
+        expect(feeds[0]).toMatchObject({ title: 'Animals', criteria: { tag: 'cats', any: ['birds'], none: ['dogs'] } });
+        expect(created).toHaveBeenCalledWith(expect.objectContaining({ title: 'Animals' }));
+        subscription.remove();
+    });
+
+    it('lets an unnamed feed follow its first hashtag', async () => {
+        const unnamed = createCustomHashtagFeed('', 'cats');
+        await saveCustomFeed('me', unnamed);
+        const onBack = jest.fn();
+        await render(withQuery(<FeedEditor feed={unnamed} onBack={onBack} />));
+        expect(screen.getByLabelText('Name (optional)').props.value).toBe('');
+
+        await fireEvent.changeText(screen.getByLabelText('Hashtags'), 'dogs');
+        await fireEvent.press(screen.getByRole('button', { name: 'Save' }));
+
+        await waitFor(() => expect(onBack).toHaveBeenCalled());
+        expect((await getCustomFeeds('me'))[0].title).toBe('#dogs');
+    });
+
+    it('can\'t save a feed left with no hashtags', async () => {
+        const pets = createCustomHashtagFeed('Pets', 'cats');
+        await render(withQuery(<FeedEditor feed={pets} onBack={jest.fn()} />));
+
+        await fireEvent.changeText(screen.getByLabelText('Hashtags'), ' ');
+
+        expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
     });
 });
 
@@ -256,5 +341,21 @@ describe('Timeline feed pills', () => {
         });
 
         expect(await screen.findByText('post /timelines/tag/cats')).toBeTruthy();
+    });
+
+    it('shows the new hashtags\' posts after editing the open feed', async () => {
+        const pets = createCustomHashtagFeed('Pets', 'cats');
+        await saveCustomFeed('me', pets);
+        await pinFeed('me', pets);
+        await render(withQuery(<><Timeline /><FeedEditor feed={pets} onBack={jest.fn()} /></>));
+        await fireEvent.press(await screen.findByRole('tab', { name: 'Pets' }));
+        expect(await screen.findByText('post /timelines/tag/cats')).toBeTruthy();
+
+        await fireEvent.changeText(screen.getByLabelText('Hashtags'), 'dogs');
+        await fireEvent.press(screen.getByRole('button', { name: 'Save' }));
+
+        expect(await screen.findByText('post /timelines/tag/dogs')).toBeTruthy();
+        expect(screen.queryByText('post /timelines/tag/cats')).toBeNull();
+        expect(screen.getByRole('tab', { name: 'Pets' })).toBeSelected();
     });
 });

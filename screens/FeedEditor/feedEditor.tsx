@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../services/themeContext';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { usePinnedFeeds } from '../../hooks/usePinnedFeeds';
-import { createCustomHashtagFeed, describeCriteria } from '../../services/mastodon/feedTypes';
+import { createCustomHashtagFeed, describeCriteria, FeedDescriptor } from '../../services/mastodon/feedTypes';
 import { radii, space } from '../../services/theme/shape';
 import { TAB_BAR_CLEARANCE } from '../../components/TabBar/styles';
 import { IconButton, PillButton, SectionLabel } from '../../components/ui';
@@ -18,20 +18,26 @@ export const FEED_OPEN_EVENT = 'feed_open';
 export const parseTags = (text: string) =>
     Array.from(new Set(text.split(/[\s,]+/).map(tag => tag.replace(/^#+/, '').trim().toLowerCase()).filter(Boolean)));
 
+const asTagText = (tags: string[] = []) => tags.map(tag => `#${tag}`).join(' ');
+
 interface FeedEditorProps {
+    // The feed to change; without one, a new feed
+    feed?: FeedDescriptor;
     onBack: () => void;
 }
 
-// Makes a hashtag feed: posts with any of the given hashtags, minus the excluded ones (Mastodon's
-// /timelines/tag with any[] / none[]). Saved on this device and pinned straight away.
-const FeedEditor = ({ onBack }: FeedEditorProps) => {
+// Makes or changes a hashtag feed: posts with any of the given hashtags, minus the excluded ones
+// (Mastodon's /timelines/tag with any[] / none[]). Saved on this device; a new one is pinned straight away.
+const FeedEditor = ({ feed, onBack }: FeedEditorProps) => {
     const { colors, type } = useTheme();
     const { t } = useI18n();
     const insets = useSafeAreaInsets();
-    const { addCustomFeed } = usePinnedFeeds();
-    const [name, setName] = useState('');
-    const [tagsText, setTagsText] = useState('');
-    const [excludeText, setExcludeText] = useState('');
+    const { addCustomFeed, replaceCustomFeed } = usePinnedFeeds();
+    const criteria = feed?.criteria;
+    // An unnamed feed goes by its first hashtag: left empty, so it follows that hashtag if it changes
+    const [name, setName] = useState(feed?.title && feed.title !== `#${criteria?.tag}` ? feed.title : '');
+    const [tagsText, setTagsText] = useState(criteria ? asTagText([criteria.tag, ...(criteria.any ?? [])]) : '');
+    const [excludeText, setExcludeText] = useState(asTagText(criteria?.none));
     const [saving, setSaving] = useState(false);
 
     const [main, ...more] = parseTags(tagsText);
@@ -42,9 +48,9 @@ const FeedEditor = ({ onBack }: FeedEditorProps) => {
         if (!main) return;
         setSaving(true);
         try {
-            const feed = createCustomHashtagFeed(name, main, more, [], exclude);
-            await addCustomFeed(feed);
-            DeviceEventEmitter.emit(FEED_CREATED_EVENT, feed);
+            const saved = createCustomHashtagFeed(name, main, more, [], exclude);
+            await (feed ? replaceCustomFeed({ oldId: feed.id, feed: saved }) : addCustomFeed(saved));
+            DeviceEventEmitter.emit(FEED_CREATED_EVENT, saved);
             onBack();
         } finally {
             setSaving(false);
@@ -73,7 +79,7 @@ const FeedEditor = ({ onBack }: FeedEditorProps) => {
             <View style={[styles.header, { paddingTop: insets.top + 10, borderBottomColor: colors.borderColor, backgroundColor: colors.cardBackground }]}>
                 <IconButton icon="arrow-back" accessibilityLabel={t('common.goBack')} onPress={onBack} />
                 <Text accessibilityRole="header" style={[type.name, styles.title, { color: colors.textPrimary }]} numberOfLines={1}>
-                    {t('feeds.createCustom')}
+                    {feed ? t('feeds.editFeed') : t('feeds.createCustom')}
                 </Text>
                 <View style={styles.spacer} />
             </View>
@@ -87,7 +93,7 @@ const FeedEditor = ({ onBack }: FeedEditorProps) => {
                         <Text style={[type.name, { color: colors.textPrimary }]}>{preview}</Text>
                     </View>
                 )}
-                <PillButton label={t('feeds.saveAndPin')} icon="add" onPress={save} disabled={!main} loading={saving} style={styles.save} />
+                <PillButton label={feed ? t('feeds.save') : t('feeds.saveAndPin')} icon={feed ? 'checkmark' : 'add'} onPress={save} disabled={!main} loading={saving} style={styles.save} />
             </ScrollView>
         </View>
     );

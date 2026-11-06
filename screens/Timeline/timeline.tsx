@@ -369,7 +369,7 @@ const Timeline = ({ onStatusPress, active = true }: TimelineProps) => {
                 visible={feedsSheetOpen}
                 onClose={() => setFeedsSheetOpen(false)}
                 onSelectFeed={openFeed}
-                onCreateFeed={() => push({ name: 'feedEditor' })}
+                onEditFeed={feed => push({ name: 'feedEditor', feed })}
                 onEditList={listId => push({ name: 'listEditor', listId })}
                 onAddServer={() => push({ name: 'serverPicker' })}
             />
