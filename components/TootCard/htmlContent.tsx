@@ -1,7 +1,8 @@
 import React from 'react';
-import { Image } from 'react-native';
+import { Image, Pressable } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import RenderHtml, { HTMLElementModel, HTMLContentModel, defaultSystemFonts } from 'react-native-render-html';
+import { useOptionalMediaViewer } from '../MediaViewer/mediaViewer';
 import { CustomEmoji } from '../../services/mastodon/types';
 import { fontFamilies } from '../../services/theme/typography';
 import { tagFromHref } from '../../services/mastodon/tags';
@@ -20,16 +21,29 @@ const customHTMLElementModels = {
     })
 };
 
-const renderers = {
-    emoji: ({ tnode }: any) => {
-        return (
-            <Image
-                source={{ uri: tnode.attributes.src }}
-                style={{ width: 16, height: 16, resizeMode: 'contain', marginHorizontal: 2 }}
-            />
-        );
-    }
+// Tapping an emoji shows it bigger, in the media viewer
+const InlineEmoji = ({ src, shortcode }: { src: string; shortcode: string }) => {
+    const viewer = useOptionalMediaViewer();
+    const label = `:${shortcode}:`;
+    return (
+        <Pressable
+            testID="inline-emoji"
+            disabled={!viewer}
+            onPress={() => viewer?.openMedia([{ id: src, type: 'image', url: src, preview_url: src, description: label }], 0)}
+            accessibilityRole="imagebutton"
+            accessibilityLabel={label}
+        >
+            <Image source={{ uri: src }} style={{ width: 16, height: 16, resizeMode: 'contain', marginHorizontal: 2 }} />
+        </Pressable>
+    );
 };
+
+const renderers = {
+    emoji: ({ tnode }: any) => <InlineEmoji src={tnode.attributes.src} shortcode={tnode.attributes.shortcode} />,
+};
+
+// Below each paragraph, the last one included
+export const PARAGRAPH_GAP = 10;
 
 // Holding the text selects it, to copy (tester request); links and taps on the card still work
 const defaultTextProps = { selectable: true };
@@ -81,7 +95,7 @@ export const StatusHtmlContent = React.memo(({ content, emojis, colors, bodyFont
         },
         p: {
             marginTop: 0,
-            marginBottom: 10,
+            marginBottom: PARAGRAPH_GAP,
         }
     }), [colors, bodyFont, compactMode]);
 
@@ -98,7 +112,7 @@ export const StatusHtmlContent = React.memo(({ content, emojis, colors, bodyFont
                 const regex = new RegExp(`:${emoji.shortcode}:`, 'g');
                 // Closed explicitly: HTML ignores "/>" on custom tags, so everything after the first
                 // emoji (more emoji, the rest of the text) would end up inside it, unseen
-                html = html.replace(regex, `<emoji src="${emoji.url}"></emoji>`);
+                html = html.replace(regex, `<emoji src="${emoji.url}" shortcode="${emoji.shortcode}"></emoji>`);
             });
         }
         return breakLongRuns(html);

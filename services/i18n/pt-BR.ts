@@ -223,8 +223,8 @@ export const ptBR: Dictionary = {
     thread: {
         title: 'Publicação',
         titleBy: 'Publicação de {{name}}',
-        oldestFirst: 'Mais antigas primeiro',
-        newestFirst: 'Mais recentes primeiro',
+        oldestFirst: 'Antigas primeiro',
+        newestFirst: 'Recentes primeiro',
         replyingTo: 'Respondendo a {{name}}',
     },
     search: {

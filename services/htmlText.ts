@@ -13,6 +13,29 @@ export const plainText = (html?: string) =>
         .replace(/&(amp|lt|gt|quot|apos|#39|nbsp);/g, (_, entity: string) => ENTITIES[entity])
         .trim();
 
+const isHashtagLine = (html: string) => {
+    const words = html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim().split(/\s+/);
+    return words.every(word => /^#[\p{L}\p{N}_·]+$/u.test(word));
+};
+
+// A post's last lines when they're only hashtags, taken out of its text to show below its media, as
+// Mastodon's web app does. A post that's nothing but hashtags keeps them as its text.
+export const splitTrailingHashtags = (html: string): { html: string; tags: string[] } => {
+    const last = html.match(/^([\s\S]*<p[^>]*>)([\s\S]*?)(<\/p>\s*)$/);
+    const whole = { html, tags: [] as string[] };
+    if (!last) return whole;
+    const [, before, inner, after] = last;
+    const lines = inner.split(/<br\s*\/?>/i);
+    let keep = lines.length;
+    while (keep > 0 && isHashtagLine(lines[keep - 1])) keep--;
+    if (keep === lines.length) return whole;
+
+    const tags = lines.slice(keep).join(' ').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim().split(/\s+/).map(word => word.slice(1));
+    const open = before.match(/<p[^>]*>$/)![0];
+    const text = keep > 0 ? `${before}${lines.slice(0, keep).join('<br>')}${after}` : before.slice(0, -open.length);
+    return plainText(text) ? { html: text, tags } : whole;
+};
+
 // Long posts fold in timelines behind "Show more". Past HUGE_POST characters (posts made to choke apps)
 // the timeline doesn't draw their HTML at all, only the start as plain text, until asked.
 export const LONG_POST = 800;

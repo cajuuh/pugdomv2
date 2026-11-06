@@ -7,8 +7,7 @@ import {
     RefreshControl,
     StyleSheet,
     Text,
-    View,
-} from 'react-native';
+    View, ScrollView } from 'react-native';
 
 import { FlashList } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -221,9 +220,10 @@ export default function Thread({
             </View>
 
             {!loading && statuses.length > 1 && (
-                <View style={styles.order}>
+                // Scrolls sideways when a large system font doesn't leave room for both on one line
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.orderRow} contentContainerStyle={styles.order}>
                     <SegmentedPill variant="chips" options={orders} value={order} onChange={changeOrder} />
-                </View>
+                </ScrollView>
             )}
 
             {loading ? (
@@ -331,6 +331,9 @@ const styles = StyleSheet.create({
         width: 44,
     },
 
+    orderRow: {
+        flexGrow: 0,
+    },
     order: {
         paddingTop: space.md,
         paddingBottom: space.sm,

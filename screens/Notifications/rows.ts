@@ -70,5 +70,11 @@ export const actorsText = (names: string[], count: number, { t, tn }: Translator
     return shown.length === 2 ? t('common.listAnd', { list: shown[0], last: shown[1] }) : shown[0] ?? '';
 };
 
-// Replies start with the handles they're addressed to; drop them unless that's all the post says
-export const withoutLeadingMentions = (text: string) => text.replace(/^(?:@[\w.-]+(?:@[\w.-]+)?\s+)+/, '') || text;
+// Replies start with the handles they're addressed to. Yours goes, since the row is already for you; the
+// others stay, to show who else it's for. All of it stays if that's all the post says.
+export const withoutOwnMention = (text: string, username?: string) => {
+    const leading = text.match(/^(?:@[\w.-]+(?:@[\w.-]+)?\s+)+/)?.[0];
+    if (!leading || !username) return text;
+    const others = leading.trim().split(/\s+/).filter(handle => handle.slice(1).split('@')[0].toLowerCase() !== username.toLowerCase());
+    return [...others, text.slice(leading.length)].filter(Boolean).join(' ') || text;
+};

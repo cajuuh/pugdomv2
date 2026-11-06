@@ -1,9 +1,12 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
+import { useOptionalMediaViewer } from '../components/MediaViewer/mediaViewer';
 import { StatusHtmlContent } from '../components/TootCard/htmlContent';
 import { mockTheme } from '../testUtils/theme';
 import { CustomEmoji } from '../services/mastodon/types';
-import { HUGE_POST, LONG_POST, breakLongRuns, postSize } from '../services/htmlText';
+import { HUGE_POST, LONG_POST, breakLongRuns, postSize, splitTrailingHashtags } from '../services/htmlText';
+
+jest.mock('../components/MediaViewer/mediaViewer', () => ({ useOptionalMediaViewer: jest.fn(() => undefined) }));
 
 const emoji = (shortcode: string): CustomEmoji => ({
     shortcode,
@@ -61,5 +64,52 @@ describe('long posts', () => {
         await renderPost(`<p>${'A'.repeat(80)}</p>`, []);
 
         expect(screen.getByText(`${'A'.repeat(40)}\u200B${'A'.repeat(40)}`)).toBeTruthy();
+    });
+});
+
+describe('trailing hashtags', () => {
+    const tag = (name: string) => `<a href="https://x/tags/${name}" class="mention hashtag" rel="tag">#<span>${name}</span></a>`;
+
+    it('takes a last paragraph of only hashtags out of the text', () => {
+        expect(splitTrailingHashtags(`<p>hello</p><p>${tag('pug')} ${tag('dog')}</p>`)).toEqual({ html: '<p>hello</p>', tags: ['pug', 'dog'] });
+    });
+
+    it('takes a last line of only hashtags after a line break', () => {
+        expect(splitTrailingHashtags(`<p>hello<br />${tag('pug')}<br>${tag('dog')}</p>`)).toEqual({ html: '<p>hello</p>', tags: ['pug', 'dog'] });
+    });
+
+    it('leaves hashtags in a sentence, and text after them', () => {
+        const sentence = `<p>hello ${tag('pug')}</p>`;
+        const textAfter = `<p>${tag('pug')}</p><p>bye</p>`;
+        expect(splitTrailingHashtags(sentence)).toEqual({ html: sentence, tags: [] });
+        expect(splitTrailingHashtags(textAfter)).toEqual({ html: textAfter, tags: [] });
+    });
+
+    it('leaves a post that is nothing but hashtags as it is', () => {
+        const only = `<p>${tag('pug')} ${tag('dog')}</p>`;
+        expect(splitTrailingHashtags(only)).toEqual({ html: only, tags: [] });
+    });
+
+    it('takes accented hashtags, and handles a post with no paragraphs', () => {
+        expect(splitTrailingHashtags(`<p>oi</p><p>${tag('São_Paulo')}</p>`).tags).toEqual(['São_Paulo']);
+        expect(splitTrailingHashtags('')).toEqual({ html: '', tags: [] });
+    });
+});
+
+describe('tapping an emoji', () => {
+    it('shows it bigger, in the media viewer', async () => {
+        const openMedia = jest.fn();
+        (useOptionalMediaViewer as jest.Mock).mockReturnValueOnce({ openMedia }).mockReturnValue({ openMedia });
+        await renderPost('<p>hi :pug:</p>', [emoji('pug')]);
+
+        await fireEvent.press(screen.getByRole('imagebutton', { name: ':pug:' }));
+
+        expect(openMedia).toHaveBeenCalledWith([expect.objectContaining({ type: 'image', url: 'https://x/pug.png', description: ':pug:' })], 0);
+        (useOptionalMediaViewer as jest.Mock).mockReturnValue(undefined);
+    });
+
+    it('still draws it outside the viewer', async () => {
+        const { toJSON } = await renderPost('<p>:pug:</p>', [emoji('pug')]);
+        expect(shownEmoji(toJSON())).toEqual(['https://x/pug.png']);
     });
 });

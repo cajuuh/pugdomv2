@@ -125,6 +125,9 @@ export const MediaViewerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     );
 };
 
+// For what can also show outside the app's screens
+export const useOptionalMediaViewer = () => useContext(MediaViewerContext);
+
 export const useMediaViewer = () => {
     const context = useContext(MediaViewerContext);
     if (!context) {

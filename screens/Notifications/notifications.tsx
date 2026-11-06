@@ -24,7 +24,7 @@ import { Avatar, AvatarBadge, IconButton, PillButton, SectionLabel, SegmentOptio
 import { hitSlopFor } from '../../services/theme/shape';
 import { FAVOURITE_SIZE, STACKED_AVATAR, makeStyles } from './styles';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
-import { ListItem, actorsText, buildListItems, notificationTime, plainText, withoutLeadingMentions } from './rows';
+import { ListItem, actorsText, buildListItems, notificationTime, plainText, withoutOwnMention } from './rows';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { TKey, Translator } from '../../services/i18n/translate';
 import { useOpenAccount } from '../../hooks/useOpenAccount';
@@ -95,10 +95,10 @@ const FollowRequestActions = ({ account }: { account: Account }) => {
 const nameOf = (account: Account) => account.display_name || account.username;
 
 // What the row shows of the post: the content warning when there is one, never the text behind it
-const statusText = (status: Status, type: Notification['type'], { t }: Translator) => {
+const statusText = (status: Status, type: Notification['type'], { t }: Translator, username?: string) => {
     if (status.spoiler_text) return t('notifications.cw', { text: status.spoiler_text });
     const text = plainText(status.content);
-    return type === 'mention' ? withoutLeadingMentions(text) : text;
+    return type === 'mention' ? withoutOwnMention(text, username) : text;
 };
 
 const MentionActions = ({ status }: { status: Status }) => {
@@ -279,7 +279,7 @@ const NotificationRow = ({ group, relationship, onStatusPress, onLongPress }: No
         );
     }
 
-    const text = status ? statusText(status, group.type, i18n) : '';
+    const text = status ? statusText(status, group.type, i18n, me?.username) : '';
     const body = (
         <>
             <View style={styles.headline}>
@@ -688,7 +688,7 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
                 </View>
             ) : (
                 <View style={styles.header}>
-                    <Text accessibilityRole="header" style={[type.title, styles.title]}>{t('notifications.title')}</Text>
+                    <Text accessibilityRole="header" numberOfLines={1} adjustsFontSizeToFit style={[type.title, styles.title]}>{t('notifications.title')}</Text>
                     <View style={styles.headerActions}>
                         <PillButton
                             label={t('notifications.clear')}
