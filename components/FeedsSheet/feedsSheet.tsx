@@ -10,6 +10,7 @@ import { useLists } from '../../hooks/useLists';
 import { radii, space } from '../../services/theme/shape';
 import { IconButton, PillButton, SectionLabel } from '../ui';
 import { BottomSheet } from '../ComposeModal/optionSheet';
+import { dialog } from '../../services/dialog';
 import { PinnedRows } from './pinnedRows';
 
 interface FeedsSheetProps {
@@ -31,7 +32,7 @@ export const FeedsSheet: React.FC<FeedsSheetProps> = ({ visible, onClose, onSele
     const { colors, type } = useTheme();
     const i18n = useI18n();
     const { t } = i18n;
-    const { pinnedFeeds, customFeeds, followedTags, pinFeed, unpinFeed, reorderPinnedFeeds, removeCustomFeed, isPinned } = usePinnedFeeds();
+    const { pinnedFeeds, customFeeds, followedTags, pinFeed, unpinFeed, reorderPinnedFeeds, unfollowHashtag, removeCustomFeed, isPinned } = usePinnedFeeds();
     const { data: lists } = useLists(visible);
     const [dragging, setDragging] = useState(false);
 
@@ -41,13 +42,24 @@ export const FeedsSheet: React.FC<FeedsSheetProps> = ({ visible, onClose, onSele
         reorderPinnedFeeds(next);
     };
 
+    const confirmUnfollow = (name: string) =>
+        dialog.alert(t('hashtag.unfollowTitle'), undefined, [
+            { text: t('hashtag.keep'), style: 'cancel' },
+            {
+                text: t('hashtag.unfollow'),
+                style: 'destructive',
+                onPress: () => {
+                    unfollowHashtag(name).catch(() => dialog.toast(t('hashtag.followFailed')));
+                },
+            },
+        ], { subtitle: `#${name}` });
 
     const open = (feed: FeedDescriptor) => {
         onSelectFeed(feed);
         onClose();
     };
 
-    const row = (feed: FeedDescriptor, options: { subtitle?: string; onDelete?: () => void; onEdit?: () => void; index?: number } = {}) => {
+    const row = (feed: FeedDescriptor, options: { subtitle?: string; onDelete?: () => void; onEdit?: () => void; onUnfollow?: () => void; index?: number } = {}) => {
         const label = feedLabel(feed, i18n);
         const pinned = isPinned(feed.id);
         return (
@@ -89,6 +101,9 @@ export const FeedsSheet: React.FC<FeedsSheetProps> = ({ visible, onClose, onSele
                             style={styles.arrow}
                         />
                     </>
+                )}
+                {options.onUnfollow && (
+                    <IconButton icon="remove-circle-outline" size={18} color={colors.textMuted} accessibilityLabel={t('feeds.unfollowTag', { feed: label })} onPress={options.onUnfollow} />
                 )}
                 {options.onEdit && (
                     <IconButton icon="create-outline" size={18} color={colors.textMuted} accessibilityLabel={t('lists.editListLabel', { list: label })} onPress={options.onEdit} />
@@ -173,7 +188,7 @@ export const FeedsSheet: React.FC<FeedsSheetProps> = ({ visible, onClose, onSele
                     {followedTags.length === 0 ? (
                         <Text style={[type.meta, styles.empty, { color: colors.textMuted }]}>{t('feeds.noFollowedTags')}</Text>
                     ) : (
-                        followedTags.map(tag => row(createHashtagFeed(tag.name)))
+                        followedTags.map(tag => row(createHashtagFeed(tag.name), { onUnfollow: () => confirmUnfollow(tag.name) }))
                     )}
 
                     <SectionLabel style={styles.section}>{t('feeds.customFeeds')}</SectionLabel>

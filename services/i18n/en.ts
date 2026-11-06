@@ -147,6 +147,7 @@ export const en = {
         openFeed: 'Open {{feed}}',
         pinFeed: 'Pin {{feed}}',
         deleteFeed: 'Delete {{feed}}',
+        unfollowTag: 'Unfollow {{feed}}',
         moveUp: 'Move {{feed}} up',
         moveDown: 'Move {{feed}} down',
         reorderHint: 'Hold and drag a feed, or use the arrows',

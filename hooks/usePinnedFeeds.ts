@@ -12,8 +12,9 @@ import {
     savePinnedFeeds,
     updatePinnedFeed as updatePinnedFeedStorage,
 } from '../services/pinnedFeeds';
-import { getFollowedTags } from '../services/mastodon/tags';
+import { getFollowedTags, Tag, unfollowTag } from '../services/mastodon/tags';
 import { DEFAULT_PINNED_FEEDS, FeedDescriptor } from '../services/mastodon/feedTypes';
+import { tagKey } from './useTag';
 
 export const usePinnedFeeds = () => {
     const { user } = useAuth();
@@ -70,6 +71,14 @@ export const usePinnedFeeds = () => {
         },
     });
 
+    const unfollowHashtagMutation = useMutation({
+        mutationFn: (name: string) => unfollowTag(name),
+        onSuccess: (_, name) => {
+            queryClient.setQueryData<Tag[]>(['followedTags', accountId], tags => tags?.filter(tag => tag.name !== name));
+            queryClient.setQueryData<Tag>(tagKey(name), tag => tag && { ...tag, following: false });
+        },
+    });
+
     const addCustomFeedMutation = useMutation({
         mutationFn: async (feed: FeedDescriptor) => {
             await saveCustomFeedStorage(accountId, feed);
@@ -108,6 +117,7 @@ export const usePinnedFeeds = () => {
         unpinFeed: unpinMutation.mutateAsync,
         updatePinnedFeed: updatePinnedMutation.mutateAsync,
         reorderPinnedFeeds: reorderMutation.mutateAsync,
+        unfollowHashtag: unfollowHashtagMutation.mutateAsync,
         addCustomFeed: addCustomFeedMutation.mutateAsync,
         replaceCustomFeed: replaceCustomFeedMutation.mutateAsync,
         removeCustomFeed: removeCustomFeedMutation.mutateAsync,

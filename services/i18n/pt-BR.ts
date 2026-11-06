@@ -144,6 +144,7 @@ export const ptBR: Dictionary = {
         openFeed: 'Abrir {{feed}}',
         pinFeed: 'Fixar {{feed}}',
         deleteFeed: 'Apagar {{feed}}',
+        unfollowTag: 'Deixar de seguir {{feed}}',
         moveUp: 'Mover {{feed}} para cima',
         moveDown: 'Mover {{feed}} para baixo',
         reorderHint: 'Segure e arraste um feed, ou use as setas',

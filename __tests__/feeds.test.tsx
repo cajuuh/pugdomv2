@@ -288,6 +288,49 @@ describe('Feeds sheet', () => {
         });
     });
 
+    describe('unfollowing a hashtag', () => {
+        const post = apiClient.post as jest.Mock;
+        const pressUnfollow = async () => {
+            await fireEvent.press(await screen.findByRole('button', { name: 'Unfollow #pugs' }));
+            expect(post).not.toHaveBeenCalled();
+            await fireEvent.press(await screen.findByRole('button', { name: 'Unfollow' }));
+        };
+
+        it('asks first, then unfollows and drops the row', async () => {
+            serve([{ name: 'pugs' }]);
+            post.mockResolvedValue({ data: { name: 'pugs', following: false } });
+            await renderSheet();
+
+            await pressUnfollow();
+
+            await waitFor(() => expect(post).toHaveBeenCalledWith('/tags/pugs/unfollow'));
+            await waitFor(() => expect(screen.queryByRole('button', { name: 'Open #pugs' })).toBeNull());
+        });
+
+        it('keeps a pinned hashtag pinned', async () => {
+            serve([{ name: 'pugs' }]);
+            await pinFeed('me', createHashtagFeed('pugs'));
+            post.mockResolvedValue({ data: { name: 'pugs', following: false } });
+            await renderSheet();
+            await screen.findAllByRole('button', { name: 'Open #pugs' });
+
+            await pressUnfollow();
+
+            await waitFor(() => expect(screen.getAllByRole('button', { name: 'Open #pugs' })).toHaveLength(1));
+            expect((await getPinnedFeeds('me')).some(feed => feed.id === 'tag:pugs')).toBe(true);
+        });
+
+        it('keeps the row when the request fails', async () => {
+            serve([{ name: 'pugs' }]);
+            post.mockRejectedValue(new Error('offline'));
+            await renderSheet();
+
+            await pressUnfollow();
+
+            expect(await screen.findByText("Couldn't update this hashtag. Please try again.")).toBeTruthy();
+            expect(screen.getByRole('button', { name: 'Open #pugs' })).toBeTruthy();
+        });
+    });
 });
 
 describe('Feed editor', () => {
