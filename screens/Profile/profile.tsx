@@ -14,7 +14,7 @@ import { makeStyles } from './styles';
 import { fullHandle, ProfileHeader } from './profileHeader';
 import { MediaGridRow, MediaTile, toMediaRows } from '../../components/MediaGrid/mediaGrid';
 import { useI18n } from '../../services/i18n/i18nContext';
-import { autoplayViewability } from '../../services/media/autoplay';
+import { postListProps } from '../../services/media/autoplay';
 
 interface ProfileProps {
     onStatusPress?: (id: string) => void;
@@ -102,7 +102,7 @@ const Profile = ({ onStatusPress }: ProfileProps) => {
     return (
         <View style={styles.container}>
             <FlashList
-                {...autoplayViewability}
+                {...postListProps}
                 data={showGrid ? toMediaRows(statuses) : statuses}
                 keyExtractor={(item: Status | MediaTile[]) => (Array.isArray(item) ? `row-${item[0].status.id}-${item[0].index}` : item.id)}
                 getItemType={(item: Status | MediaTile[]) => (Array.isArray(item) ? 'mediaRow' : 'post')}

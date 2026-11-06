@@ -1,6 +1,19 @@
+import { Linking } from 'react-native';
 import apiClient from '../api/client';
+import { getCredentials } from '../storage';
 import { nextMaxIdFromLink } from './bookmarks';
 import { Account, Status, StatusEdit, StatusSource } from './types';
+
+// The post on your own server's site, even when it came from another one: that's where you're signed in,
+// and where a moderator reaches its moderation interface. Not for posts read from another server: their ids aren't ours.
+export async function openStatusInBrowser(status: Pick<Status, 'id' | 'account'>) {
+    try {
+        const { instanceUrl } = await getCredentials();
+        await Linking.openURL(`${instanceUrl}/@${status.account.acct}/${status.id}`);
+    } catch (error) {
+        console.error('Failed to open the post in the browser:', error);
+    }
+}
 
 export interface CreateStatusParams {
     status: string;

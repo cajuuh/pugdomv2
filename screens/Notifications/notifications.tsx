@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, Text, View, useWindowDimensions } from 'react-native';
 import { FlashList, useRecyclingState } from '@shopify/flash-list';
-import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { InfiniteData, useQueryClient } from '@tanstack/react-query';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -349,57 +349,71 @@ const NotificationRow = ({ group, relationship, onStatusPress, onLongPress }: No
     );
 };
 
-// Behind a row swiped to the right: letting go past it removes the notification
-const RemoveAction = () => {
+// Behind a row swiped to the right
+const RemoveAction = ({ style }: { style: React.ComponentProps<typeof Animated.View>['style'] }) => {
     const { colors, type } = useTheme();
     const styles = useThemedStyles(makeStyles);
     const { t } = useI18n();
     return (
-        <View style={styles.removeAction}>
+        <Animated.View style={[styles.removeAction, style]}>
             <Ionicons name="trash-outline" size={20} color={colors.cardBackground} />
             <Text style={[type.label, styles.removeText]}>{t('notifications.remove')}</Text>
-        </View>
+        </Animated.View>
     );
 };
 
 // Card-toss timing: the row flies off while the swipe finishes, then the gap closes
 const FLY_MS = 220;
 const COLLAPSE_MS = 200;
+// How far across the screen a row has to be dragged before letting go removes it
+const REMOVE_AT = 0.75;
 
-// A row swiped most of the way to the right flies off, tilting and fading, then its space closes and
-// only then it leaves the list, so the rows below slide up instead of jumping
-const SwipeToRemove = ({ threshold, onRemove, children }: { threshold: number; onRemove: () => void; children: React.ReactNode }) => {
+// A row dragged nearly all the way to the right flies off, tilting and fading, then its space closes and
+// only then it leaves the list, so the rows below slide up instead of jumping. Only the distance counts:
+// ReanimatedSwipeable adds the finger's speed to it, so a quick flick removed a row that had barely moved.
+const SwipeToRemove = ({ onRemove, children }: { onRemove: () => void; children: React.ReactNode }) => {
     const styles = useThemedStyles(makeStyles);
+    const { width } = useWindowDimensions();
+    const x = useSharedValue(0);
     const flying = useSharedValue(0);
     const height = useSharedValue(-1);
     const measured = useRef(0);
     const card = useAnimatedStyle(() => ({
         opacity: 1 - flying.value * 0.7,
-        transform: [{ rotate: `${flying.value * 8}deg` }, { translateY: -flying.value * 16 }],
+        transform: [{ translateX: x.value }, { rotate: `${flying.value * 8}deg` }, { translateY: -flying.value * 16 }],
     }));
-    const cell = useAnimatedStyle(() => (height.value < 0 ? {} : { height: height.value, overflow: 'hidden' }));
+    const behind = useAnimatedStyle(() => ({ opacity: x.value > 0 ? 1 : 0 }));
+    const cell = useAnimatedStyle(() => (height.value < 0 ? {} : { height: height.value }));
     const collapse = () => {
         height.value = measured.current;
         height.value = withTiming(0, { duration: COLLAPSE_MS }, finished => {
             if (finished) runOnJS(onRemove)();
         });
     };
+    // Starts only after a clear sideways drag, and never during a scroll
+    const pan = Gesture.Pan()
+        .withTestId('swipe-to-remove')
+        .activeOffsetX(24)
+        .failOffsetY([-20, 20])
+        .onUpdate(event => {
+            x.value = Math.max(0, event.translationX);
+        })
+        .onEnd((event, success) => {
+            if (!success || event.translationX < width * REMOVE_AT) {
+                x.value = withTiming(0, { duration: FLY_MS });
+                return;
+            }
+            flying.value = withTiming(1, { duration: FLY_MS });
+            x.value = withTiming(width, { duration: FLY_MS }, finished => {
+                if (finished) runOnJS(collapse)();
+            });
+        });
     return (
-        <Animated.View style={cell} onLayout={event => (measured.current = event.nativeEvent.layout.height)}>
-            <ReanimatedSwipeable
-                renderLeftActions={() => <RemoveAction />}
-                // Removes only when dragged most of the way across, and only after a clear sideways drag
-                leftThreshold={threshold}
-                dragOffsetFromLeftEdge={24}
-                overshootLeft={false}
-                animationOptions={{ duration: FLY_MS }}
-                onSwipeableWillOpen={() => {
-                    flying.value = withTiming(1, { duration: FLY_MS });
-                }}
-                onSwipeableOpen={collapse}
-            >
+        <Animated.View style={[styles.swipeCell, cell]} onLayout={event => (measured.current = event.nativeEvent.layout.height)}>
+            <RemoveAction style={behind} />
+            <GestureDetector gesture={pan}>
                 <Animated.View style={[styles.swipeRow, card]}>{children}</Animated.View>
-            </ReanimatedSwipeable>
+            </GestureDetector>
         </Animated.View>
     );
 };
@@ -455,7 +469,6 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
     const [selecting, setSelecting] = useState(false);
     const [selected, setSelected] = useState<Set<string>>(() => new Set());
     const [clearMenuOpen, setClearMenuOpen] = useState(false);
-    const removeThreshold = useWindowDimensions().width * 0.65;
 
     const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage, refetch } = useNotifications(activeFilter);
 
@@ -629,7 +642,7 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
                     </SelectableRow>
                 ) : (
                     // Keyed by the notification so a recycled cell never comes back half swiped or collapsed
-                    <SwipeToRemove key={item.group.key} threshold={removeThreshold} onRemove={() => removeOne(item.group)}>
+                    <SwipeToRemove key={item.group.key} onRemove={() => removeOne(item.group)}>
                         {row}
                     </SwipeToRemove>
                 )}

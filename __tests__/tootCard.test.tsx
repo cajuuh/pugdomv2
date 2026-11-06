@@ -12,7 +12,7 @@ import { Poll } from '../components/Poll/poll';
 import { bookmarkStatus, favouriteStatus, unbookmarkStatus } from '../services/mastodon/statuses';
 import { votePoll } from '../services/mastodon/polls';
 import { Attachment, Poll as PollType, Status } from '../services/mastodon/types';
-import { autoplayViewability, setAutoplayPost, useIsAutoplayPost } from '../services/media/autoplay';
+import { postListProps, setAutoplayPost, useIsAutoplayPost } from '../services/media/autoplay';
 
 // An observable stand-in for the native video player
 jest.mock('expo-video', () => {
@@ -740,7 +740,7 @@ describe('TootCard autoplay', () => {
 
     it('picks the first post in view with a video or GIF, boosts and wrapped rows included', async () => {
         const pick = (...items: unknown[]) =>
-            act(async () => autoplayViewability.onViewableItemsChanged({ viewableItems: items.map((item, index) => ({ item, index, key: String(index), isViewable: true })) as any }));
+            act(async () => postListProps.onViewableItemsChanged({ viewableItems: items.map((item, index) => ({ item, index, key: String(index), isViewable: true })) as any }));
         const gif = { ...statusB, media_attachments: [{ ...video, type: 'gifv' }] } as Status;
         const isB = await renderHook(() => useIsAutoplayPost('B'));
         const isA = await renderHook(() => useIsAutoplayPost('A'));

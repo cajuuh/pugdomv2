@@ -32,7 +32,10 @@ const playableId = (item: unknown): string | null => {
 };
 
 // Spread into a FlashList of posts. Stable, as FlashList wants.
-export const autoplayViewability = {
+export const postListProps = {
+    // On Android a tap gives a post's selectable text focus, and it keeps it while its row is reused for
+    // other posts. A scroll view leaps to whatever holds focus, so the list would jump while scrolling.
+    overrideProps: { scrollsChildToFocus: false },
     viewabilityConfig: { itemVisiblePercentThreshold: 60 },
     onViewableItemsChanged: ({ viewableItems }: { viewableItems: ViewToken<unknown>[] }) => {
         const first = viewableItems.map(token => playableId(token.item)).find(Boolean);

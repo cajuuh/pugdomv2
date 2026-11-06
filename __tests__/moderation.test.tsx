@@ -1,5 +1,6 @@
 import React from 'react';
-import { Alert, Text } from 'react-native';
+import { Alert, Linking, Text } from 'react-native';
+import * as storage from '../services/storage';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { DialogHost } from '../components/Dialog/dialogHost';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -133,6 +134,32 @@ describe('Post menu', () => {
         await fireEvent.press(await screen.findByRole('button', { name: 'Report this post' }));
 
         expect(JSON.parse(screen.getByTestId('stack').props.children)).toEqual(['report']);
+    });
+
+    describe('open in browser', () => {
+        let openURL: jest.SpyInstance;
+        beforeEach(() => {
+            jest.spyOn(storage, 'getCredentials').mockResolvedValue({ accessToken: 'token', instanceUrl: 'https://home.social' });
+            openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+        });
+        afterEach(() => jest.restoreAllMocks());
+
+        it("opens someone's post from another server on your own server", async () => {
+            await openMenu();
+            await fireEvent.press(await screen.findByRole('button', { name: 'Open in browser' }));
+
+            const { id, account } = post();
+            await waitFor(() => expect(openURL).toHaveBeenCalledWith(`https://home.social/@${account.acct}/${id}`));
+            expect(account.acct).toContain('@');
+        });
+
+        it('is on the menu of your own posts too', async () => {
+            await render(wrap(<TootCard status={post({ account: me })} />));
+            await fireEvent.press(screen.getByRole('button', { name: 'More options for this post' }));
+            await fireEvent.press(await screen.findByRole('button', { name: 'Open in browser' }));
+
+            await waitFor(() => expect(openURL).toHaveBeenCalledWith(`https://home.social/@${me.acct}/${post().id}`));
+        });
     });
 
     it('mutes the author, and reloads timelines without them', async () => {

@@ -1,6 +1,8 @@
 import React from 'react';
-import { View } from 'react-native';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { Dimensions, View } from 'react-native';
+import { State } from 'react-native-gesture-handler';
+import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
 import Notifications from '../screens/Notifications/notifications';
@@ -528,6 +530,47 @@ describe('Notifications', () => {
             mockedFetch.mockResolvedValue([]);
             await renderScreen();
             await waitFor(() => expect(screen.getByRole('button', { name: 'Clear' })).toBeDisabled());
+        });
+    });
+
+    describe('swiping a row away', () => {
+        const width = Dimensions.get('window').width;
+        const swipe = async (translationX: number, velocityX = 0, last: State = State.END) => {
+            mockedFetch.mockResolvedValue([notification('1', 'mention', account('a', 'alice'))]);
+            (dismissNotificationGroup as jest.Mock).mockResolvedValue(undefined);
+            await renderScreen();
+            await screen.findByText(/mentioned you/);
+            await act(async () => {
+                fireGestureHandler(getByGestureTestId('swipe-to-remove'), [
+                    { state: State.BEGAN, translationX: 0, velocityX: 0 },
+                    { state: State.ACTIVE, translationX, velocityX },
+                    { state: last, translationX, velocityX },
+                ]);
+            });
+        };
+
+        it('removes a row dragged nearly all the way across', async () => {
+            await swipe(width * 0.8);
+
+            await waitFor(() => expect(dismissNotificationGroup).toHaveBeenCalledTimes(1));
+        });
+
+        it.each([
+            ['a quick flick', width * 0.1, 8000],
+            ['a very fast short drag', width * 0.4, 20000],
+            ['a slow drag most of the way', width * 0.65, 0],
+            ['a drag stopped just short', width * 0.74, 3000],
+        ])("doesn't remove a row on %s", async (_, translationX, velocityX) => {
+            await swipe(translationX, velocityX);
+
+            expect(dismissNotificationGroup).not.toHaveBeenCalled();
+            expect(screen.getByText(/mentioned you/)).toBeTruthy();
+        });
+
+        it("doesn't remove a row when the gesture is cancelled", async () => {
+            await swipe(width * 0.9, 0, State.CANCELLED);
+
+            expect(dismissNotificationGroup).not.toHaveBeenCalled();
         });
     });
 

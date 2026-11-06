@@ -20,6 +20,7 @@ import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import {
     bookmarkStatus,
     favouriteStatus,
+    openStatusInBrowser,
     reblogStatus,
     unbookmarkStatus,
     unfavouriteStatus,
@@ -310,6 +311,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const author = targetStatus.account;
     const quotesCount = targetStatus.quotes_count ?? 0;
     const viewQuotes = { key: 'quotes', icon: 'chatbox-ellipses-outline' as const, label: tn('quotes.viewQuotes', quotesCount), onPress: () => push({ name: 'quotes', status: targetStatus }) };
+    const openInBrowser = { key: 'openInBrowser', icon: 'open-outline' as const, label: t('post.openInBrowser'), description: t('post.openInBrowserHint'), onPress: () => openStatusInBrowser(targetStatus) };
     // Servers with quotes send quote_approval; followers-only and private posts can't be quoted by others anyway
     const canChangeQuotePolicy = ownPost && !!targetStatus.quote_approval && (targetStatus.visibility === 'public' || targetStatus.visibility === 'unlisted');
     const changeQuotePolicy = async (policy: QuotePolicy) => {
@@ -835,6 +837,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     onClose={() => setPostMenuOpen(false)}
                     actions={[
                         ...(quotesCount > 0 ? [viewQuotes] : []),
+                        openInBrowser,
                         ...(canChangeQuotePolicy
                             ? [{
                                 key: 'quotePolicy',
@@ -871,6 +874,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     onClose={() => setPostMenuOpen(false)}
                     actions={[
                         ...(quotesCount > 0 ? [viewQuotes] : []),
+                        openInBrowser,
                         { key: 'report', icon: 'flag-outline', label: t('moderation.reportPost'), onPress: () => moderation.report(author, targetStatus) },
                         { key: 'mute', icon: 'volume-mute-outline', label: t('moderation.muteAccount', { acct: author.acct }), description: t('moderation.muteHint'), onPress: () => moderation.mute(author) },
                         { key: 'block', icon: 'hand-left-outline', label: t('moderation.blockAccount', { acct: author.acct }), description: t('moderation.blockHint'), onPress: () => moderation.block(author) },

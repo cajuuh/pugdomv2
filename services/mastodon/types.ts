@@ -35,6 +35,7 @@ export interface Account {
     acct: string;
     display_name: string;
     avatar: string;
+    avatar_static?: string;
     header?: string;
     note?: string;
     followers_count?: number;

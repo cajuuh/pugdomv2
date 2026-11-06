@@ -26,7 +26,7 @@ import { SearchType, shouldResolve } from '../../services/mastodon/search';
 import { mergeTrending, TrendingPost, TrendLink } from '../../services/mastodon/trends';
 import { Account, Status } from '../../services/mastodon/types';
 import { Tag } from '../../services/mastodon/tags';
-import { autoplayViewability } from '../../services/media/autoplay';
+import { postListProps } from '../../services/media/autoplay';
 import { makeStyles } from './styles';
 
 type Tab = 'all' | SearchType;
@@ -293,7 +293,7 @@ export default function Search({ onStatusPress }: SearchProps) {
         empty: React.ReactNode
     ) => (
         <FlashList
-            {...autoplayViewability}
+            {...postListProps}
             data={page.data?.pages.flat() ?? []}
             keyExtractor={keyOf}
             renderItem={({ item }) => renderItem(item)}
@@ -387,7 +387,7 @@ export default function Search({ onStatusPress }: SearchProps) {
                 <View style={styles.exploreContainer}>
                     {exploreTab === 'posts' && (
                         <FlashList
-                            {...autoplayViewability}
+                            {...postListProps}
                             data={trendingPosts}
                             // Ids repeat across servers; the post's address doesn't
                             keyExtractor={(item: TrendingPost) => item.status.uri}

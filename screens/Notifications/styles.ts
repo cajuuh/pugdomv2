@@ -125,11 +125,18 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         backgroundColor: colors.inputBackground,
     },
     // A swiped row covers the Remove action behind it
+    swipeCell: {
+        overflow: 'hidden',
+    },
     swipeRow: {
         backgroundColor: colors.cardBackground,
     },
     removeAction: {
-        flex: 1,
+        position: 'absolute',
+        top: 0,
+        bottom: 0,
+        left: 0,
+        right: 0,
         flexDirection: 'row',
         alignItems: 'center',
         gap: space.sm,
