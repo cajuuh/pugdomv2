@@ -129,6 +129,19 @@ describe('Profile', () => {
         expect(screen.getAllByTestId('grid-play-badge', hidden)).toHaveLength(1);
     });
 
+    it('says GIF on a GIF in the Media tab, instead of a play button', async () => {
+        const gif = { id: 'g', type: 'gifv', url: 'https://x/g.mp4', preview_url: 'https://x/g.png' };
+        mockedStatuses.mockResolvedValue([status('1', { media_attachments: [gif] as any })]);
+        await renderProfile();
+        await screen.findByText('post 1');
+
+        await fireEvent.press(screen.getByRole('tab', { name: 'Media' }));
+        await screen.findByRole('imagebutton', { name: /GIF/ });
+
+        expect(screen.getAllByText('GIF', { includeHiddenElements: true }).length).toBeGreaterThan(0);
+        expect(screen.queryByTestId('grid-play-badge', { includeHiddenElements: true })).toBeNull();
+    });
+
     it('shows the profile fields under the bio, ticking a verified link', async () => {
         mockUser = {
             ...me,
