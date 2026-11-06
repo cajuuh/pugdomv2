@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../../services/themeContext';
 import { useI18n } from '../../services/i18n/i18nContext';
@@ -9,6 +10,7 @@ import { useLists } from '../../hooks/useLists';
 import { radii, space } from '../../services/theme/shape';
 import { IconButton, PillButton, SectionLabel } from '../ui';
 import { BottomSheet } from '../ComposeModal/optionSheet';
+import { PinnedRows } from './pinnedRows';
 
 interface FeedsSheetProps {
     visible: boolean;
@@ -29,15 +31,23 @@ export const FeedsSheet: React.FC<FeedsSheetProps> = ({ visible, onClose, onSele
     const { colors, type } = useTheme();
     const i18n = useI18n();
     const { t } = i18n;
-    const { pinnedFeeds, customFeeds, followedTags, pinFeed, unpinFeed, removeCustomFeed, isPinned } = usePinnedFeeds();
+    const { pinnedFeeds, customFeeds, followedTags, pinFeed, unpinFeed, reorderPinnedFeeds, removeCustomFeed, isPinned } = usePinnedFeeds();
     const { data: lists } = useLists(visible);
+    const [dragging, setDragging] = useState(false);
+
+    const move = (from: number, to: number) => {
+        const next = [...pinnedFeeds];
+        next.splice(to, 0, ...next.splice(from, 1));
+        reorderPinnedFeeds(next);
+    };
+
 
     const open = (feed: FeedDescriptor) => {
         onSelectFeed(feed);
         onClose();
     };
 
-    const row = (feed: FeedDescriptor, options: { subtitle?: string; onDelete?: () => void; onEdit?: () => void } = {}) => {
+    const row = (feed: FeedDescriptor, options: { subtitle?: string; onDelete?: () => void; onEdit?: () => void; index?: number } = {}) => {
         const label = feedLabel(feed, i18n);
         const pinned = isPinned(feed.id);
         return (
@@ -58,6 +68,28 @@ export const FeedsSheet: React.FC<FeedsSheetProps> = ({ visible, onClose, onSele
                         )}
                     </View>
                 </Pressable>
+                {options.index !== undefined && (
+                    <>
+                        <IconButton
+                            icon="chevron-up"
+                            size={18}
+                            color={colors.textMuted}
+                            accessibilityLabel={t('feeds.moveUp', { feed: label })}
+                            disabled={options.index === 0}
+                            onPress={() => move(options.index!, options.index! - 1)}
+                            style={styles.arrow}
+                        />
+                        <IconButton
+                            icon="chevron-down"
+                            size={18}
+                            color={colors.textMuted}
+                            accessibilityLabel={t('feeds.moveDown', { feed: label })}
+                            disabled={options.index === pinnedFeeds.length - 1}
+                            onPress={() => move(options.index!, options.index! + 1)}
+                            style={styles.arrow}
+                        />
+                    </>
+                )}
                 {options.onEdit && (
                     <IconButton icon="create-outline" size={18} color={colors.textMuted} accessibilityLabel={t('lists.editListLabel', { list: label })} onPress={options.onEdit} />
                 )}
@@ -105,8 +137,6 @@ export const FeedsSheet: React.FC<FeedsSheetProps> = ({ visible, onClose, onSele
         </Pressable>
     );
 
-    // Each followed hashtag as a feed of its own
-    const tagFeeds = followedTags.map(tag => createHashtagFeed(tag.name));
     // Server feeds live only as pins: unpinning one removes it
     const serverFeeds = pinnedFeeds.filter(feed => feed.kind === 'server');
     const subtitleFor = (feed: FeedDescriptor) => {
@@ -117,43 +147,59 @@ export const FeedsSheet: React.FC<FeedsSheetProps> = ({ visible, onClose, onSele
 
     return (
         <BottomSheet visible={visible} title={t('feeds.title')} onClose={onClose}>
-            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-                <SectionLabel style={styles.section}>{t('feeds.pinned')}</SectionLabel>
-                {pinnedFeeds.map(feed => row(feed, { subtitle: subtitleFor(feed) }))}
+            {/* A Modal is its own native window, so gestures inside it need their own root */}
+            <GestureHandlerRootView style={styles.gestureRoot}>
+                <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} scrollEnabled={!dragging}>
+                    <SectionLabel style={styles.section}>{t('feeds.pinned')}</SectionLabel>
+                    {pinnedFeeds.length > 1 && <Text style={[type.meta, styles.empty, { color: colors.textMuted }]}>{t('feeds.reorderHint')}</Text>}
+                    <PinnedRows
+                        feeds={pinnedFeeds}
+                        renderRow={(feed, index) => row(feed, { subtitle: subtitleFor(feed), index })}
+                        onMove={move}
+                        onDragChange={setDragging}
+                    />
 
-                <SectionLabel style={styles.section}>{t('feeds.discover')}</SectionLabel>
-                {row(TRENDING_FEED, { subtitle: t('feeds.trendingSubtitle') })}
+                    <SectionLabel style={styles.section}>{t('feeds.discover')}</SectionLabel>
+                    {row(TRENDING_FEED, { subtitle: t('feeds.trendingSubtitle') })}
 
-                <SectionLabel style={styles.section}>{t('lists.title')}</SectionLabel>
-                {lists && lists.length === 0 && (
-                    <Text style={[type.meta, styles.empty, { color: colors.textMuted }]}>{t('lists.none')}</Text>
-                )}
-                {lists?.map(list => row(createListFeed(list), { onEdit: () => edit(list.id) }))}
-                {createButton(t('lists.newList'), t('lists.newListSubtitle'), () => edit())}
+                    <SectionLabel style={styles.section}>{t('lists.title')}</SectionLabel>
+                    {lists && lists.length === 0 && (
+                        <Text style={[type.meta, styles.empty, { color: colors.textMuted }]}>{t('lists.none')}</Text>
+                    )}
+                    {lists?.map(list => row(createListFeed(list), { onEdit: () => edit(list.id) }))}
+                    {createButton(t('lists.newList'), t('lists.newListSubtitle'), () => edit())}
 
-                <SectionLabel style={styles.section}>{t('feeds.followedTags')}</SectionLabel>
-                {tagFeeds.length === 0 ? (
-                    <Text style={[type.meta, styles.empty, { color: colors.textMuted }]}>{t('feeds.noFollowedTags')}</Text>
-                ) : (
-                    tagFeeds.map(feed => row(feed))
-                )}
+                    <SectionLabel style={styles.section}>{t('feeds.followedTags')}</SectionLabel>
+                    {followedTags.length === 0 ? (
+                        <Text style={[type.meta, styles.empty, { color: colors.textMuted }]}>{t('feeds.noFollowedTags')}</Text>
+                    ) : (
+                        followedTags.map(tag => row(createHashtagFeed(tag.name)))
+                    )}
 
-                <SectionLabel style={styles.section}>{t('feeds.customFeeds')}</SectionLabel>
-                {customFeeds.map(feed => row(feed, { subtitle: describeCriteria(feed.criteria), onEdit: () => editFeed(feed), onDelete: () => removeCustomFeed(feed.id) }))}
-                {createButton(t('feeds.createCustom'), t('feeds.createCustomSubtitle'), () => editFeed())}
+                    <SectionLabel style={styles.section}>{t('feeds.customFeeds')}</SectionLabel>
+                    {customFeeds.map(feed => row(feed, { subtitle: describeCriteria(feed.criteria), onEdit: () => editFeed(feed), onDelete: () => removeCustomFeed(feed.id) }))}
+                    {createButton(t('feeds.createCustom'), t('feeds.createCustomSubtitle'), () => editFeed())}
 
-                <SectionLabel style={styles.section}>{t('servers.title')}</SectionLabel>
-                {serverFeeds.map(feed => row(feed, { subtitle: subtitleFor(feed) }))}
-                {createButton(t('servers.add'), t('servers.addSubtitle'), () => {
-                    onClose();
-                    onAddServer();
-                })}
-            </ScrollView>
+                    <SectionLabel style={styles.section}>{t('servers.title')}</SectionLabel>
+                    {serverFeeds.map(feed => row(feed, { subtitle: subtitleFor(feed) }))}
+                    {createButton(t('servers.add'), t('servers.addSubtitle'), () => {
+                        onClose();
+                        onAddServer();
+                    })}
+                </ScrollView>
+            </GestureHandlerRootView>
         </BottomSheet>
     );
 };
 
 const styles = StyleSheet.create({
+    gestureRoot: {
+        flexShrink: 1,
+    },
+    // Narrower than the usual touch width, to leave the feed's name some room; still full height
+    arrow: {
+        minWidth: 32,
+    },
     content: {
         paddingBottom: space.md,
     },

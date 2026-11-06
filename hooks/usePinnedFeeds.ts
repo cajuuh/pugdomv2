@@ -9,6 +9,7 @@ import {
     deleteCustomFeed as deleteCustomFeedStorage,
     replaceCustomFeed as replaceCustomFeedStorage,
     isFeedPinned,
+    savePinnedFeeds,
     updatePinnedFeed as updatePinnedFeedStorage,
 } from '../services/pinnedFeeds';
 import { getFollowedTags } from '../services/mastodon/tags';
@@ -60,6 +61,15 @@ export const usePinnedFeeds = () => {
         },
     });
 
+    // Shown right away, so each arrow tap builds on the last one. A read still under way would bring the old order back.
+    const reorderMutation = useMutation({
+        mutationFn: (feeds: FeedDescriptor[]) => savePinnedFeeds(accountId, feeds),
+        onMutate: async (feeds) => {
+            await queryClient.cancelQueries({ queryKey: ['pinnedFeeds', accountId] });
+            queryClient.setQueryData(['pinnedFeeds', accountId], feeds);
+        },
+    });
+
     const addCustomFeedMutation = useMutation({
         mutationFn: async (feed: FeedDescriptor) => {
             await saveCustomFeedStorage(accountId, feed);
@@ -97,6 +107,7 @@ export const usePinnedFeeds = () => {
         pinFeed: pinMutation.mutateAsync,
         unpinFeed: unpinMutation.mutateAsync,
         updatePinnedFeed: updatePinnedMutation.mutateAsync,
+        reorderPinnedFeeds: reorderMutation.mutateAsync,
         addCustomFeed: addCustomFeedMutation.mutateAsync,
         replaceCustomFeed: replaceCustomFeedMutation.mutateAsync,
         removeCustomFeed: removeCustomFeedMutation.mutateAsync,

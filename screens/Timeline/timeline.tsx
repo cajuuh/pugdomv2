@@ -289,19 +289,20 @@ const Timeline = ({ onStatusPress, active = true }: TimelineProps) => {
     const activeIsPinned = pinnedFeeds.some(f => f.id === activeFeed.id);
     const previewFeed = previewing && !activeIsPinned ? activeFeed : null;
 
-    // If the open feed gets unpinned (or its list deleted), go back to the first pinned one (Home)
+    // If the open feed gets unpinned (or its list deleted), go back to Home, wherever its pill is
     useEffect(() => {
         if (!activeIsPinned && !previewing) {
-            setActiveFeed(pinnedFeeds[0] || DEFAULT_PINNED_FEEDS[0]);
+            setActiveFeed(DEFAULT_PINNED_FEEDS[0]);
         }
-    }, [pinnedFeeds, activeIsPinned, previewing]);
+    }, [activeIsPinned, previewing]);
 
     // Each pinned feed you've opened keeps its own mounted list, so coming back finds your place. A
     // preview goes when you leave it.
     // ponytail: no limit but the pinned feeds, drop the least recently used if memory ever matters
     const visited = useRef(new Set<string>());
     visited.current.add(activeFeed.id);
-    const visitedPinned = pinnedFeeds.filter(feed => visited.current.has(feed.id));
+    // Sorted, so rearranging the pills never moves a mounted list and risks its scroll position
+    const visitedPinned = pinnedFeeds.filter(feed => visited.current.has(feed.id)).sort((a, b) => a.id.localeCompare(b.id));
     const mountedFeeds = activeIsPinned ? visitedPinned : [activeFeed, ...visitedPinned];
 
     useEffect(() => {
