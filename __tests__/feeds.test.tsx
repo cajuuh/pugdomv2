@@ -3,6 +3,8 @@ import { DeviceEventEmitter, Text } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
+import { State } from 'react-native-gesture-handler';
+import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 import { createTestQueryClient } from '../testUtils/queryClient';
 import apiClient from '../services/api/client';
 import { fetchFeedPage } from '../services/mastodon/feedService';
@@ -27,6 +29,8 @@ jest.mock('../services/authContext', () => ({ useAuth: () => ({ user: { id: 'me'
 jest.mock('../services/themeContext', () => ({
     useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
 }));
+const mockSettings = { swipeFeeds: false };
+jest.mock('../services/settingsContext', () => ({ ...jest.requireActual('../services/settingsContext'), useSettings: () => mockSettings }));
 jest.mock('../components/TootCard/tootCard', () => ({
     TootCard: ({ status }: { status: Status }) => {
         const { Text: MockText } = jest.requireActual('react-native');
@@ -54,6 +58,7 @@ const withQuery = (children: React.ReactNode) => (
 beforeEach(async () => {
     jest.clearAllMocks();
     await AsyncStorage.clear();
+    mockSettings.swipeFeeds = false;
     serve();
 });
 
@@ -357,5 +362,89 @@ describe('Timeline feed pills', () => {
         expect(await screen.findByText('post /timelines/tag/dogs')).toBeTruthy();
         expect(screen.queryByText('post /timelines/tag/cats')).toBeNull();
         expect(screen.getByRole('tab', { name: 'Pets' })).toBeSelected();
+    });
+});
+
+describe('Swiping between feeds', () => {
+    const swipe = (translationX: number, last: State = State.END) =>
+        act(async () => {
+            fireGestureHandler(getByGestureTestId('swipe-feeds'), [
+                { state: State.BEGAN, translationX: 0 },
+                { state: State.ACTIVE, translationX },
+                { state: last, translationX },
+            ]);
+        });
+    const renderTimeline = async () => {
+        await render(withQuery(<Timeline />));
+        await screen.findByText('post /timelines/home');
+    };
+
+    it('moves through the pinned feeds and stops at the ends', async () => {
+        mockSettings.swipeFeeds = true;
+        await renderTimeline();
+
+        await swipe(100);
+        expect(screen.getByRole('tab', { name: 'Home' })).toBeSelected();
+
+        await swipe(-100);
+        expect(screen.getByRole('tab', { name: 'Local' })).toBeSelected();
+        await swipe(-100);
+        expect(screen.getByRole('tab', { name: 'Federated' })).toBeSelected();
+        await swipe(-100);
+        expect(screen.getByRole('tab', { name: 'Federated' })).toBeSelected();
+
+        await swipe(100);
+        expect(screen.getByRole('tab', { name: 'Local' })).toBeSelected();
+    });
+
+    it('ignores a short or cancelled drag', async () => {
+        mockSettings.swipeFeeds = true;
+        await renderTimeline();
+
+        await swipe(-40);
+        await swipe(-100, State.FAILED);
+
+        expect(screen.getByRole('tab', { name: 'Home' })).toBeSelected();
+    });
+
+    it('goes from a preview to the first pinned feed', async () => {
+        mockSettings.swipeFeeds = true;
+        await renderTimeline();
+        await fireEvent.press(screen.getByRole('button', { name: 'Feeds' }));
+        await fireEvent.press(screen.getByRole('button', { name: 'Open Trending' }));
+        await screen.findByText('post /trends/statuses');
+
+        await swipe(100);
+        expect(screen.getByRole('tab', { name: 'Trending' })).toBeSelected();
+
+        await swipe(-100);
+        expect(screen.queryByRole('tab', { name: 'Trending' })).toBeNull();
+        expect(screen.getByRole('tab', { name: 'Home' })).toBeSelected();
+    });
+
+    it('does nothing with the setting off', async () => {
+        await renderTimeline();
+
+        expect(getByGestureTestId('swipe-feeds').config.enabled).toBe(false);
+    });
+
+    it('is off until switched on, and remembers', async () => {
+        const { SettingsProvider, useSettings: useRealSettings } = jest.requireActual('../services/settingsContext');
+        const settings: { current?: { swipeFeeds: boolean; setSwipeFeeds: (value: boolean) => Promise<void>; loadingSettings: boolean } } = {};
+        const Probe = () => {
+            settings.current = useRealSettings();
+            return null;
+        };
+        const first = await render(<SettingsProvider><Probe /></SettingsProvider>);
+        await waitFor(() => expect(settings.current?.loadingSettings).toBe(false));
+        expect(settings.current?.swipeFeeds).toBe(false);
+
+        await act(async () => {
+            await settings.current?.setSwipeFeeds(true);
+        });
+        await first.unmount();
+
+        await render(<SettingsProvider><Probe /></SettingsProvider>);
+        await waitFor(() => expect(settings.current?.swipeFeeds).toBe(true));
     });
 });

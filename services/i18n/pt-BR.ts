@@ -807,6 +807,7 @@ export const ptBR: Dictionary = {
         autoplay: 'Reproduzir mídia automaticamente',
         compactMode: 'Modo compacto',
         hideCounts: 'Esconder os números nas publicações',
+        swipeFeeds: 'Deslizar entre as timelines',
         uncroppedMedia: 'Mostrar imagens sem recorte',
         posts: 'Publicações',
         media: 'Mídia',

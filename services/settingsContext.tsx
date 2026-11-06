@@ -21,6 +21,9 @@ interface SettingsContextType {
     setMediaAutoplay: (value: boolean) => Promise<void>;
     setCompactMode: (value: boolean) => Promise<void>;
     setHideCounts: (value: boolean) => Promise<void>;
+    // Swiping sideways on the timeline moves between the pinned feeds
+    swipeFeeds: boolean;
+    setSwipeFeeds: (value: boolean) => Promise<void>;
     // Favourites and boosts of the same post share one notification row; off, each has its own
     groupNotifications: boolean;
     // Post images at their own shape instead of cropped to the card
@@ -40,7 +43,8 @@ export const PUSH_ALERTS_KEY = 'pugdom_settings_push_alerts';
 export const AUTOPLAY_KEY = 'pugdom_settings_autoplay';
 export const COMPACT_KEY = 'pugdom_settings_compact';
 export const HIDE_COUNTS_KEY = 'pugdom_settings_hide_counts';
-export const GROUP_NOTIFICATIONS_KEY = 'pugdom_settings_group_notifications';
+export const SWIPE_FEEDS_KEY = 'pugdom_settings_swipe_feeds';
+export const GROUP_NOTIFICATIONS_KEY ='pugdom_settings_group_notifications';
 export const UNCROPPED_MEDIA_KEY = 'pugdom_settings_uncropped_media';
 export const EXPAND_SPOILERS_KEY = 'pugdom_settings_expand_spoilers';
 export const SHOW_SENSITIVE_KEY = 'pugdom_settings_show_sensitive';
@@ -52,6 +56,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const [mediaAutoplay, setMediaAutoplayState] = useState(false);
     const [compactMode, setCompactModeState] = useState(false);
     const [hideCounts, setHideCountsState] = useState(false);
+    const [swipeFeeds, setSwipeFeedsState] = useState(false);
     const [groupNotifications, setGroupNotificationsState] = useState(true);
     const [uncroppedMedia, setUncroppedMediaState] = useState(false);
     const [expandSpoilers, setExpandSpoilersState] = useState<boolean | null>(null);
@@ -67,6 +72,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 const autoplay = await getSetting(AUTOPLAY_KEY, false);
                 const compact = await getSetting(COMPACT_KEY, false);
                 const counts = await getSetting(HIDE_COUNTS_KEY, false);
+                const swipe = await getSetting(SWIPE_FEEDS_KEY, false);
                 const grouped = await getSetting(GROUP_NOTIFICATIONS_KEY, true);
                 const uncropped = await getSetting(UNCROPPED_MEDIA_KEY, false);
                 const spoilers = await getStringSetting(EXPAND_SPOILERS_KEY, '');
@@ -78,6 +84,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 setMediaAutoplayState(autoplay);
                 setCompactModeState(compact);
                 setHideCountsState(counts);
+                setSwipeFeedsState(swipe);
                 setGroupNotificationsState(grouped);
                 setUncroppedMediaState(uncropped);
                 setExpandSpoilersState(spoilers === '' ? null : spoilers === 'true');
@@ -116,6 +123,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const setHideCounts = async (value: boolean) => {
         setHideCountsState(value);
         await saveSetting(HIDE_COUNTS_KEY, value);
+    };
+
+    const setSwipeFeeds = async (value: boolean) => {
+        setSwipeFeedsState(value);
+        await saveSetting(SWIPE_FEEDS_KEY, value);
     };
 
     const setGroupNotifications = async (value: boolean) => {
@@ -159,6 +171,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 setMediaAutoplay,
                 setCompactMode,
                 setHideCounts,
+                swipeFeeds,
+                setSwipeFeeds,
                 groupNotifications,
                 setGroupNotifications,
                 uncroppedMedia,

@@ -822,6 +822,7 @@ export const en = {
         autoplay: 'Autoplay Media',
         compactMode: 'Compact Mode',
         hideCounts: 'Hide numbers on posts',
+        swipeFeeds: 'Swipe between timelines',
         uncroppedMedia: 'Show images uncropped',
         posts: 'Posts',
         media: 'Media',

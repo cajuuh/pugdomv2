@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { ActivityIndicator, RefreshControl, DeviceEventEmitter, Pressable, ScrollView, Text, View } from 'react-native';
 import { FlashList, FlashListRef } from '@shopify/flash-list';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { InfiniteData, useQueryClient } from '@tanstack/react-query';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFeed } from '../../hooks/useFeed';
@@ -11,14 +12,18 @@ import { TootCard } from '../../components/TootCard/tootCard';
 import { FeedsSheet } from '../../components/FeedsSheet/feedsSheet';
 import { FEED_CREATED_EVENT, FEED_OPEN_EVENT } from '../FeedEditor/feedEditor';
 import { useNavigator } from '../../services/navigationContext';
-import { hitSlopFor } from '../../services/theme/shape';
+import { hitSlopFor, space } from '../../services/theme/shape';
 import { useTheme } from '../../services/themeContext';
+import { useSettings } from '../../services/settingsContext';
 import { FEED_PILL_HEIGHT, makeStyles } from './styles';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { postListProps, setAutoplayPost } from '../../services/media/autoplay';
 import { useNewPosts } from '../../hooks/useNewPosts';
 import { NewPostsPill } from './newPostsPill';
+
+// How far a sideways drag has to travel to change the feed, in points
+const SWIPE_FEED_AT = 60;
 
 // FlashList keeps the first visible post in place while posts above it get measured, which cut an
 // animated scrollToOffset(0) short after scrolling far. scrollToIndex pauses that correction, jumps
@@ -224,6 +229,7 @@ const Timeline = ({ onStatusPress, active = true }: TimelineProps) => {
     const { t } = i18n;
     const { push } = useNavigator();
     const { pinnedFeeds, pinFeed } = usePinnedFeeds();
+    const { swipeFeeds } = useSettings();
 
     const [activeFeed, setActiveFeed] = useState<FeedDescriptor>(DEFAULT_PINNED_FEEDS[0]);
     // Opened from the Feeds sheet or the server screen: it may not be pinned, and then shows as a
@@ -232,6 +238,7 @@ const Timeline = ({ onStatusPress, active = true }: TimelineProps) => {
     const [feedsSheetOpen, setFeedsSheetOpen] = useState(false);
     const queryClient = useQueryClient();
     const pillsRef = useRef<ScrollView>(null);
+    const pillX = useRef<Record<string, number>>({});
 
     const openFeed = useCallback((feed: FeedDescriptor) => {
         setActiveFeed(feed);
@@ -249,6 +256,25 @@ const Timeline = ({ onStatusPress, active = true }: TimelineProps) => {
         setActiveFeed(feed);
         setPreviewing(false);
     };
+
+    // A sideways swipe moves through the pinned feeds, stopping at the ends. A preview (index -1)
+    // sits before them. Starts only after a clear sideways drag, and never during a scroll.
+    const swipe = Gesture.Pan()
+        .withTestId('swipe-feeds')
+        .enabled(swipeFeeds)
+        .runOnJS(true)
+        .activeOffsetX([-24, 24])
+        .failOffsetY([-20, 20])
+        .onEnd((event, success) => {
+            if (!success || Math.abs(event.translationX) < SWIPE_FEED_AT) return;
+            const index = pinnedFeeds.findIndex(feed => feed.id === activeFeed.id);
+            const next = pinnedFeeds[index + (event.translationX < 0 ? 1 : -1)];
+            if (!next) return;
+            selectPinned(next);
+            // Keep its pill in view. Leaving a preview moves the pills, so their saved spots are old.
+            const x = index < 0 ? 0 : (pillX.current[next.id] ?? 0) - space.lg;
+            pillsRef.current?.scrollTo({ x: Math.max(0, x), animated: true });
+        });
 
     // A feed made in the editor, or one picked elsewhere, opens straight away
     useEffect(() => {
@@ -327,6 +353,9 @@ const Timeline = ({ onStatusPress, active = true }: TimelineProps) => {
                                 key={feed.id}
                                 style={[styles.feedPill, isActive && styles.feedPillActive]}
                                 onPress={() => selectPinned(feed)}
+                                onLayout={event => {
+                                    pillX.current[feed.id] = event.nativeEvent.layout.x;
+                                }}
                                 accessibilityRole="tab"
                                 accessibilityLabel={feedLabel(feed, i18n)}
                                 accessibilityState={{ selected: isActive }}
@@ -355,15 +384,19 @@ const Timeline = ({ onStatusPress, active = true }: TimelineProps) => {
                 </ScrollView>
             </View>
 
-            {mountedFeeds.map(feed => (
-                <FeedList
-                    key={feed.id}
-                    feed={feed}
-                    current={feed.id === activeFeed.id}
-                    visible={active && feed.id === activeFeed.id}
-                    onStatusPress={onStatusPress}
-                />
-            ))}
+            <GestureDetector gesture={swipe}>
+                <View style={styles.list}>
+                    {mountedFeeds.map(feed => (
+                        <FeedList
+                            key={feed.id}
+                            feed={feed}
+                            current={feed.id === activeFeed.id}
+                            visible={active && feed.id === activeFeed.id}
+                            onStatusPress={onStatusPress}
+                        />
+                    ))}
+                </View>
+            </GestureDetector>
 
             <FeedsSheet
                 visible={feedsSheetOpen}
