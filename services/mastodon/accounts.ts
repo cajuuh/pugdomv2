@@ -11,6 +11,7 @@ export async function getCurrentAccount(): Promise<Account> {
 
 export interface AccountStatusesFilter {
     exclude_replies?: boolean;
+    exclude_reblogs?: boolean;
     only_media?: boolean;
     pinned?: boolean;
 }
