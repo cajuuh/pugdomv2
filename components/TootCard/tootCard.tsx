@@ -728,7 +728,9 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     );
 
     const card = (
-        <Card style={[styles.card, isDirect && styles.cardDirect, compactMode && styles.cardCompact, threadMode && styles.cardThread]}>
+        // A new view when Compact Mode changes: Android keeps a square edge from the compact bottom
+        // hairline when that border is taken off a view that's already drawn
+        <Card key={compactMode ? 'compact' : 'card'} style={[styles.card, isDirect && styles.cardDirect, compactMode && styles.cardCompact, threadMode && styles.cardThread]}>
             {isReblog && (
                 <Pressable
                     onPress={() => openPerson(status.account)}
