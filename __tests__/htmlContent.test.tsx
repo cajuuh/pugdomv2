@@ -5,7 +5,7 @@ import { useOptionalMediaViewer } from '../components/MediaViewer/mediaViewer';
 import { StatusHtmlContent } from '../components/TootCard/htmlContent';
 import { mockTheme } from '../testUtils/theme';
 import { CustomEmoji } from '../services/mastodon/types';
-import { renderTextWithEmojis } from '../services/emojiHelper';
+import { renderNameWithEmojis, renderTextWithEmojis } from '../services/emojiHelper';
 import { HUGE_POST, LONG_POST, breakLongRuns, postSize, splitTrailingHashtags } from '../services/htmlText';
 
 jest.mock('../components/MediaViewer/mediaViewer', () => ({ useOptionalMediaViewer: jest.fn(() => undefined) }));
@@ -125,6 +125,18 @@ describe('an emoji in a line of text', () => {
     it('sits lowered in names too', async () => {
         const { toJSON } = await render(renderTextWithEmojis('Pug :pug:', [emoji('pug')], null, 15)!);
         expect(JSON.stringify(toJSON())).toContain('"translateY":3');
+    });
+});
+
+describe('a name on one line', () => {
+    it("keeps its emoji beside the text, not inside it, so they can't wrap", async () => {
+        const { toJSON } = await render(renderNameWithEmojis('jo :pug: dev', [emoji('pug')], null, 13)!);
+        const row = toJSON() as any;
+
+        expect(row.type).toBe('View');
+        expect(row.children.map((child: any) => child.type)).toEqual(['Text', 'Image', 'Text']);
+        expect(screen.getByText('jo')).toHaveProp('numberOfLines', 1);
+        expect(screen.getByText('dev')).toHaveProp('numberOfLines', 1);
     });
 });
 

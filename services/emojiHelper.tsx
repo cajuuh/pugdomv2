@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image as RNImage, ImageStyle, Text } from 'react-native';
+import { Image as RNImage, ImageStyle, StyleSheet, Text, View } from 'react-native';
 import { CustomEmoji } from './mastodon/types';
 
 // Share of its height an emoji is lowered by, to tune how it sits against the text
@@ -50,3 +50,35 @@ export const renderTextWithEmojis = (
         </Text>
     );
 };
+
+// A name on one line, its custom emoji beside the text rather than inside it. Android lays out text a
+// hair narrower than it measured it, so an emoji inside text wraps onto a line the row has no room for
+// and draws over whatever is below; pieces in a row can't wrap. Long names cut off with "…".
+export const renderNameWithEmojis = (text: string, emojis: CustomEmoji[], textStyle: any, emojiSize: number = 16) => {
+    if (!text) return null;
+    const parts = text.split(/(:\w+:)/g).map(part => part.trim()).filter(Boolean);
+    return (
+        <View style={styles.nameRow}>
+            {parts.map((part, index) => {
+                const emoji = /^:\w+:$/.test(part) ? emojis?.find(e => e.shortcode === part.slice(1, -1)) : undefined;
+                return emoji ? (
+                    <RNImage key={index} source={{ uri: emoji.url }} style={{ width: emojiSize, height: emojiSize, resizeMode: 'contain' }} />
+                ) : (
+                    <Text key={index} style={[textStyle, styles.namePart]} numberOfLines={1}>{part}</Text>
+                );
+            })}
+        </View>
+    );
+};
+
+const styles = StyleSheet.create({
+    nameRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 3,
+        maxWidth: '100%',
+    },
+    namePart: {
+        flexShrink: 1,
+    },
+});

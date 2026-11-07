@@ -4,7 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../../services/themeContext';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { TKey } from '../../services/i18n/translate';
-import { renderTextWithEmojis } from '../../services/emojiHelper';
+import { renderNameWithEmojis, renderTextWithEmojis } from '../../services/emojiHelper';
 import { plainText } from '../../services/htmlText';
 import { QuoteNotice, quoteView } from '../../services/mastodon/quotes';
 import { Quote, Status } from '../../services/mastodon/types';
@@ -68,7 +68,7 @@ export const QuotedPost: React.FC<QuotedPostProps> = ({ quote, onOpen, timeOf })
             <View style={styles.author}>
                 <Avatar name={name} uri={status.account.avatar} size={20} />
                 <View style={styles.names}>
-                    {renderTextWithEmojis(name, status.account.emojis ?? [], [type.name, styles.name, { color: colors.textPrimary }], 13)}
+                    {renderNameWithEmojis(name, status.account.emojis ?? [], [type.name, styles.name, { color: colors.textPrimary }], 13)}
                     <Text style={[type.meta, styles.handle, { color: colors.textMuted }]} numberOfLines={1}>
                         @{status.account.acct}
                         {timeOf ? ` · ${timeOf(status.created_at)}` : ''}
@@ -152,8 +152,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: space.xs,
     },
-    // Doesn't shrink (the handle does): on Android a name shrunk after measuring wraps its custom emoji
-    // onto a line the box doesn't have, so the emoji lands over the post's text
     name: {
         fontSize: 13,
     },
