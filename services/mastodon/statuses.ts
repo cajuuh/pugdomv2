@@ -143,3 +143,16 @@ export async function getStatusHistory(id: string): Promise<StatusEdit[]> {
     const response = await apiClient.get<StatusEdit[]>(`/statuses/${id}/history`);
     return response.data;
 }
+
+// A post in another language, translated by the server (when its translation is on). `lang` is what to
+// translate into: an ISO 639 code, like "pt" or "en".
+export interface Translation {
+    content: string;
+    spoiler_text: string;
+    detected_source_language: string;
+    provider: string;
+}
+export async function translateStatus(id: string, lang: string): Promise<Translation> {
+    const response = await apiClient.post<Translation>(`/statuses/${id}/translate`, { lang });
+    return response.data;
+}
