@@ -1,7 +1,7 @@
 import React from 'react';
-import { Image, Pressable } from 'react-native';
+import { Image, Platform, Pressable, Share } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
-import RenderHtml, { HTMLElementModel, HTMLContentModel, defaultSystemFonts } from 'react-native-render-html';
+import RenderHtml, { HTMLElementModel, HTMLContentModel, defaultSystemFonts, useInternalRenderer } from 'react-native-render-html';
 import { useOptionalMediaViewer } from '../MediaViewer/mediaViewer';
 import { CustomEmoji } from '../../services/mastodon/types';
 import { inlineEmojiStyle } from '../../services/emojiHelper';
@@ -39,8 +39,20 @@ const InlineEmoji = ({ src, shortcode }: { src: string; shortcode: string }) => 
     );
 };
 
+// Holding a link offers it to copy or send, instead of opening it on release (tester request). The share
+// sheet has Copy on both platforms; iOS builds a link preview from `url`, Android only shares `message`.
+export const shareLink = (url: string) => Share.share(Platform.OS === 'ios' ? { url } : { message: url }).catch(() => {});
+
+const LinkRenderer = (props: any) => {
+    const { Renderer, rendererProps } = useInternalRenderer('a', props);
+    const href = props.tnode.attributes.href;
+    if (!href) return <Renderer {...rendererProps} />;
+    return <Renderer {...rendererProps} textProps={{ ...rendererProps.textProps, onLongPress: () => shareLink(href) }} />;
+};
+
 const renderers = {
     emoji: ({ tnode }: any) => <InlineEmoji src={tnode.attributes.src} shortcode={tnode.attributes.shortcode} />,
+    a: LinkRenderer,
 };
 
 // Below each paragraph, the last one included
