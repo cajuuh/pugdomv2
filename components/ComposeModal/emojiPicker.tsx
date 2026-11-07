@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, SectionList, Text, TextInput, View } from 'react-native';
 import { useCustomEmojis } from '../../hooks/useCustomEmojis';
+import { useDebounced } from '../../hooks/useSearch';
 import { CustomEmoji } from '../../services/mastodon/types';
 import { useTheme } from '../../services/themeContext';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
@@ -11,6 +12,7 @@ import { useI18n } from '../../services/i18n/i18nContext';
 import { getRecentEmojis } from '../../services/recentEmojis';
 
 const COLUMNS = 7;
+const SEARCH_DELAY = 250;
 // Internal ids, shown as "All" / "Other" in the user's language; not valid category names on a server
 export const ALL_CATEGORIES = '\u0000all';
 export const UNCATEGORIZED = '\u0000other';
@@ -40,12 +42,16 @@ export const groupByCategory = (emojis: CustomEmoji[]): EmojiGroup[] => {
         });
 };
 
-// Emoji whose shortcode contains the query (colons and case ignored), those starting with it first
+// Emoji whose shortcode has every word of the query, so "neofox pet" finds neofox_pet (colons and case ignored),
+// those starting with its first word first
 export const searchEmojis = (emojis: CustomEmoji[], query: string): CustomEmoji[] => {
-    const q = query.trim().replace(/:/g, '').toLowerCase();
-    if (!q) return [];
-    const matches = emojis.filter(emoji => emoji.shortcode.toLowerCase().includes(q));
-    return [...matches.filter(emoji => emoji.shortcode.toLowerCase().startsWith(q)), ...matches.filter(emoji => !emoji.shortcode.toLowerCase().startsWith(q))];
+    const words = query.replace(/:/g, '').toLowerCase().split(/[\s_]+/).filter(Boolean);
+    if (!words.length) return [];
+    const matches = emojis.filter(emoji => {
+        const code = emoji.shortcode.toLowerCase();
+        return words.every(word => code.includes(word));
+    });
+    return [...matches.filter(emoji => emoji.shortcode.toLowerCase().startsWith(words[0])), ...matches.filter(emoji => !emoji.shortcode.toLowerCase().startsWith(words[0]))];
 };
 
 // SectionList has no columns, so each item is a row of up to COLUMNS emoji
@@ -77,8 +83,12 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ visible, onPick, onClo
     const { data, isLoading, isError } = useCustomEmojis(visible);
     const pickable = useMemo(() => (data ?? []).filter(emoji => emoji.visible_in_picker), [data]);
     const groups = useMemo(() => groupByCategory(pickable), [pickable]);
-    const searching = query.trim().length > 0;
-    const matches = useMemo(() => searchEmojis(pickable, query), [pickable, query]);
+    // Results wait for a pause in typing: each new list mounts dozens of images, animated ones included,
+    // only for the next key to throw them away. Clearing the field doesn't wait.
+    const debouncedQuery = useDebounced(query, SEARCH_DELAY);
+    const shownQuery = query.trim() ? debouncedQuery.trim() : '';
+    const searching = shownQuery.length > 0;
+    const matches = useMemo(() => searchEmojis(pickable, shownQuery), [pickable, shownQuery]);
 
     const [recentCodes, setRecentCodes] = useState<string[]>([]);
     // Ones the server has since removed drop out
@@ -180,7 +190,7 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ visible, onPick, onClo
                         removeClippedSubviews
                         keyboardShouldPersistTaps="handled"
                         ListEmptyComponent={
-                            searching ? <Text style={[type.meta, styles.emojiStatusText]}>{t('emoji.noMatches', { query: query.trim() })}</Text> : null
+                            searching ? <Text style={[type.meta, styles.emojiStatusText]}>{t('emoji.noMatches', { query: shownQuery })}</Text> : null
                         }
                         renderSectionHeader={({ section }) =>
                             headers ? (

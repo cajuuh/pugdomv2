@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
 import { EmojiPicker, groupByCategory, searchEmojis, UNCATEGORIZED } from '../components/ComposeModal/emojiPicker';
@@ -159,6 +159,12 @@ describe('searchEmojis', () => {
         expect(searchEmojis(list, ':BLOB').map(e => e.shortcode)).toEqual(['blobcat', 'BlobFox', 'happy_blobcat']);
         expect(searchEmojis(list, '  ')).toEqual([]);
     });
+
+    it('matches every word of the query, as shortcodes have no spaces', () => {
+        const list = [emoji('neofox_pet'), emoji('neofox'), emoji('pet_neofox_happy'), emoji('pug_pet')];
+        expect(searchEmojis(list, 'neofox pet').map(e => e.shortcode)).toEqual(['neofox_pet', 'pet_neofox_happy']);
+        expect(searchEmojis(list, 'neofox_pet').map(e => e.shortcode)).toEqual(['neofox_pet', 'pet_neofox_happy']);
+    });
 });
 
 describe('EmojiPicker search', () => {
@@ -175,9 +181,12 @@ describe('EmojiPicker search', () => {
 
         await fireEvent.changeText(screen.getByLabelText('Search emoji'), 'cat');
 
+        // The list stays put until typing pauses
+        expect(screen.getByRole('button', { name: ':flag_br:' })).toBeTruthy();
+        await waitFor(() => expect(screen.queryByRole('button', { name: ':flag_br:' })).toBeNull());
+
         expect(screen.getByRole('button', { name: ':blobcat:' })).toBeTruthy();
         expect(screen.getByRole('button', { name: ':cat_pug:' })).toBeTruthy();
-        expect(screen.queryByRole('button', { name: ':flag_br:' })).toBeNull();
         // No chips or headers while searching
         expect(screen.queryByRole('button', { name: 'All' })).toBeNull();
         expect(screen.queryByRole('header', { name: 'Blobs' })).toBeNull();
@@ -185,6 +194,7 @@ describe('EmojiPicker search', () => {
         await fireEvent.press(screen.getByRole('button', { name: ':cat_pug:' }));
         expect(onPick).toHaveBeenCalledWith('cat_pug');
 
+        // Clearing doesn't wait
         await fireEvent.changeText(screen.getByLabelText('Search emoji'), '');
         expect(screen.getByRole('header', { name: 'Flags' })).toBeTruthy();
         expect(screen.getByRole('button', { name: 'All' })).toBeTruthy();
@@ -197,7 +207,7 @@ describe('EmojiPicker search', () => {
 
         await fireEvent.changeText(screen.getByLabelText('Search emoji'), 'zebra');
 
-        expect(screen.getByText('No emoji match “zebra”')).toBeTruthy();
+        expect(await screen.findByText('No emoji match “zebra”')).toBeTruthy();
     });
 
     it('rides above the keyboard', async () => {
