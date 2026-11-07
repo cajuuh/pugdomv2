@@ -66,7 +66,9 @@ export const PillButton: React.FC<PillButtonProps> = ({
             {/* Keep the label in place while loading so the button doesn't change width */}
             <View style={[styles.content, loading && styles.hidden]}>
                 {icon && <Ionicons name={icon} size={size === 'small' ? 15 : 17} color={palette.text} />}
-                <Text style={[type.name, { fontSize: size === 'small' ? 13 : 14, color: palette.text }]}>{label}</Text>
+                {/* No line height: on Android, Nunito ExtraBold with one is measured a little narrow, so a label
+                    like "Até eu reativar" wraps and its last word is cut off by the pill */}
+                <Text style={[type.name, { fontSize: size === 'small' ? 13 : 14, lineHeight: undefined, color: palette.text }]}>{label}</Text>
             </View>
             {loading && <ActivityIndicator style={StyleSheet.absoluteFill} size="small" color={palette.text} />}
         </Pressable>

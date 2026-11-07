@@ -16,10 +16,10 @@ export const useRelationships = (accountIds: string[]) => {
 };
 
 // Runs a follow change and writes the returned relationship into every cached relationships query
-const useRelationshipChange = (change: (accountId: string) => Promise<Relationship>) => {
+const useRelationshipChange = <Args extends unknown[]>(change: (accountId: string, ...args: Args) => Promise<Relationship>) => {
     const queryClient = useQueryClient();
-    return useCallback(async (accountId: string) => {
-        const relationship = await change(accountId);
+    return useCallback(async (accountId: string, ...args: Args) => {
+        const relationship = await change(accountId, ...args);
         queryClient.setQueriesData<Relationship[]>({ queryKey: ['relationships'] }, (relationships) =>
             relationships?.map(existing => (existing.id === relationship.id ? relationship : existing))
         );
@@ -38,14 +38,16 @@ export const useNotifyOff = () => useRelationshipChange(notifyOff);
 // Unfollows, or cancels a follow request that's still pending
 export const useUnfollowAccount = () => useRelationshipChange(unfollowAccount);
 
-// Blocking or muting changes what the server sends: reload timelines and notifications without them
-const useModerationChange = (change: (accountId: string) => Promise<Relationship>) => {
+// Blocking or muting changes what the server sends: reload timelines, notifications and the muted and
+// blocked lists
+const useModerationChange = <Args extends unknown[]>(change: (accountId: string, ...args: Args) => Promise<Relationship>) => {
     const queryClient = useQueryClient();
     const changeRelationship = useRelationshipChange(change);
-    return useCallback(async (accountId: string) => {
-        const relationship = await changeRelationship(accountId);
+    return useCallback(async (accountId: string, ...args: Args) => {
+        const relationship = await changeRelationship(accountId, ...args);
         queryClient.invalidateQueries({ queryKey: ['timeline'] });
         queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        queryClient.invalidateQueries({ queryKey: ['moderatedAccounts'] });
         return relationship;
     }, [queryClient, changeRelationship]);
 };

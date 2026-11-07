@@ -1,7 +1,7 @@
 import React from 'react';
 import { Alert, View } from 'react-native';
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
-import { DialogHost, stackButtons } from '../components/Dialog/dialogHost';
+import { DialogHost, stackButtons, stackedOrder } from '../components/Dialog/dialogHost';
 import { dialog, dismissDialog, getDialogState, TOAST_DURATION_MS } from '../services/dialog';
 
 jest.mock('../services/themeContext', () => ({
@@ -166,5 +166,20 @@ describe('stackButtons', () => {
         expect(stackButtons(['Continuar editando', 'Descartar'], 360)).toBe(true);
         expect(stackButtons(['Cancel', 'Delete'], 360)).toBe(false);
         expect(stackButtons(['One', 'Two', 'Three'], 800)).toBe(true);
+    });
+});
+
+describe('stackedOrder', () => {
+    it('puts the highlighted choice on top, the others in order, then cancel', () => {
+        const cancel = { text: 'Cancel', style: 'cancel' as const };
+        const forever = { text: 'Until I unmute' };
+        const hour = { text: '1 hour' };
+        const day = { text: '1 day' };
+        expect(stackedOrder([cancel, forever, hour, day], forever).map(button => button.text)).toEqual(['Until I unmute', '1 hour', '1 day', 'Cancel']);
+
+        // The draft dialog keeps Save on top, Discard under it
+        const discard = { text: 'Discard', style: 'destructive' as const };
+        const save = { text: 'Save draft' };
+        expect(stackedOrder([cancel, discard, save], save).map(button => button.text)).toEqual(['Save draft', 'Discard', 'Cancel']);
     });
 });

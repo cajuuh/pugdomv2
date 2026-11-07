@@ -38,6 +38,13 @@ export const stackButtons = (labels: string[], windowWidth: number) => {
     return needed > rowWidth;
 };
 
+// Stacked, top to bottom: the highlighted choice, the other choices in the order given, then cancel
+export const stackedOrder = (buttons: DialogButton[], highlighted?: DialogButton) => [
+    ...(highlighted ? [highlighted] : []),
+    ...buttons.filter(button => button !== highlighted && button.style !== 'cancel'),
+    ...buttons.filter(button => button.style === 'cancel'),
+];
+
 // Draws pugdon's dialogs and toasts over whatever it's placed in (see services/dialog.ts). One sits at
 // the app root; compose, the image editor and every bottom sheet have their own, so dialogs show above them.
 export const DialogHost: React.FC<DialogHostProps> = ({ active = true }) => {
@@ -122,7 +129,7 @@ export const DialogHost: React.FC<DialogHostProps> = ({ active = true }) => {
                             </View>
                             {!!current.message && <Text style={[type.body, stacked && styles.centered, { color: colors.textSecondary }]}>{current.message}</Text>}
                             <View style={[styles.buttons, stacked && styles.buttonsStacked]}>
-                                {(stacked ? [...ordered].reverse() : ordered).map((button, index) => (
+                                {(stacked ? stackedOrder(ordered, firstDefault) : ordered).map((button, index) => (
                                     <PillButton
                                         key={`${button.text}-${index}`}
                                         label={button.text}
