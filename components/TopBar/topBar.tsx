@@ -8,6 +8,7 @@ import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { Avatar, IconButton, PugMark } from '../ui';
 import { HEADER_HEIGHT, makeStyles } from './styles';
 import { useI18n } from '../../services/i18n/i18nContext';
+import { useOptionalAuth } from '../../services/authContext';
 
 interface TopBarProps {
     user: Account | null;
@@ -25,6 +26,8 @@ export const TopBar: React.FC<TopBarProps> = ({ user, onProfilePress, onSettings
     const styles = useThemedStyles(makeStyles);
     const insets = useSafeAreaInsets();
     const { t } = useI18n();
+    const auth = useOptionalAuth();
+    const otherAccounts = (auth?.savedAccounts ?? []).filter(account => account.userInfo.id !== user?.id);
 
     const menuAction = (action: () => void) => () => {
         setMenuVisible(false);
@@ -68,6 +71,36 @@ export const TopBar: React.FC<TopBarProps> = ({ user, onProfilePress, onSettings
                     {/* A sibling of the menu, not its parent: an accessible parent would hide the items from screen readers */}
                     <Pressable style={styles.modalOverlay} onPress={() => setMenuVisible(false)} accessibilityRole="button" accessibilityLabel={t('topBar.closeMenu')} />
                     <View style={[styles.menu, { top: insets.top + HEADER_HEIGHT }]}>
+                        {/* Your other accounts, a tap away (user request: Settings was too far) */}
+                        {otherAccounts.map(account => {
+                            const name = account.userInfo.display_name.replace(/:\w+:/g, '').trim() || account.userInfo.username;
+                            return (
+                                <Pressable
+                                    key={account.id}
+                                    style={styles.menuItem}
+                                    onPress={menuAction(() => auth?.switchAccount(account.id))}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={t('settings.switchTo', { name })}
+                                >
+                                    <Avatar name={name} uri={account.userInfo.avatar} size={28} />
+                                    <View style={styles.menuAccount}>
+                                        <Text style={[type.name, styles.menuText]} numberOfLines={1}>{name}</Text>
+                                        <Text style={[type.meta, styles.menuDetail]} numberOfLines={1}>
+                                            @{account.userInfo.acct} • {account.instanceUrl.replace(/^https?:\/\//, '')}
+                                        </Text>
+                                    </View>
+                                </Pressable>
+                            );
+                        })}
+                        {auth && (
+                            <>
+                                <Pressable style={styles.menuItem} onPress={menuAction(() => auth.setAddingAccount(true))} accessibilityRole="button" accessibilityLabel={t('settings.addAccount')}>
+                                    <Ionicons name="add-circle-outline" size={18} color={colors.accentText} />
+                                    <Text style={[type.name, styles.menuText, styles.menuTextAccent]}>{t('settings.addAccount')}</Text>
+                                </Pressable>
+                                <View style={styles.divider} />
+                            </>
+                        )}
                         <Pressable style={styles.menuItem} onPress={menuAction(onProfilePress)} accessibilityRole="button" accessibilityLabel={t('common.profile')}>
                             <Ionicons name="person-outline" size={18} color={colors.textPrimary} />
                             <Text style={[type.name, styles.menuText]}>{t('common.profile')}</Text>
