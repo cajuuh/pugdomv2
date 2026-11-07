@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { Account, Status } from '../services/mastodon/types';
 import { useNavigator } from '../services/navigationContext';
 import { useI18n } from '../services/i18n/i18nContext';
-import { useBlockAccount, useMuteAccount, useUnblockAccount, useUnmuteAccount } from './useRelationships';
+import { useBlockAccount, useMuteAccount, useRemoveFollower, useUnblockAccount, useUnmuteAccount } from './useRelationships';
 import { dialog } from '../services/dialog';
 import { TKey } from '../services/i18n/translate';
 
@@ -23,6 +23,7 @@ export const useModeration = () => {
     const unblockAccount = useUnblockAccount();
     const muteAccount = useMuteAccount();
     const unmuteAccount = useUnmuteAccount();
+    const removeFollowerFrom = useRemoveFollower();
 
     const run = useCallback(async (change: () => Promise<unknown>, done?: string) => {
         try {
@@ -64,5 +65,19 @@ export const useModeration = () => {
     );
     const unblock = useCallback((account: Account) => run(() => unblockAccount(account.id)), [run, unblockAccount]);
 
-    return { report, mute, unmute, block, unblock };
+    // Asks first, like blocking (tester request: there was no way to do it)
+    const removeFollower = useCallback(
+        (account: Account) =>
+            dialog.alert(t('moderation.removeFollowerTitle'), t('moderation.removeFollowerMessage'), [
+                { text: t('common.cancel'), style: 'cancel' },
+                {
+                    text: t('moderation.removeFollowerConfirm'),
+                    style: 'destructive',
+                    onPress: () => run(() => removeFollowerFrom(account.id), t('moderation.removedFollower', { acct: account.acct })),
+                },
+            ], { subtitle: `@${account.acct}` }),
+        [run, removeFollowerFrom, t]
+    );
+
+    return { report, mute, unmute, block, unblock, removeFollower };
 };

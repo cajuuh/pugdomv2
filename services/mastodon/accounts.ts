@@ -74,6 +74,12 @@ export async function unblockAccount(accountId: string): Promise<Relationship> {
     return response.data;
 }
 
+// They stop following you (a soft block, without blocking); they aren't told
+export async function removeFromFollowers(accountId: string): Promise<Relationship> {
+    const response = await apiClient.post<Relationship>(`/accounts/${accountId}/remove_from_followers`);
+    return response.data;
+}
+
 // Muting hides their posts (and, by default, notifications from them); they aren't told. A duration
 // in seconds ends it on its own; 0 lasts until you unmute.
 export async function muteAccount(accountId: string, duration = 0): Promise<Relationship> {

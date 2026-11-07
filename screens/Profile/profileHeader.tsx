@@ -311,6 +311,9 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
                     subtitle={`@${user.acct}`}
                     onClose={() => setMenuOpen(false)}
                     actions={[
+                        ...(relationship?.followed_by
+                            ? [{ key: 'removeFollower', icon: 'person-remove-outline' as const, label: t('moderation.removeFollower', { acct: user.acct }), description: t('moderation.removeFollowerHint'), onPress: () => moderation.removeFollower(user) }]
+                            : []),
                         { key: 'report', icon: 'flag-outline', label: t('moderation.reportAccount', { acct: user.acct }), onPress: () => moderation.report(user) },
                         relationship?.muting
                             ? { key: 'unmute', icon: 'volume-high-outline', label: t('moderation.unmuteAccount', { acct: user.acct }), onPress: () => moderation.unmute(user) }

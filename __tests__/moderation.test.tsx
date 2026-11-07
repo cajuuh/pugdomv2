@@ -269,6 +269,28 @@ describe('Profile menu', () => {
         await fireEvent.press(await screen.findByRole('button', { name: 'Unblock @ana@art.social' }));
         expect(api.post).toHaveBeenCalledWith('/accounts/ana/unblock');
     });
+
+    it('removes someone who follows you, after asking', async () => {
+        await renderHeader(relationship({ followed_by: true }));
+        await fireEvent.press(screen.getByRole('button', { name: 'More options for Ana' }));
+        await fireEvent.press(await screen.findByRole('button', { name: 'Remove @ana@art.social as a follower' }));
+
+        const box = await screen.findByTestId('dialog');
+        expect(within(box).getByRole('header', { name: 'Remove this follower?' })).toBeTruthy();
+        expect(api.post).not.toHaveBeenCalled();
+        await pressInDialog('Remove');
+
+        await waitFor(() => expect(api.post).toHaveBeenCalledWith('/accounts/ana/remove_from_followers'));
+        expect(await screen.findByText('@ana@art.social no longer follows you')).toBeTruthy();
+    });
+
+    it("doesn't offer it for someone who doesn't follow you", async () => {
+        await renderHeader(relationship());
+        await fireEvent.press(screen.getByRole('button', { name: 'More options for Ana' }));
+
+        await screen.findByRole('button', { name: 'Report @ana@art.social' });
+        expect(screen.queryByRole('button', { name: 'Remove @ana@art.social as a follower' })).toBeNull();
+    });
 });
 
 describe('Report screen', () => {
