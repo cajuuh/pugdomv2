@@ -42,6 +42,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // The server couldn't be reached, so `user` may be the saved copy and is checked again later
     const unverified = useRef(false);
 
+    // The account list keeps the name and photo from sign-in, and Mastodon deletes an old photo once
+    // it's changed, so each fresh copy of the signed-in account is saved over it
+    const saveAccount = (account: Account, token: string, instanceUrl: string) =>
+        addSavedAccount(token, instanceUrl, account)
+            .then(() => getSavedAccounts())
+            .then(setSavedAccounts)
+            .catch(error => console.error('Failed to save account:', error));
+
     const checkLoginStatus = async () => {
         let accounts: SavedAccount[] = [];
         let accessToken: string | null = null;
@@ -55,6 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const account = await getCurrentAccount();
                 unverified.current = false;
                 setUser(account);
+                saveAccount(account, credentials.accessToken, credentials.instanceUrl);
             }
         } catch (error) {
             console.error('Failed to login, status: ', error);
@@ -98,11 +107,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(newUser);
         setAddingAccount(false);
         setNeedsSetup(true);
-        if (token && instanceUrl) {
-            addSavedAccount(token, instanceUrl, newUser).then(() => {
-                getSavedAccounts().then(setSavedAccounts);
-            });
-        }
+        if (token && instanceUrl) saveAccount(newUser, token, instanceUrl);
     }
 
     const switchAccount = async (accountId: string) => {
@@ -116,6 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const account = await getCurrentAccount();
                 setUser(account);
                 setAddingAccount(false);
+                saveAccount(account, target.accessToken, target.instanceUrl);
             }
         } catch (error) {
             console.error('Error switching account:', error);

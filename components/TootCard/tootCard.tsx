@@ -40,6 +40,7 @@ import { defaultTranslator, Translator } from '../../services/i18n/translate';
 import { useOpenAccount } from '../../hooks/useOpenAccount';
 import { FocusedImage } from './focusedImage';
 import { QuotedPost } from './quotedPost';
+import { TranslationLine, usePostTranslation } from './postTranslation';
 import { useNavigator } from '../../services/navigationContext';
 import { ActionSheet, BottomSheet } from '../ComposeModal/optionSheet';
 import { currentQuotePolicy, QuotePolicy, quotePermission, quotePolicies, setQuotePolicy } from '../../services/mastodon/quotes';
@@ -186,7 +187,9 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const [boostCount, setBoostCount] = useRecyclingState(targetStatus.reblogs_count, recyclingDeps);
     const [isBookmarked, setIsBookmarked] = useRecyclingState(!!targetStatus.bookmarked, recyclingDeps);
     const [isMediaRevealed, setIsMediaRevealed] = useRecyclingState(false, recyclingDeps);
-    const { html: bodyHtml, tags: trailingTags } = React.useMemo(() => splitTrailingHashtags(targetStatus.content), [targetStatus.content]);
+    const postTranslation = usePostTranslation(targetStatus, remote, recyclingDeps);
+    const shownContent = postTranslation.translation?.content ?? targetStatus.content;
+    const { html: bodyHtml, tags: trailingTags } = React.useMemo(() => splitTrailingHashtags(shownContent), [shownContent]);
     const plain = React.useMemo(() => plainText(bodyHtml), [bodyHtml]);
     const textSize = fullText ? 'normal' : postSize(plain);
     const [isTextExpanded, setIsTextExpanded] = useRecyclingState(false, recyclingDeps);
@@ -526,6 +529,14 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     <PillButton label={t('post.showMore')} size="small" variant="subtle" onPress={() => setIsTextExpanded(true)} />
                 </View>
             )}
+            {postTranslation.available && hasText(targetStatus.content) && (
+                <TranslationLine
+                    translation={postTranslation.translation}
+                    loading={postTranslation.loading}
+                    onShow={postTranslation.show}
+                    onHide={postTranslation.hide}
+                />
+            )}
             {targetStatus.poll && (
                 <Poll
                     initialPoll={targetStatus.poll}
@@ -728,7 +739,9 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     );
 
     const card = (
-        <Card style={[styles.card, isDirect && styles.cardDirect, compactMode && styles.cardCompact, threadMode && styles.cardThread]}>
+        // A new view when Compact Mode changes: Android keeps a square edge from the compact bottom
+        // hairline when that border is taken off a view that's already drawn
+        <Card key={compactMode ? 'compact' : 'card'} style={[styles.card, isDirect && styles.cardDirect, compactMode && styles.cardCompact, threadMode && styles.cardThread]}>
             {isReblog && (
                 <Pressable
                     onPress={() => openPerson(status.account)}

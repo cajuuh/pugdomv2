@@ -178,7 +178,8 @@ describe('Profile', () => {
     });
 
     it.each([
-        ['Replies', {}],
+        // Boosts stay under Posts
+        ['Replies', { exclude_reblogs: true }],
         ['Media', { only_media: true }],
     ] as const)('asks for the right posts on the %s tab', async (tab, filter) => {
         await renderProfile();

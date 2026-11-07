@@ -11,6 +11,7 @@ export async function getCurrentAccount(): Promise<Account> {
 
 export interface AccountStatusesFilter {
     exclude_replies?: boolean;
+    exclude_reblogs?: boolean;
     only_media?: boolean;
     pinned?: boolean;
 }
@@ -73,10 +74,25 @@ export async function unblockAccount(accountId: string): Promise<Relationship> {
     return response.data;
 }
 
-// Muting hides their posts (and, by default, notifications from them); they aren't told
-export async function muteAccount(accountId: string): Promise<Relationship> {
-    const response = await apiClient.post<Relationship>(`/accounts/${accountId}/mute`, { notifications: true });
+// They stop following you (a soft block, without blocking); they aren't told
+export async function removeFromFollowers(accountId: string): Promise<Relationship> {
+    const response = await apiClient.post<Relationship>(`/accounts/${accountId}/remove_from_followers`);
     return response.data;
+}
+
+// Muting hides their posts (and, by default, notifications from them); they aren't told. A duration
+// in seconds ends it on its own; 0 lasts until you unmute.
+export async function muteAccount(accountId: string, duration = 0): Promise<Relationship> {
+    const response = await apiClient.post<Relationship>(`/accounts/${accountId}/mute`, { notifications: true, duration });
+    return response.data;
+}
+
+// The people you muted or blocked, paged with the Link header. Muted accounts say when a timed mute
+// ends (mute_expires_at).
+export type ModeratedList = 'mutes' | 'blocks';
+export async function getModeratedAccounts(list: ModeratedList, maxId?: string): Promise<ReactionsPage> {
+    const response = await apiClient.get<Account[]>(`/${list}`, { params: { max_id: maxId, limit: 80 } });
+    return { accounts: response.data, nextMaxId: nextMaxIdFromLink(response.headers?.link) };
 }
 
 export async function unmuteAccount(accountId: string): Promise<Relationship> {

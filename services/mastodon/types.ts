@@ -36,6 +36,8 @@ export interface Account {
     display_name: string;
     avatar: string;
     avatar_static?: string;
+    // Only in your list of muted accounts: when a timed mute ends (null: until you unmute)
+    mute_expires_at?: string | null;
     header?: string;
     note?: string;
     followers_count?: number;

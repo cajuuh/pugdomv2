@@ -1,10 +1,11 @@
 import React from 'react';
+import { Platform, Share } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { useOptionalMediaViewer } from '../components/MediaViewer/mediaViewer';
 import { StatusHtmlContent } from '../components/TootCard/htmlContent';
 import { mockTheme } from '../testUtils/theme';
 import { CustomEmoji } from '../services/mastodon/types';
-import { renderTextWithEmojis } from '../services/emojiHelper';
+import { renderNameWithEmojis, renderTextWithEmojis } from '../services/emojiHelper';
 import { HUGE_POST, LONG_POST, breakLongRuns, postSize, splitTrailingHashtags } from '../services/htmlText';
 
 jest.mock('../components/MediaViewer/mediaViewer', () => ({ useOptionalMediaViewer: jest.fn(() => undefined) }));
@@ -40,6 +41,24 @@ describe('StatusHtmlContent text', () => {
         await renderPost('<p>copy me</p>', []);
 
         expect(screen.getByText('copy me')).toHaveProp('selectable', true);
+    });
+});
+
+describe('holding a link', () => {
+    it('offers it to copy or share, without opening it', async () => {
+        const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.sharedAction });
+        const onPressLink = jest.fn();
+        await render(
+            <StatusHtmlContent content='<p><a href="https://pug.example/a">a link</a></p>' emojis={[]} colors={mockTheme.colors} bodyFont={mockTheme.type.body} width={320} onPressLink={onPressLink} />
+        );
+
+        await fireEvent(screen.getByText('a link'), 'longPress');
+        expect(share).toHaveBeenCalledWith(expect.objectContaining(Platform.OS === 'ios' ? { url: 'https://pug.example/a' } : { message: 'https://pug.example/a' }));
+        expect(onPressLink).not.toHaveBeenCalled();
+
+        await fireEvent.press(screen.getByText('a link'));
+        expect(onPressLink).toHaveBeenCalledWith('https://pug.example/a');
+        share.mockRestore();
     });
 });
 
@@ -106,6 +125,18 @@ describe('an emoji in a line of text', () => {
     it('sits lowered in names too', async () => {
         const { toJSON } = await render(renderTextWithEmojis('Pug :pug:', [emoji('pug')], null, 15)!);
         expect(JSON.stringify(toJSON())).toContain('"translateY":3');
+    });
+});
+
+describe('a name on one line', () => {
+    it("keeps its emoji beside the text, not inside it, so they can't wrap", async () => {
+        const { toJSON } = await render(renderNameWithEmojis('jo :pug: dev', [emoji('pug')], null, 13)!);
+        const row = toJSON() as any;
+
+        expect(row.type).toBe('View');
+        expect(row.children.map((child: any) => child.type)).toEqual(['Text', 'Image', 'Text']);
+        expect(screen.getByText('jo')).toHaveProp('numberOfLines', 1);
+        expect(screen.getByText('dev')).toHaveProp('numberOfLines', 1);
     });
 });
 

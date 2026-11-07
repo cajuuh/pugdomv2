@@ -17,6 +17,8 @@ export interface InstanceConfiguration {
     supportedMimeTypes: string[];
     // Quote posts, with who-can-quote settings (Mastodon 4.5, API version 7)
     supportsQuotes: boolean;
+    // The server can translate posts (POST /statuses/:id/translate)
+    supportsTranslation: boolean;
 }
 
 // Mastodon's own defaults, used when the instance doesn't report its limits
@@ -31,6 +33,7 @@ export const DEFAULT_INSTANCE_CONFIGURATION: InstanceConfiguration = {
     descriptionLimit: 1500,
     supportedMimeTypes: [],
     supportsQuotes: false,
+    supportsTranslation: false,
 };
 
 // Mastodon's API version that added quote posts and their policies
@@ -41,6 +44,7 @@ interface InstanceV2 {
     configuration?: {
         statuses?: { max_characters?: number; max_media_attachments?: number };
         polls?: { max_options?: number; max_characters_per_option?: number };
+        translation?: { enabled?: boolean };
         media_attachments?: {
             supported_mime_types?: string[];
             image_size_limit?: number;
@@ -85,5 +89,6 @@ export async function fetchInstanceConfiguration(): Promise<InstanceConfiguratio
         descriptionLimit: media?.description_limit ?? v1?.description_limit ?? defaults.descriptionLimit,
         supportedMimeTypes: media?.supported_mime_types ?? defaults.supportedMimeTypes,
         supportsQuotes: (v2?.api_versions?.mastodon ?? 0) >= QUOTES_API_VERSION,
+        supportsTranslation: !!v2?.configuration?.translation?.enabled,
     };
 }

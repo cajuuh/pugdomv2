@@ -14,10 +14,14 @@ interface AccountRowProps {
     relationship?: Relationship;
     // Your own account has no follow button
     isSelf?: boolean;
+    // A line under the handle, such as when a mute ends
+    detail?: string;
+    // In place of the follow button
+    action?: React.ReactNode;
 }
 
 // A person in a list: avatar, name, handle and a follow button; the row opens their profile
-export const AccountRow: React.FC<AccountRowProps> = ({ account, relationship, isSelf }) => {
+export const AccountRow: React.FC<AccountRowProps> = ({ account, relationship, isSelf, detail, action }) => {
     const { colors, type } = useTheme();
     const { t } = useI18n();
     const { openAccount } = useOpenAccount();
@@ -37,9 +41,10 @@ export const AccountRow: React.FC<AccountRowProps> = ({ account, relationship, i
                         {renderTextWithEmojis(name, account.emojis || [], [type.name, { color: colors.textPrimary }], 16)}
                     </Text>
                     <Text style={[type.meta, { color: colors.textMuted }]} numberOfLines={1}>@{account.acct}</Text>
+                    {!!detail && <Text style={[type.meta, { color: colors.textMuted }]} numberOfLines={1}>{detail}</Text>}
                 </View>
             </Pressable>
-            {!isSelf && <FollowButton accountId={account.id} name={name} relationship={relationship} allowUnfollow />}
+            {action ?? (!isSelf && <FollowButton accountId={account.id} name={name} relationship={relationship} allowUnfollow />)}
         </View>
     );
 };

@@ -33,9 +33,10 @@ interface SettingsProps {
     onBack: () => void;
     onScheduledPosts: () => void;
     onDrafts: () => void;
+    onModeratedAccounts: () => void;
 }
 
-const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts }) => {
+const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts, onModeratedAccounts }) => {
     const { user, logout, savedAccounts, switchAccount, setAddingAccount, updateUser } = useAuth();
     const { colors, type, coat } = useTheme();
     const styles = useThemedStyles(makeStyles);
@@ -227,6 +228,12 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts 
                             </Pressable>
                         </>
                     )}
+                    <View style={styles.divider} />
+                    <Pressable style={styles.row} onPress={onModeratedAccounts} accessibilityRole="button">
+                        <Ionicons name="eye-off-outline" size={20} color={colors.accentText} />
+                        <Text style={[labelStyle, styles.rowText]}>{t('settings.moderatedAccounts')}</Text>
+                        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                    </Pressable>
                     <View style={styles.divider} />
                     {switchRow('notifications-outline', t('settings.pushNotifications'), notifications, changePush)}
                     {notifications && (

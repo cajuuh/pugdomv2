@@ -62,6 +62,7 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         position: 'absolute',
         left: space.lg,
         minWidth: 180,
+        maxWidth: 300,
         paddingVertical: space.xs,
         borderRadius: radii.well,
         borderWidth: 1,
@@ -86,6 +87,16 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     },
     menuTextDanger: {
         color: colors.dangerColor,
+    },
+    menuTextAccent: {
+        color: colors.accentText,
+    },
+    menuAccount: {
+        flexShrink: 1,
+        paddingVertical: space.xs,
+    },
+    menuDetail: {
+        color: colors.textMuted,
     },
     divider: {
         height: StyleSheet.hairlineWidth,

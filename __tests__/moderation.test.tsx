@@ -98,6 +98,7 @@ describe('moderation services', () => {
         await blockAccount('ana');
         await unblockAccount('ana');
         await muteAccount('ana');
+        await muteAccount('ana', 3600);
         await unmuteAccount('ana');
         expect(await getRules()).toEqual(rules);
         await createReport({ account_id: 'ana', category: 'spam' });
@@ -106,10 +107,13 @@ describe('moderation services', () => {
             '/accounts/ana/block',
             '/accounts/ana/unblock',
             '/accounts/ana/mute',
+            '/accounts/ana/mute',
             '/accounts/ana/unmute',
             '/reports',
         ]);
-        expect(api.post).toHaveBeenCalledWith('/accounts/ana/mute', { notifications: true });
+        // 0: until you unmute
+        expect(api.post).toHaveBeenCalledWith('/accounts/ana/mute', { notifications: true, duration: 0 });
+        expect(api.post).toHaveBeenCalledWith('/accounts/ana/mute', { notifications: true, duration: 3600 });
     });
 });
 
@@ -162,15 +166,29 @@ describe('Post menu', () => {
         });
     });
 
-    it('mutes the author, and reloads timelines without them', async () => {
+    it('mutes the author for as long as you pick, and reloads timelines without them', async () => {
         const invalidate = jest.spyOn(queryClient, 'invalidateQueries');
         await openMenu();
         await fireEvent.press(await screen.findByRole('button', { name: 'Mute @ana@art.social' }));
 
-        await waitFor(() => expect(api.post).toHaveBeenCalledWith('/accounts/ana/mute', { notifications: true }));
+        const box = await screen.findByTestId('dialog');
+        expect(within(box).getByRole('header', { name: 'Mute this account?' })).toBeTruthy();
+        expect(api.post).not.toHaveBeenCalled();
+        await pressInDialog('1 day');
+
+        await waitFor(() => expect(api.post).toHaveBeenCalledWith('/accounts/ana/mute', { notifications: true, duration: 86400 }));
         expect(await screen.findByText('You muted @ana@art.social')).toBeTruthy();
         expect(invalidate).toHaveBeenCalledWith({ queryKey: ['timeline'] });
         expect(invalidate).toHaveBeenCalledWith({ queryKey: ['notifications'] });
+        expect(invalidate).toHaveBeenCalledWith({ queryKey: ['moderatedAccounts'] });
+    });
+
+    it('mutes until you unmute', async () => {
+        await openMenu();
+        await fireEvent.press(await screen.findByRole('button', { name: 'Mute @ana@art.social' }));
+        await pressInDialog('Until I unmute');
+
+        await waitFor(() => expect(api.post).toHaveBeenCalledWith('/accounts/ana/mute', { notifications: true, duration: 0 }));
     });
 
     it('asks before blocking', async () => {
@@ -250,6 +268,28 @@ describe('Profile menu', () => {
         await fireEvent.press(screen.getByRole('button', { name: 'More options for Ana' }));
         await fireEvent.press(await screen.findByRole('button', { name: 'Unblock @ana@art.social' }));
         expect(api.post).toHaveBeenCalledWith('/accounts/ana/unblock');
+    });
+
+    it('removes someone who follows you, after asking', async () => {
+        await renderHeader(relationship({ followed_by: true }));
+        await fireEvent.press(screen.getByRole('button', { name: 'More options for Ana' }));
+        await fireEvent.press(await screen.findByRole('button', { name: 'Remove @ana@art.social as a follower' }));
+
+        const box = await screen.findByTestId('dialog');
+        expect(within(box).getByRole('header', { name: 'Remove this follower?' })).toBeTruthy();
+        expect(api.post).not.toHaveBeenCalled();
+        await pressInDialog('Remove');
+
+        await waitFor(() => expect(api.post).toHaveBeenCalledWith('/accounts/ana/remove_from_followers'));
+        expect(await screen.findByText('@ana@art.social no longer follows you')).toBeTruthy();
+    });
+
+    it("doesn't offer it for someone who doesn't follow you", async () => {
+        await renderHeader(relationship());
+        await fireEvent.press(screen.getByRole('button', { name: 'More options for Ana' }));
+
+        await screen.findByRole('button', { name: 'Report @ana@art.social' });
+        expect(screen.queryByRole('button', { name: 'Remove @ana@art.social as a follower' })).toBeNull();
     });
 });
 

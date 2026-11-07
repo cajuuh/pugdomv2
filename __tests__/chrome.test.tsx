@@ -11,6 +11,9 @@ jest.mock('../services/themeContext', () => ({
     useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
 }));
 
+let mockAuth: any = null;
+jest.mock('../services/authContext', () => ({ useOptionalAuth: () => mockAuth }));
+
 jest.mock('expo-blur', () => {
     const { View } = jest.requireActual('react-native');
     return { BlurView: (props: object) => <View testID="dock-blur" {...props} /> };
@@ -120,6 +123,33 @@ describe('TopBar', () => {
         await fireEvent.press(screen.getByRole('button', { name: 'Account menu' }));
         await fireEvent.press(screen.getByRole('button', { name: 'Log Out' }));
         expect(onLogoutPress).toHaveBeenCalled();
+    });
+
+    it('switches to another saved account, or adds one, from the menu', async () => {
+        const saved = (id: string, acct: string, display_name: string, instanceUrl: string) => ({
+            id: `${acct}@${instanceUrl}`, accessToken: id, instanceUrl, userInfo: { id, username: acct, acct, display_name, avatar: '' },
+        });
+        mockAuth = {
+            savedAccounts: [saved('1', 'pug', 'Pug Dom', 'https://one.social'), saved('2', 'ana', 'Ana :blob:', 'https://art.social')],
+            switchAccount: jest.fn(),
+            setAddingAccount: jest.fn(),
+        };
+        try {
+            await renderHeader();
+            await fireEvent.press(screen.getByRole('button', { name: 'Account menu' }));
+
+            // Not the account you're on
+            expect(screen.queryByRole('button', { name: 'Switch to Pug Dom' })).toBeNull();
+            expect(screen.getByText('@ana • art.social')).toBeTruthy();
+            await fireEvent.press(screen.getByRole('button', { name: 'Switch to Ana' }));
+            expect(mockAuth.switchAccount).toHaveBeenCalledWith('ana@https://art.social');
+
+            await fireEvent.press(screen.getByRole('button', { name: 'Account menu' }));
+            await fireEvent.press(screen.getByRole('button', { name: 'Add Account' }));
+            expect(mockAuth.setAddingAccount).toHaveBeenCalledWith(true);
+        } finally {
+            mockAuth = null;
+        }
     });
 });
 

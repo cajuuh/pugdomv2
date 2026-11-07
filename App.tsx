@@ -39,6 +39,7 @@ import Conversations from './screens/Conversations/conversations';
 import ConversationGroup from './screens/Conversations/conversationGroup';
 import ScheduledPosts from './screens/Scheduled/scheduledPosts';
 import Drafts from './screens/Drafts/drafts';
+import ModeratedAccounts from './screens/Moderated/moderatedAccounts';
 import Reactions from './screens/Reactions/reactions';
 import EditProfile from './screens/EditProfile/editProfile';
 import { useUnreadConversations } from './hooks/useUnreadConversations';
@@ -108,7 +109,14 @@ function NavigationRoot() {
         // (Messages, a profile, the tabs...); Android's back button steps through the posts one by one
         return <Thread statusId={route.statusId} onBack={closeThreads} onStatusPress={openThread} />;
       case 'settings':
-        return <Settings onBack={pop} onScheduledPosts={() => push({ name: 'scheduledPosts' })} onDrafts={() => push({ name: 'drafts' })} />;
+        return (
+          <Settings
+            onBack={pop}
+            onScheduledPosts={() => push({ name: 'scheduledPosts' })}
+            onDrafts={() => push({ name: 'drafts' })}
+            onModeratedAccounts={() => push({ name: 'moderatedAccounts' })}
+          />
+        );
       case 'scheduledPosts':
         return <ScheduledPosts onBack={pop} />;
       case 'drafts':
@@ -140,6 +148,8 @@ function NavigationRoot() {
         return <Reactions id={route.accountId} kind={route.list} onBack={pop} />;
       case 'editProfile':
         return <EditProfile onBack={pop} />;
+      case 'moderatedAccounts':
+        return <ModeratedAccounts onBack={pop} />;
     }
   };
 
