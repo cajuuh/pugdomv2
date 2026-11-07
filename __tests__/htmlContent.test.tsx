@@ -1,4 +1,5 @@
 import React from 'react';
+import { Platform, Share } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { useOptionalMediaViewer } from '../components/MediaViewer/mediaViewer';
 import { StatusHtmlContent } from '../components/TootCard/htmlContent';
@@ -40,6 +41,24 @@ describe('StatusHtmlContent text', () => {
         await renderPost('<p>copy me</p>', []);
 
         expect(screen.getByText('copy me')).toHaveProp('selectable', true);
+    });
+});
+
+describe('holding a link', () => {
+    it('offers it to copy or share, without opening it', async () => {
+        const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.sharedAction });
+        const onPressLink = jest.fn();
+        await render(
+            <StatusHtmlContent content='<p><a href="https://pug.example/a">a link</a></p>' emojis={[]} colors={mockTheme.colors} bodyFont={mockTheme.type.body} width={320} onPressLink={onPressLink} />
+        );
+
+        await fireEvent(screen.getByText('a link'), 'longPress');
+        expect(share).toHaveBeenCalledWith(expect.objectContaining(Platform.OS === 'ios' ? { url: 'https://pug.example/a' } : { message: 'https://pug.example/a' }));
+        expect(onPressLink).not.toHaveBeenCalled();
+
+        await fireEvent.press(screen.getByText('a link'));
+        expect(onPressLink).toHaveBeenCalledWith('https://pug.example/a');
+        share.mockRestore();
     });
 });
 
