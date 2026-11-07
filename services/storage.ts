@@ -137,8 +137,9 @@ export async function addSavedAccount(accessToken: string, instanceUrl: string, 
 
     // Write the record before the index, so the index never points at a missing account
     await setItem(accountStorageKey(id), JSON.stringify(newAccount));
+    // A saved account keeps its place when its details are refreshed
     const index = await readAccountIndex();
-    await writeAccountIndex([...index.filter(existing => existing !== id), id]);
+    if (!index.includes(id)) await writeAccountIndex([...index, id]);
 }
 
 export async function removeSavedAccount(id: string) {
