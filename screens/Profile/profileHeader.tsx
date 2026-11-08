@@ -98,7 +98,7 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
     // Following and followers open the list of those people
     const followStat = (list: 'following' | 'followers', count: number | undefined, label: string) => (
         <Pressable
-            onPress={() => push({ name: 'follows', accountId: user.id, list })}
+            onPress={() => push({ name: 'follows', accountId: user.id, list, account: user })}
             accessibilityRole="button"
             accessibilityLabel={`${(count ?? 0).toLocaleString(locale)} ${label}`}
             hitSlop={hitSlopFor(MIN_TOUCH, 19)}

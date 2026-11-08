@@ -145,7 +145,7 @@ function NavigationRoot() {
       case 'reactions':
         return <Reactions id={route.statusId} kind={route.reaction} onBack={pop} />;
       case 'follows':
-        return <Reactions id={route.accountId} kind={route.list} onBack={pop} />;
+        return <Reactions id={route.accountId} kind={route.list} account={route.account} onBack={pop} />;
       case 'editProfile':
         return <EditProfile onBack={pop} />;
       case 'moderatedAccounts':

@@ -1,4 +1,4 @@
-import apiClient from "../api/client";
+import apiClient, { publicClient } from "../api/client";
 import { Account, Relationship, Status } from './types';
 import { UploadFile } from './media';
 import { nextMaxIdFromLink } from './bookmarks';
@@ -23,11 +23,54 @@ export async function getAccountStatuses(accountId: string, maxId?: string, filt
 }
 
 // Who follows an account, or whom it follows, newest first, paged with the Link header.
-// Empty when the person hides them; for someone on another server, only the ones this server knows.
+// Empty when the person hides them.
 export type FollowList = 'followers' | 'following';
-export async function getFollows(accountId: string, list: FollowList, maxId?: string): Promise<ReactionsPage> {
+
+// Someone's account on their own server: where their lists come from
+export interface HomeAccount {
+    domain: string;
+    id: string;
+}
+export interface FollowsPage extends ReactionsPage {
+    // Read from their server: the accounts' ids are that server's, not ours
+    home?: HomeAccount;
+}
+
+// For someone on another server, ours only knows who they follow (or who follows them) here: the whole
+// list is read from their server, without an account. `home` comes from the first page. Our server's
+// list stands in when theirs can't be read or is hidden (empty).
+export async function getFollows(
+    account: Pick<Account, 'id' | 'acct' | 'url'>,
+    list: FollowList,
+    maxId?: string,
+    home?: HomeAccount
+): Promise<FollowsPage> {
+    const [username, domain] = account.acct.split('@');
+    const host = account.url?.match(/^https?:\/\/([^/?#]+)/)?.[1];
+    if (domain && host && (home || !maxId)) {
+        try {
+            const theirs = home ?? {
+                domain: host,
+                id: (await publicClient.get<Account>(`https://${host}/api/v1/accounts/lookup`, { params: { acct: username } })).data.id,
+            };
+            const response = await publicClient.get<Account[]>(`https://${theirs.domain}/api/v1/accounts/${theirs.id}/${list}`, {
+                params: { max_id: maxId, limit: 80 },
+            });
+            if (home || response.data.length > 0) {
+                return {
+                    // Their server's own people have no @server in their handle
+                    accounts: response.data.map(person => (person.acct.includes('@') ? person : { ...person, acct: `${person.acct}@${domain}` })),
+                    nextMaxId: nextMaxIdFromLink(response.headers?.link),
+                    home: theirs,
+                };
+            }
+        } catch (error) {
+            // Halfway through their list, a failed page is an error, not a switch to ours
+            if (home) throw error;
+        }
+    }
     // 80 is Mastodon's most per page: fewer requests when a search loads the whole list
-    const response = await apiClient.get<Account[]>(`/accounts/${accountId}/${list}`, { params: { max_id: maxId, limit: 80 } });
+    const response = await apiClient.get<Account[]>(`/accounts/${account.id}/${list}`, { params: { max_id: maxId, limit: 80 } });
     return { accounts: response.data, nextMaxId: nextMaxIdFromLink(response.headers?.link) };
 }
 

@@ -128,10 +128,10 @@ describe('Account screen', () => {
         const stack = () => JSON.parse(String(screen.getByTestId('stack').props.children));
 
         await fireEvent.press(screen.getByRole('button', { name: '3 following' }));
-        expect(stack()).toEqual([{ name: 'follows', accountId: 'ana', list: 'following' }]);
+        expect(stack()).toMatchObject([{ name: 'follows', accountId: 'ana', list: 'following', account: { id: 'ana' } }]);
 
         await fireEvent.press(screen.getByRole('button', { name: '40 followers' }));
-        expect(stack()[1]).toEqual({ name: 'follows', accountId: 'ana', list: 'followers' });
+        expect(stack()[1]).toMatchObject({ name: 'follows', accountId: 'ana', list: 'followers' });
     });
 
     it('goes back with its arrow', async () => {

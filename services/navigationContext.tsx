@@ -28,7 +28,7 @@ export type Route =
     // Who favourited or boosted a post
     | { name: 'reactions'; statusId: string; reaction: 'favourites' | 'boosts' }
     // Who follows someone, or whom they follow
-    | { name: 'follows'; accountId: string; list: 'followers' | 'following' }
+    | { name: 'follows'; accountId: string; list: 'followers' | 'following'; account?: Account }
     | { name: 'editProfile' }
     | { name: 'moderatedAccounts' };
 
