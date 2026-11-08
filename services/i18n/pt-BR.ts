@@ -904,6 +904,7 @@ export const ptBR: Dictionary = {
     languageNames: {
         'pt-BR': 'Português (Brasil)',
         en: 'English',
+        'es-419': 'Español (Latinoamérica)',
     },
     push: {
         channel: 'Notificações',

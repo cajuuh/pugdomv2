@@ -107,6 +107,24 @@ describe('Translating a post', () => {
         await AsyncStorage.removeItem(LANGUAGE_KEY);
     });
 
+    it('asks for es in Spanish (Latin America): Mastodon has no es-419', async () => {
+        await AsyncStorage.setItem(LANGUAGE_KEY, 'es-419');
+        await render(
+            <I18nProvider>
+                <QueryClientProvider client={queryClient}>
+                    <NavigationProvider>
+                        <TootCard status={post({ language: 'en', content: '<p>Good morning, pugs</p>' })} />
+                    </NavigationProvider>
+                </QueryClientProvider>
+            </I18nProvider>
+        );
+
+        await fireEvent.press(await screen.findByRole('button', { name: 'Traducir' }));
+
+        await waitFor(() => expect(api.post).toHaveBeenCalledWith('/statuses/p1/translate', { lang: 'es' }));
+        await AsyncStorage.removeItem(LANGUAGE_KEY);
+    });
+
     it("isn't offered for posts in your language, private posts, or when the server doesn't translate", async () => {
         await renderPost(post({ id: 'same', language: 'en' }));
         await renderPost(post({ id: 'private', visibility: 'private' }));

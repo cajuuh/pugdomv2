@@ -920,6 +920,7 @@ export const en = {
     languageNames: {
         'pt-BR': 'Português (Brasil)',
         en: 'English',
+        'es-419': 'Español (Latinoamérica)',
     },
     push: {
         // Android's name for pugdon's notification channel (system settings)

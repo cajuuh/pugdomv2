@@ -7,7 +7,7 @@ import { Status } from '../../services/mastodon/types';
 import { translateStatus, Translation } from '../../services/mastodon/statuses';
 import { useInstanceConfiguration } from '../../hooks/useInstanceConfiguration';
 import { useI18n } from '../../services/i18n/i18nContext';
-import { Translator } from '../../services/i18n/translate';
+import { MASTODON_LOCALES, Translator } from '../../services/i18n/translate';
 import { useTheme } from '../../services/themeContext';
 import { dialog } from '../../services/dialog';
 import { space } from '../../services/theme/shape';
@@ -27,11 +27,12 @@ export const usePostTranslation = (status: Status, remote: boolean | undefined, 
         supportsTranslation && !remote && !!source && source !== target && (status.visibility === 'public' || status.visibility === 'unlisted');
     const [shown, setShown] = useRecyclingState(false, recyclingDeps);
     // Translated once per post and language
-    // The full code ("pt-BR"): Mastodon only takes its own locales, and treats "pt" as no choice (the
+    // One of Mastodon's own locales ("pt-BR", "es"): it treats anything else, even "pt", as no choice (the
     // account's locale, often English)
+    const lang = MASTODON_LOCALES[language];
     const query = useQuery({
-        queryKey: ['translation', status.id, language],
-        queryFn: () => translateStatus(status.id, language),
+        queryKey: ['translation', status.id, lang],
+        queryFn: () => translateStatus(status.id, lang),
         enabled: available && shown,
         staleTime: Infinity,
         retry: false,

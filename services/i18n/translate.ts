@@ -1,11 +1,15 @@
 import { DEFAULT_LANGUAGE, Language } from './defaults';
 import { Dictionary, en } from './en';
 import { ptBR } from './pt-BR';
+import { es419 } from './es-419';
 
-export const DICTIONARIES: Record<Language, Dictionary> = { en, 'pt-BR': ptBR };
+export const DICTIONARIES: Record<Language, Dictionary> = { en, 'pt-BR': ptBR, 'es-419': es419 };
 
 // Locale for dates and numbers
-export const LOCALES: Record<Language, string> = { en: 'en-US', 'pt-BR': 'pt-BR' };
+export const LOCALES: Record<Language, string> = { en: 'en-US', 'pt-BR': 'pt-BR', 'es-419': 'es-419' };
+
+// The same language among Mastodon's own locales (it has es, es-AR and es-MX, no es-419)
+export const MASTODON_LOCALES: Record<Language, string> = { en: 'en', 'pt-BR': 'pt-BR', 'es-419': 'es' };
 
 // Every dotted path to a string in the dictionary, e.g. 'settings.title'
 type Leaves<T, P extends string = ''> = {

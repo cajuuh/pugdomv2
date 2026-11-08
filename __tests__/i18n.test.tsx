@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, render, screen, waitFor } from '@testing-library/react-native';
 import { en } from '../services/i18n/en';
 import { ptBR } from '../services/i18n/pt-BR';
+import { es419 } from '../services/i18n/es-419';
 import { createTranslator, pluralForm } from '../services/i18n/translate';
 import { I18nProvider, LANGUAGE_KEY, useI18n } from '../services/i18n/i18nContext';
 import { DEFAULT_LANGUAGE } from '../services/i18n/defaults';
@@ -24,21 +25,31 @@ const keysOf = (node: unknown, prefix = ''): string[] =>
         : [prefix.slice(0, -1)];
 
 describe('dictionaries', () => {
-    it('have exactly the same keys', () => {
-        expect(keysOf(ptBR).sort()).toEqual(keysOf(en).sort());
+    const others = Object.entries({ 'pt-BR': ptBR, 'es-419': es419 });
+
+    it.each(others)('%s has exactly the same keys as English', (_, dict) => {
+        expect(keysOf(dict).sort()).toEqual(keysOf(en).sort());
     });
 
-    it('fill in every placeholder the English text uses', () => {
+    it.each(others)('%s fills in every placeholder the English text uses', (_, dict) => {
         const placeholders = (text: string) => (text.match(/\{\{\w+\}\}/g) ?? []).sort();
-        const pairs = keysOf(en).map(key => [key, key.split('.').reduce<any>((n, p) => n[p], en), key.split('.').reduce<any>((n, p) => n[p], ptBR)]);
-        for (const [key, english, portuguese] of pairs) {
+        const pairs = keysOf(en).map(key => [key, key.split('.').reduce<any>((n, p) => n[p], en), key.split('.').reduce<any>((n, p) => n[p], dict)]);
+        for (const [key, english, translated] of pairs) {
             if (typeof english !== 'string') continue;
-            expect([key, placeholders(portuguese)]).toEqual([key, placeholders(english)]);
+            expect([key, placeholders(translated)]).toEqual([key, placeholders(english)]);
         }
     });
 
-    it('give the pug as many messages in Portuguese as in English', () => {
-        expect(ptBR.setup.messages).toHaveLength(en.setup.messages.length);
+    it.each(others)('%s gives the pug as many messages as English', (_, dict) => {
+        expect(dict.setup.messages).toHaveLength(en.setup.messages.length);
+    });
+
+    it('speaks Spanish for Latin America, with Spanish plurals', () => {
+        const es = createTranslator('es-419');
+        expect(es.t('settings.switchTo', { name: 'Ana' })).toBe('Cambiar a Ana');
+        expect(es.tn('poll.votes', 0)).toBe('0 votos');
+        expect(es.tn('poll.votes', 1)).toBe('1 voto');
+        expect(es.locale).toBe('es-419');
     });
 });
 
