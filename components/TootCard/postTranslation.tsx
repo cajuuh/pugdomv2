@@ -27,9 +27,11 @@ export const usePostTranslation = (status: Status, remote: boolean | undefined, 
         supportsTranslation && !remote && !!source && source !== target && (status.visibility === 'public' || status.visibility === 'unlisted');
     const [shown, setShown] = useRecyclingState(false, recyclingDeps);
     // Translated once per post and language
+    // The full code ("pt-BR"): Mastodon only takes its own locales, and treats "pt" as no choice (the
+    // account's locale, often English)
     const query = useQuery({
-        queryKey: ['translation', status.id, target],
-        queryFn: () => translateStatus(status.id, target),
+        queryKey: ['translation', status.id, language],
+        queryFn: () => translateStatus(status.id, language),
         enabled: available && shown,
         staleTime: Infinity,
         retry: false,

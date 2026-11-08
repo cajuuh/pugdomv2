@@ -7,6 +7,8 @@ import { TootCard } from '../components/TootCard/tootCard';
 import { DialogHost } from '../components/Dialog/dialogHost';
 import { NavigationProvider } from '../services/navigationContext';
 import { Account, Status } from '../services/mastodon/types';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { I18nProvider, LANGUAGE_KEY } from '../services/i18n/i18nContext';
 
 jest.mock('../components/MediaViewer/mediaViewer', () => ({
     MediaViewerProvider: ({ children }: { children: React.ReactNode }) => children,
@@ -85,6 +87,24 @@ describe('Translating a post', () => {
         await fireEvent.press(screen.getByRole('button', { name: 'Translate' }));
         expect(await screen.findByText('Good morning, pugs')).toBeTruthy();
         expect(api.post).toHaveBeenCalledTimes(1);
+    });
+
+    it('asks for pt-BR, not pt, in Portuguese: Mastodon falls back to English for pt', async () => {
+        await AsyncStorage.setItem(LANGUAGE_KEY, 'pt-BR');
+        await render(
+            <I18nProvider>
+                <QueryClientProvider client={queryClient}>
+                    <NavigationProvider>
+                        <TootCard status={post({ language: 'en', content: '<p>Good morning, pugs</p>' })} />
+                    </NavigationProvider>
+                </QueryClientProvider>
+            </I18nProvider>
+        );
+
+        await fireEvent.press(await screen.findByRole('button', { name: 'Traduzir' }));
+
+        await waitFor(() => expect(api.post).toHaveBeenCalledWith('/statuses/p1/translate', { lang: 'pt-BR' }));
+        await AsyncStorage.removeItem(LANGUAGE_KEY);
     });
 
     it("isn't offered for posts in your language, private posts, or when the server doesn't translate", async () => {
