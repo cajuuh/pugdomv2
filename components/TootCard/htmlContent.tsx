@@ -1,6 +1,5 @@
 import React from 'react';
 import { Image, Platform, Pressable, Share } from 'react-native';
-import * as WebBrowser from 'expo-web-browser';
 import RenderHtml, { HTMLElementModel, HTMLContentModel, defaultSystemFonts, useInternalRenderer } from 'react-native-render-html';
 import { useOptionalMediaViewer } from '../MediaViewer/mediaViewer';
 import { CustomEmoji } from '../../services/mastodon/types';
@@ -147,10 +146,4 @@ export const StatusHtmlContent = React.memo(({ content, emojis, colors, bodyFont
 
 // Module-level so it's the same function on every render; a new one would defeat StatusHtmlContent's memo
 // and make RenderHtml rebuild the post's tree on every card re-render
-export const openLink = async (url: string) => {
-    try {
-        await WebBrowser.openBrowserAsync(url);
-    } catch (error) {
-        console.error('Failed to open link:', error);
-    }
-};
+export { openLink } from '../../services/links';

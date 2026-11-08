@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getSetting, getStringSetting, saveSetting, saveStringSetting } from './storage';
 import { DEFAULT_PUSH_ALERTS, PushAlerts, PushAlertType } from './push';
+import { setExternalBrowser as setLinksBrowser } from './links';
 
 interface SettingsContextType {
     notifications: boolean;
@@ -29,6 +30,9 @@ interface SettingsContextType {
     // Post images at their own shape instead of cropped to the card
     uncroppedMedia: boolean;
     setUncroppedMedia: (value: boolean) => Promise<void>;
+    // Links open in the phone's own browser instead of the in-app one
+    externalBrowser: boolean;
+    setExternalBrowser: (value: boolean) => Promise<void>;
     setGroupNotifications: (value: boolean) => Promise<void>;
     setExpandSpoilers: (value: boolean) => Promise<void>;
     setShowSensitiveMedia: (value: boolean) => Promise<void>;
@@ -49,6 +53,7 @@ export const UNCROPPED_MEDIA_KEY = 'pugdom_settings_uncropped_media';
 export const EXPAND_SPOILERS_KEY = 'pugdom_settings_expand_spoilers';
 export const SHOW_SENSITIVE_KEY = 'pugdom_settings_show_sensitive';
 export const COVER_SENSITIVE_KEY = 'pugdom_settings_cover_sensitive';
+export const EXTERNAL_BROWSER_KEY = 'pugdom_settings_external_browser';
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [notifications, setNotificationsState] = useState(true);
@@ -59,6 +64,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const [swipeFeeds, setSwipeFeedsState] = useState(false);
     const [groupNotifications, setGroupNotificationsState] = useState(true);
     const [uncroppedMedia, setUncroppedMediaState] = useState(false);
+    const [externalBrowser, setExternalBrowserState] = useState(false);
     const [expandSpoilers, setExpandSpoilersState] = useState<boolean | null>(null);
     const [showSensitiveMedia, setShowSensitiveMediaState] = useState<boolean | null>(null);
     const [coverSensitiveMedia, setCoverSensitiveMediaState] = useState(true);
@@ -78,6 +84,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 const spoilers = await getStringSetting(EXPAND_SPOILERS_KEY, '');
                 const sensitive = await getStringSetting(SHOW_SENSITIVE_KEY, '');
                 const cover = await getSetting(COVER_SENSITIVE_KEY, true);
+                const external = await getSetting(EXTERNAL_BROWSER_KEY, false);
                 setNotificationsState(notify);
                 // Types added in later versions start on
                 setPushAlertsState({ ...DEFAULT_PUSH_ALERTS, ...(alerts ? JSON.parse(alerts) : {}) });
@@ -90,6 +97,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 setExpandSpoilersState(spoilers === '' ? null : spoilers === 'true');
                 setShowSensitiveMediaState(sensitive === '' ? null : sensitive === 'true');
                 setCoverSensitiveMediaState(cover);
+                setExternalBrowserState(external);
+                setLinksBrowser(external);
             } catch (error) {
                 console.error('Failed to load settings:', error);
             } finally {
@@ -139,6 +148,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setUncroppedMediaState(value);
         await saveSetting(UNCROPPED_MEDIA_KEY, value);
     };
+    const setExternalBrowser = async (value: boolean) => {
+        setExternalBrowserState(value);
+        setLinksBrowser(value);
+        await saveSetting(EXTERNAL_BROWSER_KEY, value);
+    };
 
     const setShowSensitiveMedia = async (value: boolean) => {
         setShowSensitiveMediaState(value);
@@ -177,6 +191,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 setGroupNotifications,
                 uncroppedMedia,
                 setUncroppedMedia,
+                externalBrowser,
+                setExternalBrowser,
                 setExpandSpoilers,
                 setShowSensitiveMedia,
                 setCoverSensitiveMedia,

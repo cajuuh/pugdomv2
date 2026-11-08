@@ -902,6 +902,7 @@ export const en = {
         hideCounts: 'Hide numbers on posts',
         swipeFeeds: 'Swipe between timelines',
         uncroppedMedia: 'Show images uncropped',
+        externalBrowser: "Open links in your phone's browser",
         posts: 'Posts',
         media: 'Media',
         groupNotifications: 'Group favourites and boosts in notifications',
