@@ -118,6 +118,13 @@ export async function unblockAccount(accountId: string): Promise<Relationship> {
 }
 
 // They stop following you (a soft block, without blocking); they aren't told
+// Your private note on someone, kept on your server (empty removes it). Mastodon's limit is 2,000 characters.
+export const NOTE_LIMIT = 2000;
+export async function setAccountNote(accountId: string, comment: string): Promise<Relationship> {
+    const response = await apiClient.post<Relationship>(`/accounts/${accountId}/note`, { comment });
+    return response.data;
+}
+
 export async function removeFromFollowers(accountId: string): Promise<Relationship> {
     const response = await apiClient.post<Relationship>(`/accounts/${accountId}/remove_from_followers`);
     return response.data;

@@ -131,6 +131,25 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         fontSize: 14,
         lineHeight: 19,
     },
+    note: {
+        gap: 2,
+        paddingHorizontal: space.md,
+        paddingVertical: space.sm,
+        borderRadius: radii.input,
+        backgroundColor: colors.accentSoft,
+    },
+    noteTop: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.xs,
+    },
+    noteLabel: {
+        flex: 1,
+        color: colors.accentText,
+    },
+    noteText: {
+        color: colors.textPrimary,
+    },
     fields: {
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: colors.borderColor,

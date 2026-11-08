@@ -80,6 +80,8 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
     // The profile picture or header, full size in the viewer (zoom, swipe to close)
     const viewImage = (url: string) => openMedia([{ id: url, type: 'image', url, preview_url: url } as Attachment], 0);
     const handleEditProfile = () => push({ name: 'editProfile' });
+    const note = relationship?.note ?? '';
+    const editNote = () => push({ name: 'accountNote', account: user, note });
 
     const handleShare = async () => {
         if (!user.url) return;
@@ -291,6 +293,23 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
                     </View>
                 )}
 
+                {/* Your private note on them: tap to change it; without one, it's added from the ⋯ menu */}
+                {mode === 'other' && !!note && (
+                    <Pressable
+                        onPress={editNote}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('profile.noteLabel', { name, note })}
+                        style={({ pressed }) => [styles.note, pressed && { opacity: 0.7 }]}
+                    >
+                        <View style={styles.noteTop}>
+                            <Ionicons name="document-text-outline" size={14} color={colors.accentText} />
+                            <Text style={[type.label, styles.noteLabel]}>{t('profile.note')}</Text>
+                            <Ionicons name="create-outline" size={14} color={colors.textMuted} />
+                        </View>
+                        <Text style={[type.body, styles.noteText]}>{note}</Text>
+                    </Pressable>
+                )}
+
                 <View style={styles.stats}>
                     {stat(user.statuses_count, t('profile.statPosts'))}
                     {followStat('following', user.following_count, t('profile.statFollowing'))}
@@ -313,6 +332,9 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
                     actions={[
                         ...(relationship?.followed_by
                             ? [{ key: 'removeFollower', icon: 'person-remove-outline' as const, label: t('moderation.removeFollower', { acct: user.acct }), description: t('moderation.removeFollowerHint'), onPress: () => moderation.removeFollower(user) }]
+                            : []),
+                        ...(relationship
+                            ? [{ key: 'note', icon: 'document-text-outline' as const, label: t(note ? 'profile.editNote' : 'profile.addNote'), onPress: editNote }]
                             : []),
                         { key: 'report', icon: 'flag-outline', label: t('moderation.reportAccount', { acct: user.acct }), onPress: () => moderation.report(user) },
                         relationship?.muting

@@ -134,6 +134,29 @@ describe('Account screen', () => {
         expect(stack()[1]).toMatchObject({ name: 'follows', accountId: 'ana', list: 'followers' });
     });
 
+    it('shows your private note on them, and opens it to edit; the menu adds one', async () => {
+        const Stack = () => <Text testID="stack">{JSON.stringify(useNavigator().stack.map(entry => entry.route))}</Text>;
+        mocked.getRelationships.mockResolvedValue([relationship({ note: 'met at the pug meetup' })]);
+        await render(
+            <NavigationProvider>
+                {withQuery(<Account accountId="ana" account={ana} onBack={jest.fn()} onStatusPress={jest.fn()} onSettingsPress={jest.fn()} />)}
+                <Stack />
+            </NavigationProvider>
+        );
+        const stack = () => JSON.parse(String(screen.getByTestId('stack').props.children));
+
+        expect(await screen.findByText('met at the pug meetup')).toBeTruthy();
+        await fireEvent.press(screen.getByRole('button', { name: 'Your note on Ana: met at the pug meetup. Edit' }));
+        expect(stack()).toMatchObject([{ name: 'accountNote', account: { id: 'ana' }, note: 'met at the pug meetup' }]);
+    });
+
+    it('offers to add a note from the menu when there is none', async () => {
+        await renderAccount({ account: ana });
+        await fireEvent.press(await screen.findByRole('button', { name: 'More options for Ana' }));
+        expect(await screen.findByText('Add a note')).toBeTruthy();
+        expect(screen.queryByText('Your note')).toBeNull();
+    });
+
     it('goes back with its arrow', async () => {
         const onBack = jest.fn();
         await renderAccount({ account: ana, onBack });
