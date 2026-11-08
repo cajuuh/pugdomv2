@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { blockAccount, followAccount, getRelationships, muteAccount, removeFromFollowers, unblockAccount, unfollowAccount, unmuteAccount } from '../services/mastodon/accounts';
+import { blockAccount, followAccount, setAccountNote, getRelationships, muteAccount, removeFromFollowers, unblockAccount, unfollowAccount, unmuteAccount } from '../services/mastodon/accounts';
 import { Relationship } from '../services/mastodon/types';
 
 // Fetches relationships for all given accounts in one request, keyed by account id
@@ -37,6 +37,9 @@ export const useNotifyOff = () => useRelationshipChange(notifyOff);
 
 // Unfollows, or cancels a follow request that's still pending
 export const useUnfollowAccount = () => useRelationshipChange(unfollowAccount);
+
+// Your private note on someone
+export const useSetNote = () => useRelationshipChange(setAccountNote);
 
 // Someone who follows you stops following you
 export const useRemoveFollower = () => useRelationshipChange(removeFromFollowers);

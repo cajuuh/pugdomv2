@@ -28,9 +28,10 @@ export type Route =
     // Who favourited or boosted a post
     | { name: 'reactions'; statusId: string; reaction: 'favourites' | 'boosts' }
     // Who follows someone, or whom they follow
-    | { name: 'follows'; accountId: string; list: 'followers' | 'following' }
+    | { name: 'follows'; accountId: string; list: 'followers' | 'following'; account?: Account }
     | { name: 'editProfile' }
-    | { name: 'moderatedAccounts' };
+    | { name: 'moderatedAccounts' }
+    | { name: 'accountNote'; account: Account; note: string };
 
 // Each entry gets its own key, so the same screen can sit in the stack twice (thread → other → same thread)
 export interface StackEntry {

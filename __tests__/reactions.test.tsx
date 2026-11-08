@@ -3,7 +3,7 @@ import { Text } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
-import apiClient from '../services/api/client';
+import apiClient, { publicClient } from '../services/api/client';
 import { getReactions } from '../services/mastodon/statuses';
 import { MediaViewerProvider } from '../components/MediaViewer/mediaViewer';
 import Reactions, { matchesSearch } from '../screens/Reactions/reactions';
@@ -12,7 +12,7 @@ import { TootCard } from '../components/TootCard/tootCard';
 import { NavigationProvider, useNavigator } from '../services/navigationContext';
 import { Account, Status } from '../services/mastodon/types';
 
-jest.mock('../services/api/client', () => ({ __esModule: true, default: { get: jest.fn(), post: jest.fn() } }));
+jest.mock('../services/api/client', () => ({ __esModule: true, default: { get: jest.fn(), post: jest.fn() }, publicClient: { get: jest.fn() } }));
 const me: Account = { id: 'me', username: 'me', acct: 'me', display_name: 'Me', avatar: '', emojis: [] };
 jest.mock('../services/authContext', () => ({ useAuth: () => ({ user: me }), useOptionalAuth: () => ({ user: me }) }));
 jest.mock('../services/themeContext', () => ({
@@ -23,6 +23,7 @@ jest.mock('../services/settingsContext', () => ({ useSettings: () => mockSetting
 jest.mock('../services/composeContext', () => ({ useCompose: () => ({ openCompose: jest.fn() }) }));
 
 const api = apiClient as unknown as Record<'get' | 'post', jest.Mock>;
+const theirServer = (publicClient as unknown as Record<'get', jest.Mock>).get;
 const ana: Account = { id: 'ana', username: 'ana', acct: 'ana@art.social', display_name: 'Ana', avatar: '', emojis: [] };
 const post = (extra: Partial<Status> = {}) =>
     ({
@@ -207,6 +208,55 @@ describe('Reactions', () => {
         await render(wrap(<Reactions id="p1" kind="favourites" onBack={jest.fn()} />));
         expect(await screen.findByText('@ana@art.social')).toBeTruthy();
         expect(screen.queryByLabelText(/Search/)).toBeNull();
+    });
+
+    describe('for someone on another server', () => {
+        // Ana's server: art.social. Ours only knows the people here she follows.
+        const anaThere = { ...ana, url: 'https://art.social/@ana' };
+        const bo = { ...me, id: '9', username: 'bo', acct: 'bo', url: 'https://art.social/@bo', display_name: 'Bo' };
+        const cy = { ...me, id: '10', username: 'cy', acct: 'cy@bolha.one', url: 'https://bolha.one/@cy', display_name: 'Cy' };
+        const local = { ...me, id: 'local1', username: 'dee', acct: 'dee', display_name: 'Dee' };
+        beforeEach(() => {
+            api.get.mockImplementation(async (url: string) =>
+                url === '/accounts/ana/following' ? { data: [local], headers: {} } : { data: [{ id: 'local1', following: true }], headers: {} }
+            );
+        });
+
+        it('reads the whole list from their server, page by page, without follow buttons', async () => {
+            theirServer.mockImplementation(async (url: string, config?: { params?: { max_id?: string } }) => {
+                if (url === 'https://art.social/api/v1/accounts/lookup') return { data: { ...anaThere, id: '7' } };
+                if (url === 'https://art.social/api/v1/accounts/7/following') {
+                    return config?.params?.max_id === '5'
+                        ? { data: [cy], headers: {} }
+                        : { data: [bo], headers: { link: '<https://art.social/api/v1/accounts/7/following?max_id=5>; rel="next"' } };
+                }
+                throw new Error(`unexpected ${url}`);
+            });
+            await render(wrap(<Reactions id="ana" kind="following" account={anaThere} onBack={jest.fn()} />));
+
+            // Their own people get their server in the handle
+            expect(await screen.findByText('@bo@art.social')).toBeTruthy();
+            expect(theirServer).toHaveBeenCalledWith('https://art.social/api/v1/accounts/lookup', { params: { acct: 'ana' } });
+            await fireEvent.changeText(screen.getByLabelText('Search following'), 'cy');
+            expect(await screen.findByText('@cy@bolha.one')).toBeTruthy();
+            expect(theirServer).toHaveBeenCalledWith('https://art.social/api/v1/accounts/7/following', { params: { max_id: '5', limit: 80 } });
+            // Their ids aren't ours: no follow state asked, no buttons, our server's list not used
+            expect(api.get).not.toHaveBeenCalled();
+            expect(screen.queryByRole('button', { name: /Follow/ })).toBeNull();
+        });
+
+        it("falls back to our server's list when theirs is hidden or can't be read", async () => {
+            theirServer.mockImplementation(async (url: string) =>
+                url.endsWith('/lookup') ? { data: { ...anaThere, id: '7' } } : { data: [], headers: {} }
+            );
+            await render(wrap(<Reactions id="ana" kind="following" account={anaThere} onBack={jest.fn()} />));
+            expect(await screen.findByText('@dee')).toBeTruthy();
+            expect(await screen.findAllByRole('button', { name: /Following/ })).toHaveLength(1);
+
+            theirServer.mockRejectedValue(new Error('401'));
+            await render(wrap(<Reactions id="ana" kind="following" account={anaThere} onBack={jest.fn()} />));
+            expect(await screen.findByText('@dee')).toBeTruthy();
+        });
     });
 
     it('says when the list is empty or hidden', async () => {

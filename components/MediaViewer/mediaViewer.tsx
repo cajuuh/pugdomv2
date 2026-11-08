@@ -3,7 +3,7 @@ import { Modal, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import * as WebBrowser from 'expo-web-browser';
+import { openLink } from '../../services/links';
 import { ImageGallery } from './imageGallery';
 import { SaveMediaButton } from './saveMediaButton';
 import { DialogHost } from '../Dialog/dialogHost';
@@ -97,7 +97,7 @@ export const MediaViewerProvider: React.FC<{ children: React.ReactNode }> = ({ c
             setOpen({ kind: 'images', images, index: images.indexOf(selected), onOpenPost });
         } else {
             // Unknown media types can't be previewed in-app
-            WebBrowser.openBrowserAsync(selected.url).catch(error => console.error('Failed to open media:', error));
+            openLink(selected.url);
         }
     }, []);
 

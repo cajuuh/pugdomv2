@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import * as WebBrowser from 'expo-web-browser';
+import { openLink } from '../../services/links';
 import { useAuth } from '../../services/authContext';
 import { useSettings } from '../../services/settingsContext';
 import { useTheme } from '../../services/themeContext';
@@ -55,6 +55,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
         setGroupNotifications,
         uncroppedMedia,
         setUncroppedMedia,
+        externalBrowser,
+        setExternalBrowser,
         setExpandSpoilers,
         coverSensitiveMedia,
         setCoverSensitiveMedia,
@@ -277,6 +279,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
                     {switchRow('warning-outline', t('settings.expandSpoilers'), expandSpoilers, setExpandSpoilers)}
                     <View style={styles.divider} />
                     {switchRow('swap-horizontal-outline', t('settings.swipeFeeds'), swipeFeeds, setSwipeFeeds)}
+                    <View style={styles.divider} />
+                    {switchRow('globe-outline', t('settings.externalBrowser'), externalBrowser, setExternalBrowser)}
                 </Card>
 
                 <SectionLabel style={styles.sectionLabel}>{t('settings.media')}</SectionLabel>
@@ -310,7 +314,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
                     <View style={styles.divider} />
                     <Pressable
                         style={styles.row}
-                        onPress={() => WebBrowser.openBrowserAsync(PRIVACY_URL).catch(error => console.error('Failed to open privacy policy:', error))}
+                        onPress={() => openLink(PRIVACY_URL)}
                         accessibilityRole="link"
                     >
                         <Ionicons name="shield-checkmark-outline" size={20} color={colors.accentText} />

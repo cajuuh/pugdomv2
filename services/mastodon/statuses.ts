@@ -145,7 +145,8 @@ export async function getStatusHistory(id: string): Promise<StatusEdit[]> {
 }
 
 // A post in another language, translated by the server (when its translation is on). `lang` is what to
-// translate into: an ISO 639 code, like "pt" or "en".
+// translate into: one of Mastodon's locales, like "pt-BR" or "en". Anything else (even "pt") is ignored
+// and the server uses the account's locale.
 export interface Translation {
     content: string;
     spoiler_text: string;

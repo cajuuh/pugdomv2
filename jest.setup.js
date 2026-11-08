@@ -28,6 +28,7 @@ jest.mock('react-native-safe-area-context', () => require('react-native-safe-are
 jest.mock('./services/i18n/defaults', () => ({
     ...jest.requireActual('./services/i18n/defaults'),
     DEFAULT_LANGUAGE: 'en',
+    phoneLocales: jest.fn(() => []),
 }));
 
 // Native image modules: tests mock what they return (see __tests__/media.test.tsx)

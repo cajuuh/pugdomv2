@@ -806,6 +806,17 @@ export const en = {
         followHint: 'Posts with this hashtag also show up in your home timeline',
     },
     profile: {
+        note: 'Your note',
+        noteLabel: 'Your note on {{name}}: {{note}}. Edit',
+        addNote: 'Add a note',
+        editNote: 'Edit your note',
+        noteTitle: 'Note on @{{acct}}',
+        noteHint: 'Only you see it. It stays on your server, so the website and other apps show it too.',
+        notePlaceholder: 'Who they are, where you met…',
+        noteSave: 'Save note',
+        noteSaved: 'Note saved',
+        noteRemoved: 'Note removed',
+        noteFailed: "Couldn't save the note",
         role: 'Role: {{name}}',
         verifiedLink: 'Verified link',
         posts: 'Posts',
@@ -891,6 +902,7 @@ export const en = {
         hideCounts: 'Hide numbers on posts',
         swipeFeeds: 'Swipe between timelines',
         uncroppedMedia: 'Show images uncropped',
+        externalBrowser: "Open links in your phone's browser",
         posts: 'Posts',
         media: 'Media',
         groupNotifications: 'Group favourites and boosts in notifications',
@@ -908,6 +920,7 @@ export const en = {
     languageNames: {
         'pt-BR': 'Português (Brasil)',
         en: 'English',
+        'es-419': 'Español (Latinoamérica)',
     },
     push: {
         // Android's name for pugdon's notification channel (system settings)

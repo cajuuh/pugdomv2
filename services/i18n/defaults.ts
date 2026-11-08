@@ -1,6 +1,19 @@
-// pugdon speaks Portuguese (Brazil) and English, for now; pt-BR is the default
-export type Language = 'pt-BR' | 'en';
+import { Platform, Settings } from 'react-native';
 
-export const LANGUAGES: Language[] = ['pt-BR', 'en'];
+// pugdon speaks Portuguese (Brazil), English and Spanish (Latin America); pt-BR is the default
+export type Language = 'pt-BR' | 'en' | 'es-419';
+
+export const LANGUAGES: Language[] = ['pt-BR', 'en', 'es-419'];
 
 export const DEFAULT_LANGUAGE: Language = 'pt-BR';
+
+// The phone's languages, most preferred first. iOS lists them all (a language picked for pugdon in iOS Settings
+// comes first); on Android, Intl reports the phone's language.
+export const phoneLocales = (): string[] => {
+    try {
+        const apple = Platform.OS === 'ios' ? Settings.get('AppleLanguages') : undefined;
+        return Array.isArray(apple) ? apple : [Intl.DateTimeFormat().resolvedOptions().locale];
+    } catch {
+        return [];
+    }
+};

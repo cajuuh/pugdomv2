@@ -41,6 +41,7 @@ import ScheduledPosts from './screens/Scheduled/scheduledPosts';
 import Drafts from './screens/Drafts/drafts';
 import ModeratedAccounts from './screens/Moderated/moderatedAccounts';
 import Reactions from './screens/Reactions/reactions';
+import AccountNote from './screens/AccountNote/accountNote';
 import EditProfile from './screens/EditProfile/editProfile';
 import { useUnreadConversations } from './hooks/useUnreadConversations';
 import { useServerPreferences } from './hooks/useExpandSpoilers';
@@ -145,11 +146,13 @@ function NavigationRoot() {
       case 'reactions':
         return <Reactions id={route.statusId} kind={route.reaction} onBack={pop} />;
       case 'follows':
-        return <Reactions id={route.accountId} kind={route.list} onBack={pop} />;
+        return <Reactions id={route.accountId} kind={route.list} account={route.account} onBack={pop} />;
       case 'editProfile':
         return <EditProfile onBack={pop} />;
       case 'moderatedAccounts':
         return <ModeratedAccounts onBack={pop} />;
+      case 'accountNote':
+        return <AccountNote account={route.account} note={route.note} onBack={pop} />;
     }
   };
 

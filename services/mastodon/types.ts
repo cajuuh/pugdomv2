@@ -198,6 +198,8 @@ export interface Relationship {
     notifying?: boolean;
     blocking?: boolean;
     muting?: boolean;
+    // Your private note on them (only you see it)
+    note?: string;
 }
 
 // One of a server's rules (shown when reporting)
