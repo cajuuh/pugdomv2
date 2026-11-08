@@ -6,14 +6,19 @@ import { en } from '../services/i18n/en';
 import { ptBR } from '../services/i18n/pt-BR';
 import { es419 } from '../services/i18n/es-419';
 import { createTranslator, pluralForm } from '../services/i18n/translate';
-import { I18nProvider, LANGUAGE_KEY, useI18n } from '../services/i18n/i18nContext';
-import { DEFAULT_LANGUAGE } from '../services/i18n/defaults';
+import { I18nProvider, LANGUAGE_KEY, phoneLanguage, useI18n } from '../services/i18n/i18nContext';
+import { DEFAULT_LANGUAGE, phoneLocales } from '../services/i18n/defaults';
+import { getCredentials } from '../services/storage';
 import { describeHidden, countMedia } from '../components/TootCard/tootCard';
 import { actorsText, notificationTime } from '../screens/Notifications/rows';
 import { pollTimeLeft } from '../components/Poll/poll';
 import { Attachment, Status } from '../services/mastodon/types';
 import { TabBar } from '../components/TabBar/tabBar';
 
+jest.mock('../services/storage', () => ({
+    ...jest.requireActual('../services/storage'),
+    getCredentials: jest.fn(async () => ({ accessToken: null, instanceUrl: null })),
+}));
 jest.mock('../services/themeContext', () => ({
     useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
 }));
@@ -125,6 +130,39 @@ describe('I18nProvider', () => {
 
         expect(screen.getByText('Home')).toBeTruthy();
         expect(await AsyncStorage.getItem(LANGUAGE_KEY)).toBe('en');
+    });
+
+    it('picks the first of the phone\'s languages it speaks, or the default', () => {
+        expect(phoneLanguage(['es-AR'])).toBe('es-419');
+        expect(phoneLanguage(['es_MX'])).toBe('es-419');
+        expect(phoneLanguage(['fr-FR', 'en-GB'])).toBe('en');
+        expect(phoneLanguage(['pt-PT'])).toBe('pt-BR');
+        expect(phoneLanguage(['de-DE'])).toBe(DEFAULT_LANGUAGE);
+        expect(phoneLanguage([])).toBe(DEFAULT_LANGUAGE);
+    });
+
+    it("starts in the phone's language on a new install, and keeps it", async () => {
+        (phoneLocales as jest.Mock).mockReturnValueOnce(['es-AR']);
+        await render(
+            <I18nProvider>
+                <Probe />
+            </I18nProvider>
+        );
+        await waitFor(() => expect(screen.getByTestId('language').props.children).toBe('es-419'));
+        expect(await AsyncStorage.getItem(LANGUAGE_KEY)).toBe('es-419');
+    });
+
+    it("doesn't change the language of someone already signed in", async () => {
+        (phoneLocales as jest.Mock).mockReturnValue(['es-AR']);
+        (getCredentials as jest.Mock).mockResolvedValueOnce({ accessToken: 'token', instanceUrl: 'https://one.social' });
+        await render(
+            <I18nProvider>
+                <Probe />
+            </I18nProvider>
+        );
+        await waitFor(async () => expect(await AsyncStorage.getItem(LANGUAGE_KEY)).toBe(DEFAULT_LANGUAGE));
+        expect(screen.getByTestId('language').props.children).toBe(DEFAULT_LANGUAGE);
+        (phoneLocales as jest.Mock).mockReturnValue([]);
     });
 
     it('ignores a saved value it does not know', async () => {
