@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../../services/themeContext';
 
@@ -43,7 +44,15 @@ export const Avatar: React.FC<AvatarProps> = ({ name, uri, size = 42, badge, rin
     return (
         <View accessible accessibilityRole="image" accessibilityLabel={name} style={circle}>
             {showImage ? (
-                <Image testID="avatar-image" source={{ uri }} style={[circle, { backgroundColor: colors.inputBackground }]} onError={() => setFailedUri(uri)} />
+                // Kept in memory as well as on disk: the same faces come back all over the timeline
+                <Image
+                    testID="avatar-image"
+                    source={{ uri }}
+                    recyclingKey={uri}
+                    cachePolicy="memory-disk"
+                    style={[circle, { backgroundColor: colors.inputBackground }]}
+                    onError={() => setFailedUri(uri)}
+                />
             ) : (
                 <View style={[circle, styles.initials, { backgroundColor: colors.accentSoft }]}>
                     <Text style={[type.name, { fontSize: size * 0.38, lineHeight: size * 0.5, color: colors.accentText }]}>

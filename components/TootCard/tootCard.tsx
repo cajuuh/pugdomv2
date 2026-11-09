@@ -1,5 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { Image, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Platform, Pressable, ScrollView, Share, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRecyclingState } from '@shopify/flash-list';
 import { Status, Attachment, PreviewCard } from '../../services/mastodon/types';
@@ -485,7 +486,13 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         return (
             <Pressable style={styles.linkPreview} onPress={() => openLinkInApp(card.url)} accessibilityRole="link" accessibilityLabel={card.title || domain}>
                 <View style={styles.linkThumb}>
-                    <Image source={{ uri: card.image }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                    <Image
+                        source={{ uri: card.image }}
+                        placeholder={card.blurhash ? { blurhash: card.blurhash } : undefined}
+                        recyclingKey={card.image}
+                        style={StyleSheet.absoluteFill}
+                        contentFit="cover"
+                    />
                 </View>
                 <View style={styles.linkBody}>
                     <Text style={[type.label, styles.linkProvider]} numberOfLines={1}>{card.provider_name || domain}</Text>

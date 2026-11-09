@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Image, Pressable, Share, Text, View, useWindowDimensions } from 'react-native';
+import { Pressable, Share, Text, View, useWindowDimensions } from 'react-native';
+import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../../services/themeContext';
 import { useNavigator } from '../../services/navigationContext';
@@ -114,7 +115,7 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
             <View style={[styles.banner, topInset > 0 && { height: BANNER_HEIGHT + topInset }]}>
                 {hasHeaderImage(user) ? (
                     <Pressable onPress={() => viewImage(user.header!)} accessibilityRole="imagebutton" accessibilityLabel={t('profile.viewHeader', { name })}>
-                        <Image testID="profile-banner-image" source={{ uri: user.header }} style={styles.bannerImage} />
+                        <Image testID="profile-banner-image" source={{ uri: user.header }} style={styles.bannerImage} contentFit="cover" />
                     </Pressable>
                 ) : (
                     <View testID="profile-banner-mark" style={styles.bannerMark}>

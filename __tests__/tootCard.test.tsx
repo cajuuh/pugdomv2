@@ -304,7 +304,7 @@ describe('TootCard content', () => {
                 media_attachments: [{ id: 'm1', type: 'image', url: 'https://example.social/m1.png', preview_url: 'https://example.social/m1-small.png', meta: { small: { width: 400, height: 300 } } }],
             } as Status);
 
-            expect(screen.getByTestId('focused-image-whole').props.resizeMode).toBe('contain');
+            expect(screen.getByTestId('focused-image-whole').props.contentFit).toBe('contain');
         } finally {
             mockSettings.uncroppedMedia = false;
         }

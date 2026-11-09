@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Image, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { mediaColors } from '../../services/theme/media';
@@ -58,6 +59,8 @@ export const FocusedImage: React.FC<FocusedImageProps> = ({ attachment, style, b
     // The tile's size: layout, not per-post state, so it doesn't need resetting when the card is reused
     const [box, setBox] = useState<Size | null>(null);
     const uri = attachment.preview_url || attachment.url;
+    // Mastodon's blurred sketch of the picture, shown until it loads
+    const placeholder = attachment.blurhash ? { blurhash: attachment.blurhash } : undefined;
     const focus = attachment.meta?.focus;
     const size = attachment.meta?.original ?? attachment.meta?.small;
     const focused = !!focus && (focus.x !== 0 || focus.y !== 0) && !!size?.width && !!size?.height;
@@ -76,15 +79,19 @@ export const FocusedImage: React.FC<FocusedImageProps> = ({ attachment, style, b
             {!focused || blurred || contain ? (
                 <Image
                     source={{ uri }}
+                    placeholder={placeholder}
+                    recyclingKey={uri}
                     testID={blurred ? 'focused-image-blurred' : contain ? 'focused-image-whole' : undefined}
                     style={StyleSheet.absoluteFill}
-                    resizeMode={contain ? 'contain' : 'cover'}
+                    contentFit={contain ? 'contain' : 'cover'}
                     blurRadius={blurred ? HIDDEN_BLUR_RADIUS : undefined}
                 />
             ) : (
                 box && (
                     <Image
                         source={{ uri }}
+                        placeholder={placeholder}
+                        recyclingKey={uri}
                         testID="focused-image-picture"
                         style={[styles.positioned, focusedCover(box, { width: size!.width!, height: size!.height! }, fromMastodonFocus(focus!))]}
                     />

@@ -13,6 +13,8 @@ export interface Attachment {
     url: string;
     preview_url: string;
     description?: string;
+    // A tiny blurred sketch of the picture, to show while it loads
+    blurhash?: string | null;
     // Sizes and the focal point (-1..1, y up), when the server knows them
     meta?: {
         // A video's or GIF's length in seconds
