@@ -46,7 +46,7 @@ export const FollowButton: React.FC<FollowButtonProps> = ({ accountId, name, rel
 
     if (relationship.following || relationship.requested) {
         // Locked accounts approve follows first, so a follow sent to them stays "Requested"
-        const label = relationship.following ? t('follow.following') : t('follow.requested');
+        const label = relationship.following ? t(relationship.followed_by ? 'follow.mutuals' : 'follow.following') : t('follow.requested');
         if (!allowUnfollow) {
             return (
                 <View style={[styles.state, { backgroundColor: colors.accentSoft }]} accessible accessibilityLabel={label}>

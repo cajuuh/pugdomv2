@@ -771,6 +771,8 @@ export const en = {
         follow: 'Follow',
         followBack: 'Follow back',
         following: 'Following',
+        // You follow each other
+        mutuals: 'Mutuals',
         requested: 'Requested',
         pending: 'Following…',
         failed: 'Failed to follow this account. Please try again.',

@@ -756,6 +756,8 @@ export const ptBR: Dictionary = {
         follow: 'Seguir',
         followBack: 'Seguir de volta',
         following: 'Seguindo',
+        // You follow each other
+        mutuals: 'Mútuos',
         requested: 'Solicitado',
         pending: 'Seguindo…',
         failed: 'Não foi possível seguir esta conta. Tente de novo.',

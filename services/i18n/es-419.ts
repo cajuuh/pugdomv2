@@ -755,6 +755,8 @@ export const es419: Dictionary = {
         follow: 'Seguir',
         followBack: 'Seguir también',
         following: 'Siguiendo',
+        // You follow each other
+        mutuals: 'Mutuos',
         requested: 'Solicitado',
         pending: 'Siguiendo…',
         failed: 'No se pudo seguir esta cuenta. Vuelve a intentarlo.',
