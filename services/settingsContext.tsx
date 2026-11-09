@@ -231,6 +231,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     );
 };
 
+// For components that also render outside the provider (tests, previews): null there
+export const useOptionalSettings = () => useContext(SettingsContext) ?? null;
+
 export const useSettings = () => {
     const context = useContext(SettingsContext);
     if (!context) {
