@@ -786,10 +786,12 @@ describe('TootCard long posts', () => {
         expect(screen.getAllByRole('link', { name: /^#/ })).toHaveLength(5);
         expect(screen.queryByText('#f6')).toBeNull();
 
-        await fireEvent.press(screen.getByRole('button', { name: 'Show more' }));
+        // The rest as a chip like the tags
+        expect(screen.getByText('+2')).toBeTruthy();
+        await fireEvent.press(screen.getByRole('button', { name: 'Show 2 more hashtags' }));
 
         expect(screen.getAllByRole('link', { name: /^#/ })).toHaveLength(7);
-        expect(screen.queryByRole('button', { name: 'Show more' })).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Show 2 more hashtags' })).toBeNull();
     });
 
     it('moves the hashtags of a post that is only hashtags below its link card', async () => {
