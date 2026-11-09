@@ -194,7 +194,8 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const [isMediaRevealed, setIsMediaRevealed] = useRecyclingState(false, recyclingDeps);
     const postTranslation = usePostTranslation(targetStatus, remote, recyclingDeps);
     const shownContent = postTranslation.translation?.content ?? targetStatus.content;
-    const { html: bodyHtml, tags: trailingTags } = React.useMemo(() => splitTrailingHashtags(shownContent), [shownContent]);
+    const hasMore = (targetStatus.media_attachments?.length ?? 0) > 0 || !!targetStatus.card || !!targetStatus.poll || !!targetStatus.quote;
+    const { html: bodyHtml, tags: trailingTags } = React.useMemo(() => splitTrailingHashtags(shownContent, hasMore), [shownContent, hasMore]);
     const plain = React.useMemo(() => plainText(bodyHtml), [bodyHtml]);
     const textSize = fullText ? 'normal' : postSize(plain);
     const [isTextExpanded, setIsTextExpanded] = useRecyclingState(false, recyclingDeps);
@@ -505,7 +506,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
 
     const body = (
         <>
-            {hasText(targetStatus.content) && (isTextFolded && textSize === 'huge' ? (
+            {hasText(bodyHtml) && (isTextFolded && textSize === 'huge' ? (
                 // Not even parsed as HTML until asked: only the start, as plain text
                 <Text style={[type.body, styles.foldedText, compactMode && styles.foldedTextCompact]} numberOfLines={12}>
                     {renderTextWithEmojis(plain.slice(0, 1000), targetStatus.emojis, null)}

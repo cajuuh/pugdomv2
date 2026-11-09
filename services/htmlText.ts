@@ -19,8 +19,9 @@ const isHashtagLine = (html: string) => {
 };
 
 // A post's last lines when they're only hashtags, taken out of its text to show below its media, as
-// Mastodon's web app does. A post that's nothing but hashtags keeps them as its text.
-export const splitTrailingHashtags = (html: string): { html: string; tags: string[] } => {
+// Mastodon's web app does. A post that's nothing but hashtags keeps them as its text, unless it has
+// something else to show (media, a link card, a poll, a quote): then they go below that too.
+export const splitTrailingHashtags = (html: string, hasMore = false): { html: string; tags: string[] } => {
     const last = html.match(/^([\s\S]*<p[^>]*>)([\s\S]*?)(<\/p>\s*)$/);
     const whole = { html, tags: [] as string[] };
     if (!last) return whole;
@@ -33,7 +34,8 @@ export const splitTrailingHashtags = (html: string): { html: string; tags: strin
     const tags = lines.slice(keep).join(' ').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim().split(/\s+/).map(word => word.slice(1));
     const open = before.match(/<p[^>]*>$/)![0];
     const text = keep > 0 ? `${before}${lines.slice(0, keep).join('<br>')}${after}` : before.slice(0, -open.length);
-    return plainText(text) ? { html: text, tags } : whole;
+    if (plainText(text)) return { html: text, tags };
+    return hasMore ? { html: '', tags } : whole;
 };
 
 // Long posts fold in timelines behind "Show more". Past HUGE_POST characters (posts made to choke apps)

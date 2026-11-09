@@ -792,6 +792,16 @@ describe('TootCard long posts', () => {
         expect(screen.queryByRole('button', { name: 'Show more' })).toBeNull();
     });
 
+    it('moves the hashtags of a post that is only hashtags below its link card', async () => {
+        const tag = `<a href="https://x/tags/Sabafoto" class="mention hashtag" rel="tag">#<span>Sabafoto</span></a>`;
+        const card = { url: 'https://news.example/a', title: 'A photo', description: '', type: 'link', image: null };
+        await renderCard({ ...statusA, content: `<p>${tag}</p>`, card } as unknown as Status);
+
+        // No text block left, only the hashtag row
+        expect(screen.queryByTestId('html')).toBeNull();
+        expect(screen.getByRole('link', { name: '#Sabafoto' })).toBeTruthy();
+    });
+
     it('folds a long post behind Show more and opens it in place', async () => {
         await renderCard(long);
 
