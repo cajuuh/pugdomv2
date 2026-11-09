@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon, IconName } from '../../components/ui/icon';
 import { useQueryClient } from '@tanstack/react-query';
 import { Avatar, Card, IconButton, PillButton, SectionLabel, ThemedSwitch } from '../../components/ui';
 import { ImageEditor } from '../../components/ImageEditor/imageEditor';
@@ -220,7 +220,7 @@ const EditProfile = ({ onBack }: EditProfileProps) => {
                             <View key={row.label}>
                                 {index > 0 && <View style={[styles.divider, { backgroundColor: colors.borderColor }]} />}
                                 <View style={styles.switchRow}>
-                                    <Ionicons name={row.icon as React.ComponentProps<typeof Ionicons>['name']} size={20} color={colors.accentText} />
+                                    <Icon name={row.icon as IconName} size={20} color={colors.accentText} />
                                     <View style={styles.switchText}>
                                         <Text style={[type.name, { color: colors.textPrimary }]}>{t(row.label as 'editProfile.locked')}</Text>
                                         <Text style={[type.meta, { color: colors.textMuted }]}>{t(row.hint as 'editProfile.lockedHint')}</Text>

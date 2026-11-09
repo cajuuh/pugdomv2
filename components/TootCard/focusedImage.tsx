@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Image, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon } from '../ui/icon';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { mediaColors } from '../../services/theme/media';
 import { radii, space } from '../../services/theme/shape';
@@ -95,7 +95,7 @@ export const FocusedImage: React.FC<FocusedImageProps> = ({ attachment, style, b
             {!blurred && !playing && attachment.type === 'video' && (
                 <View pointerEvents="none" style={styles.center} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
                     <View testID="video-badge" style={[styles.play, small && styles.playSmall]}>
-                        <Ionicons name="play" size={small ? 14 : 24} color={mediaColors.ink} style={styles.playIcon} />
+                        <Icon name="play" size={small ? 14 : 24} color={mediaColors.ink} style={styles.playIcon} />
                     </View>
                 </View>
             )}

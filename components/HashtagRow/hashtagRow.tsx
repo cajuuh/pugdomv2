@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon } from '../ui/icon';
 import { Tag, weeklyUsage } from '../../services/mastodon/tags';
 import { useOpenAccount } from '../../hooks/useOpenAccount';
 import { useI18n } from '../../services/i18n/i18nContext';
@@ -31,7 +31,7 @@ export const HashtagRow: React.FC<{ tag: Tag }> = ({ tag }) => {
                 <Text style={[type.name, { color: colors.textPrimary }]} numberOfLines={1}>#{tag.name}</Text>
                 <Text style={[type.meta, { color: colors.textMuted }]} numberOfLines={1}>{activity}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+            <Icon name="chevron-forward" size={16} color={colors.textMuted} />
         </Pressable>
     );
 };

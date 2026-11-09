@@ -3,7 +3,6 @@ import { BlurTargetView } from 'expo-blur';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { StyleSheet, ActivityIndicator, BackHandler, DeviceEventEmitter, TouchableOpacity, Platform, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider, useAuth } from './services/authContext';

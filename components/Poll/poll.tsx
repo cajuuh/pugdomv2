@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon } from '../ui/icon';
 import { useRecyclingState } from '@shopify/flash-list';
 import { Poll as PollType, PollOption } from '../../services/mastodon/types';
 import { getPoll, votePoll } from '../../services/mastodon/polls';
@@ -136,7 +136,7 @@ export const Poll: React.FC<PollProps> = ({ initialPoll, onPollUpdated, readOnly
                         14
                     )}
                     {isOwnVote && (
-                        <Ionicons name="checkmark" size={16} color={labelOnAccent ? colors.buttonTextColor : colors.accentText} />
+                        <Icon name="checkmark" size={16} color={labelOnAccent ? colors.buttonTextColor : colors.accentText} />
                     )}
                     {!unpublished && (
                         <Text style={[type.name, styles.resultPercent, isWinner && styles.resultPercentWinner]}>{percent}%</Text>
@@ -159,7 +159,7 @@ export const Poll: React.FC<PollProps> = ({ initialPoll, onPollUpdated, readOnly
                 accessibilityState={{ checked: isSelected, disabled: isVoting }}
             >
                 <View style={[styles.indicator, poll.multiple && styles.indicatorMultiple, isSelected && styles.indicatorSelected]}>
-                    {isSelected && <Ionicons name="checkmark" size={12} color={colors.buttonTextColor} />}
+                    {isSelected && <Icon name="checkmark" size={12} color={colors.buttonTextColor} />}
                 </View>
                 {renderTextWithEmojis(
                     option.title,

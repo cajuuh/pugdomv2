@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon } from '../ui/icon';
 import { useRecyclingState } from '@shopify/flash-list';
 import { PillButton } from '../ui';
 import { Relationship } from '../../services/mastodon/types';
@@ -50,7 +50,7 @@ export const FollowButton: React.FC<FollowButtonProps> = ({ accountId, name, rel
         if (!allowUnfollow) {
             return (
                 <View style={[styles.state, { backgroundColor: colors.accentSoft }]} accessible accessibilityLabel={label}>
-                    <Ionicons name={relationship.following ? 'checkmark' : 'time-outline'} size={15} color={colors.accentText} />
+                    <Icon name={relationship.following ? 'checkmark' : 'time-outline'} size={15} color={colors.accentText} />
                     <Text style={[type.name, styles.stateText, { color: colors.accentText }]}>{label}</Text>
                 </View>
             );

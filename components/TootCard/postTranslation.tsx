@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon } from '../ui/icon';
 import { useQuery } from '@tanstack/react-query';
 import { useRecyclingState } from '@shopify/flash-list';
 import { Status } from '../../services/mastodon/types';
@@ -78,7 +78,7 @@ export const TranslationLine: React.FC<TranslationLineProps> = ({ translation, l
             : t('translation.fromUnknown', { provider: translation.provider });
         return (
             <View style={styles.row}>
-                <Ionicons name="language-outline" size={14} color={colors.textMuted} />
+                <Icon name="language-outline" size={14} color={colors.textMuted} />
                 <Text style={[type.meta, styles.source, { color: colors.textMuted }]} numberOfLines={2}>
                     {source}
                 </Text>
@@ -91,7 +91,7 @@ export const TranslationLine: React.FC<TranslationLineProps> = ({ translation, l
     const label = t(loading ? 'translation.loading' : 'translation.translate');
     return (
         <Pressable onPress={onShow} disabled={loading} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ busy: loading }} hitSlop={8} style={styles.row}>
-            <Ionicons name="language-outline" size={14} color={colors.accentText} />
+            <Icon name="language-outline" size={14} color={colors.accentText} />
             <Text style={link}>{label}</Text>
         </Pressable>
     );

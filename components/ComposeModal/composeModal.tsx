@@ -15,7 +15,7 @@ import {
     useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon, IconName } from '../ui/icon';
 import { useAuth } from '../../services/authContext';
 import { useTheme } from '../../services/themeContext';
 import { createStatus, editStatus, getStatusSource } from '../../services/mastodon/statuses';
@@ -89,7 +89,7 @@ const LANGUAGE_OPTIONS: SheetOption<string>[] = LANGUAGES.map(({ code, label }) 
 type Visibility = Status['visibility'];
 
 // Mastodon calls followers-only "private" and mentioned-only "direct"
-type VisibilityOption = SheetOption<Visibility> & { icon: React.ComponentProps<typeof Ionicons>['name'] };
+type VisibilityOption = SheetOption<Visibility> & { icon: IconName };
 export const visibilities = ({ t }: Translator): VisibilityOption[] => [
     { value: 'public', label: t('compose.public'), description: t('compose.publicDescription'), icon: 'globe-outline' },
     { value: 'unlisted', label: t('compose.unlisted'), description: t('compose.unlistedDescription'), icon: 'lock-open-outline' },
@@ -636,7 +636,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
         }
     };
 
-    const tool = (icon: React.ComponentProps<typeof Ionicons>['name'], label: string, onPress: () => void, active = false, disabled = false) => (
+    const tool = (icon: IconName, label: string, onPress: () => void, active = false, disabled = false) => (
         <IconButton
             icon={icon}
             accessibilityLabel={label}
@@ -764,9 +764,9 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                                     hitSlop={hitSlopFor(0, PILL_HEIGHT)}
                                     style={({ pressed }) => [styles.pill, (pressed || editing) && { opacity: 0.7 }]}
                                 >
-                                    <Ionicons name={selectedVisibility.icon} size={14} color={colors.accentText} />
+                                    <Icon name={selectedVisibility.icon} size={14} color={colors.accentText} />
                                     <Text style={[type.name, styles.pillText]}>{selectedVisibility.label}</Text>
-                                    {!editing && <Ionicons name="chevron-down" size={12} color={colors.textSecondary} />}
+                                    {!editing && <Icon name="chevron-down" size={12} color={colors.textSecondary} />}
                                 </Pressable>
                                 <Pressable
                                     onPress={() => setPicker('language')}
@@ -778,7 +778,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                                     <Text style={[type.name, styles.pillText]}>
                                         {selectedLanguage.code.toUpperCase()} · {selectedLanguage.label}
                                     </Text>
-                                    <Ionicons name="chevron-down" size={12} color={colors.textSecondary} />
+                                    <Icon name="chevron-down" size={12} color={colors.textSecondary} />
                                 </Pressable>
                                 {instanceConfiguration.supportsQuotes && (
                                     <Pressable
@@ -790,9 +790,9 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                                         hitSlop={hitSlopFor(0, PILL_HEIGHT)}
                                         style={({ pressed }) => [styles.pill, (pressed || quotePolicyLocked) && { opacity: 0.7 }]}
                                     >
-                                        <Ionicons name="chatbox-ellipses-outline" size={14} color={colors.accentText} />
+                                        <Icon name="chatbox-ellipses-outline" size={14} color={colors.accentText} />
                                         <Text style={[type.name, styles.pillText]}>{selectedQuotePolicy.label}</Text>
-                                        {!quotePolicyLocked && <Ionicons name="chevron-down" size={12} color={colors.textSecondary} />}
+                                        {!quotePolicyLocked && <Icon name="chevron-down" size={12} color={colors.textSecondary} />}
                                     </Pressable>
                                 )}
                             </View>
@@ -806,7 +806,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
 
                 {sensitive && (
                     <View style={styles.contentWarning}>
-                        <Ionicons name="warning-outline" size={18} color={colors.accentText} />
+                        <Icon name="warning-outline" size={18} color={colors.accentText} />
                         <TextInput
                             style={[type.body, styles.contentWarningInput]}
                             placeholder={t('compose.cwPlaceholder')}
@@ -899,7 +899,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                         accessibilityLabel={t('schedule.scheduledFor', { when: formatScheduleTime(scheduledAt, locale) })}
                         style={[styles.scheduledChip, { backgroundColor: colors.accentSoft }]}
                     >
-                        <Ionicons name="calendar" size={14} color={colors.accentText} />
+                        <Icon name="calendar" size={14} color={colors.accentText} />
                         <Text style={[type.label, { color: colors.accentText }]} numberOfLines={1}>
                             {t('schedule.scheduledFor', { when: formatScheduleTime(scheduledAt, locale) })}
                         </Text>

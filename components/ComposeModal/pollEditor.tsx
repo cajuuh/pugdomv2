@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon } from '../ui/icon';
 import { useTheme } from '../../services/themeContext';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { hitSlopFor } from '../../services/theme/shape';
@@ -97,7 +97,7 @@ export const PollEditor: React.FC<PollEditorProps> = ({
                     accessibilityLabel={t('pollEditor.addChoice')}
                     style={({ pressed }) => [styles.addChoice, pressed && { opacity: 0.6 }]}
                 >
-                    <Ionicons name="add" size={16} color={colors.accentText} />
+                    <Icon name="add" size={16} color={colors.accentText} />
                     <Text style={[type.name, styles.addChoiceText]}>{t('pollEditor.addChoice')}</Text>
                 </Pressable>
             )}
@@ -112,9 +112,9 @@ export const PollEditor: React.FC<PollEditorProps> = ({
                     hitSlop={hitSlopFor(0, 34)}
                     style={({ pressed }) => [styles.duration, pressed && { opacity: 0.7 }]}
                 >
-                    <Ionicons name="time-outline" size={15} color={colors.textPrimary} />
+                    <Icon name="time-outline" size={15} color={colors.textPrimary} />
                     <Text style={[type.name, styles.durationText]}>{t('pollEditor.endsIn', { value: durationLabel })}</Text>
-                    <Ionicons name="chevron-down" size={12} color={colors.textSecondary} />
+                    <Icon name="chevron-down" size={12} color={colors.textSecondary} />
                 </Pressable>
                 <View style={styles.multiple}>
                     <Text style={[type.name, styles.multipleText]} importantForAccessibility="no" accessibilityElementsHidden>
