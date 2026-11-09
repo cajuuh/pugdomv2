@@ -42,6 +42,20 @@ describe('StatusHtmlContent text', () => {
 
         expect(screen.getByText('copy me')).toHaveProp('selectable', true);
     });
+
+    it('selects across paragraphs, as one text', async () => {
+        const { toJSON } = await renderPost('<p>first paragraph</p><p class="x">second <a href="https://pug.example/a">link</a></p>', []);
+
+        const selectable: any[] = [];
+        const walk = (node: any) => {
+            if (!node || typeof node !== 'object') return;
+            if (node.type === 'Text' && node.props.selectable) selectable.push(node);
+            else node.children?.forEach(walk);
+        };
+        walk(toJSON());
+        expect(selectable).toHaveLength(1);
+        expect(JSON.stringify(selectable[0])).toMatch(/first paragraph[\s\S]*second[\s\S]*link/);
+    });
 });
 
 describe('holding a link', () => {
