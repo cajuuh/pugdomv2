@@ -912,14 +912,22 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 accessibilityRole="toolbar"
                 style={[styles.toolbar, { paddingBottom: keyboard.visible ? 10 : Math.max(insets.bottom, 10) }, altEditing && styles.hidden]}
             >
-                {/* A post has either images or a poll */}
-                {tool('image-outline', t('compose.addMedia'), addFromLibrary, false, showPoll || !!lockedPoll || media.room === 0)}
-                {tool('camera-outline', t('compose.camera'), addFromCamera, false, showPoll || !!lockedPoll || media.room === 0)}
-                {tool(showPoll ? 'stats-chart' : 'stats-chart-outline', t('compose.poll'), () => (showPoll ? resetPoll() : setShowPoll(true)), showPoll, media.attachments.length > 0 || editing)}
-                {tool('warning-outline', t('compose.contentWarning'), () => setSensitive(!sensitive), sensitive)}
-                {tool('happy-outline', t('compose.customEmoji'), () => setPicker('emoji'))}
-                {!editing && tool(scheduledAt ? 'calendar' : 'calendar-outline', t('schedule.title'), () => setPicker('schedule'), !!scheduledAt)}
-                <View style={styles.toolbarSpacer} />
+                {/* The tools scroll on narrow phones, so the counter beside them is never cut off */}
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                    style={styles.tools}
+                    contentContainerStyle={styles.toolsContent}
+                >
+                    {/* A post has either images or a poll */}
+                    {tool('image-outline', t('compose.addMedia'), addFromLibrary, false, showPoll || !!lockedPoll || media.room === 0)}
+                    {tool('camera-outline', t('compose.camera'), addFromCamera, false, showPoll || !!lockedPoll || media.room === 0)}
+                    {tool(showPoll ? 'stats-chart' : 'stats-chart-outline', t('compose.poll'), () => (showPoll ? resetPoll() : setShowPoll(true)), showPoll, media.attachments.length > 0 || editing)}
+                    {tool('warning-outline', t('compose.contentWarning'), () => setSensitive(!sensitive), sensitive)}
+                    {tool('happy-outline', t('compose.customEmoji'), () => setPicker('emoji'))}
+                    {!editing && tool(scheduledAt ? 'calendar' : 'calendar-outline', t('schedule.title'), () => setPicker('schedule'), !!scheduledAt)}
+                </ScrollView>
                 <CharacterCounter remaining={remaining} max={instanceConfiguration.maxCharacters} />
             </View>
         </Animated.View>

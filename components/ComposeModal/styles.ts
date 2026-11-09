@@ -204,10 +204,16 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     hidden: {
         display: 'none',
     },
-    toolbarSpacer: {
+    // Fills the room the counter leaves, and scrolls when the tools need more
+    tools: {
         flex: 1,
     },
+    toolsContent: {
+        alignItems: 'center',
+        gap: space.xs,
+    },
     counter: {
+        flexShrink: 0,
         flexDirection: 'row',
         alignItems: 'center',
         gap: space.sm,
