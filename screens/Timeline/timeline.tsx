@@ -15,6 +15,8 @@ import { useNavigator } from '../../services/navigationContext';
 import { hitSlopFor, space } from '../../services/theme/shape';
 import { useTheme } from '../../services/themeContext';
 import { useSettings } from '../../services/settingsContext';
+import { useAuth } from '../../services/authContext';
+import { homeShows } from '../../services/mastodon/feedService';
 import { FEED_PILL_HEIGHT, makeStyles } from './styles';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { useI18n } from '../../services/i18n/i18nContext';
@@ -53,6 +55,13 @@ const FeedList = ({ feed, current, visible, onStatusPress }: FeedListProps) => {
     const queryClient = useQueryClient();
     const listRef = useRef<FlashListRef<Status>>(null);
 
+    const { homeBoosts, homeReplies } = useSettings();
+    const { user } = useAuth();
+    const shows = useMemo(
+        () => (feed.kind === 'home' && !(homeBoosts && homeReplies) ? homeShows(homeBoosts, homeReplies, user?.id) : undefined),
+        [feed.kind, homeBoosts, homeReplies, user?.id]
+    );
+
     const resolveEmptyMessage = () => {
         if (feed.kind === 'home') return t('timeline.emptyHome');
         if (feed.kind === 'local') return t('timeline.emptyLocal');
@@ -69,13 +78,13 @@ const FeedList = ({ feed, current, visible, onStatusPress }: FeedListProps) => {
         hasNextPage,
         fetchNextPage,
         refetch,
-    } = useFeed(feed);
+    } = useFeed(feed, shows);
 
     const statuses = useMemo(() => {
         return data?.pages.flatMap(page => page) || [];
     }, [data]);
 
-    const newPosts = useNewPosts(feed, statuses[0]?.id, current);
+    const newPosts = useNewPosts(feed, statuses[0]?.id, current, shows);
     const [loadingNewPosts, setLoadingNewPosts] = useState(false);
     // Open again for the next new posts, once these are loaded
     const [newPostsCollapsed, setNewPostsCollapsed] = useState(false);
