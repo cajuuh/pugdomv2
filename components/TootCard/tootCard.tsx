@@ -2,7 +2,7 @@ import React, { useCallback, useRef, useState } from 'react';
 import { Image, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRecyclingState } from '@shopify/flash-list';
-import { Status, Attachment, PreviewCard } from '../../services/mastodon/types';
+import { Status, Attachment, Mention, PreviewCard } from '../../services/mastodon/types';
 import { StatusHtmlContent } from './htmlContent';
 import { PostHashtags } from './postHashtags';
 import { useSettings } from '../../services/settingsContext';
@@ -169,6 +169,11 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const openQuoted = useCallback(
         (quoted: Status) => (remote ? openLinkInApp(quoted.url ?? quoted.uri) : onPress ? onPress(quoted.id) : push({ name: 'thread', statusId: quoted.id })),
         [remote, openLinkInApp, onPress, push]
+    );
+    // A remote post's mentions carry the other server's ids, so those are looked up instead
+    const openQuotedMention = useCallback(
+        (href: string, mentions?: Mention[]) => openMention(href, remote ? undefined : mentions),
+        [openMention, remote]
     );
     const openPerson = (account: Status['account']) => (remote && account.url ? openLinkInApp(account.url) : openAccount(account));
     const i18n = useI18n();
@@ -547,7 +552,16 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             {renderMedia(targetStatus.media_attachments)}
             {targetStatus.card && renderLinkPreview(targetStatus.card)}
             {targetStatus.quote && (
-                <QuotedPost quote={targetStatus.quote} onOpen={openQuoted} timeOf={createdAt => getRelativeTime(createdAt, i18n)} />
+                <QuotedPost
+                    quote={targetStatus.quote}
+                    onOpen={openQuoted}
+                    timeOf={createdAt => getRelativeTime(createdAt, i18n)}
+                    compactMode={compactMode}
+                    onPressLink={openLinkInApp}
+                    onPressHashtag={onPressHashtag ?? openHashtag}
+                    onPressMention={openQuotedMention}
+                    renderLinkPreview={renderLinkPreview}
+                />
             )}
             <PostHashtags tags={trailingTags} onPress={onPressHashtag ?? openHashtag} />
         </>
