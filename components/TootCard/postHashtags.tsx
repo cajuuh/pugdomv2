@@ -9,7 +9,8 @@ import { hitSlopFor, radii, space } from '../../services/theme/shape';
 const VISIBLE = 5;
 const CHIP_HEIGHT = 28;
 
-// The hashtags a post ends with, below its media and link preview
+// The hashtags a post ends with, below its media and link preview. No top margin: the post's content
+// gap spaces it the same after text as after media
 export const PostHashtags: React.FC<{ tags: string[]; onPress: (tag: string) => void }> = ({ tags, onPress }) => {
     const { colors, type } = useTheme();
     const { t } = useI18n();
@@ -42,7 +43,6 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
         alignItems: 'center',
         gap: space.xs,
-        marginTop: space.sm,
     },
     chip: {
         height: CHIP_HEIGHT,

@@ -194,10 +194,11 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     // The quoted post under the text, with its ✕ over the corner
     quote: {
         marginHorizontal: space.lg,
+        marginTop: space.sm,
     },
     quoteRemove: {
         position: 'absolute',
-        top: 0,
+        top: -space.sm,
         right: -space.sm,
     },
     // Kept mounted but out of the way (the post while describing an image)

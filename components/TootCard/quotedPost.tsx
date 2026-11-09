@@ -161,8 +161,8 @@ export const QuotedPost: React.FC<QuotedPostProps> = ({ quote, onOpen, timeOf, c
 };
 
 const styles = StyleSheet.create({
+    // No top margin: in a post the content's gap spaces it like media (compose adds its own)
     box: {
-        marginTop: space.sm,
         padding: space.md,
         gap: space.sm,
         borderRadius: radii.well,
