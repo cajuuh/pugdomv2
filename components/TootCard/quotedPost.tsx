@@ -1,5 +1,5 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback } from 'react';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../../services/themeContext';
 import { useI18n } from '../../services/i18n/i18nContext';
@@ -7,13 +7,17 @@ import { TKey } from '../../services/i18n/translate';
 import { renderNameWithEmojis, renderTextWithEmojis } from '../../services/emojiHelper';
 import { plainText } from '../../services/htmlText';
 import { QuoteNotice, quoteView } from '../../services/mastodon/quotes';
-import { Quote, Status } from '../../services/mastodon/types';
+import { Mention, PreviewCard, Quote, Status } from '../../services/mastodon/types';
+import { openLink } from '../../services/links';
 import { radii, space } from '../../services/theme/shape';
 import { Avatar } from '../ui';
 import { FocusedImage } from './focusedImage';
+import { PARAGRAPH_GAP, StatusHtmlContent } from './htmlContent';
 
-const THUMB = 56;
 const MAX_THUMBS = 4;
+// Longer quotes are cut here; tapping the card opens the whole post
+const MAX_LINES = 6;
+const AVATAR = 32;
 
 const NOTICES: Record<QuoteNotice, { icon: React.ComponentProps<typeof Ionicons>['name']; text: TKey }> = {
     pending: { icon: 'hourglass-outline', text: 'quotes.pending' },
@@ -30,14 +34,28 @@ interface QuotedPostProps {
     onOpen?: (status: Status) => void;
     // "3h", "Mon": the same relative time the card shows; without it, no time
     timeOf?: (createdAt: string) => string;
+    compactMode?: boolean;
+    // Links in the quoted text, as in the post around it; without them links open in the browser
+    onPressLink?: (href: string) => void;
+    onPressHashtag?: (tag: string) => void;
+    onPressMention?: (href: string, mentions?: Mention[]) => void;
+    // The link preview as the post around it draws one; without it the quote shows none (as in compose)
+    renderLinkPreview?: (card: PreviewCard) => React.ReactNode;
 }
 
 // The post a post quotes, as a small card inside it; tapping opens it. Quotes that can't be shown
 // (waiting for approval, removed, deleted…) say why instead.
-export const QuotedPost: React.FC<QuotedPostProps> = ({ quote, onOpen, timeOf }) => {
+export const QuotedPost: React.FC<QuotedPostProps> = ({ quote, onOpen, timeOf, compactMode = false, onPressLink = openLink, onPressHashtag, onPressMention, renderLinkPreview }) => {
     const { colors, type } = useTheme();
     const { t } = useI18n();
+    const { width } = useWindowDimensions();
     const view = quoteView(quote);
+    // Mentions resolve against the quoted post's own list
+    const mentions = view?.kind === 'post' ? view.status.mentions : undefined;
+    const pressMention = useCallback(
+        (href: string) => (onPressMention ? onPressMention(href, mentions) : onPressLink(href)),
+        [onPressMention, onPressLink, mentions]
+    );
     if (!view) return null;
 
     if (view.kind === 'notice') {
@@ -65,15 +83,14 @@ export const QuotedPost: React.FC<QuotedPostProps> = ({ quote, onOpen, timeOf })
             accessibilityLabel={t('quotes.openQuoted', { name, text: status.spoiler_text || text })}
             style={({ pressed }) => [styles.box, { borderColor: colors.borderColor, backgroundColor: colors.inputBackground }, pressed && styles.pressed]}
         >
+            {/* Laid out like a post's own header: name over handle, time on the right */}
             <View style={styles.author}>
-                <Avatar name={name} uri={status.account.avatar} size={20} />
+                <Avatar name={name} uri={status.account.avatar} size={AVATAR} />
                 <View style={styles.names}>
-                    {renderNameWithEmojis(name, status.account.emojis ?? [], [type.name, styles.name, { color: colors.textPrimary }], 13)}
-                    <Text style={[type.meta, styles.handle, { color: colors.textMuted }]} numberOfLines={1}>
-                        @{status.account.acct}
-                        {timeOf ? ` · ${timeOf(status.created_at)}` : ''}
-                    </Text>
+                    {renderNameWithEmojis(name, status.account.emojis ?? [], [type.name, { color: colors.textPrimary }], 15)}
+                    <Text style={[type.meta, { color: colors.textMuted }]} numberOfLines={1}>@{status.account.acct}</Text>
                 </View>
+                {timeOf && <Text style={[type.meta, { color: colors.textMuted }]}>{timeOf(status.created_at)}</Text>}
             </View>
 
             {status.spoiler_text ? (
@@ -84,10 +101,24 @@ export const QuotedPost: React.FC<QuotedPostProps> = ({ quote, onOpen, timeOf })
                     </Text>
                 </View>
             ) : (
+                // The post's own HTML, so links are shortened and tappable like in the post around it
                 !!text && (
-                    <Text style={[type.body, styles.text, { color: colors.textPrimary }]} numberOfLines={6}>
-                        {renderTextWithEmojis(text, status.emojis ?? [], [type.body, styles.text, { color: colors.textPrimary }], 14)}
-                    </Text>
+                    <View style={[styles.textFold, { maxHeight: MAX_LINES * (compactMode ? 18 : 22.5) }]}>
+                        {/* Without the gap under the last paragraph, which the card's padding already gives */}
+                        <View style={styles.lastGap}>
+                            <StatusHtmlContent
+                                content={status.content}
+                                emojis={status.emojis ?? []}
+                                colors={colors}
+                                bodyFont={type.body}
+                                compactMode={compactMode}
+                                width={width}
+                                onPressMention={pressMention}
+                                onPressHashtag={onPressHashtag}
+                                onPressLink={onPressLink}
+                            />
+                        </View>
+                    </View>
                 )
             )}
 
@@ -100,10 +131,17 @@ export const QuotedPost: React.FC<QuotedPostProps> = ({ quote, onOpen, timeOf })
                 ) : (
                     <View style={styles.thumbs}>
                         {media.slice(0, MAX_THUMBS).map(item => (
-                            <FocusedImage key={item.id} attachment={item} style={[styles.thumb, { backgroundColor: colors.cardBackground }]} />
+                            <FocusedImage
+                                key={item.id}
+                                attachment={item}
+                                style={[styles.thumb, media.length === 1 && styles.wide, { backgroundColor: colors.cardBackground }]}
+                            />
                         ))}
                     </View>
                 ))}
+
+            {/* Not under a content warning: it would give away what's behind it */}
+            {status.card && !status.spoiler_text && renderLinkPreview?.(status.card)}
 
             {status.poll && (
                 <View style={styles.warning}>
@@ -148,15 +186,12 @@ const styles = StyleSheet.create({
     names: {
         flex: 1,
         minWidth: 0,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: space.xs,
     },
-    name: {
-        fontSize: 13,
+    textFold: {
+        overflow: 'hidden',
     },
-    handle: {
-        flexShrink: 1,
+    lastGap: {
+        marginBottom: -PARAGRAPH_GAP,
     },
     text: {
         fontSize: 14,
@@ -171,9 +206,14 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: space.xs,
     },
+    // Side by side across the card; one picture gets a wide tile
     thumb: {
-        width: THUMB,
-        height: THUMB,
+        flex: 1,
+        aspectRatio: 1,
         borderRadius: radii.input,
+        overflow: 'hidden',
+    },
+    wide: {
+        aspectRatio: 16 / 9,
     },
 });

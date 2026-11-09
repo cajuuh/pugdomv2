@@ -886,6 +886,8 @@ export const ptBR: Dictionary = {
         compactMode: 'Modo compacto',
         hideCounts: 'Esconder os números nas publicações',
         swipeFeeds: 'Deslizar entre as timelines',
+        homeBoosts: 'Mostrar boosts na timeline Início',
+        homeReplies: 'Mostrar respostas na timeline Início',
         externalBrowser: 'Abrir links no navegador do celular',
         uncroppedMedia: 'Mostrar imagens sem recorte',
         posts: 'Publicações',

@@ -25,6 +25,11 @@ interface SettingsContextType {
     // Swiping sideways on the timeline moves between the pinned feeds
     swipeFeeds: boolean;
     setSwipeFeeds: (value: boolean) => Promise<void>;
+    // Home shows boosts / replies (off hides them, like the web app's Home settings)
+    homeBoosts: boolean;
+    setHomeBoosts: (value: boolean) => Promise<void>;
+    homeReplies: boolean;
+    setHomeReplies: (value: boolean) => Promise<void>;
     // Favourites and boosts of the same post share one notification row; off, each has its own
     groupNotifications: boolean;
     // Post images at their own shape instead of cropped to the card
@@ -48,6 +53,8 @@ export const AUTOPLAY_KEY = 'pugdom_settings_autoplay';
 export const COMPACT_KEY = 'pugdom_settings_compact';
 export const HIDE_COUNTS_KEY = 'pugdom_settings_hide_counts';
 export const SWIPE_FEEDS_KEY = 'pugdom_settings_swipe_feeds';
+export const HOME_BOOSTS_KEY = 'pugdom_settings_home_boosts';
+export const HOME_REPLIES_KEY = 'pugdom_settings_home_replies';
 export const GROUP_NOTIFICATIONS_KEY ='pugdom_settings_group_notifications';
 export const UNCROPPED_MEDIA_KEY = 'pugdom_settings_uncropped_media';
 export const EXPAND_SPOILERS_KEY = 'pugdom_settings_expand_spoilers';
@@ -62,6 +69,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const [compactMode, setCompactModeState] = useState(false);
     const [hideCounts, setHideCountsState] = useState(false);
     const [swipeFeeds, setSwipeFeedsState] = useState(false);
+    const [homeBoosts, setHomeBoostsState] = useState(true);
+    const [homeReplies, setHomeRepliesState] = useState(true);
     const [groupNotifications, setGroupNotificationsState] = useState(true);
     const [uncroppedMedia, setUncroppedMediaState] = useState(false);
     const [externalBrowser, setExternalBrowserState] = useState(false);
@@ -79,6 +88,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 const compact = await getSetting(COMPACT_KEY, false);
                 const counts = await getSetting(HIDE_COUNTS_KEY, false);
                 const swipe = await getSetting(SWIPE_FEEDS_KEY, false);
+                const boosts = await getSetting(HOME_BOOSTS_KEY, true);
+                const replies = await getSetting(HOME_REPLIES_KEY, true);
                 const grouped = await getSetting(GROUP_NOTIFICATIONS_KEY, true);
                 const uncropped = await getSetting(UNCROPPED_MEDIA_KEY, false);
                 const spoilers = await getStringSetting(EXPAND_SPOILERS_KEY, '');
@@ -92,6 +103,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 setCompactModeState(compact);
                 setHideCountsState(counts);
                 setSwipeFeedsState(swipe);
+                setHomeBoostsState(boosts);
+                setHomeRepliesState(replies);
                 setGroupNotificationsState(grouped);
                 setUncroppedMediaState(uncropped);
                 setExpandSpoilersState(spoilers === '' ? null : spoilers === 'true');
@@ -137,6 +150,16 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const setSwipeFeeds = async (value: boolean) => {
         setSwipeFeedsState(value);
         await saveSetting(SWIPE_FEEDS_KEY, value);
+    };
+
+    const setHomeBoosts = async (value: boolean) => {
+        setHomeBoostsState(value);
+        await saveSetting(HOME_BOOSTS_KEY, value);
+    };
+
+    const setHomeReplies = async (value: boolean) => {
+        setHomeRepliesState(value);
+        await saveSetting(HOME_REPLIES_KEY, value);
     };
 
     const setGroupNotifications = async (value: boolean) => {
@@ -187,6 +210,10 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 setHideCounts,
                 swipeFeeds,
                 setSwipeFeeds,
+                homeBoosts,
+                setHomeBoosts,
+                homeReplies,
+                setHomeReplies,
                 groupNotifications,
                 setGroupNotifications,
                 uncroppedMedia,
@@ -203,6 +230,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         </SettingsContext.Provider>
     );
 };
+
+// For components that also render outside the provider (tests, previews): null there
+export const useOptionalSettings = () => useContext(SettingsContext) ?? null;
 
 export const useSettings = () => {
     const context = useContext(SettingsContext);

@@ -885,6 +885,8 @@ export const es419: Dictionary = {
         compactMode: 'Modo compacto',
         hideCounts: 'Ocultar números en las publicaciones',
         swipeFeeds: 'Deslizar entre líneas de tiempo',
+        homeBoosts: 'Mostrar impulsos en la línea de tiempo Inicio',
+        homeReplies: 'Mostrar respuestas en la línea de tiempo Inicio',
         uncroppedMedia: 'Mostrar imágenes sin recortar',
         externalBrowser: 'Abrir enlaces en el navegador del celular',
         posts: 'Publicaciones',

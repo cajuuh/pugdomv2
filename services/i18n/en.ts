@@ -901,6 +901,8 @@ export const en = {
         compactMode: 'Compact Mode',
         hideCounts: 'Hide numbers on posts',
         swipeFeeds: 'Swipe between timelines',
+        homeBoosts: 'Show boosts in the Home timeline',
+        homeReplies: 'Show replies in the Home timeline',
         uncroppedMedia: 'Show images uncropped',
         externalBrowser: "Open links in your phone's browser",
         posts: 'Posts',

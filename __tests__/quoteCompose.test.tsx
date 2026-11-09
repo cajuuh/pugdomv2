@@ -21,6 +21,7 @@ jest.mock('../services/themeContext', () => ({
 }));
 jest.mock('../services/settingsContext', () => ({
     useSettings: () => ({ compactMode: false, mediaAutoplay: false }),
+    useOptionalSettings: () => null,
 }));
 jest.mock('../services/composeContext', () => ({
     useCompose: () => ({ openCompose: mockOpenCompose }),
