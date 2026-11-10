@@ -928,6 +928,7 @@ export const ptBR: Dictionary = {
         switchTo: 'Trocar para {{name}}',
         logOutOf: 'Sair de {{name}}',
         addAccount: 'Adicionar conta',
+        serverSettings: 'Configurações no {{server}}',
         preferences: 'Preferências',
         appearance: 'Aparência',
         appearanceLabel: 'Aparência, {{coat}}',

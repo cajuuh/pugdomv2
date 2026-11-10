@@ -39,6 +39,7 @@ interface SettingsProps {
 
 const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts, onModeratedAccounts, onFilters }) => {
     const { user, logout, savedAccounts, switchAccount, setAddingAccount, updateUser } = useAuth();
+    const activeServer = savedAccounts.find(account => account.userInfo.id === user?.id)?.instanceUrl;
     const { colors, type, coat } = useTheme();
     const styles = useThemedStyles(makeStyles);
     const {
@@ -183,6 +184,16 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
                             </React.Fragment>
                         );
                     })}
+                    {/* Profile, privacy, filters and more live on the server's website; Mastodon's settings start at the profile page */}
+                    {activeServer && (
+                        <>
+                            <Pressable style={styles.row} onPress={() => openLink(`${activeServer}/settings/profile`)} accessibilityRole="link">
+                                <Icon name="open-outline" size={20} color={colors.accentText} />
+                                <Text style={[labelStyle, styles.rowText]}>{t('settings.serverSettings', { server: activeServer.replace(/^https?:\/\//, '') })}</Text>
+                            </Pressable>
+                            <View style={styles.divider} />
+                        </>
+                    )}
                     <Pressable style={[styles.row, styles.rowCentered]} onPress={() => setAddingAccount(true)} accessibilityRole="button">
                         <Icon name="add-circle-outline" size={20} color={colors.accentText} />
                         <Text style={[type.name, styles.rowLabel, { color: colors.accentText }]}>{t('settings.addAccount')}</Text>

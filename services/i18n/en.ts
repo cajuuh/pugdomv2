@@ -943,6 +943,7 @@ export const en = {
         switchTo: 'Switch to {{name}}',
         logOutOf: 'Log out of {{name}}',
         addAccount: 'Add Account',
+        serverSettings: 'Settings on {{server}}',
         preferences: 'Preferences',
         appearance: 'Appearance',
         appearanceLabel: 'Appearance, {{coat}}',

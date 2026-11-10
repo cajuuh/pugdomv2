@@ -927,6 +927,7 @@ export const es419: Dictionary = {
         switchTo: 'Cambiar a {{name}}',
         logOutOf: 'Cerrar sesión de {{name}}',
         addAccount: 'Agregar cuenta',
+        serverSettings: 'Configuración en {{server}}',
         preferences: 'Preferencias',
         appearance: 'Apariencia',
         appearanceLabel: 'Apariencia, {{coat}}',
