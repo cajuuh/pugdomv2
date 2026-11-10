@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon } from '../ui/icon';
 import { BottomSheet } from '../ComposeModal/optionSheet';
 import { useAccountLists, useListActions, useLists } from '../../hooks/useLists';
 import { Account } from '../../services/mastodon/types';
@@ -51,7 +51,7 @@ export const AccountListsSheet: React.FC<AccountListsSheetProps> = ({ visible, o
     const newList = following && (
         newTitle === null ? (
             <Pressable onPress={() => setNewTitle('')} accessibilityRole="button" accessibilityLabel={t('lists.newList')} style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}>
-                <Ionicons name="add-circle-outline" size={20} color={colors.accentText} />
+                <Icon name="add-circle-outline" size={20} color={colors.accentText} />
                 <Text style={[type.name, styles.title, { color: colors.accentText }]}>{t('lists.newList')}</Text>
             </Pressable>
         ) : (
@@ -102,12 +102,12 @@ export const AccountListsSheet: React.FC<AccountListsSheetProps> = ({ visible, o
                     accessibilityLabel={list.title}
                     style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
                 >
-                    <Ionicons name="list-outline" size={20} color={colors.accentText} />
+                    <Icon name="list-outline" size={20} color={colors.accentText} />
                     <Text style={[type.name, styles.title, { color: colors.textPrimary }]} numberOfLines={1}>{list.title}</Text>
                     {pending === list.id ? (
                         <ActivityIndicator size="small" color={colors.accentColor} />
                     ) : (
-                        <Ionicons name={inList ? 'checkmark-circle' : 'ellipse-outline'} size={22} color={inList ? colors.accentText : colors.textMuted} />
+                        <Icon name={inList ? 'checkmark-circle' : 'ellipse-outline'} size={22} color={inList ? colors.accentText : colors.textMuted} />
                     )}
                 </Pressable>
             );

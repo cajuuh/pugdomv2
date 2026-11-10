@@ -2,7 +2,7 @@ import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FlashList } from '@shopify/flash-list';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon } from '../../components/ui/icon';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '../../services/themeContext';
 import { useI18n } from '../../services/i18n/i18nContext';
@@ -98,7 +98,7 @@ const Drafts = ({ onBack }: DraftsProps) => {
                     contentContainerStyle={styles.list}
                     ListEmptyComponent={
                         <View style={styles.empty}>
-                            <Ionicons name="document-text-outline" size={28} color={colors.textMuted} />
+                            <Icon name="document-text-outline" size={28} color={colors.textMuted} />
                             <Text style={[type.body, styles.emptyText, { color: colors.textMuted }]}>{t('drafts.empty')}</Text>
                         </View>
                     }

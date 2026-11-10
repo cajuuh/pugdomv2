@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { FeedType, NEW_POSTS_LIMIT } from '../services/mastodon/timeline';
@@ -18,9 +18,9 @@ export interface NewPosts {
 
 const NONE: NewPosts = { count: 0, more: false, accounts: [] };
 
-// Direct posts don't count: the timeline doesn't show them
-export const summarizeNewPosts = (fetched: Status[]): NewPosts => {
-    const posts = withoutDirect(fetched);
+// Direct posts don't count, nor what `shows` hides: the timeline doesn't show them
+export const summarizeNewPosts = (fetched: Status[], shows?: (post: Status) => boolean): NewPosts => {
+    const posts = shows ? withoutDirect(fetched).filter(shows) : withoutDirect(fetched);
     const accounts: Account[] = [];
     for (const post of posts) {
         if (accounts.length < 3 && !accounts.some(a => a.id === post.account.id)) accounts.push(post.account);
@@ -34,7 +34,7 @@ export const summarizeNewPosts = (fetched: Status[]): NewPosts => {
 const isForeground = (state: AppStateStatus | null) => state !== 'background';
 
 // `checking` is off for a feed kept mounted behind the one on screen
-export const useNewPosts = (feed: FeedType | FeedDescriptor, newestId: string | undefined, checking = true): NewPosts => {
+export const useNewPosts = (feed: FeedType | FeedDescriptor, newestId: string | undefined, checking = true, shows?: (post: Status) => boolean): NewPosts => {
     const [active, setActive] = useState(isForeground(AppState.currentState));
     const descriptor: FeedDescriptor = typeof feed === 'string' ? { id: feed, kind: feed } : feed;
 
@@ -42,6 +42,8 @@ export const useNewPosts = (feed: FeedType | FeedDescriptor, newestId: string | 
         const subscription = AppState.addEventListener('change', state => setActive(isForeground(state)));
         return () => subscription.remove();
     }, []);
+
+    const select = useCallback((fetched: Status[]) => summarizeNewPosts(fetched, shows), [shows]);
 
     const { data } = useQuery({
         queryKey: ['newPosts', descriptor.id, newestId],
@@ -52,7 +54,7 @@ export const useNewPosts = (feed: FeedType | FeedDescriptor, newestId: string | 
         initialDataUpdatedAt: () => Date.now(),
         staleTime: NEW_POSTS_INTERVAL_MS,
         refetchInterval: active && checking ? NEW_POSTS_INTERVAL_MS : false,
-        select: summarizeNewPosts,
+        select,
     });
 
     return data ?? NONE;

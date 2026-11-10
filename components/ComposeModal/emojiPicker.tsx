@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, SectionList, Text, TextInput, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Image, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useCustomEmojis } from '../../hooks/useCustomEmojis';
 import { useDebounced } from '../../hooks/useSearch';
 import { CustomEmoji } from '../../services/mastodon/types';
@@ -10,6 +11,7 @@ import { BottomSheet } from './optionSheet';
 import { makeStyles } from './styles';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { getRecentEmojis } from '../../services/recentEmojis';
+import { useOptionalSettings } from '../../services/settingsContext';
 
 const COLUMNS = 7;
 const SEARCH_DELAY = 250;
@@ -54,14 +56,44 @@ export const searchEmojis = (emojis: CustomEmoji[], query: string): CustomEmoji[
     return [...matches.filter(emoji => emoji.shortcode.toLowerCase().startsWith(words[0])), ...matches.filter(emoji => !emoji.shortcode.toLowerCase().startsWith(words[0]))];
 };
 
-// SectionList has no columns, so each item is a row of up to COLUMNS emoji
-const toRows = (emojis: CustomEmoji[]) => {
-    const rows: CustomEmoji[][] = [];
+// One flat list for FlashList: a header, then rows of up to COLUMNS emoji
+type PickerItem = { kind: 'header'; title: string } | { kind: 'row'; emojis: CustomEmoji[] };
+
+const toRows = (emojis: CustomEmoji[]): PickerItem[] => {
+    const rows: PickerItem[] = [];
     for (let i = 0; i < emojis.length; i += COLUMNS) {
-        rows.push(emojis.slice(i, i + COLUMNS));
+        rows.push({ kind: 'row', emojis: emojis.slice(i, i + COLUMNS) });
     }
     return rows;
 };
+
+type RowProps = { emojis: CustomEmoji[]; animated: boolean; onPick: (shortcode: string) => void; styles: ReturnType<typeof makeStyles> };
+
+// Memoized: picking a category or typing re-renders the picker, not every row on screen
+const EmojiRow = React.memo(({ emojis, animated, onPick, styles }: RowProps) => (
+    <View style={styles.emojiRow}>
+        {emojis.map(emoji => (
+            <Pressable
+                key={emoji.shortcode}
+                onPress={() => onPick(emoji.shortcode)}
+                accessibilityRole="button"
+                accessibilityLabel={`:${emoji.shortcode}:`}
+                style={({ pressed }) => [styles.emojiCell, pressed && styles.optionSelected]}
+            >
+                {/* Dozens of animated emoji on screen at once made scrolling stall, so they only move
+                    with media autoplay on, as in posts' GIFs */}
+                <Image
+                    testID="emoji-image"
+                    source={{ uri: (animated ? emoji.url : emoji.static_url) || emoji.url || emoji.static_url }}
+                    style={styles.emojiImage}
+                    resizeMode="contain"
+                />
+            </Pressable>
+        ))}
+        {/* Keep a short last row aligned to the grid */}
+        {Array.from({ length: COLUMNS - emojis.length }, (_, i) => <View key={`gap-${i}`} style={styles.emojiCell} />)}
+    </View>
+));
 
 interface EmojiPickerProps {
     visible: boolean;
@@ -78,6 +110,11 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ visible, onPick, onClo
     const categoryLabel = (value: string) =>
         value === ALL_CATEGORIES ? t('emoji.all') : value === UNCATEGORIZED ? t('emoji.other') : value === RECENT ? t('emoji.recent') : value;
     const styles = useThemedStyles(makeStyles);
+    const mediaAutoplay = useOptionalSettings()?.mediaAutoplay ?? false;
+    const pick = useCallback((shortcode: string) => {
+        onPick(shortcode);
+        onClose();
+    }, [onPick, onClose]);
     const [category, setCategory] = useState(ALL_CATEGORIES);
     const [query, setQuery] = useState('');
     const { data, isLoading, isError } = useCustomEmojis(visible);
@@ -119,17 +156,22 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ visible, onPick, onClo
         () => [ALL_CATEGORIES, ...groups.map(group => group.category)].map(value => ({ value, label: categoryLabel(value) })),
         [groups, t]
     );
-    const sections = useMemo(() => {
-        if (searching) return matches.length ? [{ title: '', data: toRows(matches) }] : [];
-        if (activeCategory !== ALL_CATEGORIES) {
-            return groups.filter(group => group.category === activeCategory).map(group => ({ title: group.category, data: toRows(group.emojis) }));
-        }
-        const all = groups.map(group => ({ title: group.category, data: toRows(group.emojis) }));
-        return recent.length ? [{ title: RECENT, data: toRows(recent) }, ...all] : all;
-    }, [groups, activeCategory, searching, matches, recent]);
     // Headers in All when there's more than one section; a server without categories has its emoji under "All"
     const headers = activeCategory === ALL_CATEGORIES && !searching && (categorized || recent.length > 0);
     const sectionLabel = (title: string) => (title === UNCATEGORIZED && !categorized ? t('emoji.all') : categoryLabel(title));
+    const items = useMemo((): PickerItem[] => {
+        if (searching) return toRows(matches);
+        if (activeCategory !== ALL_CATEGORIES) return toRows(groups.find(group => group.category === activeCategory)?.emojis ?? []);
+        const sections = recent.length ? [{ category: RECENT, emojis: recent }, ...groups] : groups;
+        return sections.flatMap(group => [
+            ...(headers ? [{ kind: 'header' as const, title: group.category }] : []),
+            ...toRows(group.emojis),
+        ]);
+    }, [groups, activeCategory, searching, matches, recent, headers]);
+    const stickyHeaders = useMemo(
+        () => items.flatMap((item, index) => (item.kind === 'header' ? [index] : [])),
+        [items]
+    );
 
     const status = isLoading
         ? <ActivityIndicator color={colors.accentColor} />
@@ -138,22 +180,6 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ visible, onPick, onClo
             : groups.length === 0
                 ? <Text style={[type.meta, styles.emojiStatusText]}>{t('emoji.none')}</Text>
                 : null;
-
-    const renderEmoji = (emoji: CustomEmoji) => (
-        <Pressable
-            key={emoji.shortcode}
-            onPress={() => {
-                onPick(emoji.shortcode);
-                onClose();
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={`:${emoji.shortcode}:`}
-            style={({ pressed }) => [styles.emojiCell, pressed && styles.optionSelected]}
-        >
-            {/* The original, so animated emoji play here as they will in the post */}
-            <Image testID="emoji-image" source={{ uri: emoji.url || emoji.static_url }} style={styles.emojiImage} resizeMode="contain" />
-        </Pressable>
-    );
 
     return (
         <BottomSheet visible={visible} title={t('emoji.title')} onClose={onClose}>
@@ -178,33 +204,26 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ visible, onPick, onClo
                             <SegmentedPill variant="chips" options={chips} value={activeCategory} onChange={setCategory} />
                         </ScrollView>
                     )}
-                    <SectionList
-                        sections={sections}
-                        keyExtractor={row => row[0].shortcode}
-                        style={styles.emojiGrid}
-                        stickySectionHeadersEnabled
-                        // Each row is seven images, and animated ones are costly: only keep about what's on screen
-                        initialNumToRender={8}
-                        maxToRenderPerBatch={4}
-                        windowSize={3}
-                        removeClippedSubviews
-                        keyboardShouldPersistTaps="handled"
-                        ListEmptyComponent={
-                            searching ? <Text style={[type.meta, styles.emojiStatusText]}>{t('emoji.noMatches', { query: shownQuery })}</Text> : null
-                        }
-                        renderSectionHeader={({ section }) =>
-                            headers ? (
-                                <Text accessibilityRole="header" style={[type.label, styles.emojiSectionTitle]}>{sectionLabel(section.title)}</Text>
-                            ) : null
-                        }
-                        renderItem={({ item: row }) => (
-                            <View style={styles.emojiRow}>
-                                {row.map(renderEmoji)}
-                                {/* Keep a short last row aligned to the grid */}
-                                {Array.from({ length: COLUMNS - row.length }, (_, i) => <View key={`gap-${i}`} style={styles.emojiCell} />)}
-                            </View>
-                        )}
-                    />
+                    <View style={styles.emojiGrid}>
+                        <FlashList
+                            data={items}
+                            // Recent emoji also sit in their own category, so rows are told apart by place too
+                            keyExtractor={(item, index) => (item.kind === 'header' ? `h:${item.title}` : `${index}:${item.emojis[0].shortcode}`)}
+                            getItemType={item => item.kind}
+                            stickyHeaderIndices={stickyHeaders}
+                            keyboardShouldPersistTaps="handled"
+                            ListEmptyComponent={
+                                searching ? <Text style={[type.meta, styles.emojiStatusText]}>{t('emoji.noMatches', { query: shownQuery })}</Text> : null
+                            }
+                            renderItem={({ item }) =>
+                                item.kind === 'header' ? (
+                                    <Text accessibilityRole="header" style={[type.label, styles.emojiSectionTitle]}>{sectionLabel(item.title)}</Text>
+                                ) : (
+                                    <EmojiRow emojis={item.emojis} animated={mediaAutoplay} onPick={pick} styles={styles} />
+                                )
+                            }
+                        />
+                    </View>
                 </>
             )}
         </BottomSheet>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Modal, Pressable, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon } from '../ui/icon';
 import { Account } from '../../services/mastodon/types';
 import { useTheme } from '../../services/themeContext';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
@@ -95,19 +95,19 @@ export const TopBar: React.FC<TopBarProps> = ({ user, onProfilePress, onSettings
                         {auth && (
                             <>
                                 <Pressable style={styles.menuItem} onPress={menuAction(() => auth.setAddingAccount(true))} accessibilityRole="button" accessibilityLabel={t('settings.addAccount')}>
-                                    <Ionicons name="add-circle-outline" size={18} color={colors.accentText} />
+                                    <Icon name="add-circle-outline" size={18} color={colors.accentText} />
                                     <Text style={[type.name, styles.menuText, styles.menuTextAccent]}>{t('settings.addAccount')}</Text>
                                 </Pressable>
                                 <View style={styles.divider} />
                             </>
                         )}
                         <Pressable style={styles.menuItem} onPress={menuAction(onProfilePress)} accessibilityRole="button" accessibilityLabel={t('common.profile')}>
-                            <Ionicons name="person-outline" size={18} color={colors.textPrimary} />
+                            <Icon name="person-outline" size={18} color={colors.textPrimary} />
                             <Text style={[type.name, styles.menuText]}>{t('common.profile')}</Text>
                         </Pressable>
                         <View style={styles.divider} />
                         <Pressable style={styles.menuItem} onPress={menuAction(onLogoutPress)} accessibilityRole="button" accessibilityLabel={t('common.logOut')}>
-                            <Ionicons name="log-out-outline" size={18} color={colors.dangerColor} />
+                            <Icon name="log-out-outline" size={18} color={colors.dangerColor} />
                             <Text style={[type.name, styles.menuText, styles.menuTextDanger]}>{t('common.logOut')}</Text>
                         </Pressable>
                     </View>

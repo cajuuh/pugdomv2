@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon, IconName } from '../../components/ui/icon';
 import { Card, ThemedSwitch } from '../../components/ui';
 import { useTheme } from '../../services/themeContext';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
@@ -10,7 +10,7 @@ import { PUSH_ALERT_TYPES } from '../../services/push';
 import { SettingsHeader } from './header';
 import { makeClearHelpStyles, makeStyles } from './styles';
 
-const ICONS: Record<typeof PUSH_ALERT_TYPES[number], React.ComponentProps<typeof Ionicons>['name']> = {
+const ICONS: Record<typeof PUSH_ALERT_TYPES[number], IconName> = {
     mention: 'at',
     status: 'notifications-outline',
     reblog: 'repeat',
@@ -40,7 +40,7 @@ const PushAlerts: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                         <React.Fragment key={alert}>
                             {index > 0 && <View style={styles.divider} />}
                             <View style={styles.row}>
-                                <Ionicons name={ICONS[alert]} size={20} color={colors.accentText} />
+                                <Icon name={ICONS[alert]} size={20} color={colors.accentText} />
                                 <Text style={[type.name, styles.rowLabel, styles.rowText]}>{t(`push.${alert}`)}</Text>
                                 <ThemedSwitch value={pushAlerts[alert]} onValueChange={value => setPushAlert(alert, value)} accessibilityLabel={t(`push.${alert}`)} />
                             </View>
@@ -48,7 +48,7 @@ const PushAlerts: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                     ))}
                 </Card>
                 <View style={helpStyles.note} accessible>
-                    <Ionicons name="lock-closed-outline" size={18} color={colors.textMuted} />
+                    <Icon name="lock-closed-outline" size={18} color={colors.textMuted} />
                     <Text style={[type.meta, helpStyles.noteText]}>{t('push.privacy')}</Text>
                 </View>
             </ScrollView>

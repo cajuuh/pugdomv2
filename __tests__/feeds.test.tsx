@@ -30,7 +30,7 @@ jest.mock('../services/authContext', () => ({ useAuth: () => ({ user: { id: 'me'
 jest.mock('../services/themeContext', () => ({
     useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
 }));
-const mockSettings = { swipeFeeds: false };
+const mockSettings = { swipeFeeds: false, homeBoosts: true, homeReplies: true };
 jest.mock('../services/settingsContext', () => ({ ...jest.requireActual('../services/settingsContext'), useSettings: () => mockSettings }));
 jest.mock('../components/TootCard/tootCard', () => ({
     TootCard: ({ status }: { status: Status }) => {

@@ -309,6 +309,9 @@ export const en = {
         cwTitle: 'CW · {{text}}',
         // A long post folded in a timeline; past 5,000 characters it also says how long
         showMore: 'Show more',
+        // The chip at the end of a post's hashtags that shows the rest ("+3")
+        moreHashtags_one: 'Show {{count}} more hashtag',
+        moreHashtags_other: 'Show {{count}} more hashtags',
         veryLong: 'Very long post · {{count}} characters',
         boosted: '{{name}} boosted',
         privateMention: 'Private mention',
@@ -771,6 +774,8 @@ export const en = {
         follow: 'Follow',
         followBack: 'Follow back',
         following: 'Following',
+        // You follow each other
+        mutuals: 'Mutuals',
         requested: 'Requested',
         pending: 'Following…',
         failed: 'Failed to follow this account. Please try again.',
@@ -901,6 +906,8 @@ export const en = {
         compactMode: 'Compact Mode',
         hideCounts: 'Hide numbers on posts',
         swipeFeeds: 'Swipe between timelines',
+        homeBoosts: 'Show boosts in the Home timeline',
+        homeReplies: 'Show replies in the Home timeline',
         uncroppedMedia: 'Show images uncropped',
         externalBrowser: "Open links in your phone's browser",
         posts: 'Posts',

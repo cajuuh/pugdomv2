@@ -21,6 +21,7 @@ jest.mock('../services/themeContext', () => ({
 }));
 jest.mock('../services/settingsContext', () => ({
     useSettings: () => ({ compactMode: false, mediaAutoplay: false }),
+    useOptionalSettings: () => null,
 }));
 jest.mock('../services/composeContext', () => ({
     useCompose: () => ({ openCompose: mockOpenCompose }),
@@ -269,7 +270,7 @@ describe('Quoting in compose', () => {
     it("doesn't send quote settings to servers without quotes", async () => {
         (fetchInstanceConfiguration as jest.Mock).mockResolvedValue({ ...DEFAULT_INSTANCE_CONFIGURATION, supportsQuotes: false });
         await renderCompose(null);
-        await screen.findByText(String(DEFAULT_INSTANCE_CONFIGURATION.maxCharacters));
+        await screen.findByLabelText(`${DEFAULT_INSTANCE_CONFIGURATION.maxCharacters} characters left`);
 
         expect(screen.queryByRole('button', { name: /Who can quote/ })).toBeNull();
         await write('Hi');

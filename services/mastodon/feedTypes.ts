@@ -1,5 +1,5 @@
 import type React from 'react';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import type { IconName } from '../../components/ui/icon';
 import { Translator } from '../i18n/translate';
 
 export type BuiltinFeedKind = 'home' | 'local' | 'federated' | 'trending';
@@ -111,7 +111,7 @@ export const feedLabel = (feed: FeedDescriptor, { t }: Pick<Translator, 't'>) =>
     }
 };
 
-export const feedIcon = (kind: FeedKind): React.ComponentProps<typeof Ionicons>['name'] => {
+export const feedIcon = (kind: FeedKind): IconName => {
     switch (kind) {
         case 'home':
             return 'home-outline';

@@ -13,6 +13,8 @@ jest.mock('../services/themeContext', () => ({
     useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
 }));
 jest.mock('../services/mastodon/customEmojis', () => ({ fetchCustomEmojis: jest.fn() }));
+let mockAutoplay = false;
+jest.mock('../services/settingsContext', () => ({ useOptionalSettings: () => ({ mediaAutoplay: mockAutoplay }) }));
 // The keyboard, as the sheet sees it
 let mockKeyboard = { visible: false, inset: 0 };
 jest.mock('../hooks/useKeyboard', () => ({ useKeyboard: () => mockKeyboard }));
@@ -64,6 +66,7 @@ describe('groupByCategory', () => {
 describe('EmojiPicker', () => {
     beforeEach(async () => {
         jest.clearAllMocks();
+        mockAutoplay = false;
         await AsyncStorage.clear();
     });
 
@@ -79,7 +82,8 @@ describe('EmojiPicker', () => {
         );
 
         expect(await screen.findByRole('header', { name: 'Recent' })).toBeTruthy();
-        const headers = screen.getAllByRole('header').map(header => header.props.children);
+        // Once each: the list also draws a copy of the header stuck to its top
+        const headers = [...new Set(screen.getAllByRole('header').map(header => header.props.children))];
         // After the sheet's title
         expect(headers).toEqual(['Custom emoji', 'Recent', 'Blobs', 'Flags']);
         // Each recent one shows twice: under Recent and in its own category
@@ -95,7 +99,7 @@ describe('EmojiPicker', () => {
         await renderPicker();
 
         expect(await screen.findByRole('header', { name: 'Recent' })).toBeTruthy();
-        expect(screen.getByRole('header', { name: 'All' })).toBeTruthy();
+        expect(screen.getAllByRole('header', { name: 'All' }).length).toBeGreaterThan(0);
     });
 
     it('shows every category under its own header, with a chip for each', async () => {
@@ -103,19 +107,21 @@ describe('EmojiPicker', () => {
         await renderPicker();
 
         expect(await screen.findByRole('button', { name: ':blobcat:' })).toBeTruthy();
-        expect(screen.getByRole('header', { name: 'Blobs' })).toBeTruthy();
-        expect(screen.getByRole('header', { name: 'Flags' })).toBeTruthy();
-        expect(screen.getByRole('header', { name: 'Other' })).toBeTruthy();
+        for (const name of ['Blobs', 'Flags', 'Other']) expect(screen.getAllByRole('header', { name }).length).toBeGreaterThan(0);
         expect(screen.getByRole('button', { name: 'All' })).toBeSelected();
         expect(screen.queryByRole('button', { name: ':hidden:' })).toBeNull();
     });
 
-    it('shows animated emoji moving, from their original image rather than the still one', async () => {
+    it.each([
+        [false, 'https://x/blobdance-still.png'],
+        [true, 'https://x/blobdance.gif'],
+    ])('with media autoplay %s, shows animated emoji from %s', async (autoplay, uri) => {
+        mockAutoplay = autoplay;
         mockedFetch.mockResolvedValue([{ ...emoji('blobdance'), url: 'https://x/blobdance.gif', static_url: 'https://x/blobdance-still.png' }]);
         await renderPicker();
         await screen.findByRole('button', { name: ':blobdance:' });
 
-        expect(screen.getByTestId('emoji-image').props.source).toEqual({ uri: 'https://x/blobdance.gif' });
+        expect(screen.getByTestId('emoji-image').props.source).toEqual({ uri });
     });
 
     it('keeps a server category literally named "Other" apart from the uncategorized group', async () => {
@@ -123,7 +129,7 @@ describe('EmojiPicker', () => {
         await renderPicker();
         await screen.findByRole('button', { name: ':blobcat:' });
 
-        expect(screen.getAllByRole('header', { name: 'Other' })).toHaveLength(2);
+        expect(screen.getAllByRole('header', { name: 'Other' }).length).toBeGreaterThanOrEqual(2);
         expect(screen.getAllByRole('button', { name: 'Other' })).toHaveLength(2);
     });
 

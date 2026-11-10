@@ -112,7 +112,9 @@ export const StatusHtmlContent = React.memo(({ content, emojis, colors, bodyFont
     }), [colors, bodyFont, compactMode]);
 
     const processedHtml = React.useMemo(() => {
-        let html = withoutQuoteInline(content || '');
+        // One <p> for the whole post: each <p> is its own Text, and a selection can't cross Texts, so
+        // holding a word could only copy that paragraph
+        let html = withoutQuoteInline(content || '').replace(/<\/p>\s*<p[^>]*>/gi, '<br><br>');
         html = html.replace(/<span class="invisible">https?:\/\/<\/span>/gi, '');
         html = html.replace(/<span class="invisible">.*?<\/span>/gi, (match: string) => {
             const inner = match.replace(/<[^>]*>/g, '');

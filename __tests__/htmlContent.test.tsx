@@ -42,6 +42,20 @@ describe('StatusHtmlContent text', () => {
 
         expect(screen.getByText('copy me')).toHaveProp('selectable', true);
     });
+
+    it('selects across paragraphs, as one text', async () => {
+        const { toJSON } = await renderPost('<p>first paragraph</p><p class="x">second <a href="https://pug.example/a">link</a></p>', []);
+
+        const selectable: any[] = [];
+        const walk = (node: any) => {
+            if (!node || typeof node !== 'object') return;
+            if (node.type === 'Text' && node.props.selectable) selectable.push(node);
+            else node.children?.forEach(walk);
+        };
+        walk(toJSON());
+        expect(selectable).toHaveLength(1);
+        expect(JSON.stringify(selectable[0])).toMatch(/first paragraph[\s\S]*second[\s\S]*link/);
+    });
 });
 
 describe('holding a link', () => {
@@ -108,6 +122,13 @@ describe('trailing hashtags', () => {
     it('leaves a post that is nothing but hashtags as it is', () => {
         const only = `<p>${tag('pug')} ${tag('dog')}</p>`;
         expect(splitTrailingHashtags(only)).toEqual({ html: only, tags: [] });
+    });
+
+    it('takes them out too when the post has a photo, a link card, a poll or a quote to show', () => {
+        expect(splitTrailingHashtags(`<p>${tag('Sabafoto')}</p>`, true)).toEqual({ html: '', tags: ['Sabafoto'] });
+        // Mastodon's "RE:" line for apps without quotes isn't text either
+        expect(splitTrailingHashtags(`<p class="quote-inline">RE: <a href="x">x</a></p><p>${tag('pug')}</p>`, true)).toEqual({ html: '', tags: ['pug'] });
+        expect(splitTrailingHashtags(`<p>hello</p><p>${tag('pug')}</p>`, true)).toEqual({ html: '<p>hello</p>', tags: ['pug'] });
     });
 
     it('takes accented hashtags, and handles a post with no paragraphs', () => {

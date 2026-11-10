@@ -3,7 +3,7 @@ import { Image, Modal, StyleSheet, Text, TouchableOpacity, View, useWindowDimens
 import { FlatList, Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { interpolate, runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming, SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon } from '../ui/icon';
 import { mediaColors } from '../../services/theme/media';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { SaveMediaButton } from './saveMediaButton';
@@ -237,7 +237,7 @@ export const ImageGallery = ({ images, index, visible, onClose, extraButton }: I
                     accessibilityRole="button"
                     accessibilityLabel={t('media.close')}
                 >
-                    <Ionicons name="close" size={30} color={mediaColors.ink} />
+                    <Icon name="close" size={30} color={mediaColors.ink} />
                 </TouchableOpacity>
                 {extraButton}
                 {/* Left of the close button (44 wide, 16 from the edge), centred on it */}
@@ -255,7 +255,7 @@ export const ImageGallery = ({ images, index, visible, onClose, extraButton }: I
                                 accessibilityRole="button"
                                 accessibilityLabel={t('media.previous')}
                             >
-                                <Ionicons name="chevron-back" size={24} color={mediaColors.ink} />
+                                <Icon name="chevron-back" size={24} color={mediaColors.ink} />
                             </TouchableOpacity>
                         )}
                         {current < images.length - 1 && (
@@ -265,7 +265,7 @@ export const ImageGallery = ({ images, index, visible, onClose, extraButton }: I
                                 accessibilityRole="button"
                                 accessibilityLabel={t('media.next')}
                             >
-                                <Ionicons name="chevron-forward" size={24} color={mediaColors.ink} />
+                                <Icon name="chevron-forward" size={24} color={mediaColors.ink} />
                             </TouchableOpacity>
                         )}
                     </>

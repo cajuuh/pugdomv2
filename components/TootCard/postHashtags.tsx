@@ -1,7 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRecyclingState } from '@shopify/flash-list';
-import { PillButton } from '../ui';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { useTheme } from '../../services/themeContext';
 import { hitSlopFor, radii, space } from '../../services/theme/shape';
@@ -9,10 +8,11 @@ import { hitSlopFor, radii, space } from '../../services/theme/shape';
 const VISIBLE = 5;
 const CHIP_HEIGHT = 28;
 
-// The hashtags a post ends with, below its media and link preview
+// The hashtags a post ends with, below its media and link preview. No top margin: the post's content
+// gap spaces it the same after text as after media
 export const PostHashtags: React.FC<{ tags: string[]; onPress: (tag: string) => void }> = ({ tags, onPress }) => {
     const { colors, type } = useTheme();
-    const { t } = useI18n();
+    const { tn } = useI18n();
     const [expanded, setExpanded] = useRecyclingState(false, [tags]);
     if (tags.length === 0) return null;
 
@@ -29,8 +29,17 @@ export const PostHashtags: React.FC<{ tags: string[]; onPress: (tag: string) => 
                     <Text style={[type.meta, { color: colors.accentText }]} numberOfLines={1}>#{tag}</Text>
                 </Pressable>
             ))}
+            {/* The rest as one more chip, the same size as the tags */}
             {!expanded && tags.length > VISIBLE && (
-                <PillButton label={t('post.showMore')} size="small" variant="subtle" onPress={() => setExpanded(true)} />
+                <Pressable
+                    onPress={() => setExpanded(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel={tn('post.moreHashtags', tags.length - VISIBLE)}
+                    hitSlop={hitSlopFor(0, CHIP_HEIGHT)}
+                    style={[styles.chip, { backgroundColor: colors.inputBackground }]}
+                >
+                    <Text style={[type.meta, { color: colors.textSecondary }]}>+{tags.length - VISIBLE}</Text>
+                </Pressable>
             )}
         </View>
     );
@@ -42,7 +51,6 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
         alignItems: 'center',
         gap: space.xs,
-        marginTop: space.sm,
     },
     chip: {
         height: CHIP_HEIGHT,

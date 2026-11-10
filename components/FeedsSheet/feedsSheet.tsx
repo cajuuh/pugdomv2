@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon } from '../ui/icon';
 import { useTheme } from '../../services/themeContext';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { usePinnedFeeds } from '../../hooks/usePinnedFeeds';
@@ -71,7 +71,7 @@ export const FeedsSheet: React.FC<FeedsSheetProps> = ({ visible, onClose, onSele
                     style={({ pressed }) => [styles.rowMain, pressed && { opacity: 0.7 }]}
                 >
                     <View style={[styles.icon, { backgroundColor: colors.accentSoft }]}>
-                        <Ionicons name={feedIcon(feed.kind)} size={18} color={colors.accentText} />
+                        <Icon name={feedIcon(feed.kind)} size={18} color={colors.accentText} />
                     </View>
                     <View style={styles.rowText}>
                         <Text style={[type.name, { color: colors.textPrimary }]} numberOfLines={1}>{label}</Text>
@@ -144,7 +144,7 @@ export const FeedsSheet: React.FC<FeedsSheetProps> = ({ visible, onClose, onSele
             accessibilityLabel={title}
             style={({ pressed }) => [styles.create, { borderColor: colors.borderColor }, pressed && { opacity: 0.7 }]}
         >
-            <Ionicons name="add-circle-outline" size={20} color={colors.accentText} />
+            <Icon name="add-circle-outline" size={20} color={colors.accentText} />
             <View style={styles.rowText}>
                 <Text style={[type.name, { color: colors.accentText }]}>{title}</Text>
                 <Text style={[type.meta, { color: colors.textMuted }]}>{subtitle}</Text>

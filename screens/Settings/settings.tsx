@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon, IconName } from '../../components/ui/icon';
 import { openLink } from '../../services/links';
 import { useAuth } from '../../services/authContext';
 import { useSettings } from '../../services/settingsContext';
@@ -51,6 +51,10 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
         setHideCounts,
         swipeFeeds,
         setSwipeFeeds,
+        homeBoosts,
+        setHomeBoosts,
+        homeReplies,
+        setHomeReplies,
         groupNotifications,
         setGroupNotifications,
         uncroppedMedia,
@@ -124,9 +128,9 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
         setNotifications(value);
     };
 
-    const switchRow = (icon: React.ComponentProps<typeof Ionicons>['name'], label: string, value: boolean, onChange: (value: boolean) => void) => (
+    const switchRow = (icon: IconName, label: string, value: boolean, onChange: (value: boolean) => void) => (
         <View style={styles.row}>
-            <Ionicons name={icon} size={20} color={colors.accentText} />
+            <Icon name={icon} size={20} color={colors.accentText} />
             <Text style={[labelStyle, styles.rowText]}>{label}</Text>
             <ThemedSwitch value={value} onValueChange={onChange} accessibilityLabel={label} />
         </View>
@@ -161,7 +165,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
                                         </Text>
                                     </View>
                                     {isActive ? (
-                                        <Ionicons name="checkmark-circle" size={24} color={colors.accentText} />
+                                        <Icon name="checkmark-circle" size={24} color={colors.accentText} />
                                     ) : (
                                         <IconButton
                                             icon="log-out-outline"
@@ -177,7 +181,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
                         );
                     })}
                     <Pressable style={[styles.row, styles.rowCentered]} onPress={() => setAddingAccount(true)} accessibilityRole="button">
-                        <Ionicons name="add-circle-outline" size={20} color={colors.accentText} />
+                        <Icon name="add-circle-outline" size={20} color={colors.accentText} />
                         <Text style={[type.name, styles.rowLabel, { color: colors.accentText }]}>{t('settings.addAccount')}</Text>
                     </Pressable>
                 </Card>
@@ -190,12 +194,12 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
                         accessibilityRole="button"
                         accessibilityLabel={t('settings.appearanceLabel', { coat: coatName })}
                     >
-                        <Ionicons name="color-palette-outline" size={20} color={colors.accentText} />
+                        <Icon name="color-palette-outline" size={20} color={colors.accentText} />
                         <Text style={[labelStyle, styles.rowText]}>{t('settings.appearance')}</Text>
                         <View style={styles.rowTrailing}>
                             <PugMark coat={coat} size={22} />
                             <Text style={[type.meta, styles.rowValue]}>{coatName}</Text>
-                            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                            <Icon name="chevron-forward" size={16} color={colors.textMuted} />
                         </View>
                     </Pressable>
                     <View style={styles.divider} />
@@ -205,11 +209,11 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
                         accessibilityRole="button"
                         accessibilityLabel={t('settings.languageLabel', { value: languageName })}
                     >
-                        <Ionicons name="language-outline" size={20} color={colors.accentText} />
+                        <Icon name="language-outline" size={20} color={colors.accentText} />
                         <Text style={[labelStyle, styles.rowText]}>{t('settings.language')}</Text>
                         <View style={styles.rowTrailing}>
                             <Text style={[type.meta, styles.rowValue]}>{languageName}</Text>
-                            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                            <Icon name="chevron-forward" size={16} color={colors.textMuted} />
                         </View>
                     </Pressable>
                     {supportsQuotes && (
@@ -221,20 +225,20 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
                                 accessibilityRole="button"
                                 accessibilityLabel={t('settings.quotePolicyLabel', { value: quotePolicyName })}
                             >
-                                <Ionicons name="chatbox-ellipses-outline" size={20} color={colors.accentText} />
+                                <Icon name="chatbox-ellipses-outline" size={20} color={colors.accentText} />
                                 <Text style={[labelStyle, styles.rowText]}>{t('settings.quotePolicy')}</Text>
                                 <View style={styles.rowTrailing}>
                                     <Text style={[type.meta, styles.rowValue]}>{quotePolicyName}</Text>
-                                    <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                                    <Icon name="chevron-forward" size={16} color={colors.textMuted} />
                                 </View>
                             </Pressable>
                         </>
                     )}
                     <View style={styles.divider} />
                     <Pressable style={styles.row} onPress={onModeratedAccounts} accessibilityRole="button">
-                        <Ionicons name="eye-off-outline" size={20} color={colors.accentText} />
+                        <Icon name="eye-off-outline" size={20} color={colors.accentText} />
                         <Text style={[labelStyle, styles.rowText]}>{t('settings.moderatedAccounts')}</Text>
-                        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                        <Icon name="chevron-forward" size={16} color={colors.textMuted} />
                     </Pressable>
                     <View style={styles.divider} />
                     {switchRow('notifications-outline', t('settings.pushNotifications'), notifications, changePush)}
@@ -242,9 +246,9 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
                         <>
                             <View style={styles.divider} />
                             <Pressable style={styles.row} onPress={() => setPage('pushAlerts')} accessibilityRole="button" accessibilityLabel={t('settings.pushAlerts')}>
-                                <Ionicons name="options-outline" size={20} color={colors.accentText} />
+                                <Icon name="options-outline" size={20} color={colors.accentText} />
                                 <Text style={[labelStyle, styles.rowText]}>{t('settings.pushAlerts')}</Text>
-                                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                                <Icon name="chevron-forward" size={16} color={colors.textMuted} />
                             </Pressable>
                         </>
                     )}
@@ -252,24 +256,24 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
                     {switchRow('layers-outline', t('settings.groupNotifications'), groupNotifications, setGroupNotifications)}
                     <View style={styles.divider} />
                     <Pressable style={styles.row} onPress={() => setPage('clearNotifications')} accessibilityRole="button" accessibilityLabel={t('settings.clearNotifications')}>
-                        <Ionicons name="trash-outline" size={20} color={colors.accentText} />
+                        <Icon name="trash-outline" size={20} color={colors.accentText} />
                         <Text style={[labelStyle, styles.rowText]}>{t('settings.clearNotifications')}</Text>
-                        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                        <Icon name="chevron-forward" size={16} color={colors.textMuted} />
                     </Pressable>
                 </Card>
 
                 <SectionLabel style={styles.sectionLabel}>{t('settings.posts')}</SectionLabel>
                 <Card style={styles.group}>
                     <Pressable style={styles.row} onPress={onScheduledPosts} accessibilityRole="button">
-                        <Ionicons name="calendar-outline" size={20} color={colors.accentText} />
+                        <Icon name="calendar-outline" size={20} color={colors.accentText} />
                         <Text style={[labelStyle, styles.rowText]}>{t('scheduled.title')}</Text>
-                        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                        <Icon name="chevron-forward" size={16} color={colors.textMuted} />
                     </Pressable>
                     <View style={styles.divider} />
                     <Pressable style={styles.row} onPress={onDrafts} accessibilityRole="button">
-                        <Ionicons name="document-text-outline" size={20} color={colors.accentText} />
+                        <Icon name="document-text-outline" size={20} color={colors.accentText} />
                         <Text style={[labelStyle, styles.rowText]}>{t('drafts.title')}</Text>
-                        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                        <Icon name="chevron-forward" size={16} color={colors.textMuted} />
                     </Pressable>
                     <View style={styles.divider} />
                     {switchRow('list-outline', t('settings.compactMode'), compactMode, setCompactMode)}
@@ -279,6 +283,10 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
                     {switchRow('warning-outline', t('settings.expandSpoilers'), expandSpoilers, setExpandSpoilers)}
                     <View style={styles.divider} />
                     {switchRow('swap-horizontal-outline', t('settings.swipeFeeds'), swipeFeeds, setSwipeFeeds)}
+                    <View style={styles.divider} />
+                    {switchRow('repeat', t('settings.homeBoosts'), homeBoosts, setHomeBoosts)}
+                    <View style={styles.divider} />
+                    {switchRow('chatbubbles-outline', t('settings.homeReplies'), homeReplies, setHomeReplies)}
                     <View style={styles.divider} />
                     {switchRow('globe-outline', t('settings.externalBrowser'), externalBrowser, setExternalBrowser)}
                 </Card>
@@ -298,13 +306,13 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
                 <Card style={styles.group}>
                     {/* Tapped 7 times: Esmeralda */}
                     <Pressable style={styles.row} onPress={esmeralda.tap}>
-                        <Ionicons name="information-circle-outline" size={20} color={colors.accentText} />
+                        <Icon name="information-circle-outline" size={20} color={colors.accentText} />
                         <Text style={[labelStyle, styles.rowText]}>{t('settings.version')}</Text>
                         <Text style={[type.meta, styles.rowValue]}>{appVersionLabel()}</Text>
                     </Pressable>
                     <View style={styles.divider} />
                     <View style={styles.row}>
-                        <Ionicons name="code-slash-outline" size={20} color={colors.accentText} />
+                        <Icon name="code-slash-outline" size={20} color={colors.accentText} />
                         {/* An update's label is long ("2026-10-13 21:43 · d095fe8 (production)"): its own line, under the name */}
                         <View style={styles.rowText}>
                             <Text style={labelStyle}>{t('settings.codeVersion')}</Text>
@@ -317,14 +325,14 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
                         onPress={() => openLink(PRIVACY_URL)}
                         accessibilityRole="link"
                     >
-                        <Ionicons name="shield-checkmark-outline" size={20} color={colors.accentText} />
+                        <Icon name="shield-checkmark-outline" size={20} color={colors.accentText} />
                         <Text style={[labelStyle, styles.rowText]}>{t('settings.privacy')}</Text>
-                        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                        <Icon name="chevron-forward" size={16} color={colors.textMuted} />
                     </Pressable>
                 </Card>
 
                 <Pressable style={styles.logoutButton} onPress={() => logout()} accessibilityRole="button">
-                    <Ionicons name="log-out-outline" size={18} color={colors.dangerColor} />
+                    <Icon name="log-out-outline" size={18} color={colors.dangerColor} />
                     <Text style={[type.name, styles.logoutLabel]}>{t('common.logOut')}</Text>
                 </Pressable>
             </ScrollView>

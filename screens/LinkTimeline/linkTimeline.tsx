@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, RefreshControl, Text, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon } from '../../components/ui/icon';
 import { useTheme } from '../../services/themeContext';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { useI18n } from '../../services/i18n/i18nContext';
@@ -58,7 +58,7 @@ const LinkTimeline = ({ url, title, onBack, onStatusPress }: LinkTimelineProps) 
     const intro = (
         <View style={styles.intro}>
             <View style={styles.domainBadge}>
-                <Ionicons name="link-outline" size={14} color={colors.accentText} />
+                <Icon name="link-outline" size={14} color={colors.accentText} />
                 <Text style={[type.label, styles.domainText]}>{domain}</Text>
             </View>
             <Text accessibilityRole="header" style={[type.title, styles.title]}>

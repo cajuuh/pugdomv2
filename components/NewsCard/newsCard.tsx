@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon } from '../ui/icon';
 import { Card, PillButton } from '../ui';
 import { TrendLink, weeklyTrendUsage } from '../../services/mastodon/trends';
 import { useTheme } from '../../services/themeContext';
@@ -47,7 +47,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({ link, onPressLinkTimeline })
             <Pressable onPress={handleTimeline} accessibilityRole="link" accessibilityLabel={link.title || domain}>
                 <View style={styles.header}>
                     <View style={styles.providerBadge}>
-                        <Ionicons name="newspaper-outline" size={13} color={colors.accentText} />
+                        <Icon name="newspaper-outline" size={13} color={colors.accentText} />
                         <Text style={[type.label, styles.providerText]} numberOfLines={1}>
                             {provider}
                         </Text>

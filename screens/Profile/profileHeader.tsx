@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Pressable, Share, Text, View, useWindowDimensions } from 'react-native';
+import { Platform, Pressable, Share, Text, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon } from '../../components/ui/icon';
 import { useTheme } from '../../services/themeContext';
 import { useNavigator } from '../../services/navigationContext';
 import { Account, Attachment, Relationship } from '../../services/mastodon/types';
@@ -130,8 +130,8 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
                         style={[styles.bannerButton, styles.bannerButtonLeft, { top: topInset + space.md }]}
                     />
                 )}
-                {/* Report, mute, block: on the banner, where your own profile has Settings, so the row below
-                    keeps room for Follow, the bell, lists and share */}
+                {/* Share, report, mute, block: on the banner, where your own profile has Settings, so the row
+                    below keeps room for Follow, the bell and lists */}
                 {mode === 'other' && (
                     <IconButton
                         icon="ellipsis-horizontal"
@@ -177,7 +177,7 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
                                 hitSlop={hitSlopFor(SHARE_SIZE, SHARE_SIZE)}
                                 style={({ pressed }) => [styles.share, relationship.notifying && { backgroundColor: colors.accentSoft }, pressed && { opacity: 0.7 }]}
                             >
-                                <Ionicons
+                                <Icon
                                     name={relationship.notifying ? 'notifications' : 'notifications-outline'}
                                     size={18}
                                     color={relationship.notifying ? colors.accentText : colors.textPrimary}
@@ -192,18 +192,22 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
                                 hitSlop={hitSlopFor(SHARE_SIZE, SHARE_SIZE)}
                                 style={({ pressed }) => [styles.share, pressed && { opacity: 0.7 }]}
                             >
-                                <Ionicons name="list-outline" size={18} color={colors.textPrimary} />
+                                <Icon name="list-outline" size={18} color={colors.textPrimary} />
                             </Pressable>
                         )}
-                        <Pressable
-                            onPress={handleShare}
-                            accessibilityRole="button"
-                            accessibilityLabel={t('profile.shareProfile')}
-                            hitSlop={hitSlopFor(SHARE_SIZE, SHARE_SIZE)}
-                            style={({ pressed }) => [styles.share, pressed && { opacity: 0.7 }]}
-                        >
-                            <Ionicons name="share-outline" size={18} color={colors.textPrimary} />
-                        </Pressable>
+                        {/* On other people's profiles share is in the ⋯ menu: Follow, the bell and lists already fill
+                            the row, and a fourth button was cut off on narrow phones */}
+                        {mode === 'self' && (
+                            <Pressable
+                                onPress={handleShare}
+                                accessibilityRole="button"
+                                accessibilityLabel={t('profile.shareProfile')}
+                                hitSlop={hitSlopFor(SHARE_SIZE, SHARE_SIZE)}
+                                style={({ pressed }) => [styles.share, pressed && { opacity: 0.7 }]}
+                            >
+                                <Icon name="share-outline" size={18} color={colors.textPrimary} />
+                            </Pressable>
+                        )}
                     </View>
                 </View>
 
@@ -220,9 +224,9 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
                     </View>
                 )}
 
-                {mode === 'other' && (relationship?.followed_by || remoteServer) && (
+                {mode === 'other' && ((relationship?.followed_by && !relationship.following) || remoteServer) && (
                     <View style={styles.otherInfo}>
-                        {relationship?.followed_by && (
+                        {relationship?.followed_by && !relationship.following && (
                             <View style={styles.followsYou}>
                                 <Text style={[type.label, styles.followsYouText]}>{t('account.followsYou')}</Text>
                             </View>
@@ -235,7 +239,7 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
                                 hitSlop={hitSlopFor(0, 20)}
                                 style={({ pressed }) => [styles.remoteLink, pressed && { opacity: 0.7 }]}
                             >
-                                <Ionicons name="open-outline" size={14} color={colors.accentText} />
+                                <Icon name="open-outline" size={14} color={colors.accentText} />
                                 <Text style={[type.meta, styles.remoteLinkText]}>{t('account.openOnServer', { server: remoteServer })}</Text>
                             </Pressable>
                         )}
@@ -273,7 +277,7 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
                                 </Text>
                                 <View style={styles.fieldValue}>
                                     {!!field.verified_at && (
-                                        <Ionicons name="checkmark-circle" size={16} color={colors.accentText} accessibilityLabel={t('profile.verifiedLink')} />
+                                        <Icon name="checkmark-circle" size={16} color={colors.accentText} accessibilityLabel={t('profile.verifiedLink')} />
                                     )}
                                     <View style={styles.fieldValueText}>
                                         <StatusHtmlContent
@@ -303,9 +307,9 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
                         style={({ pressed }) => [styles.note, pressed && { opacity: 0.7 }]}
                     >
                         <View style={styles.noteTop}>
-                            <Ionicons name="document-text-outline" size={14} color={colors.accentText} />
+                            <Icon name="document-text-outline" size={14} color={colors.accentText} />
                             <Text style={[type.label, styles.noteLabel]}>{t('profile.note')}</Text>
-                            <Ionicons name="create-outline" size={14} color={colors.textMuted} />
+                            <Icon name="create-outline" size={14} color={colors.textMuted} />
                         </View>
                         <Text style={[type.body, styles.noteText]}>{note}</Text>
                     </Pressable>
@@ -331,6 +335,8 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
                     subtitle={`@${user.acct}`}
                     onClose={() => setMenuOpen(false)}
                     actions={[
+                        // After the sheet has closed: iOS can't present the share sheet over one still closing
+                        { key: 'share', icon: 'share-outline', label: t('profile.shareProfile'), onPress: () => setTimeout(handleShare, Platform.OS === 'ios' ? 400 : 0) },
                         ...(relationship?.followed_by
                             ? [{ key: 'removeFollower', icon: 'person-remove-outline' as const, label: t('moderation.removeFollower', { acct: user.acct }), description: t('moderation.removeFollowerHint'), onPress: () => moderation.removeFollower(user) }]
                             : []),
