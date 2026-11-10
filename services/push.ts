@@ -8,6 +8,8 @@ import { Route } from './navigationContext';
 
 // relay/ in this repo: turns Mastodon's Web Push into Expo Push (decrypting it there, storing nothing)
 export const RELAY_URL = 'https://pugdom-relay.cajuuh.workers.dev';
+// False in the F-Droid build, which has no push (app.config.js)
+export const pushAvailable = !Constants.expoConfig?.extra?.foss;
 // Matches expo-notifications' defaultChannel in app.json, which pushes without a channel use
 export const ANDROID_CHANNEL = 'default';
 
@@ -58,6 +60,7 @@ export async function unsubscribe(account: SavedAccount): Promise<void> {
 // Brings every saved account's server subscription in line with the settings.
 // Subscribing again is how a new Expo token or changed alerts reach the server.
 export async function syncPush(accounts: SavedAccount[], enabled: boolean, alerts: PushAlerts, channelName: string): Promise<void> {
+    if (!pushAvailable) return;
     if (!enabled) {
         await Promise.allSettled(accounts.map(unsubscribe));
         return;

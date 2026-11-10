@@ -120,6 +120,17 @@ yarn ios
 yarn web
 ```
 
+### F-Droid / IzzyOnDroid build
+
+The Android build for those stores has no Google code: no push notifications (they go through Firebase) and no over-the-air updates. `PUGDOM_FOSS=1` switches it on (see `app.config.js`), and the store listing lives in `fastlane/metadata/android/`.
+```bash
+# Debug-signed, to try on a phone
+scripts/build-foss.sh
+
+# Signed with your release key
+PUGDOM_KEYSTORE=~/keys/pugdon-foss.jks scripts/build-foss.sh
+```
+
 ---
 
 ## 🤝 Contributing

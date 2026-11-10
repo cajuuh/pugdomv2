@@ -14,7 +14,7 @@ import Appearance from './appearance';
 import ClearNotificationsHelp from './clearNotificationsHelp';
 import PushAlerts from './pushAlerts';
 import { Esmeralda, useEsmeraldaTaps } from './esmeralda';
-import { requestPushPermission } from '../../services/push';
+import { pushAvailable, requestPushPermission } from '../../services/push';
 import { SettingsHeader } from './header';
 import { makeStyles } from './styles';
 import { useI18n } from '../../services/i18n/i18nContext';
@@ -261,18 +261,22 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
                         <Icon name="chevron-forward" size={16} color={colors.textMuted} />
                     </Pressable>
                     <View style={styles.divider} />
-                    {switchRow('notifications-outline', t('settings.pushNotifications'), notifications, changePush)}
-                    {notifications && (
+                    {pushAvailable && (
                         <>
+                            {switchRow('notifications-outline', t('settings.pushNotifications'), notifications, changePush)}
+                            {notifications && (
+                                <>
+                                    <View style={styles.divider} />
+                                    <Pressable style={styles.row} onPress={() => setPage('pushAlerts')} accessibilityRole="button" accessibilityLabel={t('settings.pushAlerts')}>
+                                        <Icon name="options-outline" size={20} color={colors.accentText} />
+                                        <Text style={[labelStyle, styles.rowText]}>{t('settings.pushAlerts')}</Text>
+                                        <Icon name="chevron-forward" size={16} color={colors.textMuted} />
+                                    </Pressable>
+                                </>
+                            )}
                             <View style={styles.divider} />
-                            <Pressable style={styles.row} onPress={() => setPage('pushAlerts')} accessibilityRole="button" accessibilityLabel={t('settings.pushAlerts')}>
-                                <Icon name="options-outline" size={20} color={colors.accentText} />
-                                <Text style={[labelStyle, styles.rowText]}>{t('settings.pushAlerts')}</Text>
-                                <Icon name="chevron-forward" size={16} color={colors.textMuted} />
-                            </Pressable>
                         </>
                     )}
-                    <View style={styles.divider} />
                     {switchRow('layers-outline', t('settings.groupNotifications'), groupNotifications, setGroupNotifications)}
                     <View style={styles.divider} />
                     <Pressable style={styles.row} onPress={() => setPage('clearNotifications')} accessibilityRole="button" accessibilityLabel={t('settings.clearNotifications')}>

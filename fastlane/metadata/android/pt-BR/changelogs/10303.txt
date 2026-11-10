@@ -1,0 +1,1 @@
+Primeira versão para o F-Droid e o IzzyOnDroid: todo o pugdon, sem nenhum código do Google e sem atualizações pelo ar. Esta versão ainda não recebe notificações push.
