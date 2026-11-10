@@ -1,1 +1,1 @@
-Um app de Mastodon caloroso, acessível e com um pug de mascote.
+Um app de Mastodon caloroso, acessível e com um pug de mascote

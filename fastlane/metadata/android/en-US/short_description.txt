@@ -1,1 +1,1 @@
-A warm, accessible Mastodon app with a one-eyed pug for a mascot.
+A warm, accessible Mastodon app with a one-eyed pug for a mascot

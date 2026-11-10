@@ -122,6 +122,8 @@ yarn web
 
 ### F-Droid / IzzyOnDroid build
 
+**To install it without Google Play:** add `https://github.com/cajuuh/pugdomv2` in [Obtainium](https://github.com/ImranR98/Obtainium). It installs and updates the `pugdon-<version>-foss.apk` from each release.
+
 The Android build for those stores has no Google code: no push notifications (they go through Firebase) and no over-the-air updates. `PUGDOM_FOSS=1` switches it on (see `app.config.js`), and the store listing lives in `fastlane/metadata/android/`.
 ```bash
 # Debug-signed, to try on a phone
