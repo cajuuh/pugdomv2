@@ -83,9 +83,16 @@ export const LANGUAGES = [
     { code: 'es', label: 'Español' },
     { code: 'fr', label: 'Français' },
     { code: 'de', label: 'Deutsch' },
+    { code: 'eo', label: 'Esperanto' },
+    { code: 'la', label: 'Latin' },
+    { code: 'ja', label: '日本語' },
+    { code: 'zh', label: '中文' },
 ];
 
-const LANGUAGE_OPTIONS: SheetOption<string>[] = LANGUAGES.map(({ code, label }) => ({ value: code, label, description: code.toUpperCase() }));
+// Each language goes by its own name, except Latin, which reads in the app's language (Latim, Latein…)
+const languageLabel = ({ code, label }: typeof LANGUAGES[number], i18n: Translator) => code === 'la' ? i18n.dict.languageNames.la : label;
+const languageOptions = (i18n: Translator): SheetOption<string>[] =>
+    LANGUAGES.map(option => ({ value: option.code, label: languageLabel(option, i18n), description: option.code.toUpperCase() }));
 
 type Visibility = Status['visibility'];
 
@@ -457,6 +464,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
     const visibilityOptions = visibilities(i18n);
     const selectedVisibility = visibilityOptions.find(v => v.value === visibility) ?? visibilityOptions[0];
     const selectedLanguage = LANGUAGES.find(l => l.code === language) ?? LANGUAGES[0];
+    const selectedLanguageLabel = languageLabel(selectedLanguage, i18n);
     // Followers-only and private posts can't be quoted by others, whatever the setting says
     const quotePolicyOptions = quotePolicies(i18n);
     const shownQuotePolicy = effectiveQuotePolicy(quotePolicy, visibility);
@@ -780,12 +788,12 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                                 <Pressable
                                     onPress={() => setPicker('language')}
                                     accessibilityRole="button"
-                                    accessibilityLabel={t('compose.languageLabel', { value: selectedLanguage.label })}
+                                    accessibilityLabel={t('compose.languageLabel', { value: selectedLanguageLabel })}
                                     hitSlop={hitSlopFor(0, PILL_HEIGHT)}
                                     style={({ pressed }) => [styles.pill, pressed && { opacity: 0.7 }]}
                                 >
                                     <Text style={[type.name, styles.pillText]}>
-                                        {selectedLanguage.code.toUpperCase()} · {selectedLanguage.label}
+                                        {selectedLanguage.code.toUpperCase()} · {selectedLanguageLabel}
                                     </Text>
                                     <Icon name="chevron-down" size={12} color={colors.textSecondary} />
                                 </Pressable>
@@ -976,7 +984,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
             <OptionSheet
                 visible={picker === 'language'}
                 title={t('compose.postLanguage')}
-                options={LANGUAGE_OPTIONS}
+                options={languageOptions(i18n)}
                 value={language}
                 onSelect={setLanguage}
                 onClose={() => setPicker(null)}

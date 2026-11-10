@@ -525,6 +525,7 @@ export const en = {
             id: 'Indonesian',
             no: 'Norwegian',
             eo: 'Esperanto',
+            la: 'Latin',
         },
         showOriginal: 'Show original',
         failed: "Couldn't translate this post",
@@ -982,6 +983,12 @@ export const en = {
         'pt-BR': 'Português (Brasil)',
         en: 'English',
         'es-419': 'Español (Latinoamérica)',
+        de: 'Deutsch',
+        fr: 'Français',
+        eo: 'Esperanto',
+        la: 'Latin',
+        ja: '日本語',
+        'zh-CN': '简体中文',
     },
     push: {
         // Android's name for pugdon's notification channel (system settings)
