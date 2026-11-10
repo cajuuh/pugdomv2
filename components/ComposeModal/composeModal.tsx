@@ -17,6 +17,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '../../services/authContext';
+import { useOptionalSettings } from '../../services/settingsContext';
 import { useTheme } from '../../services/themeContext';
 import { createStatus, editStatus, getStatusSource } from '../../services/mastodon/statuses';
 import { plainText } from '../../services/htmlText';
@@ -104,10 +105,17 @@ export const defaultLanguage = (user: Account | null, appLanguage?: string) =>
         .map(code => code?.split('-')[0])
         .find(code => code && LANGUAGES.some(l => l.code === code)) ?? 'en';
 
-// Replies keep the parent's visibility; new posts use the account's default. Quoting a followers-only
-// post makes the quote followers-only too (Mastodon enforces it).
-export const defaultVisibility = (user: Account | null, replyToStatus: Status | null, quoteStatus: Status | null = null): Visibility => {
-    const visibility = replyToStatus?.visibility ?? user?.source?.privacy ?? 'public';
+// Replies keep the parent's visibility (a public one becomes unlisted with the "reply as unlisted" setting);
+// new posts use the account's default. Quoting a followers-only post makes the quote followers-only too
+// (Mastodon enforces it).
+export const defaultVisibility = (
+    user: Account | null,
+    replyToStatus: Status | null,
+    quoteStatus: Status | null = null,
+    replyUnlisted = false
+): Visibility => {
+    const parent = replyToStatus?.visibility;
+    const visibility = parent === 'public' && replyUnlisted ? 'unlisted' : parent ?? user?.source?.privacy ?? 'public';
     return quoteStatus?.visibility === 'private' && (visibility === 'public' || visibility === 'unlisted') ? 'private' : visibility;
 };
 
@@ -167,6 +175,7 @@ const WOOF_CHANCE = 0.1;
 
 const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quoteStatus = null, existingPost = null, shared = null, incoming = null, draft = null, closeCompose }) => {
     const { user } = useAuth();
+    const replyUnlisted = useOptionalSettings()?.replyUnlisted ?? false;
     const { colors, type } = useTheme();
     const i18n = useI18n();
     const { t, locale, language: appLanguage } = i18n;
@@ -186,7 +195,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
     const [spoilerText, setSpoilerText] = useState('');
     const [loading, setLoading] = useState(false);
     const [language, setLanguage] = useState(() => defaultLanguage(user, appLanguage));
-    const [visibility, setVisibility] = useState<Visibility>(() => defaultVisibility(user, replyToStatus, quoteStatus));
+    const [visibility, setVisibility] = useState<Visibility>(() => defaultVisibility(user, replyToStatus, quoteStatus, replyUnlisted));
     const [picker, setPicker] = useState<'language' | 'visibility' | 'emoji' | 'quotePolicy' | 'camera' | 'schedule' | null>(null);
     // Publish later: the server posts it then (not for edits)
     const [scheduledAt, setScheduledAt] = useState<Date | null>(null);
@@ -338,7 +347,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
             setSensitive(false);
             setSpoilerText('');
             setLanguage(defaultLanguage(user, appLanguage));
-            setVisibility(defaultVisibility(user, replyToStatus, quoteStatus));
+            setVisibility(defaultVisibility(user, replyToStatus, quoteStatus, replyUnlisted));
             setQuote(quoteStatus);
             setQuotePolicy(user?.source?.quote_policy ?? 'public');
             setLoading(false);

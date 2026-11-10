@@ -55,6 +55,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
         setHomeBoosts,
         homeReplies,
         setHomeReplies,
+        replyUnlisted,
+        setReplyUnlisted,
         groupNotifications,
         setGroupNotifications,
         uncroppedMedia,
@@ -287,6 +289,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
                     {switchRow('repeat', t('settings.homeBoosts'), homeBoosts, setHomeBoosts)}
                     <View style={styles.divider} />
                     {switchRow('chatbubbles-outline', t('settings.homeReplies'), homeReplies, setHomeReplies)}
+                    <View style={styles.divider} />
+                    {switchRow('lock-open-outline', t('settings.replyUnlisted'), replyUnlisted, setReplyUnlisted)}
                     <View style={styles.divider} />
                     {switchRow('globe-outline', t('settings.externalBrowser'), externalBrowser, setExternalBrowser)}
                 </Card>

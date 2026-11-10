@@ -903,6 +903,7 @@ export const en = {
         swipeFeeds: 'Swipe between timelines',
         homeBoosts: 'Show boosts in the Home timeline',
         homeReplies: 'Show replies in the Home timeline',
+        replyUnlisted: 'Reply as unlisted',
         uncroppedMedia: 'Show images uncropped',
         externalBrowser: "Open links in your phone's browser",
         posts: 'Posts',

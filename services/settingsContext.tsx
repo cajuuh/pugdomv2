@@ -30,6 +30,9 @@ interface SettingsContextType {
     setHomeBoosts: (value: boolean) => Promise<void>;
     homeReplies: boolean;
     setHomeReplies: (value: boolean) => Promise<void>;
+    // Replies to public posts start as unlisted
+    replyUnlisted: boolean;
+    setReplyUnlisted: (value: boolean) => Promise<void>;
     // Favourites and boosts of the same post share one notification row; off, each has its own
     groupNotifications: boolean;
     // Post images at their own shape instead of cropped to the card
@@ -55,6 +58,7 @@ export const HIDE_COUNTS_KEY = 'pugdom_settings_hide_counts';
 export const SWIPE_FEEDS_KEY = 'pugdom_settings_swipe_feeds';
 export const HOME_BOOSTS_KEY = 'pugdom_settings_home_boosts';
 export const HOME_REPLIES_KEY = 'pugdom_settings_home_replies';
+export const REPLY_UNLISTED_KEY = 'pugdom_settings_reply_unlisted';
 export const GROUP_NOTIFICATIONS_KEY ='pugdom_settings_group_notifications';
 export const UNCROPPED_MEDIA_KEY = 'pugdom_settings_uncropped_media';
 export const EXPAND_SPOILERS_KEY = 'pugdom_settings_expand_spoilers';
@@ -71,6 +75,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const [swipeFeeds, setSwipeFeedsState] = useState(false);
     const [homeBoosts, setHomeBoostsState] = useState(true);
     const [homeReplies, setHomeRepliesState] = useState(true);
+    const [replyUnlisted, setReplyUnlistedState] = useState(false);
     const [groupNotifications, setGroupNotificationsState] = useState(true);
     const [uncroppedMedia, setUncroppedMediaState] = useState(false);
     const [externalBrowser, setExternalBrowserState] = useState(false);
@@ -90,6 +95,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 const swipe = await getSetting(SWIPE_FEEDS_KEY, false);
                 const boosts = await getSetting(HOME_BOOSTS_KEY, true);
                 const replies = await getSetting(HOME_REPLIES_KEY, true);
+                const unlistedReplies = await getSetting(REPLY_UNLISTED_KEY, false);
                 const grouped = await getSetting(GROUP_NOTIFICATIONS_KEY, true);
                 const uncropped = await getSetting(UNCROPPED_MEDIA_KEY, false);
                 const spoilers = await getStringSetting(EXPAND_SPOILERS_KEY, '');
@@ -105,6 +111,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 setSwipeFeedsState(swipe);
                 setHomeBoostsState(boosts);
                 setHomeRepliesState(replies);
+                setReplyUnlistedState(unlistedReplies);
                 setGroupNotificationsState(grouped);
                 setUncroppedMediaState(uncropped);
                 setExpandSpoilersState(spoilers === '' ? null : spoilers === 'true');
@@ -187,6 +194,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         await saveStringSetting(EXPAND_SPOILERS_KEY, String(value));
     };
 
+    const setReplyUnlisted = async (value: boolean) => {
+        setReplyUnlistedState(value);
+        await saveSetting(REPLY_UNLISTED_KEY, value);
+    };
+
     const setCoverSensitiveMedia = async (value: boolean) => {
         setCoverSensitiveMediaState(value);
         await saveSetting(COVER_SENSITIVE_KEY, value);
@@ -214,6 +226,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 setHomeBoosts,
                 homeReplies,
                 setHomeReplies,
+                replyUnlisted,
+                setReplyUnlisted,
                 groupNotifications,
                 setGroupNotifications,
                 uncroppedMedia,
