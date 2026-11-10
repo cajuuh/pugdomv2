@@ -42,22 +42,30 @@ jobs:
         run: eas update --branch preview --message "Automated update from GitHub Actions"
 
       # Closed testing: every merge goes straight to the testers' store builds of this version, for fast feedback.
-      # Only when nothing native changed since that version's release, or the update could crash those builds.
-      # ponytail: compares app.json, app.config.js, eas.json, yarn.lock and dependencies, so a JavaScript-only dependency change
-      # also holds updates back until the next release; use @expo/fingerprint if that gets in the way.
+      # Only when the native fingerprint (native modules, config plugins, native app config) matches that version's
+      # release tag, or the update could crash those builds. JavaScript-only dependencies don't change it.
       - name: Check the testers' builds can take this update
         id: testers
         run: |
           TAG="v$(node -p "require('./app.json').expo.version")"
-          deps() { git show "$1:package.json" | node -e 'let s = ""; process.stdin.on("data", d => (s += d)).on("end", () => console.log(JSON.stringify(JSON.parse(s).dependencies)))'; }
           if ! git rev-parse -q --verify "refs/tags/$TAG" > /dev/null; then
             echo "::notice::$TAG isn't released yet, so the testers get this with the $TAG build."
             echo "publish=false" >> "$GITHUB_OUTPUT"
-          elif ! git diff --quiet "$TAG" HEAD -- app.json app.config.js eas.json yarn.lock || [ "$(deps "$TAG")" != "$(deps HEAD)" ]; then
-            echo "::warning::Native config or dependencies changed since $TAG, so an update could break its builds: bump expo.version and release."
-            echo "publish=false" >> "$GITHUB_OUTPUT"
-          else
+            exit 0
+          fi
+          RELEASE="$RUNNER_TEMP/release"
+          git worktree add --detach "$RELEASE" "$TAG"
+          (cd "$RELEASE" && yarn install --frozen-lockfile)
+          npx @expo/fingerprint "$RELEASE" > "$RUNNER_TEMP/release.json"
+          # Absolute paths on both sides: "." hashes asset paths differently
+          npx @expo/fingerprint "$PWD" > "$RUNNER_TEMP/head.json"
+          hash() { node -p "require('$1').hash"; }
+          if [ "$(hash "$RUNNER_TEMP/release.json")" = "$(hash "$RUNNER_TEMP/head.json")" ]; then
             echo "publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Native code or config changed since $TAG, so an update could break its builds: bump expo.version and release."
+            npx @expo/fingerprint fingerprint:diff "$RUNNER_TEMP/release.json" "$RUNNER_TEMP/head.json"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Publish EAS Update to testers (production)
