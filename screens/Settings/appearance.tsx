@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon } from '../../components/ui/icon';
 import { Avatar, Card, PillButton, PugMark, SectionLabel, SegmentedPill, SegmentOption, ThemedSwitch } from '../../components/ui';
 import { ThemeType, useTheme } from '../../services/themeContext';
 import { COATS, getCoat } from '../../services/theme/coats';
@@ -49,15 +49,15 @@ const Appearance: React.FC<AppearanceProps> = ({ onBack }) => {
                     </View>
                     <View style={styles.previewActions}>
                         <View style={styles.previewAction}>
-                            <Ionicons name="arrow-undo-outline" size={18} color={colors.textMuted} />
+                            <Icon name="arrow-undo-outline" size={18} color={colors.textMuted} />
                             <Text style={[type.meta, styles.previewCount]}>6</Text>
                         </View>
                         <View style={styles.previewAction}>
-                            <Ionicons name="repeat" size={18} color={colors.textMuted} />
+                            <Icon name="repeat" size={18} color={colors.textMuted} />
                             <Text style={[type.meta, styles.previewCount]}>2</Text>
                         </View>
                         <View style={styles.previewAction}>
-                            <Ionicons name="star" size={18} color={colors.accentText} />
+                            <Icon name="star" size={18} color={colors.accentText} />
                             <Text style={[type.meta, styles.previewCountActive]}>19</Text>
                         </View>
                     </View>

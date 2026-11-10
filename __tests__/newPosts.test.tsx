@@ -71,6 +71,33 @@ describe('useFeed', () => {
     });
 });
 
+describe('useFeed while reloading', () => {
+    it('keeps the reload when the list asks for more meanwhile, so the new posts arrive', async () => {
+        mockedGet.mockReset().mockResolvedValueOnce({ data: [post('10'), post('9')] });
+        const queryClient = createTestQueryClient();
+        const { result } = await renderHook(() => useFeed({ id: 'home', kind: 'home' }), {
+            wrapper: ({ children }) => <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>,
+        });
+        await waitFor(() => expect(result.current.data?.pages).toHaveLength(1));
+
+        let arrive: (value: { data: Status[] }) => void = () => {};
+        mockedGet.mockImplementationOnce(() => new Promise(resolve => { arrive = resolve; })).mockResolvedValue({ data: [post('8')] });
+        let reloading: Promise<unknown> = Promise.resolve();
+        await act(async () => {
+            reloading = result.current.refetch();
+        });
+        await act(async () => {
+            result.current.fetchNextPage();
+        });
+        await act(async () => {
+            arrive({ data: [post('12'), post('11'), post('10')] });
+            await reloading;
+        });
+
+        await waitFor(() => expect(result.current.data!.pages[0][0].id).toBe('12'));
+    });
+});
+
 describe('Home without boosts or replies', () => {
     const boost = { ...post('9', 'b'), reblog: post('8', 'c') } as Status;
     const reply = { ...post('7', 'd'), in_reply_to_id: '1', in_reply_to_account_id: 'e' } as Status;

@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { Modal, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon } from '../ui/icon';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { openLink } from '../../services/links';
 import { ImageGallery } from './imageGallery';
@@ -34,7 +34,7 @@ const OpenPostButton = ({ onPress }: { onPress: () => void }) => {
     const { type } = useTheme();
     return (
         <TouchableOpacity onPress={onPress} style={[styles.openPostButton, { top: insets.top + 12 }]} accessibilityRole="button" accessibilityLabel={t('media.viewPost')}>
-            <Ionicons name="chatbox-outline" size={18} color={mediaColors.ink} />
+            <Icon name="chatbox-outline" size={18} color={mediaColors.ink} />
             <Text style={[type.name, { color: mediaColors.ink }]}>{t('media.viewPost')}</Text>
         </TouchableOpacity>
     );
@@ -68,7 +68,7 @@ const VideoModal = ({ attachment, onClose, onOpenPost }: { attachment: Attachmen
                     style={[styles.closeButton, { top: insets.top + 12 }]}
                     accessibilityLabel={t('media.closeVideo')}
                 >
-                    <Ionicons name="close" size={30} color={mediaColors.ink} />
+                    <Icon name="close" size={30} color={mediaColors.ink} />
                 </TouchableOpacity>
                 {/* Left of the close button (38 wide, 20 from the edge) */}
                 <SaveMediaButton url={attachment.url} style={{ top: insets.top + 12, right: 66 }} />

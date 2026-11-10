@@ -4,7 +4,7 @@ import { FlashList, useRecyclingState } from '@shopify/flash-list';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { InfiniteData, useQueryClient } from '@tanstack/react-query';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon, IconName } from '../../components/ui/icon';
 import { Account, Notification, NotificationGroup, Relationship, Status } from '../../services/mastodon/types';
 import { NotificationGroupsPage, clearNotifications, dismissNotificationGroup, isNewerId, mergeGroups } from '../../services/mastodon/notifications';
 import { ActionSheet } from '../../components/ComposeModal/optionSheet';
@@ -43,7 +43,7 @@ interface NotificationsProps {
 const FILTERS: NotificationFilter[] = ['all', 'mentions', 'follows'];
 
 // Types share the accent and differ by glyph and wording
-const TYPE_CONFIG: Record<string, { badge: React.ComponentProps<typeof Ionicons>['name']; action: TKey }> = {
+const TYPE_CONFIG: Record<string, { badge: IconName; action: TKey }> = {
     mention: { badge: 'at', action: 'notifications.mention' },
     // A mention in a direct post
     privateMention: { badge: 'lock-closed', action: 'notifications.privateMention' },
@@ -142,7 +142,7 @@ const MentionActions = ({ status }: { status: Status }) => {
                 hitSlop={hitSlopFor(FAVOURITE_SIZE, FAVOURITE_SIZE)}
                 style={({ pressed }) => [styles.favourite, isFavourited && styles.favouriteOn, pressed && { opacity: 0.7 }]}
             >
-                <Ionicons
+                <Icon
                     name={isFavourited ? 'star' : 'star-outline'}
                     size={16}
                     color={isFavourited ? colors.accentText : colors.textSecondary}
@@ -182,7 +182,7 @@ const MediaThumbnails = ({ status, onOpenPost }: { status: Status; onOpenPost?: 
 };
 
 // The two most recent people in a group, overlapping, with the type badge
-const StackedAvatars = ({ accounts, badge }: { accounts: Account[]; badge: React.ComponentProps<typeof Ionicons>['name'] }) => {
+const StackedAvatars = ({ accounts, badge }: { accounts: Account[]; badge: IconName }) => {
     const styles = useThemedStyles(makeStyles);
     return (
         <View testID="avatar-stack" style={styles.stack44}>
@@ -356,7 +356,7 @@ const RemoveAction = ({ style }: { style: React.ComponentProps<typeof Animated.V
     const { t } = useI18n();
     return (
         <Animated.View style={[styles.removeAction, style]}>
-            <Ionicons name="trash-outline" size={20} color={colors.cardBackground} />
+            <Icon name="trash-outline" size={20} color={colors.cardBackground} />
             <Text style={[type.label, styles.removeText]}>{t('notifications.remove')}</Text>
         </Animated.View>
     );
@@ -432,7 +432,7 @@ const SelectableRow = ({ group, selected, onToggle, children }: { group: Notific
             accessibilityLabel={label}
             style={[styles.selectable, selected && styles.selectableOn]}
         >
-            <Ionicons name={selected ? 'checkmark-circle' : 'ellipse-outline'} size={24} color={selected ? colors.accentText : colors.textMuted} />
+            <Icon name={selected ? 'checkmark-circle' : 'ellipse-outline'} size={24} color={selected ? colors.accentText : colors.textMuted} />
             <View style={styles.selectableContent} pointerEvents="none" importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
                 {children}
             </View>

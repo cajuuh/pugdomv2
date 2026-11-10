@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon, IconName } from './icon';
 import { useTheme } from '../../services/themeContext';
 
 interface AvatarProps {
@@ -9,7 +9,7 @@ interface AvatarProps {
     uri?: string | null;
     size?: number;
     // Type glyph in an accent circle at the bottom-right (e.g. a notification's type)
-    badge?: React.ComponentProps<typeof Ionicons>['name'];
+    badge?: IconName;
     ring?: boolean;
 }
 
@@ -25,11 +25,11 @@ export const initialsOf = (name: string) =>
 const BADGE_SIZE = 22;
 
 // Type glyph in an accent circle, pinned to the bottom-right of the avatar (or avatar stack) it sits in
-export const AvatarBadge: React.FC<{ icon: React.ComponentProps<typeof Ionicons>['name'] }> = ({ icon }) => {
+export const AvatarBadge: React.FC<{ icon: IconName }> = ({ icon }) => {
     const { colors } = useTheme();
     return (
         <View testID="avatar-badge" style={[styles.badge, { backgroundColor: colors.accentColor, borderColor: colors.cardBackground }]}>
-            <Ionicons name={icon} size={12} color={colors.buttonTextColor} />
+            <Icon name={icon} size={12} color={colors.buttonTextColor} />
         </View>
     );
 };

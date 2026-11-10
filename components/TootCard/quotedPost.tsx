@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon, IconName } from '../ui/icon';
 import { useTheme } from '../../services/themeContext';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { TKey } from '../../services/i18n/translate';
@@ -19,7 +19,7 @@ const MAX_THUMBS = 4;
 const MAX_LINES = 6;
 const AVATAR = 32;
 
-const NOTICES: Record<QuoteNotice, { icon: React.ComponentProps<typeof Ionicons>['name']; text: TKey }> = {
+const NOTICES: Record<QuoteNotice, { icon: IconName; text: TKey }> = {
     pending: { icon: 'hourglass-outline', text: 'quotes.pending' },
     removed: { icon: 'remove-circle-outline', text: 'quotes.removed' },
     deleted: { icon: 'trash-outline', text: 'quotes.deleted' },
@@ -62,7 +62,7 @@ export const QuotedPost: React.FC<QuotedPostProps> = ({ quote, onOpen, timeOf, c
         const notice = NOTICES[view.notice];
         return (
             <View style={[styles.box, styles.notice, { borderColor: colors.borderColor }]} accessible accessibilityLabel={t(notice.text)}>
-                <Ionicons name={notice.icon} size={16} color={colors.textMuted} />
+                <Icon name={notice.icon} size={16} color={colors.textMuted} />
                 <Text style={[type.meta, styles.noticeText, { color: colors.textMuted }]}>{t(notice.text)}</Text>
             </View>
         );
@@ -95,7 +95,7 @@ export const QuotedPost: React.FC<QuotedPostProps> = ({ quote, onOpen, timeOf, c
 
             {status.spoiler_text ? (
                 <View style={styles.warning}>
-                    <Ionicons name="warning-outline" size={14} color={colors.accentText} />
+                    <Icon name="warning-outline" size={14} color={colors.accentText} />
                     <Text style={[type.body, styles.text, { color: colors.textSecondary }]} numberOfLines={2}>
                         {renderTextWithEmojis(status.spoiler_text, status.emojis ?? [], [type.body, styles.text, { color: colors.textSecondary }], 14)}
                     </Text>
@@ -125,7 +125,7 @@ export const QuotedPost: React.FC<QuotedPostProps> = ({ quote, onOpen, timeOf, c
             {media.length > 0 &&
                 (hideMedia ? (
                     <View style={styles.warning}>
-                        <Ionicons name="eye-off-outline" size={14} color={colors.textMuted} />
+                        <Icon name="eye-off-outline" size={14} color={colors.textMuted} />
                         <Text style={[type.meta, { color: colors.textMuted }]}>{t('quotes.hiddenMedia')}</Text>
                     </View>
                 ) : (
@@ -145,14 +145,14 @@ export const QuotedPost: React.FC<QuotedPostProps> = ({ quote, onOpen, timeOf, c
 
             {status.poll && (
                 <View style={styles.warning}>
-                    <Ionicons name="stats-chart-outline" size={14} color={colors.textMuted} />
+                    <Icon name="stats-chart-outline" size={14} color={colors.textMuted} />
                     <Text style={[type.meta, { color: colors.textMuted }]}>{t('quotes.hasPoll')}</Text>
                 </View>
             )}
 
             {nested && (
                 <View style={styles.warning}>
-                    <Ionicons name="return-down-forward-outline" size={14} color={colors.textMuted} />
+                    <Icon name="return-down-forward-outline" size={14} color={colors.textMuted} />
                     <Text style={[type.meta, { color: colors.textMuted }]}>{t('quotes.quotesAnother')}</Text>
                 </View>
             )}
@@ -161,8 +161,8 @@ export const QuotedPost: React.FC<QuotedPostProps> = ({ quote, onOpen, timeOf, c
 };
 
 const styles = StyleSheet.create({
+    // No top margin: in a post the content's gap spaces it like media (compose adds its own)
     box: {
-        marginTop: space.sm,
         padding: space.md,
         gap: space.sm,
         borderRadius: radii.well,

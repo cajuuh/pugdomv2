@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon } from '../../components/ui/icon';
 import { useTheme } from '../../services/themeContext';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { useListAccounts, useListActions, useLists } from '../../hooks/useLists';
@@ -120,14 +120,14 @@ const ListEditor = ({ listId, onBack }: ListEditorProps) => {
                         accessibilityLabel={`${t('lists.replies')}, ${t(POLICY_KEY[policy])}`}
                         style={styles.row}
                     >
-                        <Ionicons name="chatbubbles-outline" size={20} color={colors.accentText} />
+                        <Icon name="chatbubbles-outline" size={20} color={colors.accentText} />
                         <Text style={[type.name, styles.rowText, { color: colors.textPrimary }]}>{t('lists.replies')}</Text>
                         <Text style={[type.meta, { color: colors.textSecondary }]}>{t(POLICY_KEY[policy])}</Text>
-                        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                        <Icon name="chevron-forward" size={16} color={colors.textMuted} />
                     </Pressable>
                     <View style={[styles.divider, { backgroundColor: colors.borderColor }]} />
                     <View style={styles.row}>
-                        <Ionicons name="eye-off-outline" size={20} color={colors.accentText} />
+                        <Icon name="eye-off-outline" size={20} color={colors.accentText} />
                         <View style={styles.rowText}>
                             <Text style={[type.name, { color: colors.textPrimary }]}>{t('lists.exclusive')}</Text>
                             <Text style={[type.meta, { color: colors.textMuted }]}>{t('lists.exclusiveHint')}</Text>
@@ -183,7 +183,7 @@ const ListEditor = ({ listId, onBack }: ListEditorProps) => {
                             hitSlop={hitSlopFor(0, 24)}
                             style={({ pressed }) => [styles.delete, pressed && { opacity: 0.7 }]}
                         >
-                            <Ionicons name="trash-outline" size={18} color={colors.dangerColor} />
+                            <Icon name="trash-outline" size={18} color={colors.dangerColor} />
                             <Text style={[type.name, { color: colors.dangerColor }]}>{t('lists.delete')}</Text>
                         </Pressable>
                     </>

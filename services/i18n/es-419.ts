@@ -301,6 +301,9 @@ export const es419: Dictionary = {
         contentWarning: 'Advertencia de contenido',
         cwTitle: 'AC · {{text}}',
         showMore: 'Mostrar más',
+        // The chip at the end of a post's hashtags that shows the rest ("+3")
+        moreHashtags_one: 'Mostrar {{count}} hashtag más',
+        moreHashtags_other: 'Mostrar {{count}} hashtags más',
         veryLong: 'Publicación muy larga · {{count}} caracteres',
         boosted: '{{name}} impulsó',
         privateMention: 'Mención privada',
@@ -755,6 +758,8 @@ export const es419: Dictionary = {
         follow: 'Seguir',
         followBack: 'Seguir también',
         following: 'Siguiendo',
+        // You follow each other
+        mutuals: 'Mutuos',
         requested: 'Solicitado',
         pending: 'Siguiendo…',
         failed: 'No se pudo seguir esta cuenta. Vuelve a intentarlo.',

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon } from '../../components/ui/icon';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../services/themeContext';
 import { useI18n } from '../../services/i18n/i18nContext';
@@ -83,7 +83,7 @@ const Report = ({ account, status, onBack }: ReportProps) => {
             accessibilityHint={description}
             style={({ pressed }) => [styles.choice, { borderColor: checked ? colors.accentColor : colors.borderColor }, (checked || pressed) && { backgroundColor: colors.accentSoft }]}
         >
-            <Ionicons
+            <Icon
                 name={role === 'radio' ? (checked ? 'radio-button-on' : 'radio-button-off') : checked ? 'checkbox' : 'square-outline'}
                 size={20}
                 color={checked ? colors.accentText : colors.textMuted}
@@ -108,7 +108,7 @@ const Report = ({ account, status, onBack }: ReportProps) => {
             {sent ? (
                 <ScrollView contentContainerStyle={styles.content}>
                     <View style={styles.sent}>
-                        <Ionicons name="checkmark-circle" size={48} color={colors.accentText} />
+                        <Icon name="checkmark-circle" size={48} color={colors.accentText} />
                         <Text style={[type.title, styles.centered, { color: colors.textPrimary }]}>{t('moderation.sentTitle')}</Text>
                         <Text style={[type.body, styles.centered, { color: colors.textSecondary }]}>{t('moderation.sentMessage')}</Text>
                     </View>

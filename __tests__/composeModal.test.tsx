@@ -116,10 +116,10 @@ describe('ComposeModal', () => {
     it('counts URLs as 23 characters against the instance limit', async () => {
         mockedInstance.mockResolvedValue({ ...DEFAULT_INSTANCE_CONFIGURATION, maxCharacters: 1000, maxPollOptions: 4, maxCharactersPerPollOption: 50 });
         await renderCompose();
-        await screen.findByText('1000');
+        await screen.findByLabelText('1000 characters left');
 
         await fireEvent.changeText(composer(), `hi https://example.social/${'a'.repeat(200)}`);
-        expect(screen.getByText(String(1000 - 3 - 23))).toBeTruthy();
+        expect(screen.getByLabelText(`${1000 - 3 - 23} characters left`)).toBeTruthy();
     });
 
     it('does not publish a poll with fewer than two choices', async () => {
@@ -199,10 +199,13 @@ describe('ComposeModal', () => {
     it('warns near the limit and blocks posting over it', async () => {
         mockedInstance.mockResolvedValue({ ...DEFAULT_INSTANCE_CONFIGURATION, maxCharacters: 30, maxPollOptions: 4, maxCharactersPerPollOption: 50 });
         await renderCompose();
-        await screen.findByText('30');
+        // Far from the limit: the ring alone, the count only for screen readers
+        expect(await screen.findByLabelText('30 characters left')).toBeTruthy();
+        expect(screen.queryByText('30')).toBeNull();
 
         await fireEvent.changeText(composer(), 'a'.repeat(15));
         expect(screen.getByLabelText('15 characters left')).toBeTruthy();
+        expect(screen.getByText('15')).toBeTruthy();
 
         await fireEvent.changeText(composer(), 'a'.repeat(42));
         expect(screen.getByText('12 over')).toBeTruthy();

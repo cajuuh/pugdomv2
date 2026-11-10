@@ -301,6 +301,9 @@ export const ptBR: Dictionary = {
         contentWarning: 'Aviso de conteúdo',
         cwTitle: 'AC · {{text}}',
         showMore: 'Mostrar mais',
+        // The chip at the end of a post's hashtags that shows the rest ("+3")
+        moreHashtags_one: 'Mostrar mais {{count}} hashtag',
+        moreHashtags_other: 'Mostrar mais {{count}} hashtags',
         veryLong: 'Post muito longo · {{count}} caracteres',
         boosted: '{{name}} deu boost',
         privateMention: 'Menção privada',
@@ -756,6 +759,8 @@ export const ptBR: Dictionary = {
         follow: 'Seguir',
         followBack: 'Seguir de volta',
         following: 'Seguindo',
+        // You follow each other
+        mutuals: 'Mútuos',
         requested: 'Solicitado',
         pending: 'Seguindo…',
         failed: 'Não foi possível seguir esta conta. Tente de novo.',

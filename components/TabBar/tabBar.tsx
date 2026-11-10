@@ -1,6 +1,6 @@
 import React, { RefObject } from 'react';
 import { Platform, Pressable, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon, IconName } from '../ui/icon';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../../services/themeContext';
 import { makeStyles } from './styles';
@@ -19,7 +19,6 @@ interface TabBarProps {
     blurTarget?: RefObject<View | null>;
 }
 
-type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
 // Outline icon when idle, filled when active
 const TABS: Record<Tab, { icon: IconName; activeIcon: IconName }> = {
@@ -50,7 +49,7 @@ export const TabBar: React.FC<TabBarProps> = ({ activeTab, onTabPress, onCompose
                 style={({ pressed }) => [styles.tab, active && styles.tabActive, pressed && { opacity: 0.7 }]}
             >
                 <View>
-                    <Ionicons name={active ? activeIcon : icon} size={24} color={active ? colors.accentText : colors.textMuted} />
+                    <Icon name={active ? activeIcon : icon} size={24} color={active ? colors.accentText : colors.textMuted} />
                     {dot && <View testID="unread-dot" style={styles.dot} />}
                 </View>
             </Pressable>
@@ -79,7 +78,7 @@ export const TabBar: React.FC<TabBarProps> = ({ activeTab, onTabPress, onCompose
                     accessibilityLabel={t('tabs.newPost')}
                     style={({ pressed }) => [styles.compose, pressed && { opacity: 0.85 }]}
                 >
-                    <Ionicons name="add" size={28} color={colors.buttonTextColor} />
+                    <Icon name="add" size={28} color={colors.buttonTextColor} />
                 </Pressable>
                 {tab('notifications')}
                 {tab('profile')}

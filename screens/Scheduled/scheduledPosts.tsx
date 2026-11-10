@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ActivityIndicator, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FlashList } from '@shopify/flash-list';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon } from '../../components/ui/icon';
 import { InfiniteData, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '../../services/themeContext';
 import { useI18n } from '../../services/i18n/i18nContext';
@@ -85,7 +85,7 @@ const ScheduledPosts = ({ onBack }: ScheduledPostsProps) => {
         return (
             <Card style={styles.card}>
                 <View style={styles.when}>
-                    <Ionicons name="calendar" size={16} color={colors.accentText} />
+                    <Icon name="calendar" size={16} color={colors.accentText} />
                     <Text style={[type.name, { color: colors.accentText }]}>{when}</Text>
                 </View>
                 {!!text && (

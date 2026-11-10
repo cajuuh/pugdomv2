@@ -11,7 +11,7 @@ export const useFeed = (feed: FeedDescriptor, shows?: (post: Status) => boolean)
         ...data,
         pages: data.pages.map(page => (shows ? withoutDirect(page).filter(shows) : withoutDirect(page))),
     }), [shows]);
-    return useInfiniteQuery({
+    const query = useInfiniteQuery({
         queryKey: ['timeline', feed.id],
         queryFn: async ({ pageParam }) => {
             return fetchFeedPage(feed, pageParam);
@@ -32,4 +32,10 @@ export const useFeed = (feed: FeedDescriptor, shows?: (post: Status) => boolean)
         },
         select,
     });
+
+    // Loading more joins a reload in progress instead of cancelling it (TanStack cancels by default). The
+    // new posts pill cuts the list to its first page and reloads it; scrolled down, that short list asks
+    // for more at once, which cancelled the reload and left the pill on top of the old posts.
+    const fetchNextPage = useCallback(() => query.fetchNextPage({ cancelRefetch: false }), [query.fetchNextPage]);
+    return { ...query, fetchNextPage };
 };

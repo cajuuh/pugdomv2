@@ -1,6 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { Image, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon } from '../ui/icon';
 import { useRecyclingState } from '@shopify/flash-list';
 import { Status, Attachment, Mention, PreviewCard } from '../../services/mastodon/types';
 import { StatusHtmlContent } from './htmlContent';
@@ -194,7 +194,8 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const [isMediaRevealed, setIsMediaRevealed] = useRecyclingState(false, recyclingDeps);
     const postTranslation = usePostTranslation(targetStatus, remote, recyclingDeps);
     const shownContent = postTranslation.translation?.content ?? targetStatus.content;
-    const { html: bodyHtml, tags: trailingTags } = React.useMemo(() => splitTrailingHashtags(shownContent), [shownContent]);
+    const hasMore = (targetStatus.media_attachments?.length ?? 0) > 0 || !!targetStatus.card || !!targetStatus.poll || !!targetStatus.quote;
+    const { html: bodyHtml, tags: trailingTags } = React.useMemo(() => splitTrailingHashtags(shownContent, hasMore), [shownContent, hasMore]);
     const plain = React.useMemo(() => plainText(bodyHtml), [bodyHtml]);
     const textSize = fullText ? 'normal' : postSize(plain);
     const [isTextExpanded, setIsTextExpanded] = useRecyclingState(false, recyclingDeps);
@@ -449,7 +450,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                             screen readers still reach its label and Show button */}
                         <Pressable testID="media-veil" accessible={false} onPress={() => setIsMediaRevealed(true)} style={[styles.veil, !coverSensitiveMedia && styles.veilBare]}>
                             <View style={styles.veilLabel}>
-                                <Ionicons name="eye-off-outline" size={16} color={colors.textPrimary} />
+                                <Icon name="eye-off-outline" size={16} color={colors.textPrimary} />
                                 <Text style={[type.name, styles.veilText]}>{t(targetStatus.sensitive ? 'post.sensitive' : 'post.hiddenMedia', { media: countMedia(attachments, i18n) })}</Text>
                             </View>
                             <PillButton label={t('common.show')} size="small" variant="secondary" onPress={() => setIsMediaRevealed(true)} />
@@ -463,7 +464,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                         accessibilityLabel={t('post.hideMedia')}
                         hitSlop={6}
                     >
-                        <Ionicons name="eye-off-outline" size={14} color={colors.textPrimary} />
+                        <Icon name="eye-off-outline" size={14} color={colors.textPrimary} />
                         <Text style={[type.label, styles.hideMediaText]}>{t('post.hideMedia')}</Text>
                     </Pressable>
                 )}
@@ -478,7 +479,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             return (
                 <Pressable style={[styles.linkPlain, compactMode && styles.linkPlainCompact]} onPress={() => openLinkInApp(card.url)} accessibilityRole="link" accessibilityLabel={card.title || domain}>
                     <View style={styles.linkIconBox}>
-                        <Ionicons name="link" size={18} color={colors.accentText} />
+                        <Icon name="link" size={18} color={colors.accentText} />
                     </View>
                     <View style={styles.linkBody}>
                         <Text style={[type.name, styles.linkTitle]} numberOfLines={1}>{card.title || domain}</Text>
@@ -505,7 +506,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
 
     const body = (
         <>
-            {hasText(targetStatus.content) && (isTextFolded && textSize === 'huge' ? (
+            {hasText(bodyHtml) && (isTextFolded && textSize === 'huge' ? (
                 // Not even parsed as HTML until asked: only the start, as plain text
                 <Text style={[type.body, styles.foldedText, compactMode && styles.foldedTextCompact]} numberOfLines={12}>
                     {renderTextWithEmojis(plain.slice(0, 1000), targetStatus.emojis, null)}
@@ -575,7 +576,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             const hidden = describeHidden(targetStatus, i18n);
             return (
                 <View style={styles.cwRibbon}>
-                    <Ionicons name="warning-outline" size={22} color={colors.accentText} />
+                    <Icon name="warning-outline" size={22} color={colors.accentText} />
                     <View style={styles.cwText}>
                         <Text style={[type.label, styles.cwLabel]}>{t('post.contentWarning')}</Text>
                         {renderTextWithEmojis(targetStatus.spoiler_text, targetStatus.emojis, [type.name, styles.cwSpoiler], 15)}
@@ -645,7 +646,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     hitSlop={hitSlopFor(18, 22)}
                     style={styles.postMenuButton}
                 >
-                    <Ionicons name="ellipsis-horizontal" size={18} color={colors.textMuted} />
+                    <Icon name="ellipsis-horizontal" size={18} color={colors.textMuted} />
                 </Pressable>
             )}
         </>
@@ -666,7 +667,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const actionHitSlop = compactMode ? hitSlopFor(44, COMPACT_ACTION_HEIGHT) : undefined;
     const shareButton = (
         <Pressable style={actionButtonStyle} hitSlop={actionHitSlop} onPress={handleShare} accessibilityRole="button" accessibilityLabel={t('post.share')}>
-            <Ionicons name="share-outline" size={actionIcon} color={colors.textMuted} />
+            <Icon name="share-outline" size={actionIcon} color={colors.textMuted} />
         </Pressable>
     );
     const actions = remote ? (
@@ -679,7 +680,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 accessibilityLabel={t('servers.openToInteract')}
                 accessibilityHint={t('servers.openToInteractHint')}
             >
-                <Ionicons name="log-in-outline" size={actionIcon} color={colors.accentText} />
+                <Icon name="log-in-outline" size={actionIcon} color={colors.accentText} />
                 <Text style={[type.meta, styles.actionCount, styles.actionCountActive]}>{t('servers.openToInteract')}</Text>
             </Pressable>
             {shareButton}
@@ -693,7 +694,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 accessibilityRole="button"
                 accessibilityLabel={tn('post.replies', targetStatus.replies_count || 0)}
             >
-                <Ionicons name="arrow-undo-outline" size={actionIcon} color={colors.textMuted} />
+                <Icon name="arrow-undo-outline" size={actionIcon} color={colors.textMuted} />
                 {!hideCounts && <Text style={[type.meta, styles.actionCount]}>{targetStatus.replies_count || 0}</Text>}
             </Pressable>
             <Pressable
@@ -704,7 +705,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 accessibilityLabel={boostLocked ? t('post.boostNotAllowed') : tn(isReblogged ? 'post.boostedCount' : 'post.boost', boostCount || 0)}
                 accessibilityState={{ selected: isReblogged, disabled: boostLocked }}
             >
-                <Ionicons name={boostLocked ? 'lock-closed-outline' : 'repeat'} size={actionIcon} color={isReblogged ? colors.accentText : colors.textMuted} />
+                <Icon name={boostLocked ? 'lock-closed-outline' : 'repeat'} size={actionIcon} color={isReblogged ? colors.accentText : colors.textMuted} />
                 {!hideCounts && <Text style={[type.meta, styles.actionCount, isReblogged && styles.actionCountActive]}>{boostCount || 0}</Text>}
             </Pressable>
             <Pressable
@@ -715,7 +716,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 accessibilityLabel={tn(isFavorited ? 'post.favouritedCount' : 'post.favourite', favCount || 0)}
                 accessibilityState={{ selected: isFavorited }}
             >
-                <Ionicons name={isFavorited ? 'star' : 'star-outline'} size={actionIcon} color={isFavorited ? colors.accentText : colors.textMuted} />
+                <Icon name={isFavorited ? 'star' : 'star-outline'} size={actionIcon} color={isFavorited ? colors.accentText : colors.textMuted} />
                 {!hideCounts && <Text style={[type.meta, styles.actionCount, isFavorited && styles.actionCountActive]}>{favCount || 0}</Text>}
             </Pressable>
             <Pressable
@@ -726,7 +727,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 accessibilityLabel={isBookmarked ? t('post.bookmarked') : t('post.bookmark')}
                 accessibilityState={{ selected: isBookmarked }}
             >
-                <Ionicons name={isBookmarked ? 'bookmark' : 'bookmark-outline'} size={actionIcon} color={isBookmarked ? colors.accentText : colors.textMuted} />
+                <Icon name={isBookmarked ? 'bookmark' : 'bookmark-outline'} size={actionIcon} color={isBookmarked ? colors.accentText : colors.textMuted} />
             </Pressable>
             {shareButton}
         </View>
@@ -738,14 +739,14 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     // Under the name, in the text column: clear of a thread's avatar line, and shown even behind a content warning
     const privateMention = isDirect && (
         <View style={styles.directRow}>
-            <Ionicons name="lock-closed" size={13} color={colors.accentText} />
+            <Icon name="lock-closed" size={13} color={colors.accentText} />
             <Text style={[type.meta, styles.directText]}>{t('post.privateMention')}</Text>
         </View>
     );
 
     const replyLabel = replyingTo && (
         <View style={styles.directRow}>
-            <Ionicons name="return-down-forward" size={13} color={colors.textMuted} />
+            <Icon name="return-down-forward" size={13} color={colors.textMuted} />
             <Text style={[type.meta, { color: colors.textMuted }]} numberOfLines={1}>
                 {t('thread.replyingTo', { name: replyingTo })}
             </Text>
@@ -762,7 +763,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     accessibilityRole="link"
                     style={[styles.boostRow, compactMode && styles.boostRowCompact]}
                 >
-                    <Ionicons name="repeat" size={14} color={colors.textMuted} />
+                    <Icon name="repeat" size={14} color={colors.textMuted} />
                     <Avatar name={status.account.display_name || status.account.username} uri={status.account.avatar} size={18} />
                     {renderTextWithEmojis(
                         t('post.boosted', { name: status.account.display_name || status.account.username }),
