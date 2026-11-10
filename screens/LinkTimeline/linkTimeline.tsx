@@ -10,6 +10,7 @@ import { useLinkTimeline } from '../../hooks/useExplore';
 import { Status } from '../../services/mastodon/types';
 import { postListProps } from '../../services/media/autoplay';
 import { TootCard } from '../../components/TootCard/tootCard';
+import { withoutHidden } from '../../services/mastodon/filters';
 import { IconButton, PillButton } from '../../components/ui';
 import { openLink } from '../../components/TootCard/htmlContent';
 import { makeStyles } from './styles';
@@ -42,7 +43,7 @@ const LinkTimeline = ({ url, title, onBack, onStatusPress }: LinkTimelineProps) 
 
     const { data, isLoading, isError, isFetchingNextPage, hasNextPage, fetchNextPage, refetch } =
         useLinkTimeline(url);
-    const statuses = data?.pages.flat() ?? [];
+    const statuses = withoutHidden(data?.pages.flat() ?? [], 'public');
 
     const handleRefresh = useCallback(async () => {
         setIsPullRefreshing(true);
@@ -91,7 +92,7 @@ const LinkTimeline = ({ url, title, onBack, onStatusPress }: LinkTimelineProps) 
                 {...postListProps}
                 data={statuses}
                 keyExtractor={(item: Status) => item.id}
-                renderItem={({ item }) => <TootCard status={item} onPress={onStatusPress} />}
+                renderItem={({ item }) => <TootCard status={item} onPress={onStatusPress} filterContext="public" />}
                 ListHeaderComponent={intro}
                 ListEmptyComponent={
                     <View style={styles.empty}>

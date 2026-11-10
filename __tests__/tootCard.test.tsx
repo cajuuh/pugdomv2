@@ -835,3 +835,37 @@ describe('TootCard long posts', () => {
         expect(screen.queryByText(/Very long post/)).toBeNull();
     });
 });
+
+describe('TootCard filters', () => {
+    const warned = {
+        ...statusA,
+        filtered: [{
+            filter: { id: 'f1', title: 'Spoilers', context: ['home'], expires_at: null, filter_action: 'warn' },
+            keyword_matches: ['finale'],
+            status_matches: null,
+        }],
+    } as Status;
+    const renderCard = (status: Status, filterContext?: 'home' | 'thread') =>
+        render(
+            <QueryClientProvider client={createTestQueryClient()}>
+                <MediaViewerProvider>
+                    <TootCard status={status} filterContext={filterContext} />
+                </MediaViewerProvider>
+            </QueryClientProvider>
+        );
+
+    it('covers a post a warn filter matches until you show it', async () => {
+        await renderCard(warned, 'home');
+        expect(screen.getByText('Spoilers')).toBeTruthy();
+        expect(screen.queryByText('status A')).toBeNull();
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Show' }));
+        expect(screen.getByText('status A')).toBeTruthy();
+    });
+
+    it('leaves it alone where the filter does not apply', async () => {
+        await renderCard(warned, 'thread');
+        expect(screen.getByText('status A')).toBeTruthy();
+        expect(screen.queryByText('Spoilers')).toBeNull();
+    });
+});

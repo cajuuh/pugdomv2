@@ -34,9 +34,10 @@ interface SettingsProps {
     onScheduledPosts: () => void;
     onDrafts: () => void;
     onModeratedAccounts: () => void;
+    onFilters: () => void;
 }
 
-const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts, onModeratedAccounts }) => {
+const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts, onModeratedAccounts, onFilters }) => {
     const { user, logout, savedAccounts, switchAccount, setAddingAccount, updateUser } = useAuth();
     const { colors, type, coat } = useTheme();
     const styles = useThemedStyles(makeStyles);
@@ -240,6 +241,12 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
                     <Pressable style={styles.row} onPress={onModeratedAccounts} accessibilityRole="button">
                         <Icon name="eye-off-outline" size={20} color={colors.accentText} />
                         <Text style={[labelStyle, styles.rowText]}>{t('settings.moderatedAccounts')}</Text>
+                        <Icon name="chevron-forward" size={16} color={colors.textMuted} />
+                    </Pressable>
+                    <View style={styles.divider} />
+                    <Pressable style={styles.row} onPress={onFilters} accessibilityRole="button">
+                        <Icon name="options-outline" size={20} color={colors.accentText} />
+                        <Text style={[labelStyle, styles.rowText]}>{t('settings.filters')}</Text>
                         <Icon name="chevron-forward" size={16} color={colors.textMuted} />
                     </Pressable>
                     <View style={styles.divider} />

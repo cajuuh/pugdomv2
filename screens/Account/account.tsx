@@ -9,6 +9,7 @@ import { ProfileTab, useProfileStatuses } from '../../hooks/useAccountStatuses';
 import { useAccount } from '../../hooks/useAccount';
 import { useRelationships } from '../../hooks/useRelationships';
 import { TootCard } from '../../components/TootCard/tootCard';
+import { withoutHidden } from '../../services/mastodon/filters';
 import { IconButton, SegmentOption } from '../../components/ui';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { useI18n } from '../../services/i18n/i18nContext';
@@ -50,6 +51,7 @@ const Account = ({ accountId, account: initialAccount, onBack, onStatusPress, on
     const { data: account, isError, refetch: refetchAccount } = useAccount(accountId, initialAccount);
     const relationships = useRelationships(isSelf ? [] : [accountId]);
     const { statuses, hasPinned, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage, refetch } = useProfileStatuses(accountId, tab);
+    const shown = withoutHidden(statuses, 'account');
     const tabs: SegmentOption<ProfileTab>[] = tabsFor(hasPinned).map(value => ({ value, label: t(`profile.${value}`), icon: value === 'pinned' ? 'pin' : undefined }));
 
     // Unpinning the last pinned post takes the Pinned tab away
@@ -94,13 +96,13 @@ const Account = ({ accountId, account: initialAccount, onBack, onStatusPress, on
         <View style={styles.container}>
             <FlashList
                 {...postListProps}
-                data={showGrid ? toMediaRows(statuses) : statuses}
+                data={showGrid ? toMediaRows(shown) : shown}
                 keyExtractor={(item: Status | MediaTile[]) => (Array.isArray(item) ? `row-${item[0].status.id}-${item[0].index}` : item.id)}
                 getItemType={(item: Status | MediaTile[]) => (Array.isArray(item) ? 'mediaRow' : 'post')}
                 renderItem={({ item }) =>
                     Array.isArray(item)
                         ? <MediaGridRow row={item} onStatusPress={onStatusPress} />
-                        : <TootCard status={item} onPress={onStatusPress} />
+                        : <TootCard status={item} onPress={onStatusPress} filterContext="account" />
                 }
                 ListHeaderComponent={
                     <ProfileHeader

@@ -2,7 +2,8 @@ import React, { useCallback, useRef, useState } from 'react';
 import { Image, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Icon } from '../ui/icon';
 import { useRecyclingState } from '@shopify/flash-list';
-import { Status, Attachment, Mention, PreviewCard } from '../../services/mastodon/types';
+import { Status, Attachment, FilterContext, Mention, PreviewCard } from '../../services/mastodon/types';
+import { filterMatch } from '../../services/mastodon/filters';
 import { StatusHtmlContent } from './htmlContent';
 import { PostHashtags } from './postHashtags';
 import { useSettings } from '../../services/settingsContext';
@@ -140,9 +141,11 @@ interface TootCardProps {
     remote?: boolean;
     // The whole text however long (a thread's main post); elsewhere long posts fold behind "Show more"
     fullText?: boolean;
+    // Where it's shown, for your filters: warn covers it, blur veils its media (hide is the list's job)
+    filterContext?: FilterContext;
 }
 
-export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPressHashtag, onPress, threadMode, showReactions, hasThreadLineTop, hasThreadLineBottom, indent = 0, replyingTo, remote, fullText }) => {
+export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPressHashtag, onPress, threadMode, showReactions, hasThreadLineTop, hasThreadLineBottom, indent = 0, replyingTo, remote, fullText, filterContext }) => {
     const { compactMode, hideCounts, coverSensitiveMedia, uncroppedMedia, mediaAutoplay } = useSettings();
     const { colors, type } = useTheme();
     const styles = useThemedStyles(makeStyles);
@@ -192,6 +195,9 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const [boostCount, setBoostCount] = useRecyclingState(targetStatus.reblogs_count, recyclingDeps);
     const [isBookmarked, setIsBookmarked] = useRecyclingState(!!targetStatus.bookmarked, recyclingDeps);
     const [isMediaRevealed, setIsMediaRevealed] = useRecyclingState(false, recyclingDeps);
+    const filtered = filterMatch(status, filterContext);
+    const filterTitles = filtered?.action === 'warn' ? filtered.titles.join(', ') : '';
+    const [isFilterCovered, setIsFilterCovered] = useRecyclingState(!!filterTitles, [targetStatus.id, filterTitles]);
     const postTranslation = usePostTranslation(targetStatus, remote, recyclingDeps);
     const shownContent = postTranslation.translation?.content ?? targetStatus.content;
     const hasMore = (targetStatus.media_attachments?.length ?? 0) > 0 || !!targetStatus.card || !!targetStatus.poll || !!targetStatus.quote;
@@ -365,7 +371,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
 
         const count = attachments.length;
         // Sensitive media starts veiled, unless the account (or the app) shows it all; "hide all" veils everything
-        const hidesMedia = mediaDisplay === 'hide_all' || (mediaDisplay === 'default' && targetStatus.sensitive);
+        const hidesMedia = mediaDisplay === 'hide_all' || (mediaDisplay === 'default' && targetStatus.sensitive) || filtered?.action === 'blur';
         const veiled = hidesMedia && !isMediaRevealed;
         // Compact Mode keeps its short tiles; uncropped ones show the whole picture
         const uncropped = uncroppedMedia && !compactMode;
@@ -569,6 +575,19 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     );
 
     const renderContent = () => {
+        // A warn filter covers the post, content warning and all, until you show it
+        if (isFilterCovered) {
+            return (
+                <View style={styles.cwRibbon}>
+                    <Icon name="options-outline" size={22} color={colors.accentText} />
+                    <View style={styles.cwText}>
+                        <Text style={[type.label, styles.cwLabel]}>{t('post.filtered')}</Text>
+                        <Text style={[type.name, styles.cwSpoiler]}>{filterTitles}</Text>
+                    </View>
+                    <PillButton label={t('common.show')} variant="secondary" onPress={() => setIsFilterCovered(false)} style={styles.cwButton} />
+                </View>
+            );
+        }
         if (!hasContentWarning) {
             return <View style={[styles.content, compactMode && styles.contentCompact]}>{body}</View>;
         }

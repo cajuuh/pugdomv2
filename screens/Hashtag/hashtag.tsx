@@ -9,6 +9,7 @@ import { useTag, useTagTimeline, useToggleFollowTag } from '../../hooks/useTag';
 import { weeklyUsage } from '../../services/mastodon/tags';
 import { Status } from '../../services/mastodon/types';
 import { TootCard } from '../../components/TootCard/tootCard';
+import { withoutHidden } from '../../services/mastodon/filters';
 import { IconButton, PillButton } from '../../components/ui';
 import { makeStyles } from './styles';
 import { usePinnedFeeds } from '../../hooks/usePinnedFeeds';
@@ -38,7 +39,7 @@ const Hashtag = ({ tag, onBack, onStatusPress }: HashtagProps) => {
     const tagFeed = createHashtagFeed(tag);
     const pinned = isPinned(tagFeed.id);
     const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage, refetch } = useTagTimeline(tag);
-    const statuses = data?.pages.flat() ?? [];
+    const statuses = withoutHidden(data?.pages.flat() ?? [], 'public');
     // The server's spelling of the tag once known (e.g. #PugsOfMastodon)
     const name = info?.name ?? tag;
     const usage = weeklyUsage(info);
@@ -108,7 +109,7 @@ const Hashtag = ({ tag, onBack, onStatusPress }: HashtagProps) => {
                 {...postListProps}
                 data={statuses}
                 keyExtractor={(item: Status) => item.id}
-                renderItem={({ item }) => <TootCard status={item} onPress={onStatusPress} />}
+                renderItem={({ item }) => <TootCard status={item} onPress={onStatusPress} filterContext="public" />}
                 ListHeaderComponent={intro}
                 ListEmptyComponent={
                     <View style={styles.empty}>

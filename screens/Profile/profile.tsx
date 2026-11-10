@@ -8,6 +8,7 @@ import { Status } from '../../services/mastodon/types';
 import { accountStatusesKey, ProfileTab, useProfileStatuses } from '../../hooks/useAccountStatuses';
 import { useBookmarks } from '../../hooks/useBookmarks';
 import { TootCard } from '../../components/TootCard/tootCard';
+import { withoutHidden } from '../../services/mastodon/filters';
 import { SegmentOption } from '../../components/ui';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { makeStyles } from './styles';
@@ -52,7 +53,7 @@ const Profile = ({ onStatusPress }: ProfileProps) => {
     const tabs: SegmentOption<Tab>[] = tabsFor(hasPinned).map(value => ({ value, label: t(`profile.${value}`), icon: value === 'pinned' ? 'pin' : undefined }));
     const bookmarks = useBookmarks(showBookmarks);
     const { isLoading, isFetchingNextPage, hasNextPage, fetchNextPage, refetch } = showBookmarks ? bookmarks : accountStatuses;
-    const statuses = showBookmarks ? bookmarks.data?.pages.flatMap(page => page.statuses) ?? [] : accountStatuses.statuses;
+    const statuses = showBookmarks ? bookmarks.data?.pages.flatMap(page => page.statuses) ?? [] : withoutHidden(accountStatuses.statuses, 'account');
 
     // Unpinning the last pinned post takes the Pinned tab away
     useEffect(() => {
@@ -109,7 +110,7 @@ const Profile = ({ onStatusPress }: ProfileProps) => {
                 renderItem={({ item }) =>
                     Array.isArray(item)
                         ? <MediaGridRow row={item} onStatusPress={onStatusPress} />
-                        : <TootCard status={item} onPress={onStatusPress} />
+                        : <TootCard status={item} onPress={onStatusPress} filterContext={showBookmarks ? undefined : 'account'} />
                 }
                 ListHeaderComponent={<ProfileHeader user={user} mode="self" tabs={tabs} tab={tab} onChangeTab={setTab} />}
                 ListEmptyComponent={renderEmpty}
