@@ -856,6 +856,10 @@ export const en = {
         quiet: 'No posts this week',
         empty: 'No posts with #{{tag}} yet',
         followHint: 'Posts with this hashtag also show up in your home timeline',
+        mute: 'Mute hashtag',
+        mutedPill: 'Muted',
+        muted: '{{tag}} muted. Its posts no longer show in your timelines.',
+        unmuted: '{{tag}} unmuted',
     },
     profile: {
         note: 'Your note',

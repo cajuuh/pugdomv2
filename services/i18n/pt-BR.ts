@@ -841,6 +841,10 @@ export const ptBR: Dictionary = {
         quiet: 'Nenhuma publicação nesta semana',
         empty: 'Ainda não há publicações com #{{tag}}',
         followHint: 'As publicações com esta hashtag também aparecem na sua página inicial',
+        mute: 'Silenciar hashtag',
+        mutedPill: 'Silenciada',
+        muted: '{{tag}} silenciada. As publicações dela não aparecem mais nas suas timelines.',
+        unmuted: '{{tag}} não está mais silenciada',
     },
     profile: {
         note: 'Sua nota',

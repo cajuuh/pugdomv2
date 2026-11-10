@@ -840,6 +840,10 @@ export const es419: Dictionary = {
         quiet: 'Sin publicaciones esta semana',
         empty: 'Todavía no hay publicaciones con #{{tag}}',
         followHint: 'Las publicaciones con esta etiqueta también aparecen en tu inicio',
+        mute: 'Silenciar hashtag',
+        mutedPill: 'Silenciada',
+        muted: '{{tag}} silenciada. Sus publicaciones ya no aparecen en tus líneas de tiempo.',
+        unmuted: '{{tag}} ya no está silenciada',
     },
     profile: {
         note: 'Tu nota',

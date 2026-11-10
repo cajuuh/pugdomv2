@@ -14,20 +14,32 @@ const STRENGTH: Record<FilterAction, number> = { blur: 1, warn: 2, hide: 3 };
 // What your filters do to a post shown in `context`, as Mastodon's web app decides it: only filters for that
 // context that haven't expired count, a boost counts its own results and the boosted post's, and the strongest
 // action wins.
-export const filterMatch = (status: Status, context: FilterContext | undefined, now = Date.now()): FilterMatch | null => {
+export const filterMatch = (status: Status, context: FilterContext | undefined, now = Date.now(), ignoreId?: string): FilterMatch | null => {
     if (!context) return null;
     const results = [...(status.filtered ?? []), ...(status.reblog?.filtered ?? [])];
     const filters = results
         .map(result => result.filter)
-        .filter(filter => filter.context.includes(context) && !(filter.expires_at && Date.parse(filter.expires_at) <= now));
+        .filter(filter => filter.id !== ignoreId && filter.context.includes(context) && !(filter.expires_at && Date.parse(filter.expires_at) <= now));
     if (filters.length === 0) return null;
     const action = filters.reduce<FilterAction>((best, f) => (STRENGTH[f.filter_action] > STRENGTH[best] ? f.filter_action : best), 'blur');
     return { action, titles: filters.filter(f => f.filter_action === 'warn').map(f => f.title) };
 };
 
-// Posts a hide filter for `context` doesn't drop
-export const withoutHidden = (posts: Status[], context: FilterContext | undefined): Status[] =>
-    context ? posts.filter(post => filterMatch(post, context)?.action !== 'hide') : posts;
+// Posts a hide filter for `context` doesn't drop (`ignoreId`: one filter that doesn't count here)
+export const withoutHidden = (posts: Status[], context: FilterContext | undefined, ignoreId?: string): Status[] =>
+    context ? posts.filter(post => filterMatch(post, context, Date.now(), ignoreId)?.action !== 'hide') : posts;
+
+// A muted hashtag is a hide filter whose only word is the tag
+export const hashtagMuteFilter = (filters: Filter[] | undefined, tag: string) =>
+    filters?.find(filter => filter.keywords?.length === 1 && filter.keywords[0].keyword.toLowerCase() === `#${tag.toLowerCase()}`);
+
+export const hashtagMuteFields = (name: string): FilterFields => ({
+    title: `#${name}`,
+    context: ['home', 'public'],
+    filter_action: 'hide',
+    expires_in: '',
+    keywords_attributes: [{ keyword: `#${name}`, whole_word: true }],
+});
 
 // Home and lists use Home's filters; another server's timeline has none of yours
 export const feedFilterContext = (kind: FeedKind): FilterContext | undefined =>
