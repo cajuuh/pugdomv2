@@ -124,6 +124,13 @@ describe('trailing hashtags', () => {
         expect(splitTrailingHashtags(only)).toEqual({ html: only, tags: [] });
     });
 
+    it('takes them out too when the post has a photo, a link card, a poll or a quote to show', () => {
+        expect(splitTrailingHashtags(`<p>${tag('Sabafoto')}</p>`, true)).toEqual({ html: '', tags: ['Sabafoto'] });
+        // Mastodon's "RE:" line for apps without quotes isn't text either
+        expect(splitTrailingHashtags(`<p class="quote-inline">RE: <a href="x">x</a></p><p>${tag('pug')}</p>`, true)).toEqual({ html: '', tags: ['pug'] });
+        expect(splitTrailingHashtags(`<p>hello</p><p>${tag('pug')}</p>`, true)).toEqual({ html: '<p>hello</p>', tags: ['pug'] });
+    });
+
     it('takes accented hashtags, and handles a post with no paragraphs', () => {
         expect(splitTrailingHashtags(`<p>oi</p><p>${tag('São_Paulo')}</p>`).tags).toEqual(['São_Paulo']);
         expect(splitTrailingHashtags('')).toEqual({ html: '', tags: [] });

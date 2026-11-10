@@ -255,7 +255,8 @@ describe('Notifications', () => {
         await fireEvent.press(await screen.findByText('Follow back'));
 
         expect(mockedFollow).toHaveBeenCalledWith('b');
-        expect(await screen.findByText('Following')).toBeTruthy();
+        // They follow you (it's a follow notification), so following back makes you mutuals
+        expect(await screen.findByText('Mutuals')).toBeTruthy();
         expect(screen.queryByText('Follow back')).toBeNull();
     });
 
@@ -264,7 +265,7 @@ describe('Notifications', () => {
         mockedRelationships.mockResolvedValue([relationship('b', true)]);
         await renderScreen();
 
-        expect(await screen.findByText('Following')).toBeTruthy();
+        expect(await screen.findByText('Mutuals')).toBeTruthy();
         expect(screen.queryByText('Follow back')).toBeNull();
         expect(mockedRelationships).toHaveBeenCalledWith(['b']);
     });

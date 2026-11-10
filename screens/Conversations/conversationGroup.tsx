@@ -2,7 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FlashList } from '@shopify/flash-list';
-import { Ionicons } from '@expo/vector-icons';
+import { Icon } from '../../components/ui/icon';
 import { useTheme } from '../../services/themeContext';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { Conversation, groupConversations, statusPreview } from '../../services/mastodon/conversations';
@@ -52,7 +52,7 @@ const ConversationGroupScreen = ({ groupKey, onBack, onStatusPress }: Conversati
             >
                 <View style={styles.cardTop}>
                     <View style={[styles.number, { backgroundColor: colors.accentSoft }]}>
-                        <Ionicons name="chatbubbles" size={13} color={colors.accentText} />
+                        <Icon name="chatbubbles" size={13} color={colors.accentText} />
                         <Text style={[type.label, { color: colors.accentText }]}>{label}</Text>
                     </View>
                     <View style={styles.flex} />

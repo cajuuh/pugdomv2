@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon } from '../../components/ui/icon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FlashList } from '@shopify/flash-list';
 import { useInfiniteQuery } from '@tanstack/react-query';
@@ -87,7 +87,7 @@ const Reactions = ({ id, kind, account, onBack }: ReactionsProps) => {
 
             {searchable && (
                 <View style={[styles.field, { backgroundColor: colors.inputBackground }]}>
-                    <Ionicons name="search" size={18} color={colors.textMuted} />
+                    <Icon name="search" size={18} color={colors.textMuted} />
                     <TextInput
                         value={query}
                         onChangeText={setQuery}
@@ -101,7 +101,7 @@ const Reactions = ({ id, kind, account, onBack }: ReactionsProps) => {
                     />
                     {query.length > 0 && (
                         <Pressable onPress={() => setQuery('')} accessibilityRole="button" accessibilityLabel={t('search.clear')} hitSlop={10}>
-                            <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+                            <Icon name="close-circle" size={18} color={colors.textMuted} />
                         </Pressable>
                     )}
                 </View>

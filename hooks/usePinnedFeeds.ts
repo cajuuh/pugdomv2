@@ -116,7 +116,12 @@ export const usePinnedFeeds = () => {
         pinFeed: pinMutation.mutateAsync,
         unpinFeed: unpinMutation.mutateAsync,
         updatePinnedFeed: updatePinnedMutation.mutateAsync,
-        reorderPinnedFeeds: reorderMutation.mutateAsync,
+        // Written to the cache before the mutation starts: its onMutate waits on cancelQueries first, and a
+        // second arrow tap in that gap would build on the old order and undo the first
+        reorderPinnedFeeds: (feeds: FeedDescriptor[]) => {
+            queryClient.setQueryData(['pinnedFeeds', accountId], feeds);
+            return reorderMutation.mutateAsync(feeds);
+        },
         unfollowHashtag: unfollowHashtagMutation.mutateAsync,
         addCustomFeed: addCustomFeedMutation.mutateAsync,
         replaceCustomFeed: replaceCustomFeedMutation.mutateAsync,

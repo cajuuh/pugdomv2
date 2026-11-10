@@ -22,7 +22,7 @@ interface CharacterCounterProps {
     max: number;
 }
 
-// A ring that fills as you type: accent, then accent ink near the limit, then danger with "N over"
+// A ring that fills as you type: accent, then accent ink and the count near the limit, then danger with "N over"
 export const CharacterCounter: React.FC<CharacterCounterProps> = ({ remaining, max }) => {
     const { colors, type } = useTheme();
     const { t } = useI18n();
@@ -38,9 +38,13 @@ export const CharacterCounter: React.FC<CharacterCounterProps> = ({ remaining, m
             accessibilityLabel={state === 'over' ? t('compose.charactersOver', { count: -remaining }) : t('compose.charactersLeft', { count: remaining })}
             style={styles.counter}
         >
-            <Text style={[type.name, styles.counterText, { color: textColor }]}>
-                {state === 'over' ? t('compose.overShort', { count: -remaining }) : remaining}
-            </Text>
+            {/* The number only near the limit: "10000" on a long-post server says little, and it pushed the
+                tools off narrow phones. Screen readers always hear the count (the label above). */}
+            {state !== 'plenty' && (
+                <Text style={[type.name, styles.counterText, { color: textColor }]}>
+                    {state === 'over' ? t('compose.overShort', { count: -remaining }) : remaining}
+                </Text>
+            )}
             <Svg testID="character-ring" width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
                 <Circle cx={SIZE / 2} cy={SIZE / 2} r={RADIUS} fill="none" stroke={state === 'over' ? color : colors.borderColor} strokeWidth={STROKE} />
                 {state !== 'over' && used > 0 && (

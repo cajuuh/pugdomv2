@@ -1,4 +1,6 @@
 export { Avatar, AvatarBadge } from './avatar';
+export { Icon } from './icon';
+export type { IconName } from './icon';
 export { Card } from './card';
 export { IconButton } from './iconButton';
 export { PillButton } from './pillButton';

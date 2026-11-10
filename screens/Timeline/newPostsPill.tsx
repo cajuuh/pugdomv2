@@ -1,6 +1,6 @@
 import React from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon } from '../../components/ui/icon';
 import { Avatar } from '../../components/ui';
 import { NewPosts } from '../../hooks/useNewPosts';
 import { useI18n } from '../../services/i18n/i18nContext';
@@ -38,7 +38,7 @@ export const NewPostsPill: React.FC<NewPostsPillProps> = ({ newPosts, loading, c
                 {loading ? (
                     <ActivityIndicator size="small" color={colors.buttonTextColor} />
                 ) : (
-                    <Ionicons name="arrow-up" size={16} color={colors.buttonTextColor} />
+                    <Icon name="arrow-up" size={16} color={colors.buttonTextColor} />
                 )}
                 {!collapsed && newPosts.accounts.length > 0 && (
                     <View style={styles.newPostsAvatars}>

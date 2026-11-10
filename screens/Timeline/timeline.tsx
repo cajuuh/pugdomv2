@@ -3,7 +3,7 @@ import { ActivityIndicator, RefreshControl, DeviceEventEmitter, Pressable, Scrol
 import { FlashList, FlashListRef } from '@shopify/flash-list';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { InfiniteData, useQueryClient } from '@tanstack/react-query';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon } from '../../components/ui/icon';
 import { useFeed } from '../../hooks/useFeed';
 import { usePinnedFeeds } from '../../hooks/usePinnedFeeds';
 import { Status } from '../../services/mastodon/types';
@@ -339,7 +339,7 @@ const Timeline = ({ onStatusPress, active = true }: TimelineProps) => {
                                 accessibilityLabel={feedLabel(previewFeed, i18n)}
                                 accessibilityState={{ selected: true }}
                             >
-                                <Ionicons name={feedIcon(previewFeed.kind)} size={14} color={colors.buttonTextColor} />
+                                <Icon name={feedIcon(previewFeed.kind)} size={14} color={colors.buttonTextColor} />
                                 <Text style={[type.name, styles.feedPillText, styles.feedPillTextActive]} numberOfLines={1}>
                                     {feedLabel(previewFeed, i18n)}
                                 </Text>
@@ -351,7 +351,7 @@ const Timeline = ({ onStatusPress, active = true }: TimelineProps) => {
                                 accessibilityRole="button"
                                 hitSlop={hitSlopFor(FEED_PILL_HEIGHT, FEED_PILL_HEIGHT)}
                             >
-                                <Ionicons name="pin-outline" size={16} color={colors.accentText} />
+                                <Icon name="pin-outline" size={16} color={colors.accentText} />
                             </Pressable>
                             <View style={styles.feedPillDivider} />
                         </>
@@ -371,7 +371,7 @@ const Timeline = ({ onStatusPress, active = true }: TimelineProps) => {
                                 accessibilityState={{ selected: isActive }}
                                 hitSlop={hitSlopFor(0, FEED_PILL_HEIGHT)}
                             >
-                                <Ionicons
+                                <Icon
                                     name={feedIcon(feed.kind)}
                                     size={14}
                                     color={isActive ? colors.buttonTextColor : colors.textSecondary}
@@ -389,7 +389,7 @@ const Timeline = ({ onStatusPress, active = true }: TimelineProps) => {
                         accessibilityRole="button"
                         hitSlop={hitSlopFor(FEED_PILL_HEIGHT, FEED_PILL_HEIGHT)}
                     >
-                        <Ionicons name="add" size={18} color={colors.textSecondary} />
+                        <Icon name="add" size={18} color={colors.textSecondary} />
                     </Pressable>
                 </ScrollView>
             </View>

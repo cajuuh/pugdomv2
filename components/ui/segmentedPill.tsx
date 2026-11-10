@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon, IconName } from './icon';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { useTheme } from '../../services/themeContext';
@@ -10,7 +10,7 @@ export interface SegmentOption<T extends string> {
     value: T;
     label: string;
     // Shown before the label on underline tabs
-    icon?: React.ComponentProps<typeof Ionicons>['name'];
+    icon?: IconName;
 }
 
 interface SegmentedPillProps<T extends string> {
@@ -85,7 +85,7 @@ function UnderlineTabs<T extends string>({ options, value, onChange }: Pick<Segm
                             accessibilityState={{ selected }}
                             style={[styles.underlineTab, { borderBottomColor: selected ? colors.accentColor : 'transparent' }]}
                         >
-                            {option.icon && <Ionicons name={option.icon} size={15} color={selected ? colors.textPrimary : colors.textMuted} />}
+                            {option.icon && <Icon name={option.icon} size={15} color={selected ? colors.textPrimary : colors.textMuted} />}
                             <Text style={[type.name, styles.underlineLabel, { color: selected ? colors.textPrimary : colors.textMuted }]}>
                                 {option.label}
                             </Text>
@@ -122,7 +122,7 @@ const EdgeFade = ({ side, onPress }: { side: 'start' | 'end'; onPress: () => voi
                 hitSlop={hitSlopFor(UNDERLINE_ARROW, 44)}
                 style={styles.edgeArrow}
             >
-                <Ionicons name={end ? 'chevron-forward' : 'chevron-back'} size={UNDERLINE_ARROW} color={colors.textMuted} />
+                <Icon name={end ? 'chevron-forward' : 'chevron-back'} size={UNDERLINE_ARROW} color={colors.textMuted} />
             </Pressable>
         </View>
     );

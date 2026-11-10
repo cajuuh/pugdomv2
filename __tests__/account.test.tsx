@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Text } from 'react-native';
+import { Alert, Share, Text } from 'react-native';
 import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import * as WebBrowser from 'expo-web-browser';
@@ -115,6 +115,27 @@ describe('Account screen', () => {
 
         await fireEvent.press(screen.getByRole('link', { name: 'See on art.social' }));
         expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith('https://art.social/@ana');
+    });
+
+    it('says Mutuals when you follow each other, without the follows-you badge', async () => {
+        mocked.getRelationships.mockResolvedValue([relationship({ following: true, followed_by: true })]);
+        await renderAccount({ account: ana });
+
+        expect(await screen.findByRole('button', { name: 'Mutuals' })).toBeTruthy();
+        expect(screen.queryByText('Follows you')).toBeNull();
+    });
+
+    it("shares someone else's profile from the menu, keeping the row for Follow, the bell and lists", async () => {
+        const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.sharedAction });
+        mocked.getRelationships.mockResolvedValue([relationship({ following: true })]);
+        await renderAccount({ account: ana });
+        await screen.findByRole('button', { name: 'Following' });
+        expect(screen.queryByRole('button', { name: 'Share profile' })).toBeNull();
+
+        await fireEvent.press(screen.getByRole('button', { name: 'More options for Ana' }));
+        await fireEvent.press(screen.getByRole('button', { name: 'Share profile' }));
+
+        await waitFor(() => expect(share).toHaveBeenCalled());
     });
 
     it('opens who they follow and who follows them from the counts', async () => {
