@@ -138,6 +138,21 @@ describe('Quote posts', () => {
 
     const card = { url: 'https://news.example/pugs', title: 'Pugs win again', description: '', type: 'link', image: null } as any;
 
+    it('says when a long quote goes on, and opens it in place', async () => {
+        const onPress = jest.fn();
+        await renderCard(quoting({ state: 'accepted', quoted_status: quoted }), { onPress });
+        // Short text fits the fold: nothing to add
+        await fireEvent(screen.getByText('Pugs are the best'), 'layout', { nativeEvent: { layout: { height: 40 } } });
+        expect(screen.queryByRole('button', { name: 'Show more' })).toBeNull();
+
+        // Taller than its six lines: the rest is cut, so say so
+        await fireEvent(screen.getByText('Pugs are the best'), 'layout', { nativeEvent: { layout: { height: 400 } } });
+        await fireEvent.press(screen.getByRole('button', { name: 'Show more' }));
+
+        expect(screen.queryByRole('button', { name: 'Show more' })).toBeNull();
+        expect(onPress).not.toHaveBeenCalled();
+    });
+
     it("shows the quoted post's link preview", async () => {
         await renderCard(quoting({ state: 'accepted', quoted_status: { ...quoted, card } }));
         expect(screen.getByRole('link', { name: 'Pugs win again' })).toBeTruthy();

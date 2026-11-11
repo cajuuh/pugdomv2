@@ -1,4 +1,5 @@
 import React, { useCallback } from 'react';
+import { useRecyclingState } from '@shopify/flash-list';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Icon, IconName } from '../ui/icon';
 import { useTheme } from '../../services/themeContext';
@@ -10,12 +11,12 @@ import { QuoteNotice, quoteView } from '../../services/mastodon/quotes';
 import { Mention, PreviewCard, Quote, Status } from '../../services/mastodon/types';
 import { openLink } from '../../services/links';
 import { radii, space } from '../../services/theme/shape';
-import { Avatar } from '../ui';
+import { Avatar, PillButton } from '../ui';
 import { FocusedImage } from './focusedImage';
 import { PARAGRAPH_GAP, StatusHtmlContent } from './htmlContent';
 
 const MAX_THUMBS = 4;
-// Longer quotes are cut here; tapping the card opens the whole post
+// Longer quotes fold here, with "Show more" under them; tapping the card opens the whole post
 const MAX_LINES = 6;
 const AVATAR = 32;
 
@@ -56,6 +57,10 @@ export const QuotedPost: React.FC<QuotedPostProps> = ({ quote, onOpen, timeOf, c
         (href: string) => (onPressMention ? onPressMention(href, mentions) : onPressLink(href)),
         [onPressMention, onPressLink, mentions]
     );
+    // Per quoted post, since list rows are recycled: whether its text is taller than the fold, and opened
+    const postId = view?.kind === 'post' ? view.status.id : undefined;
+    const [overflows, setOverflows] = useRecyclingState(false, [postId]);
+    const [expanded, setExpanded] = useRecyclingState(false, [postId]);
     if (!view) return null;
 
     if (view.kind === 'notice') {
@@ -74,6 +79,7 @@ export const QuotedPost: React.FC<QuotedPostProps> = ({ quote, onOpen, timeOf, c
     const media = status.media_attachments ?? [];
     const hideMedia = status.sensitive || !!status.spoiler_text;
     const nested = !!status.quote;
+    const foldHeight = MAX_LINES * (compactMode ? 18 : 22.5);
 
     return (
         <Pressable
@@ -103,9 +109,12 @@ export const QuotedPost: React.FC<QuotedPostProps> = ({ quote, onOpen, timeOf, c
             ) : (
                 // The post's own HTML, so links are shortened and tappable like in the post around it
                 !!text && (
-                    <View style={[styles.textFold, { maxHeight: MAX_LINES * (compactMode ? 18 : 22.5) }]}>
+                    <View style={!expanded && [styles.textFold, { maxHeight: foldHeight }]}>
                         {/* Without the gap under the last paragraph, which the card's padding already gives */}
-                        <View style={styles.lastGap}>
+                        <View
+                            style={styles.lastGap}
+                            onLayout={event => setOverflows(event.nativeEvent.layout.height - PARAGRAPH_GAP > foldHeight + 1)}
+                        >
                             <StatusHtmlContent
                                 content={status.content}
                                 emojis={status.emojis ?? []}
@@ -120,6 +129,10 @@ export const QuotedPost: React.FC<QuotedPostProps> = ({ quote, onOpen, timeOf, c
                         </View>
                     </View>
                 )
+            )}
+            {/* Says the quote goes on, and opens it here; the card itself still opens the whole post */}
+            {!status.spoiler_text && overflows && !expanded && (
+                <PillButton label={t('post.showMore')} size="small" variant="subtle" onPress={() => setExpanded(true)} style={styles.showMore} />
             )}
 
             {media.length > 0 &&
@@ -187,8 +200,13 @@ const styles = StyleSheet.create({
         flex: 1,
         minWidth: 0,
     },
+    // Clips like 'hidden', but Yoga only measures the text at its full height (not cut at the fold) under
+    // 'scroll', and that height is what tells whether the fold cuts it
     textFold: {
-        overflow: 'hidden',
+        overflow: 'scroll',
+    },
+    showMore: {
+        alignSelf: 'flex-start',
     },
     lastGap: {
         marginBottom: -PARAGRAPH_GAP,
