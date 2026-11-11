@@ -6,7 +6,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { createTestQueryClient } from '../testUtils/queryClient';
 import Profile, { fullHandle } from '../screens/Profile/profile';
 import { getAccountStatuses } from '../services/mastodon/accounts';
-import { getBookmarks } from '../services/mastodon/bookmarks';
+import { getBookmarks, getFavourites } from '../services/mastodon/bookmarks';
 import { MediaViewerProvider } from '../components/MediaViewer/mediaViewer';
 import { NavigationProvider, useNavigator } from '../services/navigationContext';
 import { Account, Status } from '../services/mastodon/types';
@@ -36,7 +36,7 @@ jest.mock('../services/themeContext', () => ({
     useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
 }));
 jest.mock('../services/mastodon/accounts', () => ({ getAccountStatuses: jest.fn() }));
-jest.mock('../services/mastodon/bookmarks', () => ({ getBookmarks: jest.fn() }));
+jest.mock('../services/mastodon/bookmarks', () => ({ getBookmarks: jest.fn(), getFavourites: jest.fn() }));
 jest.mock('../services/storage', () => ({
     getCredentials: jest.fn().mockResolvedValue({ accessToken: 't', instanceUrl: 'https://mastodon.social' }),
 }));
@@ -52,6 +52,7 @@ jest.mock('../components/TootCard/tootCard', () => ({
 
 const mockedStatuses = getAccountStatuses as jest.MockedFunction<typeof getAccountStatuses>;
 const mockedBookmarks = getBookmarks as jest.MockedFunction<typeof getBookmarks>;
+const mockedFavourites = getFavourites as jest.MockedFunction<typeof getFavourites>;
 const status = (id: string, extra: Partial<Status> = {}) => ({ id, content: `post ${id}`, media_attachments: [], ...extra } as Status);
 
 describe('Profile', () => {
@@ -80,7 +81,7 @@ describe('Profile', () => {
         );
         await renderProfile();
 
-        await waitFor(() => expect(screen.getAllByRole('tab').map(tab => tab.props.accessibilityLabel)).toEqual(['Pinned', 'Posts', 'Replies', 'Media', 'Bookmarks']));
+        await waitFor(() => expect(screen.getAllByRole('tab').map(tab => tab.props.accessibilityLabel)).toEqual(['Pinned', 'Posts', 'Replies', 'Media', 'Bookmarks', 'Favourites']));
         expect(screen.getAllByText(/^post /).map(node => node.props.children)).toEqual(['post 4', 'post 3', 'post 1']);
         expect(screen.getByRole('tab', { name: 'Posts' })).toBeSelected();
         expect(mockedStatuses).toHaveBeenCalledWith('7', undefined, { pinned: true });
@@ -208,6 +209,29 @@ describe('Profile', () => {
         expect(screen.queryByText('post 1')).toBeNull();
         expect(mockedBookmarks).toHaveBeenCalledWith(undefined);
         expect(screen.getByRole('tab', { name: 'Bookmarks' })).toBeSelected();
+    });
+
+    it('lists the posts you favourited on the Favourites tab', async () => {
+        mockedFavourites.mockResolvedValue({ statuses: [status('f1')] });
+        await renderProfile();
+        await screen.findByText('post 1');
+        expect(mockedFavourites).not.toHaveBeenCalled();
+
+        await fireEvent.press(screen.getByRole('tab', { name: 'Favourites' }));
+
+        expect(await screen.findByText('post f1')).toBeTruthy();
+        expect(mockedFavourites).toHaveBeenCalledWith(undefined);
+        expect(mockedBookmarks).not.toHaveBeenCalled();
+    });
+
+    it('says when you have no favourites', async () => {
+        mockedFavourites.mockResolvedValue({ statuses: [] });
+        await renderProfile();
+        await screen.findByText('post 1');
+
+        await fireEvent.press(screen.getByRole('tab', { name: 'Favourites' }));
+
+        expect(await screen.findByText('No favourites yet')).toBeTruthy();
     });
 
     it('says when there are no bookmarks', async () => {

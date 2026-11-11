@@ -30,7 +30,7 @@ import {
     unreblogStatus,
 } from '../../services/mastodon/statuses';
 import { useQueryClient } from '@tanstack/react-query';
-import { BOOKMARKS_KEY } from '../../hooks/useBookmarks';
+import { BOOKMARKS_KEY, FAVOURITES_KEY } from '../../hooks/useBookmarks';
 import { Poll } from '../Poll/poll';
 import { Avatar, Card, PillButton } from '../ui';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
@@ -252,6 +252,8 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 ? await unfavouriteStatus(targetStatus.id)
                 : await favouriteStatus(targetStatus.id);
             updateCachedStatus(updated);
+            // Your Favourites list gains or loses this post
+            queryClient.invalidateQueries({ queryKey: FAVOURITES_KEY });
         } catch (error) {
             if (renderedStatusId.current !== targetStatus.id) {
                 return;
