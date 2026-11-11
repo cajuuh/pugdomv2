@@ -22,6 +22,7 @@ import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { postListProps, setAutoplayPost } from '../../services/media/autoplay';
 import { useNewPosts } from '../../hooks/useNewPosts';
+import { feedFilterContext, filterMatch } from '../../services/mastodon/filters';
 import { NewPostsPill } from './newPostsPill';
 
 // How far a sideways drag has to travel to change the feed, in points
@@ -57,10 +58,12 @@ const FeedList = ({ feed, current, visible, onStatusPress }: FeedListProps) => {
 
     const { homeBoosts, homeReplies } = useSettings();
     const { user } = useAuth();
-    const shows = useMemo(
-        () => (feed.kind === 'home' && !(homeBoosts && homeReplies) ? homeShows(homeBoosts, homeReplies, user?.id) : undefined),
-        [feed.kind, homeBoosts, homeReplies, user?.id]
-    );
+    const filterContext = feedFilterContext(feed.kind);
+    // Hide filters drop posts; on Home, the boosts and replies switches too
+    const shows = useMemo(() => {
+        const home = feed.kind === 'home' && !(homeBoosts && homeReplies) ? homeShows(homeBoosts, homeReplies, user?.id) : undefined;
+        return (post: Status) => filterMatch(post, filterContext)?.action !== 'hide' && (!home || home(post));
+    }, [feed.kind, filterContext, homeBoosts, homeReplies, user?.id]);
 
     const resolveEmptyMessage = () => {
         if (feed.kind === 'home') return t('timeline.emptyHome');
@@ -202,7 +205,7 @@ const FeedList = ({ feed, current, visible, onStatusPress }: FeedListProps) => {
                         }}
                         data={statuses}
                         keyExtractor={(item) => item.id}
-                        renderItem={({ item }) => <TootCard status={item} onPress={onStatusPress} remote={feed.kind === 'server'} />}
+                        renderItem={({ item }) => <TootCard status={item} onPress={onStatusPress} remote={feed.kind === 'server'} filterContext={filterContext} />}
                         onEndReached={handleLoadMore}
                         onEndReachedThreshold={0.5}
                         refreshControl={

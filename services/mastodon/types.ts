@@ -126,6 +126,34 @@ export interface Status {
     quote?: Quote | null;
     quotes_count?: number;
     quote_approval?: QuoteApproval | null;
+    // Your filters that match it (Mastodon 4.0+), whatever their context: the app checks the context
+    filtered?: FilterResult[];
+}
+
+// Where a filter applies: Home and lists, notifications, public and hashtag timelines, threads, profiles
+export type FilterContext = 'home' | 'notifications' | 'public' | 'thread' | 'account';
+// warn covers the post, hide drops it, blur (Mastodon 4.4) veils only its media
+export type FilterAction = 'warn' | 'hide' | 'blur';
+
+export interface FilterKeyword {
+    id: string;
+    keyword: string;
+    whole_word: boolean;
+}
+
+export interface Filter {
+    id: string;
+    title: string;
+    context: FilterContext[];
+    expires_at: string | null;
+    filter_action: FilterAction;
+    keywords?: FilterKeyword[];
+}
+
+export interface FilterResult {
+    filter: Filter;
+    keyword_matches: string[] | null;
+    status_matches: string[] | null;
 }
 
 // What a post was written as, to edit it

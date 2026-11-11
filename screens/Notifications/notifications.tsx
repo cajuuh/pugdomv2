@@ -25,6 +25,7 @@ import { hitSlopFor } from '../../services/theme/shape';
 import { FAVOURITE_SIZE, STACKED_AVATAR, makeStyles } from './styles';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { ListItem, actorsText, buildListItems, notificationTime, plainText, withoutOwnMention } from './rows';
+import { filterMatch } from '../../services/mastodon/filters';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { TKey, Translator } from '../../services/i18n/translate';
 import { useOpenAccount } from '../../hooks/useOpenAccount';
@@ -94,8 +95,10 @@ const FollowRequestActions = ({ account }: { account: Account }) => {
 
 const nameOf = (account: Account) => account.display_name || account.username;
 
-// What the row shows of the post: the content warning when there is one, never the text behind it
+// What the row shows of the post: the filter or content warning covering it, never the text behind it
 const statusText = (status: Status, type: Notification['type'], { t }: Translator, username?: string) => {
+    const filtered = filterMatch(status, 'notifications');
+    if (filtered?.action === 'warn') return t('notifications.filtered', { text: filtered.titles.join(', ') });
     if (status.spoiler_text) return t('notifications.cw', { text: status.spoiler_text });
     const text = plainText(status.content);
     return type === 'mention' ? withoutOwnMention(text, username) : text;
@@ -472,9 +475,9 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
 
     const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage, refetch } = useNotifications(activeFilter);
 
-    // The server already filters by type; this guards against types the screen can't render
+    // The server already filters by type; this guards against types the screen can't render, and drops posts your hide filters cover
     const notifications = useMemo(
-        () => mergeGroups(data?.pages.flatMap(page => page.groups) ?? []).filter(g => SUPPORTED_NOTIFICATION_TYPES.includes(g.type)),
+        () => mergeGroups(data?.pages.flatMap(page => page.groups) ?? []).filter(g => SUPPORTED_NOTIFICATION_TYPES.includes(g.type) && !(g.status && filterMatch(g.status, 'notifications')?.action === 'hide')),
         [data]
     );
     const listItems = useMemo(() => buildListItems(notifications, new Date(), i18n, readPoint), [notifications, i18n, readPoint]);

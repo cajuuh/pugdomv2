@@ -39,6 +39,7 @@ import ConversationGroup from './screens/Conversations/conversationGroup';
 import ScheduledPosts from './screens/Scheduled/scheduledPosts';
 import Drafts from './screens/Drafts/drafts';
 import ModeratedAccounts from './screens/Moderated/moderatedAccounts';
+import { FilterEditor, FilterList } from './screens/Filters/filters';
 import Reactions from './screens/Reactions/reactions';
 import AccountNote from './screens/AccountNote/accountNote';
 import EditProfile from './screens/EditProfile/editProfile';
@@ -115,6 +116,7 @@ function NavigationRoot() {
             onScheduledPosts={() => push({ name: 'scheduledPosts' })}
             onDrafts={() => push({ name: 'drafts' })}
             onModeratedAccounts={() => push({ name: 'moderatedAccounts' })}
+            onFilters={() => push({ name: 'filters' })}
           />
         );
       case 'scheduledPosts':
@@ -150,6 +152,10 @@ function NavigationRoot() {
         return <EditProfile onBack={pop} />;
       case 'moderatedAccounts':
         return <ModeratedAccounts onBack={pop} />;
+      case 'filters':
+        return <FilterList onBack={pop} onEdit={filterId => push({ name: 'filterEditor', filterId })} />;
+      case 'filterEditor':
+        return <FilterEditor filterId={route.filterId} onBack={pop} />;
       case 'accountNote':
         return <AccountNote account={route.account} note={route.note} onBack={pop} />;
     }

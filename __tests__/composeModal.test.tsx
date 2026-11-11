@@ -175,6 +175,19 @@ describe('ComposeModal', () => {
         expect(defaultVisibility({ ...me, source: { privacy: 'private' } }, { ...replyTarget, visibility: 'direct' } as Status)).toBe('direct');
     });
 
+    it('starts replies to public posts as unlisted with the setting on', () => {
+        const reply = (visibility: Status['visibility']) => ({ ...replyTarget, visibility }) as Status;
+        expect(defaultVisibility(me, reply('public'), null, true)).toBe('unlisted');
+        expect(defaultVisibility(me, reply('public'), null, false)).toBe('public');
+        for (const visibility of ['unlisted', 'private', 'direct'] as const) {
+            expect(defaultVisibility(me, reply(visibility), null, true)).toBe(visibility);
+        }
+        // New posts keep the account default
+        expect(defaultVisibility(me, null, null, true)).toBe('public');
+        // Quoting a followers-only post still wins
+        expect(defaultVisibility(me, reply('public'), reply('private'), true)).toBe('private');
+    });
+
     it("defaults the post language to the account's, else the app's", () => {
         expect(defaultLanguage({ ...me, source: { language: 'de' } }, 'pt-BR')).toBe('de');
         // Akkoma and Pleroma send no posting language

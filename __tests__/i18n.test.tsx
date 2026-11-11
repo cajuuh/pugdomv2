@@ -5,6 +5,12 @@ import { act, render, screen, waitFor } from '@testing-library/react-native';
 import { en } from '../services/i18n/en';
 import { ptBR } from '../services/i18n/pt-BR';
 import { es419 } from '../services/i18n/es-419';
+import { de } from '../services/i18n/de';
+import { fr } from '../services/i18n/fr';
+import { eo } from '../services/i18n/eo';
+import { la } from '../services/i18n/la';
+import { ja } from '../services/i18n/ja';
+import { zhCN } from '../services/i18n/zh-CN';
 import { createTranslator, pluralForm } from '../services/i18n/translate';
 import { I18nProvider, LANGUAGE_KEY, phoneLanguage, useI18n } from '../services/i18n/i18nContext';
 import { DEFAULT_LANGUAGE, phoneLocales } from '../services/i18n/defaults';
@@ -30,7 +36,7 @@ const keysOf = (node: unknown, prefix = ''): string[] =>
         : [prefix.slice(0, -1)];
 
 describe('dictionaries', () => {
-    const others = Object.entries({ 'pt-BR': ptBR, 'es-419': es419 });
+    const others = Object.entries({ 'pt-BR': ptBR, 'es-419': es419, de, fr, eo, la, ja, 'zh-CN': zhCN });
 
     it.each(others)('%s has exactly the same keys as English', (_, dict) => {
         expect(keysOf(dict).sort()).toEqual(keysOf(en).sort());
@@ -55,6 +61,21 @@ describe('dictionaries', () => {
         expect(es.tn('poll.votes', 0)).toBe('0 votos');
         expect(es.tn('poll.votes', 1)).toBe('1 voto');
         expect(es.locale).toBe('es-419');
+    });
+
+    it('uses the singular for 0 and 1 in French, like Portuguese', () => {
+        const french = createTranslator('fr');
+        expect(french.tn('poll.votes', 0)).toBe('0 vote');
+        expect(french.tn('poll.votes', 2)).toBe('2 votes');
+        expect(createTranslator('de').tn('poll.votes', 0)).toBe('0 Stimmen');
+    });
+
+    it('follows a phone in Japanese, Chinese, German, French or Esperanto', () => {
+        expect(phoneLanguage(['ja-JP'])).toBe('ja');
+        expect(phoneLanguage(['zh-Hans-CN'])).toBe('zh-CN');
+        expect(phoneLanguage(['de-AT'])).toBe('de');
+        expect(phoneLanguage(['fr-CA'])).toBe('fr');
+        expect(phoneLanguage(['eo'])).toBe('eo');
     });
 });
 
@@ -135,9 +156,9 @@ describe('I18nProvider', () => {
     it('picks the first of the phone\'s languages it speaks, or the default', () => {
         expect(phoneLanguage(['es-AR'])).toBe('es-419');
         expect(phoneLanguage(['es_MX'])).toBe('es-419');
-        expect(phoneLanguage(['fr-FR', 'en-GB'])).toBe('en');
+        expect(phoneLanguage(['ko-KR', 'en-GB'])).toBe('en');
         expect(phoneLanguage(['pt-PT'])).toBe('pt-BR');
-        expect(phoneLanguage(['de-DE'])).toBe(DEFAULT_LANGUAGE);
+        expect(phoneLanguage(['ru-RU'])).toBe(DEFAULT_LANGUAGE);
         expect(phoneLanguage([])).toBe(DEFAULT_LANGUAGE);
     });
 

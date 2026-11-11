@@ -5,6 +5,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
 import Settings from '../screens/Settings/settings';
 import { ThemeProvider } from '../services/themeContext';
+import { openLink } from '../services/links';
 
 // Settings live in AsyncStorage (jest.setup.js mock); SecureStore only holds settings saved by builds before 1.1.0
 const mockStore = new Map<string, string>();
@@ -17,6 +18,7 @@ jest.mock('expo-secure-store', () => ({
         mockStore.delete(key);
     }),
 }));
+jest.mock('../services/links', () => ({ ...jest.requireActual('../services/links'), openLink: jest.fn() }));
 jest.mock('expo-font', () => ({ ...jest.requireActual('expo-font'), useFonts: () => [true, null] }));
 jest.mock('../services/authContext', () => ({
     useOptionalAuth: () => undefined,
@@ -48,7 +50,7 @@ const renderAppearance = async () => {
     await render(
         <QueryClientProvider client={createTestQueryClient()}>
             <ThemeProvider>
-                <Settings onBack={jest.fn()} onScheduledPosts={jest.fn()} onDrafts={jest.fn()} onModeratedAccounts={jest.fn()} />
+                <Settings onBack={jest.fn()} onScheduledPosts={jest.fn()} onDrafts={jest.fn()} onModeratedAccounts={jest.fn()} onFilters={jest.fn()} />
             </ThemeProvider>
         </QueryClientProvider>
     );
@@ -132,7 +134,7 @@ describe('Clear notifications help', () => {
         await render(
             <QueryClientProvider client={createTestQueryClient()}>
                 <ThemeProvider>
-                    <Settings onBack={jest.fn()} onScheduledPosts={jest.fn()} onDrafts={jest.fn()} onModeratedAccounts={jest.fn()} />
+                    <Settings onBack={jest.fn()} onScheduledPosts={jest.fn()} onDrafts={jest.fn()} onModeratedAccounts={jest.fn()} onFilters={jest.fn()} />
                 </ThemeProvider>
             </QueryClientProvider>
         );
@@ -145,5 +147,19 @@ describe('Clear notifications help', () => {
 
         await fireEvent.press(screen.getByRole('button', { name: 'Back to settings' }));
         expect(await screen.findByRole('button', { name: 'Clear notifications' })).toBeTruthy();
+    });
+});
+
+describe('Server settings', () => {
+    it("opens the server's own settings pages", async () => {
+        await render(
+            <QueryClientProvider client={createTestQueryClient()}>
+                <ThemeProvider>
+                    <Settings onBack={jest.fn()} onScheduledPosts={jest.fn()} onDrafts={jest.fn()} onModeratedAccounts={jest.fn()} onFilters={jest.fn()} />
+                </ThemeProvider>
+            </QueryClientProvider>
+        );
+        await fireEvent.press(await screen.findByRole('link', { name: 'Settings on pug.town' }));
+        expect(openLink).toHaveBeenCalledWith('https://pug.town/settings/profile');
     });
 });

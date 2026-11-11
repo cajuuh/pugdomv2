@@ -19,6 +19,7 @@ import { TAB_BAR_CLEARANCE } from '../../components/TabBar/styles';
 import { getStatus, getStatusContext } from '../../services/mastodon/statuses';
 import { Status } from '../../services/mastodon/types';
 import { TootCard } from '../../components/TootCard/tootCard';
+import { withoutHidden } from '../../services/mastodon/filters';
 import { threadCardMetrics } from '../../components/TootCard/styles';
 import { useSettings } from '../../services/settingsContext';
 import { useTheme } from '../../services/themeContext';
@@ -131,9 +132,9 @@ export default function Thread({
             };
 
             setStatuses([
-                ...context.ancestors,
+                ...withoutHidden(context.ancestors, 'thread'),
                 mainStatus,
-                ...context.descendants,
+                ...withoutHidden(context.descendants, 'thread'),
             ]);
         } catch (error) {
             console.error('Failed to load thread:', error);
@@ -282,6 +283,8 @@ export default function Thread({
                                         // pressable card takes the touch from its text, which then can't be held to select
                                         onPress={isMain ? undefined : onStatusPress}
                                         threadMode={true}
+                                        // The open post shows whatever your filters say
+                                        filterContext={isMain ? undefined : 'thread'}
                                         showReactions={isMain}
                                         fullText={isMain}
                                         // The avatar line links what the post answers down to it, and a reply to its branch
