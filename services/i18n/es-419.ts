@@ -303,6 +303,7 @@ export const es419: Dictionary = {
         cwTitle: 'AC · {{text}}',
         showMore: 'Mostrar más',
         mediaUnavailable: 'No disponible en tu servidor',
+        via: 'vía {{app}}',
         // The chip at the end of a post's hashtags that shows the rest ("+3")
         moreHashtags_one: 'Mostrar {{count}} hashtag más',
         moreHashtags_other: 'Mostrar {{count}} hashtags más',

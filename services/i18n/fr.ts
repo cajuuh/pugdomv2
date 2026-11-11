@@ -303,6 +303,7 @@ export const fr: Dictionary = {
         cwTitle: 'AC · {{text}}',
         showMore: 'Afficher plus',
         mediaUnavailable: 'Indisponible sur votre serveur',
+        via: 'via {{app}}',
         moreHashtags_one: 'Afficher {{count}} hashtag de plus',
         moreHashtags_other: 'Afficher {{count}} hashtags de plus',
         veryLong: 'Message très long · {{count}} caractères',

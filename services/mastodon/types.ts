@@ -120,6 +120,8 @@ export interface Status {
     poll?: Poll | null;
     // When it was last edited, if ever
     edited_at?: string | null;
+    // The app it was posted with: only on your server's posts, and only when the author shows it
+    application?: { name: string; website?: string | null } | null;
     // The source text, only in the answer to a delete (for "delete and redraft")
     text?: string;
     // Quote posts (Mastodon 4.4+); older servers send none of these

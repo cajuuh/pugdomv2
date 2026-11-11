@@ -304,6 +304,7 @@ export const ja: Dictionary = {
         cwTitle: 'CW · {{text}}',
         showMore: 'もっと見る',
         mediaUnavailable: 'このサーバーでは表示できません',
+        via: '{{app}} から',
         moreHashtags_one: 'ハッシュタグをあと{{count}}個表示',
         moreHashtags_other: 'ハッシュタグをあと{{count}}個表示',
         veryLong: 'とても長い投稿 · {{count}}文字',

@@ -304,6 +304,7 @@ export const la: Dictionary = {
         cwTitle: 'MC · {{text}}',
         showMore: 'Plura ostendere',
         mediaUnavailable: 'In servitro tuo non praesto',
+        via: 'per {{app}}',
         moreHashtags_one: '{{count}} notam plus ostendere',
         moreHashtags_other: '{{count}} notas plus ostendere',
         veryLong: 'Nuntius longissimus · {{count}} litterae',

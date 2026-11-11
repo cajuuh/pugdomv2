@@ -312,6 +312,8 @@ export const en = {
         showMore: 'Show more',
         // Media the server didn't keep (a blocked server's, or a file that's gone)
         mediaUnavailable: 'Not available on your server',
+        // The app a post was written with, on the open post ("via Ivory")
+        via: 'via {{app}}',
         // The chip at the end of a post's hashtags that shows the rest ("+3")
         moreHashtags_one: 'Show {{count}} more hashtag',
         moreHashtags_other: 'Show {{count}} more hashtags',

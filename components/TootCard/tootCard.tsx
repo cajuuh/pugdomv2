@@ -1,6 +1,7 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { Image, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import { Icon } from '../ui/icon';
+import { Icon, IconName } from '../ui/icon';
+import { openLink } from '../../services/links';
 import { useRecyclingState } from '@shopify/flash-list';
 import { Status, Attachment, FilterContext, Mention, PreviewCard } from '../../services/mastodon/types';
 import { filterMatch } from '../../services/mastodon/filters';
@@ -37,7 +38,7 @@ import { useUpdateCachedStatus } from '../../hooks/useUpdateCachedStatus';
 import { useMediaViewer } from '../MediaViewer/mediaViewer';
 import { hitSlopFor } from '../../services/theme/shape';
 import { useI18n } from '../../services/i18n/i18nContext';
-import { defaultTranslator, Translator } from '../../services/i18n/translate';
+import { defaultTranslator, TKey, Translator } from '../../services/i18n/translate';
 import { useOpenAccount } from '../../hooks/useOpenAccount';
 import { FocusedImage } from './focusedImage';
 import { QuotedPost } from './quotedPost';
@@ -77,6 +78,14 @@ export const getRelativeTime = (dateString: string, { t }: Translator) => {
 
 // Alt text when the author wrote one, otherwise the media's position in the post
 const MEDIA_KIND = { image: 'post.image', video: 'post.video', gifv: 'post.gif', unknown: 'post.attachment' } as const;
+// The open post's visibility, named and drawn as in compose's picker
+const VISIBILITY: Record<Status['visibility'], { icon: IconName; label: TKey }> = {
+    public: { icon: 'globe-outline', label: 'compose.public' },
+    unlisted: { icon: 'lock-open-outline', label: 'compose.unlisted' },
+    private: { icon: 'lock-closed-outline', label: 'compose.followers' },
+    direct: { icon: 'at', label: 'compose.mentioned' },
+};
+
 export const mediaLabel = (attachment: Attachment, index: number, count: number, { t }: Translator) =>
     attachment.description ||
     t('post.mediaPosition', { kind: t(MEDIA_KIND[attachment.type] ?? 'post.attachment'), index: index + 1, count });
@@ -755,6 +764,27 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     // Not for posts from another server: their ids aren't ours
     const reactions = (showReactions || ownPost) && !remote && <ReactionLinks status={targetStatus} />;
 
+    // The open post in a thread: who can see it, and the app it came from (when its server says)
+    const app = targetStatus.application;
+    const details = showReactions && (
+        <View style={styles.directRow}>
+            <Icon name={VISIBILITY[targetStatus.visibility].icon} size={13} color={colors.textMuted} />
+            <Text style={[type.meta, { color: colors.textMuted }]}>
+                {t(VISIBILITY[targetStatus.visibility].label)}
+                {app?.name && ' · '}
+                {app?.name && (
+                    <Text
+                        onPress={app.website ? () => openLink(app.website!) : undefined}
+                        accessibilityRole={app.website ? 'link' : undefined}
+                        style={app.website ? { color: colors.accentText } : undefined}
+                    >
+                        {t('post.via', { app: app.name })}
+                    </Text>
+                )}
+            </Text>
+        </View>
+    );
+
     // Under the name, in the text column: clear of a thread's avatar line, and shown even behind a content warning
     const privateMention = isDirect && (
         <View style={styles.directRow}>
@@ -816,6 +846,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                         {privateMention}
                         {replyLabel}
                         {renderContent()}
+                        {details}
                         {actions}
                         {reactions}
                     </View>
@@ -829,6 +860,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     </View>
                     {privateMention}
                     {renderContent()}
+                    {details}
                     {actions}
                     {reactions}
                 </>

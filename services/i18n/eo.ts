@@ -303,6 +303,7 @@ export const eo: Dictionary = {
         cwTitle: 'EA · {{text}}',
         showMore: 'Montri pli',
         mediaUnavailable: 'Ne disponebla en via servilo',
+        via: 'per {{app}}',
         moreHashtags_one: 'Montri {{count}} plian kradvorton',
         moreHashtags_other: 'Montri {{count}} pliajn kradvortojn',
         veryLong: 'Tre longa afiŝo · {{count}} signoj',

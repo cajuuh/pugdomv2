@@ -304,6 +304,7 @@ export const zhCN: Dictionary = {
         cwTitle: 'CW · {{text}}',
         showMore: '显示更多',
         mediaUnavailable: '你的服务器上无法查看',
+        via: '来自 {{app}}',
         moreHashtags_one: '再显示{{count}}个话题',
         moreHashtags_other: '再显示{{count}}个话题',
         veryLong: '很长的嘟文 · {{count}}个字',
