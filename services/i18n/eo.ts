@@ -302,6 +302,7 @@ export const eo: Dictionary = {
         filtered: 'Filtrita',
         cwTitle: 'EA · {{text}}',
         showMore: 'Montri pli',
+        mediaUnavailable: 'Ne disponebla en via servilo',
         moreHashtags_one: 'Montri {{count}} plian kradvorton',
         moreHashtags_other: 'Montri {{count}} pliajn kradvortojn',
         veryLong: 'Tre longa afiŝo · {{count}} signoj',

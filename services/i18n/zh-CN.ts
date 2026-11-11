@@ -303,6 +303,7 @@ export const zhCN: Dictionary = {
         filtered: '已过滤',
         cwTitle: 'CW · {{text}}',
         showMore: '显示更多',
+        mediaUnavailable: '你的服务器上无法查看',
         moreHashtags_one: '再显示{{count}}个话题',
         moreHashtags_other: '再显示{{count}}个话题',
         veryLong: '很长的嘟文 · {{count}}个字',

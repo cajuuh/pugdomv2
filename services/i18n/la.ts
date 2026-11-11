@@ -303,6 +303,7 @@ export const la: Dictionary = {
         filtered: 'Colatum',
         cwTitle: 'MC · {{text}}',
         showMore: 'Plura ostendere',
+        mediaUnavailable: 'In servitro tuo non praesto',
         moreHashtags_one: '{{count}} notam plus ostendere',
         moreHashtags_other: '{{count}} notas plus ostendere',
         veryLong: 'Nuntius longissimus · {{count}} litterae',

@@ -399,7 +399,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         const tiles = count === 1 ? (
             <Pressable
                 style={[styles.singleMedia, compactMode && styles.singleMediaCompact, mediaHeight]}
-                onPress={() => openMedia(attachments, 0)}
+                onPress={() => openMedia(attachments, 0, undefined, targetStatus.url ?? targetStatus.uri)}
                 accessibilityRole="imagebutton"
                 accessibilityLabel={mediaLabel(attachments[0], 0, count, i18n)}
             >
@@ -423,7 +423,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                         <Pressable
                             key={item.id || idx}
                             style={[styles.carouselSlide, compactMode && styles.singleMediaCompact, mediaHeight, { width: slideWidth }]}
-                            onPress={() => openMedia(attachments, idx)}
+                            onPress={() => openMedia(attachments, idx, undefined, targetStatus.url ?? targetStatus.uri)}
                             accessibilityRole="imagebutton"
                             accessibilityLabel={mediaLabel(item, idx, count, i18n)}
                         >

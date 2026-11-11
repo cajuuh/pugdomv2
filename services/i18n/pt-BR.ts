@@ -302,6 +302,7 @@ export const ptBR: Dictionary = {
         filtered: 'Filtrado',
         cwTitle: 'AC · {{text}}',
         showMore: 'Mostrar mais',
+        mediaUnavailable: 'Indisponível no seu servidor',
         // The chip at the end of a post's hashtags that shows the rest ("+3")
         moreHashtags_one: 'Mostrar mais {{count}} hashtag',
         moreHashtags_other: 'Mostrar mais {{count}} hashtags',

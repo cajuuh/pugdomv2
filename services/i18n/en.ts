@@ -310,6 +310,8 @@ export const en = {
         cwTitle: 'CW · {{text}}',
         // A long post folded in a timeline; past 5,000 characters it also says how long
         showMore: 'Show more',
+        // Media the server didn't keep (a blocked server's, or a file that's gone)
+        mediaUnavailable: 'Not available on your server',
         // The chip at the end of a post's hashtags that shows the rest ("+3")
         moreHashtags_one: 'Show {{count}} more hashtag',
         moreHashtags_other: 'Show {{count}} more hashtags',

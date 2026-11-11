@@ -302,6 +302,7 @@ export const de: Dictionary = {
         filtered: 'Gefiltert',
         cwTitle: 'IW · {{text}}',
         showMore: 'Mehr anzeigen',
+        mediaUnavailable: 'Auf deinem Server nicht verfügbar',
         moreHashtags_one: '{{count}} weiteren Hashtag anzeigen',
         moreHashtags_other: '{{count}} weitere Hashtags anzeigen',
         veryLong: 'Sehr langer Beitrag · {{count}} Zeichen',

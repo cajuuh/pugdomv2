@@ -302,6 +302,7 @@ export const es419: Dictionary = {
         filtered: 'Filtrado',
         cwTitle: 'AC · {{text}}',
         showMore: 'Mostrar más',
+        mediaUnavailable: 'No disponible en tu servidor',
         // The chip at the end of a post's hashtags that shows the rest ("+3")
         moreHashtags_one: 'Mostrar {{count}} hashtag más',
         moreHashtags_other: 'Mostrar {{count}} hashtags más',
