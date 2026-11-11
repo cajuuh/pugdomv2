@@ -1,0 +1,43 @@
+O pugdon é um app para o Mastodon e o fediverso, feito com carinho e com um pug de um olho só de mascote. 🐾
+
+Entre no seu servidor Mastodon e acompanhe tudo num app bonito, rápido e pensado para ser acessível.
+
+🏠 TIMELINES DO SEU JEITO
+• Início, Local e Federada, além de feeds fixados no topo
+• Em alta: as publicações populares do seu servidor e do fediverso
+• Feeds de hashtags: junte várias hashtags num feed só e deixe outras de fora
+• Listas: crie, edite e acompanhe as suas listas, ou comece uma a partir de um perfil
+• Outros servidores: leia a timeline local de outras comunidades sem criar conta lá
+• O Início guarda o seu lugar quando você troca de aba
+
+🔎 BUSCA E EXPLORAR
+• Encontre pessoas, hashtags e publicações, inclusive de outros servidores
+• Explore o que está em alta: publicações, hashtags, pessoas e notícias
+
+✍️ ESCREVER
+• Imagens, GIFs e vídeos, da galeria ou da câmera
+• Corte, rotação e espelhamento, com ponto de foco para os recortes mostrarem o que importa
+• Descrição das imagens (texto alternativo), com um pug que lembra você de descrever
+• Enquetes, aviso de conteúdo, emojis personalizados, visibilidade e idioma
+• Sugestões de menções e emojis enquanto você digita
+• Rascunhos, publicações agendadas, e editar ou apagar o que você publicou
+• Citações: cite publicações e escolha quem pode citar as suas
+• Compartilhe links e fotos de outros apps direto num novo post
+
+🔔 NOTIFICAÇÕES
+• Agrupadas ou uma a uma, em Hoje e Antes
+• Mensagens diretas agrupadas por pessoa
+
+💬 E MAIS
+• Perfis com campos, publicações fixadas, grade de mídia, seguidores e seguindo
+• Veja quem favoritou ou impulsionou, salve mídias no celular
+• Itens salvos, várias contas no mesmo app
+• Denunciar, silenciar e bloquear
+• Esconda os números das publicações se preferir não vê-los
+• Nove pelagens de cores, modo claro e escuro, e preto total
+• Em português e inglês
+
+🔒 PRIVACIDADE
+Sem anúncios, sem rastreamento, sem análises de uso. O pugdon conversa só com o seu servidor Mastodon. Esta versão não tem nenhum código do Google, então ainda não recebe notificações push: abra a aba Notificações para ver as novidades.
+
+O pugdon é software livre (licença MIT). O código está em github.com/cajuuh/pugdomv2, e sugestões e problemas são bem-vindos por lá.

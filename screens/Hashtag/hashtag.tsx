@@ -9,6 +9,8 @@ import { useTag, useTagTimeline, useToggleFollowTag } from '../../hooks/useTag';
 import { weeklyUsage } from '../../services/mastodon/tags';
 import { Status } from '../../services/mastodon/types';
 import { TootCard } from '../../components/TootCard/tootCard';
+import { hashtagMuteFields, hashtagMuteFilter, withoutHidden } from '../../services/mastodon/filters';
+import { useFilterActions, useFilters } from '../../hooks/useFilters';
 import { IconButton, PillButton } from '../../components/ui';
 import { makeStyles } from './styles';
 import { usePinnedFeeds } from '../../hooks/usePinnedFeeds';
@@ -30,6 +32,7 @@ const Hashtag = ({ tag, onBack, onStatusPress }: HashtagProps) => {
     const insets = useSafeAreaInsets();
     const [isPullRefreshing, setIsPullRefreshing] = useState(false);
     const [followPending, setFollowPending] = useState(false);
+    const [mutePending, setMutePending] = useState(false);
 
     const { data: info, refetch: refetchInfo } = useTag(tag);
     const toggleFollow = useToggleFollowTag(tag);
@@ -38,9 +41,13 @@ const Hashtag = ({ tag, onBack, onStatusPress }: HashtagProps) => {
     const tagFeed = createHashtagFeed(tag);
     const pinned = isPinned(tagFeed.id);
     const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage, refetch } = useTagTimeline(tag);
-    const statuses = data?.pages.flat() ?? [];
     // The server's spelling of the tag once known (e.g. #PugsOfMastodon)
     const name = info?.name ?? tag;
+    // Muting is a hide filter for the tag; here, where you opened it on purpose, its posts still show
+    const { data: filters } = useFilters();
+    const muteFilter = hashtagMuteFilter(filters, tag);
+    const filterActions = useFilterActions();
+    const statuses = withoutHidden(data?.pages.flat() ?? [], 'public', muteFilter?.id);
     const usage = weeklyUsage(info);
 
     const setFollowing = async (follow: boolean) => {
@@ -51,6 +58,18 @@ const Hashtag = ({ tag, onBack, onStatusPress }: HashtagProps) => {
             dialog.toast(t('hashtag.followFailed'));
         } finally {
             setFollowPending(false);
+        }
+    };
+
+    const setMuted = async (mute: boolean) => {
+        setMutePending(true);
+        try {
+            await (mute ? filterActions.save(undefined, hashtagMuteFields(name)) : filterActions.remove(muteFilter!.id));
+            dialog.toast(t(mute ? 'hashtag.muted' : 'hashtag.unmuted', { tag: `#${name}` }));
+        } catch {
+            dialog.toast(t('filters.failed'));
+        } finally {
+            setMutePending(false);
         }
     };
 
@@ -94,6 +113,16 @@ const Hashtag = ({ tag, onBack, onStatusPress }: HashtagProps) => {
                 size="small"
                 onPress={() => (pinned ? unpinFeed(tagFeed.id) : pinFeed(tagFeed))}
             />
+            {filters && (
+                <PillButton
+                    label={muteFilter ? t('hashtag.mutedPill') : t('hashtag.mute')}
+                    icon={muteFilter ? 'checkmark' : 'volume-mute-outline'}
+                    variant="subtle"
+                    size="small"
+                    disabled={mutePending}
+                    onPress={() => setMuted(!muteFilter)}
+                />
+            )}
         </View>
     );
 
@@ -108,7 +137,7 @@ const Hashtag = ({ tag, onBack, onStatusPress }: HashtagProps) => {
                 {...postListProps}
                 data={statuses}
                 keyExtractor={(item: Status) => item.id}
-                renderItem={({ item }) => <TootCard status={item} onPress={onStatusPress} />}
+                renderItem={({ item }) => <TootCard status={item} onPress={onStatusPress} filterContext="public" />}
                 ListHeaderComponent={intro}
                 ListEmptyComponent={
                     <View style={styles.empty}>

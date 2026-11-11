@@ -31,6 +31,8 @@ export type Route =
     | { name: 'follows'; accountId: string; list: 'followers' | 'following'; account?: Account }
     | { name: 'editProfile' }
     | { name: 'moderatedAccounts' }
+    | { name: 'filters' }
+    | { name: 'filterEditor'; filterId?: string }
     | { name: 'accountNote'; account: Account; note: string };
 
 // Each entry gets its own key, so the same screen can sit in the stack twice (thread → other → same thread)

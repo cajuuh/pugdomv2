@@ -1,0 +1,43 @@
+pugdon is an app for Mastodon and the fediverse, made with care and with a one-eyed pug for a mascot. 🐾
+
+Sign in to your Mastodon server and follow everything in an app that's pretty, fast and built to be accessible.
+
+🏠 TIMELINES YOUR WAY
+• Home, Local and Federated, plus feeds pinned at the top
+• Trending: popular posts on your server and across the fediverse
+• Hashtag feeds: mix several hashtags into one feed and leave others out
+• Lists: create, edit and follow your lists, or start one from a profile
+• Other servers: read another community's local timeline without an account there
+• Home keeps your place when you switch tabs
+
+🔎 SEARCH AND EXPLORE
+• Find people, hashtags and posts, including from other servers
+• Explore what's trending: posts, hashtags, people and news
+
+✍️ WRITING
+• Images, GIFs and videos, from the gallery or the camera
+• Crop, rotate and flip images, with focal points so crops show what matters
+• Image descriptions (alt text), with a pug that reminds you to write them
+• Polls, content warnings, custom emoji, visibility and language
+• Mention and emoji suggestions while you type
+• Drafts, scheduled posts, and editing or deleting what you posted
+• Quote posts: quote others and choose who can quote you
+• Share links and pictures from other apps straight into a new post
+
+🔔 NOTIFICATIONS
+• Grouped or one by one, under Today and Earlier
+• Direct messages grouped by person
+
+💬 AND MORE
+• Profiles with fields, pinned posts, a media grid, followers and following
+• See who favourited or boosted, save media to your phone
+• Bookmarks, several accounts in one app
+• Report, mute and block
+• Hide the numbers on posts if you'd rather not see them
+• Nine color coats, light and dark mode, and true black
+• In English and Portuguese
+
+🔒 PRIVACY
+No ads, no tracking, no analytics. pugdon talks only to your Mastodon server. This build has no Google code, so push notifications aren't in it yet: open the Notifications tab to see what's new.
+
+pugdon is free software (MIT license). The code is at github.com/cajuuh/pugdomv2, and ideas and bug reports are welcome there.

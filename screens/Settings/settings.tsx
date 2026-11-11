@@ -14,7 +14,7 @@ import Appearance from './appearance';
 import ClearNotificationsHelp from './clearNotificationsHelp';
 import PushAlerts from './pushAlerts';
 import { Esmeralda, useEsmeraldaTaps } from './esmeralda';
-import { requestPushPermission } from '../../services/push';
+import { pushAvailable, requestPushPermission } from '../../services/push';
 import { SettingsHeader } from './header';
 import { makeStyles } from './styles';
 import { useI18n } from '../../services/i18n/i18nContext';
@@ -34,10 +34,12 @@ interface SettingsProps {
     onScheduledPosts: () => void;
     onDrafts: () => void;
     onModeratedAccounts: () => void;
+    onFilters: () => void;
 }
 
-const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts, onModeratedAccounts }) => {
+const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts, onModeratedAccounts, onFilters }) => {
     const { user, logout, savedAccounts, switchAccount, setAddingAccount, updateUser } = useAuth();
+    const activeServer = savedAccounts.find(account => account.userInfo.id === user?.id)?.instanceUrl;
     const { colors, type, coat } = useTheme();
     const styles = useThemedStyles(makeStyles);
     const {
@@ -55,6 +57,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
         setHomeBoosts,
         homeReplies,
         setHomeReplies,
+        replyUnlisted,
+        setReplyUnlisted,
         groupNotifications,
         setGroupNotifications,
         uncroppedMedia,
@@ -180,6 +184,16 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
                             </React.Fragment>
                         );
                     })}
+                    {/* Profile, privacy, filters and more live on the server's website; Mastodon's settings start at the profile page */}
+                    {activeServer && (
+                        <>
+                            <Pressable style={styles.row} onPress={() => openLink(`${activeServer}/settings/profile`)} accessibilityRole="link">
+                                <Icon name="open-outline" size={20} color={colors.accentText} />
+                                <Text style={[labelStyle, styles.rowText]}>{t('settings.serverSettings', { server: activeServer.replace(/^https?:\/\//, '') })}</Text>
+                            </Pressable>
+                            <View style={styles.divider} />
+                        </>
+                    )}
                     <Pressable style={[styles.row, styles.rowCentered]} onPress={() => setAddingAccount(true)} accessibilityRole="button">
                         <Icon name="add-circle-outline" size={20} color={colors.accentText} />
                         <Text style={[type.name, styles.rowLabel, { color: colors.accentText }]}>{t('settings.addAccount')}</Text>
@@ -241,18 +255,28 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
                         <Icon name="chevron-forward" size={16} color={colors.textMuted} />
                     </Pressable>
                     <View style={styles.divider} />
-                    {switchRow('notifications-outline', t('settings.pushNotifications'), notifications, changePush)}
-                    {notifications && (
+                    <Pressable style={styles.row} onPress={onFilters} accessibilityRole="button">
+                        <Icon name="options-outline" size={20} color={colors.accentText} />
+                        <Text style={[labelStyle, styles.rowText]}>{t('settings.filters')}</Text>
+                        <Icon name="chevron-forward" size={16} color={colors.textMuted} />
+                    </Pressable>
+                    <View style={styles.divider} />
+                    {pushAvailable && (
                         <>
+                            {switchRow('notifications-outline', t('settings.pushNotifications'), notifications, changePush)}
+                            {notifications && (
+                                <>
+                                    <View style={styles.divider} />
+                                    <Pressable style={styles.row} onPress={() => setPage('pushAlerts')} accessibilityRole="button" accessibilityLabel={t('settings.pushAlerts')}>
+                                        <Icon name="options-outline" size={20} color={colors.accentText} />
+                                        <Text style={[labelStyle, styles.rowText]}>{t('settings.pushAlerts')}</Text>
+                                        <Icon name="chevron-forward" size={16} color={colors.textMuted} />
+                                    </Pressable>
+                                </>
+                            )}
                             <View style={styles.divider} />
-                            <Pressable style={styles.row} onPress={() => setPage('pushAlerts')} accessibilityRole="button" accessibilityLabel={t('settings.pushAlerts')}>
-                                <Icon name="options-outline" size={20} color={colors.accentText} />
-                                <Text style={[labelStyle, styles.rowText]}>{t('settings.pushAlerts')}</Text>
-                                <Icon name="chevron-forward" size={16} color={colors.textMuted} />
-                            </Pressable>
                         </>
                     )}
-                    <View style={styles.divider} />
                     {switchRow('layers-outline', t('settings.groupNotifications'), groupNotifications, setGroupNotifications)}
                     <View style={styles.divider} />
                     <Pressable style={styles.row} onPress={() => setPage('clearNotifications')} accessibilityRole="button" accessibilityLabel={t('settings.clearNotifications')}>
@@ -287,6 +311,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
                     {switchRow('repeat', t('settings.homeBoosts'), homeBoosts, setHomeBoosts)}
                     <View style={styles.divider} />
                     {switchRow('chatbubbles-outline', t('settings.homeReplies'), homeReplies, setHomeReplies)}
+                    <View style={styles.divider} />
+                    {switchRow('lock-open-outline', t('settings.replyUnlisted'), replyUnlisted, setReplyUnlisted)}
                     <View style={styles.divider} />
                     {switchRow('globe-outline', t('settings.externalBrowser'), externalBrowser, setExternalBrowser)}
                 </Card>
