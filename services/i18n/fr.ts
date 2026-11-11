@@ -875,6 +875,7 @@ export const fr: Dictionary = {
         statFollowers: 'abonnés',
         editProfile: 'Modifier le profil',
         shareProfile: 'Envoyer le profil',
+        directMessage: 'Message direct à @{{acct}}',
         viewAvatar: 'Voir la photo de profil de {{name}}',
         viewHeader: 'Voir l’image d’en-tête de {{name}}',
         notify: 'Me prévenir quand {{name}} publie',

@@ -878,6 +878,7 @@ export const ptBR: Dictionary = {
         statFollowers: 'seguidores',
         editProfile: 'Editar perfil',
         shareProfile: 'Compartilhar perfil',
+        directMessage: 'Mensagem direta para @{{acct}}',
         viewAvatar: 'Ver a foto de perfil de {{name}}',
         viewHeader: 'Ver a imagem de capa de {{name}}',
         notify: 'Avisar quando {{name}} publicar',

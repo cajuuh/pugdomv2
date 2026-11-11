@@ -876,6 +876,7 @@ export const la: Dictionary = {
         statFollowers: 'sectatores',
         editProfile: 'Personam mutare',
         shareProfile: 'Personam communicare',
+        directMessage: 'Nuntius directus ad @{{acct}}',
         viewAvatar: 'Imaginem personae {{name}} videre',
         viewHeader: 'Imaginem capitis {{name}} videre',
         notify: 'Me monere cum {{name}} publicat',

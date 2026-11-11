@@ -894,6 +894,7 @@ export const en = {
         statFollowers: 'followers',
         editProfile: 'Edit profile',
         shareProfile: 'Share profile',
+        directMessage: 'Direct message @{{acct}}',
         viewAvatar: "View {{name}}'s profile picture",
         viewHeader: "View {{name}}'s header image",
         notify: 'Notify me when {{name}} posts',

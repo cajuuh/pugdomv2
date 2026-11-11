@@ -29,6 +29,9 @@ let mockUser: Account = me;
 jest.mock('../services/authContext', () => ({
     useAuth: () => ({ user: mockUser, checkLoginStatus: jest.fn().mockResolvedValue(undefined) }),
 }));
+jest.mock('../services/composeContext', () => ({
+    useCompose: () => ({ openCompose: jest.fn() }),
+}));
 jest.mock('../services/themeContext', () => ({
     useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
 }));

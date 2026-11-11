@@ -877,6 +877,7 @@ export const es419: Dictionary = {
         statFollowers: 'seguidores',
         editProfile: 'Editar perfil',
         shareProfile: 'Compartir perfil',
+        directMessage: 'Mensaje directo a @{{acct}}',
         viewAvatar: 'Ver la foto de perfil de {{name}}',
         viewHeader: 'Ver la imagen de encabezado de {{name}}',
         notify: 'Avisarme cuando {{name}} publique',

@@ -875,6 +875,7 @@ export const eo: Dictionary = {
         statFollowers: 'sekvantoj',
         editProfile: 'Redakti profilon',
         shareProfile: 'Kundividi profilon',
+        directMessage: 'Rekta mesaĝo al @{{acct}}',
         viewAvatar: 'Vidi la profilbildon de {{name}}',
         viewHeader: 'Vidi la kapbildon de {{name}}',
         notify: 'Sciigi min, kiam {{name}} afiŝas',

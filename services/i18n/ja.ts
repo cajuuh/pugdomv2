@@ -876,6 +876,7 @@ export const ja: Dictionary = {
         statFollowers: 'フォロワー',
         editProfile: 'プロフィールを編集',
         shareProfile: 'プロフィールを共有',
+        directMessage: '@{{acct}} にダイレクトメッセージ',
         viewAvatar: '{{name}}のプロフィール画像を見る',
         viewHeader: '{{name}}のヘッダー画像を見る',
         notify: '{{name}}が投稿したら通知する',

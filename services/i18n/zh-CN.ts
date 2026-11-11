@@ -876,6 +876,7 @@ export const zhCN: Dictionary = {
         statFollowers: '关注者',
         editProfile: '编辑个人资料',
         shareProfile: '分享个人资料',
+        directMessage: '私信 @{{acct}}',
         viewAvatar: '查看{{name}}的头像',
         viewHeader: '查看{{name}}的封面图',
         notify: '{{name}}发嘟时通知我',
