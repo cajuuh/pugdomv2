@@ -18,6 +18,8 @@ export const COMPACT_AVATAR = 32;
 export const COMPACT_PADDING = 12;
 export const COMPACT_ACTION_HEIGHT = 32;
 export const COMPACT_ACTION_ICON = 18;
+// Between a carousel's slides
+export const SLIDE_GAP = 8;
 const CARD_PADDING_TOP = 14;
 const COMPACT_PADDING_TOP = 10;
 
@@ -247,8 +249,12 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         borderRadius: radii.well,
         overflow: 'hidden',
     },
+    carouselTrack: {
+        gap: SLIDE_GAP,
+    },
     carouselSlide: {
         height: 200,
+        borderRadius: radii.well,
         overflow: 'hidden',
         backgroundColor: colors.inputBackground,
     },

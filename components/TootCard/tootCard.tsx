@@ -19,6 +19,7 @@ import {
     makeStyles,
     threadCardMetrics,
     postTextMetrics,
+    SLIDE_GAP,
 } from './styles';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import {
@@ -59,6 +60,19 @@ import { useIsAutoplayPost } from '../../services/media/autoplay';
 
 // A long post folds after this many lines, until "Show more"
 const FOLD_LINES = 12;
+
+// Several images: each slide leaves the next one peeking in at the edge, so it's clear there's more to see
+const PEEK_SLIDE = 0.88;
+export const carouselMetrics = (width: number) => {
+    const slide = Math.round(width * PEEK_SLIDE);
+    return { slide, interval: slide + SLIDE_GAP };
+};
+// The slide a scroll stopped at; the last one can't scroll to the start, so the far end counts as it
+export const carouselPage = (offset: number, width: number, count: number) => {
+    const { slide, interval } = carouselMetrics(width);
+    const end = count * slide + (count - 1) * SLIDE_GAP - width;
+    return offset >= end - 1 ? count - 1 : Math.min(count - 1, Math.max(0, Math.round(offset / interval)));
+};
 
 export const getRelativeTime = (dateString: string, { t }: Translator) => {
     const now = new Date();
@@ -388,6 +402,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
 
     // The carousel's own width, once laid out; until then the width the body should have
     const slideWidth = carouselWidth || contentWidth;
+    const carousel = carouselMetrics(slideWidth);
 
     const renderMedia = (attachments: Attachment[]) => {
         if (!attachments || attachments.length === 0) {
@@ -403,7 +418,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         // Autoplay: the carousel's current video or GIF, while this is the post in view
         const plays = (idx: number) => mediaAutoplay && isAutoplayPost && !veiled && idx === mediaPage && (attachments[idx].type === 'video' || attachments[idx].type === 'gifv');
         const mediaHeight = uncropped
-            ? { height: Math.max(...attachments.map(item => uncroppedHeight(count === 1 ? contentWidth : slideWidth, item))) }
+            ? { height: Math.max(...attachments.map(item => uncroppedHeight(count === 1 ? contentWidth : carousel.slide, item))) }
             : undefined;
         // Images with a description say so; tapping the chip reads it, tapping the image still opens it
         const altChip = (item: Attachment) =>
@@ -432,22 +447,24 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 {altChip(attachments[0])}
             </Pressable>
         ) : (
-            // Several images: one at a time, swiped sideways, with a dot for each
+            // Several images: swiped sideways one at a time, the next peeking in, with a dot for each
             <View>
                 <ScrollView
                     key={targetStatus.id}
                     testID="media-carousel"
                     horizontal
-                    pagingEnabled
+                    snapToInterval={carousel.interval}
+                    decelerationRate="fast"
+                    disableIntervalMomentum
                     showsHorizontalScrollIndicator={false}
                     onLayout={event => setCarouselWidth(event.nativeEvent.layout.width)}
-                    onMomentumScrollEnd={event => setMediaPage(Math.round(event.nativeEvent.contentOffset.x / slideWidth))}
-                    style={styles.carousel}
+                    onMomentumScrollEnd={event => setMediaPage(carouselPage(event.nativeEvent.contentOffset.x, slideWidth, count))}
+                    contentContainerStyle={styles.carouselTrack}
                 >
                     {attachments.map((item, idx) => (
                         <Pressable
                             key={item.id || idx}
-                            style={[styles.carouselSlide, compactMode && styles.singleMediaCompact, mediaHeight, { width: slideWidth }]}
+                            style={[styles.carouselSlide, compactMode && styles.singleMediaCompact, mediaHeight, { width: carousel.slide }]}
                             onPress={() => openMedia(attachments, idx, undefined, targetStatus.url ?? targetStatus.uri)}
                             accessibilityRole="imagebutton"
                             accessibilityLabel={mediaLabel(item, idx, count, i18n)}

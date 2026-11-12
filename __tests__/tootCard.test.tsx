@@ -310,7 +310,7 @@ describe('TootCard content', () => {
         }
     });
 
-    it('shows several images as a carousel, one page at a time', async () => {
+    it('shows several images as a carousel, one at a time, the next peeking in', async () => {
         const image = (id: string) => ({ id, type: 'image', url: `https://example.social/${id}.png`, preview_url: `https://example.social/${id}-small.png` });
         await renderCard({ ...statusA, media_attachments: [image('m1'), image('m2'), image('m3')] } as Status);
 
@@ -321,8 +321,13 @@ describe('TootCard content', () => {
 
         const carousel = screen.getByTestId('media-carousel');
         await fireEvent(carousel, 'layout', { nativeEvent: { layout: { width: 300, height: 200 } } });
-        await fireEvent(carousel, 'momentumScrollEnd', { nativeEvent: { contentOffset: { x: 300, y: 0 } } });
+        // 300 wide: 264-wide slides, 8 apart, so the next one peeks in
+        expect(StyleSheet.flatten(screen.getByRole('imagebutton', { name: 'Image 1 of 3' }).props.style).width).toBe(264);
+        await fireEvent(carousel, 'momentumScrollEnd', { nativeEvent: { contentOffset: { x: 272, y: 0 } } });
         expect(dots()).toEqual(['carousel-dot', 'carousel-dot-active', 'carousel-dot']);
+        // The far end, where the last slide lines up with the edge
+        await fireEvent(carousel, 'momentumScrollEnd', { nativeEvent: { contentOffset: { x: 3 * 264 + 2 * 8 - 300, y: 0 } } });
+        expect(dots()).toEqual(['carousel-dot', 'carousel-dot', 'carousel-dot-active']);
     });
 
     it('shows sensitive posts without a CW, veiling only the media', async () => {
