@@ -279,6 +279,8 @@ export const la: Dictionary = {
         unsupported: 'Servitor tuus lineas temporis nexuum non sustinet. Articulum tamen directe aperire potes.',
     },
     post: {
+        continuesThread: 'Filum suum continuat',
+        isReply: 'Responsum',
         readDescription: 'Descriptionem imaginis legere',
         descriptionTitle: 'Descriptio imaginis',
         image: 'Imago',

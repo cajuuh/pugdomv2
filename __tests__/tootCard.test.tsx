@@ -869,3 +869,54 @@ describe('TootCard filters', () => {
         expect(screen.queryByText('Spoilers')).toBeNull();
     });
 });
+
+describe('TootCard replies', () => {
+    const renderCard = (status: Status, threadMode = false) =>
+        render(
+            <QueryClientProvider client={createTestQueryClient()}>
+                <MediaViewerProvider>
+                    <TootCard status={status} threadMode={threadMode} />
+                </MediaViewerProvider>
+            </QueryClientProvider>
+        );
+    const bob = { id: 'b1', username: 'bob', acct: 'bob@pug.social', url: '' };
+    const reply = { ...statusA, in_reply_to_id: 'P', in_reply_to_account_id: 'b1', mentions: [bob] };
+
+    it('says whom a reply in a feed answers', async () => {
+        await renderCard(reply);
+        expect(screen.getByText('Replying to @bob@pug.social')).toBeTruthy();
+    });
+
+    it("says a reply to the author's own post continues their thread", async () => {
+        await renderCard({ ...reply, in_reply_to_account_id: 'a1' });
+        expect(screen.getByText('Continues their own thread')).toBeTruthy();
+    });
+
+    it("says only that it's a reply when it doesn't mention whom it answers", async () => {
+        await renderCard({ ...reply, mentions: [] });
+        expect(screen.getByText('Reply')).toBeTruthy();
+    });
+
+    it('says it in Compact Mode too', async () => {
+        mockSettings.compactMode = true;
+        try {
+            await renderCard(reply);
+            expect(screen.getByText('Replying to @bob@pug.social')).toBeTruthy();
+        } finally {
+            mockSettings.compactMode = false;
+        }
+    });
+
+    it('marks the boosted post when a boost is a reply', async () => {
+        await renderCard({ ...statusB, reblog: reply });
+        expect(screen.getByText('Replying to @bob@pug.social')).toBeTruthy();
+    });
+
+    it("leaves posts that aren't replies, and threads, unmarked", async () => {
+        await renderCard(statusA);
+        expect(screen.queryByText(/Replying to|Continues their own thread/)).toBeNull();
+        screen.unmount();
+        await renderCard(reply, true);
+        expect(screen.queryByText(/Replying to/)).toBeNull();
+    });
+});

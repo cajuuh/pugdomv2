@@ -278,6 +278,8 @@ export const eo: Dictionary = {
         unsupported: 'Via servilo ne subtenas ligilajn tempoliniojn. Vi ankoraŭ povas malfermi la artikolon rekte.',
     },
     post: {
+        continuesThread: 'Daŭrigas sian propran fadenon',
+        isReply: 'Respondo',
         readDescription: 'Legi la priskribon de la bildo',
         descriptionTitle: 'Priskribo de la bildo',
         image: 'Bildo',

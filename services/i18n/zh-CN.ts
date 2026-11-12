@@ -279,6 +279,8 @@ export const zhCN: Dictionary = {
         unsupported: '你的服务器不支持链接时间线。你仍然可以直接打开文章。',
     },
     post: {
+        continuesThread: '延续自己的嘟文串',
+        isReply: '回复',
         readDescription: '阅读图片描述',
         descriptionTitle: '图片描述',
         image: '图片',

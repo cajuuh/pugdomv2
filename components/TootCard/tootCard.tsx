@@ -104,6 +104,15 @@ export const countMedia = (attachments: Attachment[], { tn }: Translator = defau
     return tn(`post.${noun}` as 'post.photos' | 'post.videos' | 'post.attachments', attachments.length);
 };
 
+// "Replying to @acct" for a reply outside a thread: to the author themselves, it continues their thread;
+// with no mention of whom it answers, just "Reply"
+export const feedReplyText = (status: Status, { t }: Translator) => {
+    if (!status.in_reply_to_id) return '';
+    if (status.in_reply_to_account_id === status.account.id) return t('post.continuesThread');
+    const parent = status.mentions?.find(mention => mention.id === status.in_reply_to_account_id);
+    return parent ? t('thread.replyingTo', { name: `@${parent.acct}` }) : t('post.isReply');
+};
+
 const hasText = (html: string) => html.replace(/<[^>]*>/g, '').trim().length > 0;
 
 // What a collapsed content warning hides, e.g. "Text and 2 photos hidden"
@@ -795,11 +804,15 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         </View>
     );
 
-    const replyLabel = replyingTo && (
+    // In a thread the screen says whom it answers; elsewhere the post does, so a reply isn't taken for a thread's start
+    const replyText = threadMode
+        ? replyingTo && t('thread.replyingTo', { name: replyingTo })
+        : feedReplyText(targetStatus, i18n);
+    const replyLabel = !!replyText && (
         <View style={styles.directRow}>
             <Icon name="return-down-forward" size={13} color={colors.textMuted} />
             <Text style={[type.meta, { color: colors.textMuted }]} numberOfLines={1}>
-                {t('thread.replyingTo', { name: replyingTo })}
+                {replyText}
             </Text>
         </View>
     );
@@ -861,6 +874,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                         {time}
                     </View>
                     {privateMention}
+                    {replyLabel}
                     {renderContent()}
                     {details}
                     {actions}

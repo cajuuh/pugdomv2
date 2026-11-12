@@ -278,6 +278,8 @@ export const fr: Dictionary = {
         unsupported: 'Votre serveur ne prend pas en charge les fils de liens. Vous pouvez quand même ouvrir l’article directement.',
     },
     post: {
+        continuesThread: 'Suite de son propre fil',
+        isReply: 'Réponse',
         readDescription: 'Lire la description de l’image',
         descriptionTitle: 'Description de l’image',
         image: 'Image',

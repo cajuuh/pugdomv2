@@ -278,6 +278,8 @@ export const de: Dictionary = {
         unsupported: 'Dein Server unterstützt keine Link-Timelines. Du kannst den Artikel trotzdem direkt öffnen.',
     },
     post: {
+        continuesThread: 'Setzt den eigenen Thread fort',
+        isReply: 'Antwort',
         readDescription: 'Bildbeschreibung lesen',
         descriptionTitle: 'Bildbeschreibung',
         image: 'Bild',

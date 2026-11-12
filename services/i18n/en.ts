@@ -282,6 +282,8 @@ export const en = {
         unsupported: "Your server doesn't support link timelines. You can still open the article directly.",
     },
     post: {
+        continuesThread: 'Continues their own thread',
+        isReply: 'Reply',
         readDescription: 'Read the image description',
         descriptionTitle: 'Image description',
         image: 'Image',

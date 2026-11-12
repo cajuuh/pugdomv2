@@ -279,6 +279,8 @@ export const ja: Dictionary = {
         unsupported: 'お使いのサーバーはリンクのタイムラインに対応していません。記事は直接開けます。',
     },
     post: {
+        continuesThread: '自分のスレッドの続き',
+        isReply: '返信',
         readDescription: '画像の説明を読む',
         descriptionTitle: '画像の説明',
         image: '画像',

@@ -278,6 +278,8 @@ export const ptBR: Dictionary = {
         unsupported: 'Seu servidor não suporta linha do tempo de links. Você ainda pode abrir a notícia diretamente.',
     },
     post: {
+        continuesThread: 'Continua a própria conversa',
+        isReply: 'Resposta',
         readDescription: 'Ler a descrição da imagem',
         descriptionTitle: 'Descrição da imagem',
         image: 'Imagem',
