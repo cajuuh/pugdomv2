@@ -31,6 +31,10 @@ const ana: AccountType = {
 jest.mock('../services/authContext', () => ({
     useAuth: () => ({ user: { id: 'me', username: 'pedro', acct: 'pedro', display_name: 'Pedro', avatar: '', emojis: [] } }),
 }));
+const mockOpenCompose = jest.fn();
+jest.mock('../services/composeContext', () => ({
+    useCompose: () => ({ openCompose: mockOpenCompose }),
+}));
 jest.mock('../services/themeContext', () => ({
     useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
 }));
@@ -176,6 +180,14 @@ describe('Account screen', () => {
         await fireEvent.press(await screen.findByRole('button', { name: 'More options for Ana' }));
         expect(await screen.findByText('Add a note')).toBeTruthy();
         expect(screen.queryByText('Your note')).toBeNull();
+    });
+
+    it('starts a direct message from the menu', async () => {
+        await renderAccount({ account: ana });
+        await fireEvent.press(await screen.findByRole('button', { name: 'More options for Ana' }));
+        await fireEvent.press(await screen.findByText('Direct message @ana@art.social'));
+
+        await waitFor(() => expect(mockOpenCompose).toHaveBeenCalledWith({ directTo: expect.objectContaining({ id: 'ana' }) }));
     });
 
     it('goes back with its arrow', async () => {

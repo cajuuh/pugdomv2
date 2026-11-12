@@ -95,6 +95,21 @@ describe('ComposeModal', () => {
         expect(screen.getByText('@bob@other.social')).toBeTruthy();
     });
 
+    it("starts a direct message with the account's mention, sent to mentioned people only", async () => {
+        queryClient = createTestQueryClient();
+        const bob = { id: '2', username: 'bob', acct: 'bob@other.social', display_name: 'Bob', avatar: '', emojis: [] } as unknown as Account;
+        await render(
+            <QueryClientProvider client={queryClient}>
+                <ComposeModal isOpen replyToStatus={null} directTo={bob} closeCompose={jest.fn()} />
+            </QueryClientProvider>
+        );
+
+        expect(composer().props.value).toBe('@bob@other.social ');
+        await fireEvent.changeText(composer(), '@bob@other.social oi');
+        await fireEvent.press(screen.getByRole('button', { name: 'Post' }));
+        expect(mockedCreateStatus).toHaveBeenCalledWith(expect.objectContaining({ status: '@bob@other.social oi', visibility: 'direct' }));
+    });
+
     it("posts in the account's default language as an ISO 639-1 code", async () => {
         await renderCompose();
 

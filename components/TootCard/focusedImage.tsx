@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Image, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { Image, LayoutChangeEvent, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { Icon } from '../ui/icon';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { mediaColors } from '../../services/theme/media';
 import { radii, space } from '../../services/theme/shape';
 import { Attachment } from '../../services/mastodon/types';
+import { useI18n } from '../../services/i18n/i18nContext';
 import { focusedCover, fromMastodonFocus, Size } from '../../services/media/geometry';
 
 interface FocusedImageProps {
@@ -63,15 +64,27 @@ export const FocusedImage: React.FC<FocusedImageProps> = ({ attachment, style, b
     const focused = !!focus && (focus.x !== 0 || focus.y !== 0) && !!size?.width && !!size?.height;
     const duration = attachment.meta?.original?.duration;
     const small = !!box && box.width < SMALL_TILE;
+    const { t } = useI18n();
+    const measure = (event: LayoutChangeEvent) => {
+        const { width, height } = event.nativeEvent.layout;
+        setBox(current => (current?.width === width && current?.height === height ? current : { width, height }));
+    };
+
+    // Media the server didn't keep (it rejects that server's media, or the file is gone): nothing to draw
+    if (attachment.type === 'unknown') {
+        return (
+            <View style={[style, styles.clip, styles.center, styles.unavailable]} testID="media-unavailable" onLayout={measure}>
+                <Icon name="alert-circle-outline" size={small ? 18 : 24} color={mediaColors.ink} />
+                {!small && <Text style={styles.unavailableText}>{t('post.mediaUnavailable')}</Text>}
+            </View>
+        );
+    }
 
     return (
         <View
             style={[style, styles.clip]}
             testID="focused-image"
-            onLayout={event => {
-                const { width, height } = event.nativeEvent.layout;
-                setBox(current => (current?.width === width && current?.height === height ? current : { width, height }));
-            }}
+            onLayout={measure}
         >
             {!focused || blurred || contain ? (
                 <Image
@@ -156,5 +169,16 @@ const styles = StyleSheet.create({
     },
     positioned: {
         position: 'absolute',
+    },
+    unavailable: {
+        gap: space.xs,
+        padding: space.sm,
+        backgroundColor: mediaColors.scrim,
+    },
+    unavailableText: {
+        color: mediaColors.ink,
+        fontSize: 13,
+        fontWeight: '600',
+        textAlign: 'center',
     },
 });

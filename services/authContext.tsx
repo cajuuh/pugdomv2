@@ -3,7 +3,9 @@ import { AppState, DeviceEventEmitter } from 'react-native';
 import axios from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
 import { UNAUTHORIZED_EVENT } from './api/client';
+import * as Linking from 'expo-linking';
 import { getCurrentAccount } from './mastodon/accounts';
+import { finishSignIn } from './mastodon/auth';
 import { Account } from './mastodon/types';
 import { getCredentials, clearCredentials, saveCredentials, getSavedAccounts, addSavedAccount, removeSavedAccount, SavedAccount } from './storage';
 import { useI18n } from './i18n/i18nContext';
@@ -85,7 +87,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkLoginStatusRef.current = checkLoginStatus;
 
     useEffect(() => {
-        checkLoginStatus();
+        // Android can kill pugdon while the sign-in page is open: the server's redirect then starts
+        // a fresh copy, which finishes that sign-in before loading the account
+        Linking.getInitialURL()
+            .then(finishSignIn)
+            .catch(error => {
+                console.error('Failed to finish sign-in:', error);
+                dialog.alert(t('login.failed'), error?.message || t('login.unexpected'));
+                return null;
+            })
+            .then(async signedIn => {
+                await checkLoginStatusRef.current();
+                if (signedIn) setNeedsSetup(true);
+            });
         // ponytail: retries on returning to the app, not the moment the connection comes back
         const subscription = AppState.addEventListener('change', state => {
             if (state === 'active' && unverified.current) {

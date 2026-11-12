@@ -60,7 +60,7 @@ export const MediaGridRow: React.FC<MediaGridRowProps> = ({ row, onStatusPress }
                     <Pressable
                         key={`${status.id}-${index}`}
                         style={[styles.tile, { backgroundColor: colors.inputBackground }]}
-                        onPress={() => openMedia(attachments, index, () => openPost(status.id))}
+                        onPress={() => openMedia(attachments, index, () => openPost(status.id), status.url ?? status.uri)}
                         onLongPress={() => openPost(status.id)}
                         accessibilityRole="imagebutton"
                         accessibilityLabel={mediaLabel(attachment, index, attachments.length, i18n)}

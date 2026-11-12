@@ -198,13 +198,29 @@ describe('shared media viewer', () => {
         expect(screen.getByLabelText('A pug in a raincoat')).toBeTruthy();
     });
 
-    it('opens unknown media types in the browser', async () => {
+    it("says when our server didn't keep the media, and opens the post where it lives", async () => {
         await renderCards(makeStatus('1', [attachment('u1', 'unknown')]));
 
+        expect(screen.getByTestId('media-unavailable')).toBeTruthy();
+        expect(screen.getByText('Not available on your server')).toBeTruthy();
         await fireEvent.press(screen.getByLabelText('Attachment 1 of 1'));
 
-        expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith('https://files.example.social/u1');
+        // Not our server's copy of the file, which is gone (a 404)
+        expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith('https://example.social/@user/1');
         expect(screen.queryByText(/gallery|playing/)).toBeNull();
+    });
+
+    it("opens the original file of unavailable media when there's no post to open", async () => {
+        let open: ReturnType<typeof useMediaViewer>['openMedia'] = () => {};
+        const Grab = () => {
+            open = useMediaViewer().openMedia;
+            return null;
+        };
+        await render(<MediaViewerProvider><Grab /></MediaViewerProvider>);
+
+        open([{ ...attachment('u2', 'unknown'), remote_url: 'https://other.social/files/u2.png' }], 0);
+
+        expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith('https://other.social/files/u2.png');
     });
 });
 

@@ -167,6 +167,8 @@ interface ComposeModalProps {
     incoming?: SharedContent | null;
     // A draft put aside on this phone, reopened
     draft?: Draft | null;
+    // A direct message to this account (from its profile)
+    directTo?: Account | null;
     closeCompose: () => void;
 }
 
@@ -180,7 +182,7 @@ const unchangedPoll = (poll: NonNullable<Status['poll']>) => ({
 
 const WOOF_CHANCE = 0.1;
 
-const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quoteStatus = null, existingPost = null, shared = null, incoming = null, draft = null, closeCompose }) => {
+const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quoteStatus = null, existingPost = null, shared = null, incoming = null, draft = null, directTo = null, closeCompose }) => {
     const { user } = useAuth();
     const replyUnlisted = useOptionalSettings()?.replyUnlisted ?? false;
     const { colors, type } = useTheme();
@@ -344,7 +346,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
 
     useEffect(() => {
         if (isOpen) {
-            const startText = replyToStatus ? replyMentionsText(replyToStatus, user) : '';
+            const startText = replyToStatus ? replyMentionsText(replyToStatus, user) : directTo ? `@${directTo.acct} ` : '';
             initialText.current = startText;
             drag.setValue(0);
             // Something shared from another app counts as a draft, so closing asks first
@@ -354,7 +356,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
             setSensitive(false);
             setSpoilerText('');
             setLanguage(defaultLanguage(user, appLanguage));
-            setVisibility(defaultVisibility(user, replyToStatus, quoteStatus, replyUnlisted));
+            setVisibility(directTo ? 'direct' : defaultVisibility(user, replyToStatus, quoteStatus, replyUnlisted));
             setQuote(quoteStatus);
             setQuotePolicy(user?.source?.quote_policy ?? 'public');
             setLoading(false);
@@ -432,7 +434,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 current = false;
             };
         }
-    }, [isOpen, replyToStatus, quoteStatus, existingPost, shared, draft, drag]);
+    }, [isOpen, replyToStatus, quoteStatus, existingPost, shared, draft, directTo, drag]);
 
     // What arrives while composing joins the draft: its media, its words at the cursor
     useEffect(() => {

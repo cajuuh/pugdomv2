@@ -1,4 +1,7 @@
-import { nextMaxIdFromLink } from '../services/mastodon/bookmarks';
+import apiClient from '../services/api/client';
+import { getFavourites, nextMaxIdFromLink } from '../services/mastodon/bookmarks';
+
+jest.mock('../services/api/client', () => ({ __esModule: true, default: { get: jest.fn() } }));
 
 describe('nextMaxIdFromLink', () => {
     it('reads the next page cursor from a Mastodon Link header', () => {
@@ -16,5 +19,14 @@ describe('nextMaxIdFromLink', () => {
     it('has no next page without a next link', () => {
         expect(nextMaxIdFromLink('<https://pug.social/api/v1/bookmarks?min_id=140>; rel="prev"')).toBeUndefined();
         expect(nextMaxIdFromLink(undefined)).toBeUndefined();
+    });
+});
+
+describe('getFavourites', () => {
+    it('reads your favourites, with the next page from the Link header', async () => {
+        (apiClient.get as jest.Mock).mockResolvedValue({ data: [{ id: 's1' }], headers: { link: '<https://pug.social/api/v1/favourites?max_id=77>; rel="next"' } });
+
+        await expect(getFavourites('90')).resolves.toEqual({ statuses: [{ id: 's1' }], nextMaxId: '77' });
+        expect(apiClient.get).toHaveBeenCalledWith('/favourites', { params: { max_id: '90' } });
     });
 });
