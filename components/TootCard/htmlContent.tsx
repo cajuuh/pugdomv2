@@ -102,7 +102,7 @@ export const StatusHtmlContent = React.memo(({ content, emojis, colors, bodyFont
             ...postTextMetrics(!!compactMode, textSize),
         },
         a: {
-            color: colors.accentText,
+            color: colors.linkColor,
             textDecorationLine: 'none' as const,
         },
         p: {
