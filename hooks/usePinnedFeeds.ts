@@ -116,9 +116,15 @@ export const usePinnedFeeds = () => {
         pinFeed: pinMutation.mutateAsync,
         unpinFeed: unpinMutation.mutateAsync,
         updatePinnedFeed: updatePinnedMutation.mutateAsync,
-        // Written to the cache before the mutation starts: its onMutate waits on cancelQueries first, and a
-        // second arrow tap in that gap would build on the old order and undo the first
-        reorderPinnedFeeds: (feeds: FeedDescriptor[]) => {
+        // Moves a pinned feed by `offset` places in the cached order as it is now, not as the caller last
+        // rendered it: a second arrow tap can land before the re-render. Written to the cache before the
+        // mutation starts, since its onMutate waits on cancelQueries first
+        movePinnedFeed: (feedId: string, offset: number) => {
+            const feeds = [...(queryClient.getQueryData<FeedDescriptor[]>(['pinnedFeeds', accountId]) ?? DEFAULT_PINNED_FEEDS)];
+            const from = feeds.findIndex(feed => feed.id === feedId);
+            const to = Math.max(0, Math.min(feeds.length - 1, from + offset));
+            if (from < 0 || from === to) return Promise.resolve();
+            feeds.splice(to, 0, ...feeds.splice(from, 1));
             queryClient.setQueryData(['pinnedFeeds', accountId], feeds);
             return reorderMutation.mutateAsync(feeds);
         },

@@ -234,6 +234,19 @@ describe('Feeds sheet', () => {
             await waitFor(async () => expect(await pinnedIds()).toEqual(['federated', 'home', 'local']));
         });
 
+        it('counts two taps that land before the sheet re-renders', async () => {
+            await renderSheet();
+            const up = screen.getByRole('button', { name: 'Move Federated up' });
+
+            // One act: no render in between, so the second tap gets the first render's handler
+            await act(async () => {
+                fireEvent.press(up);
+                fireEvent.press(up);
+            });
+
+            await waitFor(async () => expect(await pinnedIds()).toEqual(['federated', 'home', 'local']));
+        });
+
         it('has nowhere to go past either end', async () => {
             await renderSheet();
 

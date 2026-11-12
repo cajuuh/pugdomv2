@@ -310,6 +310,10 @@ export const en = {
         cwTitle: 'CW · {{text}}',
         // A long post folded in a timeline; past 5,000 characters it also says how long
         showMore: 'Show more',
+        // Media the server didn't keep (a blocked server's, or a file that's gone)
+        mediaUnavailable: 'Not available on your server',
+        // The app a post was written with, on the open post ("via Ivory")
+        via: 'via {{app}}',
         // The chip at the end of a post's hashtags that shows the rest ("+3")
         moreHashtags_one: 'Show {{count}} more hashtag',
         moreHashtags_other: 'Show {{count}} more hashtags',
@@ -880,6 +884,7 @@ export const en = {
         replies: 'Replies',
         media: 'Media',
         bookmarks: 'Bookmarks',
+        favourites: 'Favourites',
         emptyPosts: 'No posts yet',
         emptyReplies: 'No posts or replies yet',
         emptyMedia: 'No media yet',
@@ -887,11 +892,13 @@ export const en = {
         emptyPinned: 'No pinned posts',
         openPost: 'Open post',
         emptyBookmarks: 'No bookmarks yet',
+        emptyFavourites: 'No favourites yet',
         statPosts: 'posts',
         statFollowing: 'following',
         statFollowers: 'followers',
         editProfile: 'Edit profile',
         shareProfile: 'Share profile',
+        directMessage: 'Direct message @{{acct}}',
         viewAvatar: "View {{name}}'s profile picture",
         viewHeader: "View {{name}}'s header image",
         notify: 'Notify me when {{name}} posts',

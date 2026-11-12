@@ -12,6 +12,8 @@ export interface Attachment {
     type: 'image' | 'video' | 'gifv' | 'unknown';
     url: string;
     preview_url: string;
+    // The file on the post's own server; null for local media
+    remote_url?: string | null;
     description?: string;
     // A tiny blurred sketch of the picture, to show while it loads
     blurhash?: string | null;
@@ -120,6 +122,8 @@ export interface Status {
     poll?: Poll | null;
     // When it was last edited, if ever
     edited_at?: string | null;
+    // The app it was posted with: only on your server's posts, and only when the author shows it
+    application?: { name: string; website?: string | null } | null;
     // The source text, only in the answer to a delete (for "delete and redraft")
     text?: string;
     // Quote posts (Mastodon 4.4+); older servers send none of these

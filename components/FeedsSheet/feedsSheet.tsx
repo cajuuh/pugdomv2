@@ -32,15 +32,12 @@ export const FeedsSheet: React.FC<FeedsSheetProps> = ({ visible, onClose, onSele
     const { colors, type } = useTheme();
     const i18n = useI18n();
     const { t } = i18n;
-    const { pinnedFeeds, customFeeds, followedTags, pinFeed, unpinFeed, reorderPinnedFeeds, unfollowHashtag, removeCustomFeed, isPinned } = usePinnedFeeds();
+    const { pinnedFeeds, customFeeds, followedTags, pinFeed, unpinFeed, movePinnedFeed, unfollowHashtag, removeCustomFeed, isPinned } = usePinnedFeeds();
     const { data: lists } = useLists(visible);
     const [dragging, setDragging] = useState(false);
 
-    const move = (from: number, to: number) => {
-        const next = [...pinnedFeeds];
-        next.splice(to, 0, ...next.splice(from, 1));
-        reorderPinnedFeeds(next);
-    };
+    // By id: this render's indexes can be one tap behind the saved order
+    const move = (from: number, to: number) => movePinnedFeed(pinnedFeeds[from].id, to - from);
 
     const confirmUnfollow = (name: string) =>
         dialog.alert(t('hashtag.unfollowTitle'), undefined, [

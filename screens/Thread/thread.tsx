@@ -51,8 +51,8 @@ export interface ThreadRow {
     replyingTo?: Status['account'];
 }
 
-// Oldest first: ancestors and the post, then each answer to the post with its whole branch under it, one indent in
-// and in reading order. Replies whose parent is missing count as answers to the post.
+// Oldest first: ancestors, the post and the author's own thread after it, then each answer to those with its whole
+// branch under it, one indent in and in reading order. Replies whose parent is missing count as answers to the post.
 export function threadRows(statuses: ThreadStatus[], newestFirst: boolean): ThreadRow[] {
     const mainIndex = statuses.findIndex(status => status.isMain);
     if (mainIndex < 0) return statuses.map(status => ({ status, depth: 0 }));
@@ -65,8 +65,22 @@ export function threadRows(statuses: ThreadStatus[], newestFirst: boolean): Thre
     });
     const answersTo = (id: string) => [...(children.get(id) ?? [])].sort((a, b) => a.created_at.localeCompare(b.created_at));
 
+    // The author's own thread goes on in the chain, in order: their first reply to the post, their first reply
+    // to that, and so on. Everyone else's replies, to the post or to any of those, come after it as branches.
     const chain: ThreadRow[] = statuses.slice(0, mainIndex + 1).map(status => ({ status, depth: 0 }));
-    const branches = answersTo(main.id).map(head => {
+    const continued = [main];
+    for (;;) {
+        const next = answersTo(continued[continued.length - 1].id).find(reply => reply.account.id === main.account.id);
+        if (!next) break;
+        continued.push(next);
+        chain.push({ status: next, depth: 0 });
+    }
+    const inChain = new Set(continued.map(status => status.id));
+    const heads = continued
+        .flatMap(status => answersTo(status.id))
+        .filter(reply => !inChain.has(reply.id))
+        .sort((a, b) => a.created_at.localeCompare(b.created_at));
+    const branches = heads.map(head => {
         const rows: ThreadRow[] = [{ status: head, depth: 1 }];
         const branch = (id: string) =>
             answersTo(id).forEach(reply => {

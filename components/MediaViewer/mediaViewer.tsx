@@ -15,7 +15,8 @@ import { useTheme } from '../../services/themeContext';
 
 interface MediaViewerContextType {
     // With onOpenPost (e.g. from a profile's media grid), the viewer also offers to open the post
-    openMedia: (attachments: Attachment[], index: number, onOpenPost?: () => void) => void;
+    // postUrl: the post on its own server, where media our server didn't keep can still be seen
+    openMedia: (attachments: Attachment[], index: number, onOpenPost?: () => void, postUrl?: string) => void;
 }
 
 const MediaViewerContext = createContext<MediaViewerContextType | undefined>(undefined);
@@ -84,7 +85,7 @@ const VideoModal = ({ attachment, onClose, onOpenPost }: { attachment: Attachmen
 export const MediaViewerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [open, setOpen] = useState<OpenMedia | null>(null);
 
-    const openMedia = useCallback((attachments: Attachment[], index: number, onOpenPost?: () => void) => {
+    const openMedia = useCallback((attachments: Attachment[], index: number, onOpenPost?: () => void, postUrl?: string) => {
         const selected = attachments[index];
         if (!selected) {
             return;
@@ -96,8 +97,9 @@ export const MediaViewerProvider: React.FC<{ children: React.ReactNode }> = ({ c
             const images = attachments.filter(attachment => attachment.type === 'image');
             setOpen({ kind: 'images', images, index: images.indexOf(selected), onOpenPost });
         } else {
-            // Unknown media types can't be previewed in-app
-            openLink(selected.url);
+            // Media our server didn't keep: its own copy is a dead link (or a proxy that 404s), so show the
+            // post where it lives, or else the original file, as Mastodon's web app links it
+            openLink(postUrl ?? selected.remote_url ?? selected.url);
         }
     }, []);
 

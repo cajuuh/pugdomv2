@@ -20,6 +20,7 @@ import { useModeration } from '../../hooks/useModeration';
 import { useMediaViewer } from '../../components/MediaViewer/mediaViewer';
 import { useNotifyOff, useNotifyOn } from '../../hooks/useRelationships';
 import { dialog } from '../../services/dialog';
+import { useCompose } from '../../services/composeContext';
 
 const originOf = (url?: string) => url?.match(/^https?:\/\/[^/?#]+/i)?.[0];
 
@@ -59,6 +60,7 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
     const moderation = useModeration();
     const remoteServer = mode === 'other' && user.acct.includes('@') ? user.acct.split('@').pop() : undefined;
     const notifyOn = useNotifyOn();
+    const { openCompose } = useCompose();
     const notifyOff = useNotifyOff();
     const [bellBusy, setBellBusy] = useState(false);
     // The bell: their posts as notifications. Only for people you follow
@@ -336,6 +338,8 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
                     onClose={() => setMenuOpen(false)}
                     actions={[
                         // After the sheet has closed: iOS can't present the share sheet over one still closing
+                        // After the sheet has closed, like Share: compose is a sheet too
+                        { key: 'directMessage', icon: 'mail-outline', label: t('profile.directMessage', { acct: user.acct }), onPress: () => setTimeout(() => openCompose({ directTo: user }), Platform.OS === 'ios' ? 400 : 0) },
                         { key: 'share', icon: 'share-outline', label: t('profile.shareProfile'), onPress: () => setTimeout(handleShare, Platform.OS === 'ios' ? 400 : 0) },
                         ...(relationship?.followed_by
                             ? [{ key: 'removeFollower', icon: 'person-remove-outline' as const, label: t('moderation.removeFollower', { acct: user.acct }), description: t('moderation.removeFollowerHint'), onPress: () => moderation.removeFollower(user) }]

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Text } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
@@ -21,6 +22,7 @@ jest.mock('../services/themeContext', () => ({
 const mockSettings = { compactMode: false, mediaAutoplay: false, hideCounts: false };
 jest.mock('../services/settingsContext', () => ({ useSettings: () => mockSettings }));
 jest.mock('../services/composeContext', () => ({ useCompose: () => ({ openCompose: jest.fn() }) }));
+jest.mock('expo-web-browser', () => ({ openBrowserAsync: jest.fn(() => Promise.resolve()) }));
 
 const api = apiClient as unknown as Record<'get' | 'post', jest.Mock>;
 const theirServer = (publicClient as unknown as Record<'get', jest.Mock>).get;
@@ -134,6 +136,25 @@ describe('TootCard reactions', () => {
 
         expect(screen.queryByRole('button', { name: '2 favourites' })).toBeNull();
         expect(api.get).not.toHaveBeenCalledWith('/statuses/p1/favourited_by', expect.anything());
+    });
+});
+
+describe("the open post's details", () => {
+    it('says who can see it and the app it was posted with, linking to the app', async () => {
+        await render(wrap(<TootCard status={post({ account: ana, visibility: 'unlisted', application: { name: 'Ivory', website: 'https://tapbots.com/ivory' } })} showReactions />));
+
+        expect(screen.getByText(/Unlisted/)).toBeTruthy();
+        await fireEvent.press(screen.getByText('via Ivory'));
+        expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith('https://tapbots.com/ivory');
+    });
+
+    it("leaves the app out when the server doesn't say, and the line off posts in a list", async () => {
+        await render(wrap(<TootCard status={post({ account: ana, visibility: 'private' })} showReactions />));
+        expect(screen.getByText('Followers')).toBeTruthy();
+        expect(screen.queryByText(/via /)).toBeNull();
+
+        await render(wrap(<TootCard status={post({ account: ana, application: { name: 'Ivory' } })} />));
+        expect(screen.queryByText(/via Ivory/)).toBeNull();
     });
 });
 

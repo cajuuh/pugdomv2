@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useRef, useState } from 'react';
-import { Status } from './mastodon/types';
+import { Account, Status } from './mastodon/types';
 import { SharedContent } from './sharedContent';
 import type { Draft } from './drafts';
 import ComposeModal from '../components/ComposeModal/composeModal';
@@ -31,6 +31,8 @@ interface ComposeParams {
     existingPost?: ExistingPost;
     shared?: SharedContent;
     draft?: Draft;
+    // A direct message to this account: starts with its mention, visibility direct
+    directTo?: Account;
 }
 
 const ComposeContext = createContext<ComposeContextType | undefined>(undefined);
@@ -42,6 +44,7 @@ export const ComposeProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const [existingPost, setExistingPost] = useState<ExistingPost | null>(null);
     const [shared, setShared] = useState<SharedContent | null>(null);
     const [draft, setDraft] = useState<Draft | null>(null);
+    const [directTo, setDirectTo] = useState<Account | null>(null);
     // Shared while compose was already open, to add to the draft
     const [incoming, setIncoming] = useState<SharedContent | null>(null);
     const open = useRef(false);
@@ -59,6 +62,7 @@ export const ComposeProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setExistingPost(params?.existingPost ?? null);
         setShared(params?.shared ?? null);
         setDraft(params?.draft ?? null);
+        setDirectTo(params?.directTo ?? null);
         setIncoming(null);
         setIsOpen(true);
     };
@@ -71,6 +75,7 @@ export const ComposeProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setExistingPost(null);
         setShared(null);
         setDraft(null);
+        setDirectTo(null);
         setIncoming(null);
     };
 
@@ -85,6 +90,7 @@ export const ComposeProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 shared={shared}
                 incoming={incoming}
                 draft={draft}
+                directTo={directTo}
                 closeCompose={closeCompose}
             />
         </ComposeContext.Provider>
