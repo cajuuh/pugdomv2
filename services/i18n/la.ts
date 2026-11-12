@@ -279,6 +279,7 @@ export const la: Dictionary = {
         unsupported: 'Servitor tuus lineas temporis nexuum non sustinet. Articulum tamen directe aperire potes.',
     },
     post: {
+        moreMedia: '{{count}} plures',
         continuesThread: 'Filum suum continuat',
         isReply: 'Responsum',
         readDescription: 'Descriptionem imaginis legere',
@@ -927,6 +928,7 @@ export const la: Dictionary = {
         later: 'Postea',
     },
     settings: {
+        mediaGrid: 'Plures imagines in cancellis',
         title: 'Optiones',
         close: 'Optiones claudere',
         accounts: 'Rationes',

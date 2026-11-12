@@ -279,6 +279,7 @@ export const ja: Dictionary = {
         unsupported: 'お使いのサーバーはリンクのタイムラインに対応していません。記事は直接開けます。',
     },
     post: {
+        moreMedia: 'ほか{{count}}件',
         continuesThread: '自分のスレッドの続き',
         isReply: '返信',
         readDescription: '画像の説明を読む',
@@ -927,6 +928,7 @@ export const ja: Dictionary = {
         later: 'あとで',
     },
     settings: {
+        mediaGrid: '複数の画像をグリッドで表示',
         title: '設定',
         close: '設定を閉じる',
         accounts: 'アカウント',

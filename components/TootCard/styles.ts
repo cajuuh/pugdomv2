@@ -1,6 +1,7 @@
 import { StyleSheet } from 'react-native';
 import { ThemeColors } from '../../services/themeContext';
 import { radii, space } from '../../services/theme/shape';
+import { mediaColors } from '../../services/theme/media';
 import type { PostTextSize } from '../../services/settingsContext';
 
 // Post text in each mode, scaled by the text size setting; anything measured in lines (the quote fold) uses it too
@@ -248,6 +249,38 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     carousel: {
         borderRadius: radii.well,
         overflow: 'hidden',
+    },
+    grid: {
+        flexDirection: 'row',
+        gap: SLIDE_GAP / 2,
+        borderRadius: radii.well,
+        overflow: 'hidden',
+    },
+    gridRows: {
+        flexDirection: 'column',
+    },
+    gridColumn: {
+        flex: 1,
+        gap: SLIDE_GAP / 2,
+    },
+    gridRow: {
+        flex: 1,
+        flexDirection: 'row',
+        gap: SLIDE_GAP / 2,
+    },
+    gridTile: {
+        flex: 1,
+        overflow: 'hidden',
+        backgroundColor: colors.inputBackground,
+    },
+    gridMore: {
+        ...StyleSheet.absoluteFill,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: mediaColors.scrim,
+    },
+    gridMoreText: {
+        color: mediaColors.ink,
     },
     carouselTrack: {
         gap: SLIDE_GAP,

@@ -63,6 +63,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
         setGroupNotifications,
         uncroppedMedia,
         setUncroppedMedia,
+        mediaGrid,
+        setMediaGrid,
         externalBrowser,
         setExternalBrowser,
         setExpandSpoilers,
@@ -322,6 +324,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
                     {switchRow('play-circle-outline', t('settings.autoplay'), mediaAutoplay, setMediaAutoplay)}
                     <View style={styles.divider} />
                     {switchRow('expand-outline', t('settings.uncroppedMedia'), uncroppedMedia, setUncroppedMedia)}
+                    <View style={styles.divider} />
+                    {switchRow('grid-outline', t('settings.mediaGrid'), mediaGrid, setMediaGrid)}
                     <View style={styles.divider} />
                     {switchRow('eye-outline', t('settings.showSensitiveMedia'), showSensitive, setShowSensitiveMedia)}
                     <View style={styles.divider} />

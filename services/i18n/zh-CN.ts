@@ -279,6 +279,7 @@ export const zhCN: Dictionary = {
         unsupported: '你的服务器不支持链接时间线。你仍然可以直接打开文章。',
     },
     post: {
+        moreMedia: '还有 {{count}} 张',
         continuesThread: '延续自己的嘟文串',
         isReply: '回复',
         readDescription: '阅读图片描述',
@@ -927,6 +928,7 @@ export const zhCN: Dictionary = {
         later: '稍后',
     },
     settings: {
+        mediaGrid: '多张图片以网格显示',
         title: '设置',
         close: '关闭设置',
         accounts: '账号',

@@ -3,7 +3,7 @@ import { Text } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fireEvent } from '@testing-library/react-native';
-import { POST_TEXT_SIZE_KEY, SettingsProvider, UNCROPPED_MEDIA_KEY, useSettings } from '../services/settingsContext';
+import { MEDIA_GRID_KEY, POST_TEXT_SIZE_KEY, SettingsProvider, UNCROPPED_MEDIA_KEY, useSettings } from '../services/settingsContext';
 import { postTextMetrics } from '../components/TootCard/styles';
 
 jest.mock('expo-secure-store', () => ({ getItemAsync: jest.fn().mockResolvedValue(null), deleteItemAsync: jest.fn() }));
@@ -32,12 +32,13 @@ describe('Post text size', () => {
     };
 
     it('starts at the default and remembers a choice', async () => {
-        await render(<SettingsProvider><SizeProbe /></SettingsProvider>);
+        const first = await render(<SettingsProvider><SizeProbe /></SettingsProvider>);
         await fireEvent.press(await screen.findByText('default'));
         expect(await screen.findByText('large')).toBeTruthy();
         expect(await AsyncStorage.getItem(POST_TEXT_SIZE_KEY)).toBe('large');
+        await first.unmount();
 
-        screen.unmount();
+        // Next start
         await render(<SettingsProvider><SizeProbe /></SettingsProvider>);
         expect(await screen.findByText('large')).toBeTruthy();
     });
@@ -48,5 +49,19 @@ describe('Post text size', () => {
         // Compact Mode's largest step is bigger than the normal default
         expect(postTextMetrics(true, 'larger').fontSize).toBeGreaterThan(postTextMetrics(false).fontSize);
         expect(postTextMetrics(true, 'small').fontSize).toBeLessThan(13);
+    });
+});
+
+describe('Media grid', () => {
+    const GridProbe = () => {
+        const { mediaGrid, setMediaGrid } = useSettings();
+        return <Text onPress={() => setMediaGrid(true)}>{mediaGrid ? 'grid' : 'carousel'}</Text>;
+    };
+
+    it('starts as the carousel and remembers the grid', async () => {
+        await render(<SettingsProvider><GridProbe /></SettingsProvider>);
+        await fireEvent.press(await screen.findByText('carousel'));
+        expect(await screen.findByText('grid')).toBeTruthy();
+        expect(await AsyncStorage.getItem(MEDIA_GRID_KEY)).toBe('true');
     });
 });

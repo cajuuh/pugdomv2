@@ -41,7 +41,7 @@ jest.mock('../services/mastodon/polls', () => ({
 }));
 
 // Mutable so the Compact Mode tests can turn it on
-const mockSettings: { compactMode: boolean; mediaAutoplay: boolean; hideCounts: boolean; expandSpoilers: boolean | null; coverSensitiveMedia: boolean; uncroppedMedia: boolean } = { compactMode: false, mediaAutoplay: false, hideCounts: false, expandSpoilers: null, coverSensitiveMedia: true, uncroppedMedia: false };
+const mockSettings: { compactMode: boolean; mediaAutoplay: boolean; hideCounts: boolean; expandSpoilers: boolean | null; coverSensitiveMedia: boolean; uncroppedMedia: boolean; mediaGrid?: boolean } = { compactMode: false, mediaAutoplay: false, hideCounts: false, expandSpoilers: null, coverSensitiveMedia: true, uncroppedMedia: false };
 jest.mock('../services/settingsContext', () => ({
     useSettings: () => mockSettings,
 }));
@@ -917,11 +917,65 @@ describe('TootCard replies', () => {
         expect(screen.getByText('Replying to @bob@pug.social')).toBeTruthy();
     });
 
-    it("leaves posts that aren't replies, and threads, unmarked", async () => {
+    it("leaves posts that aren't replies unmarked", async () => {
         await renderCard(statusA);
         expect(screen.queryByText(/Replying to|Continues their own thread/)).toBeNull();
-        screen.unmount();
+    });
+
+    it('leaves threads to say whom a post answers', async () => {
         await renderCard(reply, true);
         expect(screen.queryByText(/Replying to/)).toBeNull();
+    });
+});
+
+describe('TootCard media grid', () => {
+    const image = (id: string, description = '') => ({ id, type: 'image', url: `https://example.social/${id}.png`, preview_url: `https://example.social/${id}-small.png`, description });
+    const renderWith = async (count: number) => {
+        mockSettings.mediaGrid = true;
+        await render(
+            <QueryClientProvider client={createTestQueryClient()}>
+                <MediaViewerProvider>
+                    <TootCard status={{ ...statusA, media_attachments: Array.from({ length: count }, (_, i) => image(`m${i + 1}`)) } as Status} />
+                </MediaViewerProvider>
+            </QueryClientProvider>
+        );
+    };
+    afterEach(() => { mockSettings.mediaGrid = false; });
+
+    it('shows every image at once instead of the carousel', async () => {
+        await renderWith(3);
+        expect(screen.getByTestId('media-grid')).toBeTruthy();
+        expect(screen.queryByTestId('media-carousel')).toBeNull();
+        expect(screen.getAllByRole('imagebutton').map(tile => tile.props.accessibilityLabel)).toEqual(['Image 1 of 3', 'Image 2 of 3', 'Image 3 of 3']);
+    });
+
+    it('shows four, and says how many more there are on the last', async () => {
+        await renderWith(6);
+        expect(screen.getAllByRole('imagebutton')).toHaveLength(4);
+        expect(screen.getByText('+2')).toBeTruthy();
+        expect(screen.getByRole('imagebutton', { name: 'Image 4 of 6, 2 more' })).toBeTruthy();
+    });
+
+    it('reads four in rows, left to right', async () => {
+        await renderWith(4);
+        expect(screen.getAllByRole('imagebutton').map(tile => tile.props.accessibilityLabel)).toEqual(['Image 1 of 4', 'Image 2 of 4', 'Image 3 of 4', 'Image 4 of 4']);
+        expect(screen.queryByText(/^\+/)).toBeNull();
+    });
+
+    it('keeps one image as it is', async () => {
+        await renderWith(1);
+        expect(screen.queryByTestId('media-grid')).toBeNull();
+        expect(screen.getByRole('imagebutton', { name: 'Image 1 of 1' })).toBeTruthy();
+    });
+
+    it('keeps the carousel when the grid is off', async () => {
+        await render(
+            <QueryClientProvider client={createTestQueryClient()}>
+                <MediaViewerProvider>
+                    <TootCard status={{ ...statusA, media_attachments: [image('m1'), image('m2')] } as Status} />
+                </MediaViewerProvider>
+            </QueryClientProvider>
+        );
+        expect(screen.getByTestId('media-carousel')).toBeTruthy();
     });
 });

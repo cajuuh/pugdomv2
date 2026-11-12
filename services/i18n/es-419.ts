@@ -278,6 +278,7 @@ export const es419: Dictionary = {
         unsupported: 'Tu servidor no permite ver publicaciones por enlace. Aún puedes abrir el artículo directamente.',
     },
     post: {
+        moreMedia: '{{count}} más',
         continuesThread: 'Continúa su propio hilo',
         isReply: 'Respuesta',
         readDescription: 'Leer la descripción de la imagen',
@@ -928,6 +929,7 @@ export const es419: Dictionary = {
         later: 'Más tarde',
     },
     settings: {
+        mediaGrid: 'Varias imágenes en cuadrícula',
         title: 'Configuración',
         close: 'Cerrar configuración',
         accounts: 'Cuentas',

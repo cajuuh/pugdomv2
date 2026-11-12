@@ -61,6 +61,11 @@ import { useIsAutoplayPost } from '../../services/media/autoplay';
 // A long post folds after this many lines, until "Show more"
 const FOLD_LINES = 12;
 
+// The grid shows at most four; its height from the post's width (Compact Mode: fixed and short)
+const GRID_MAX = 4;
+const GRID_RATIO = 0.66;
+const GRID_HEIGHT_COMPACT = 160;
+
 // Several images: each slide leaves the next one peeking in at the edge, so it's clear there's more to see
 const PEEK_SLIDE = 0.88;
 export const carouselMetrics = (width: number) => {
@@ -182,7 +187,7 @@ interface TootCardProps {
 }
 
 export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPressHashtag, onPress, threadMode, showReactions, hasThreadLineTop, hasThreadLineBottom, indent = 0, replyingTo, remote, fullText, filterContext }) => {
-    const { compactMode, hideCounts, coverSensitiveMedia, uncroppedMedia, mediaAutoplay, postTextSize } = useSettings();
+    const { compactMode, hideCounts, coverSensitiveMedia, uncroppedMedia, mediaAutoplay, postTextSize, mediaGrid } = useSettings();
     const { colors, type } = useTheme();
     const styles = useThemedStyles(makeStyles);
     const { openCompose } = useCompose();
@@ -436,6 +441,43 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     <Text style={[type.label, styles.altChipText]}>ALT</Text>
                 </Pressable>
             );
+        // A grid tile: cropped to its focal point; the fourth says how many more there are past it
+        const gridTile = (idx: number) => {
+            const more = idx === GRID_MAX - 1 ? count - GRID_MAX : 0;
+            const item = attachments[idx];
+            return (
+                <Pressable
+                    key={item.id || idx}
+                    style={styles.gridTile}
+                    onPress={() => openMedia(attachments, idx, undefined, targetStatus.url ?? targetStatus.uri)}
+                    accessibilityRole="imagebutton"
+                    accessibilityLabel={more > 0 ? `${mediaLabel(item, idx, count, i18n)}, ${t('post.moreMedia', { count: more })}` : mediaLabel(item, idx, count, i18n)}
+                >
+                    <FocusedImage attachment={item} style={styles.mediaImage} blurred={veiled} playing={plays(idx)} />
+                    {more > 0 ? (
+                        <View style={styles.gridMore}>
+                            <Text style={[type.title, styles.gridMoreText]}>+{more}</Text>
+                        </View>
+                    ) : altChip(item)}
+                </Pressable>
+            );
+        };
+        // Two side by side; three: one large and two stacked; four or more: two by two
+        const grid = () => (
+            <View testID="media-grid" style={[styles.grid, count > 3 && styles.gridRows, { height: compactMode ? GRID_HEIGHT_COMPACT : Math.round(contentWidth * GRID_RATIO) }]}>
+                {count === 2 ? [gridTile(0), gridTile(1)] : count === 3 ? (
+                    <>
+                        {gridTile(0)}
+                        <View style={styles.gridColumn}>{gridTile(1)}{gridTile(2)}</View>
+                    </>
+                ) : (
+                    <>
+                        <View style={styles.gridRow}>{gridTile(0)}{gridTile(1)}</View>
+                        <View style={styles.gridRow}>{gridTile(2)}{gridTile(3)}</View>
+                    </>
+                )}
+            </View>
+        );
         const tiles = count === 1 ? (
             <Pressable
                 style={[styles.singleMedia, compactMode && styles.singleMediaCompact, mediaHeight]}
@@ -446,7 +488,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 <FocusedImage attachment={attachments[0]} style={styles.mediaImage} blurred={veiled} contain={uncropped} playing={plays(0)} />
                 {altChip(attachments[0])}
             </Pressable>
-        ) : (
+        ) : mediaGrid ? grid() : (
             // Several images: swiped sideways one at a time, the next peeking in, with a dot for each
             <View>
                 <ScrollView

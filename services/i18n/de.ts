@@ -278,6 +278,7 @@ export const de: Dictionary = {
         unsupported: 'Dein Server unterstützt keine Link-Timelines. Du kannst den Artikel trotzdem direkt öffnen.',
     },
     post: {
+        moreMedia: '{{count}} weitere',
         continuesThread: 'Setzt den eigenen Thread fort',
         isReply: 'Antwort',
         readDescription: 'Bildbeschreibung lesen',
@@ -926,6 +927,7 @@ export const de: Dictionary = {
         later: 'Später',
     },
     settings: {
+        mediaGrid: 'Mehrere Bilder als Raster',
         title: 'Einstellungen',
         close: 'Einstellungen schließen',
         accounts: 'Konten',

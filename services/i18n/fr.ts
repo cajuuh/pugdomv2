@@ -278,6 +278,7 @@ export const fr: Dictionary = {
         unsupported: 'Votre serveur ne prend pas en charge les fils de liens. Vous pouvez quand même ouvrir l’article directement.',
     },
     post: {
+        moreMedia: '{{count}} de plus',
         continuesThread: 'Suite de son propre fil',
         isReply: 'Réponse',
         readDescription: 'Lire la description de l’image',
@@ -926,6 +927,7 @@ export const fr: Dictionary = {
         later: 'Plus tard',
     },
     settings: {
+        mediaGrid: 'Plusieurs images en grille',
         title: 'Paramètres',
         close: 'Fermer les paramètres',
         accounts: 'Comptes',

@@ -282,6 +282,7 @@ export const en = {
         unsupported: "Your server doesn't support link timelines. You can still open the article directly.",
     },
     post: {
+        moreMedia: '{{count}} more',
         continuesThread: 'Continues their own thread',
         isReply: 'Reply',
         readDescription: 'Read the image description',
@@ -946,6 +947,7 @@ export const en = {
         later: 'Later',
     },
     settings: {
+        mediaGrid: 'Several images in a grid',
         title: 'Settings',
         close: 'Close settings',
         accounts: 'Accounts',

@@ -42,6 +42,9 @@ interface SettingsContextType {
     // Post images at their own shape instead of cropped to the card
     uncroppedMedia: boolean;
     setUncroppedMedia: (value: boolean) => Promise<void>;
+    // Posts with several images show them all at once in a grid, instead of the carousel
+    mediaGrid: boolean;
+    setMediaGrid: (value: boolean) => Promise<void>;
     // Links open in the phone's own browser instead of the in-app one
     externalBrowser: boolean;
     setExternalBrowser: (value: boolean) => Promise<void>;
@@ -67,6 +70,7 @@ export const HOME_REPLIES_KEY = 'pugdom_settings_home_replies';
 export const REPLY_UNLISTED_KEY = 'pugdom_settings_reply_unlisted';
 export const GROUP_NOTIFICATIONS_KEY ='pugdom_settings_group_notifications';
 export const UNCROPPED_MEDIA_KEY = 'pugdom_settings_uncropped_media';
+export const MEDIA_GRID_KEY = 'pugdom_settings_media_grid';
 export const EXPAND_SPOILERS_KEY = 'pugdom_settings_expand_spoilers';
 export const SHOW_SENSITIVE_KEY = 'pugdom_settings_show_sensitive';
 export const COVER_SENSITIVE_KEY = 'pugdom_settings_cover_sensitive';
@@ -85,6 +89,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const [replyUnlisted, setReplyUnlistedState] = useState(false);
     const [groupNotifications, setGroupNotificationsState] = useState(true);
     const [uncroppedMedia, setUncroppedMediaState] = useState(true);
+    const [mediaGrid, setMediaGridState] = useState(false);
     const [externalBrowser, setExternalBrowserState] = useState(false);
     const [postTextSize, setPostTextSizeState] = useState<PostTextSize>('default');
     const [expandSpoilers, setExpandSpoilersState] = useState<boolean | null>(null);
@@ -106,6 +111,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 const unlistedReplies = await getSetting(REPLY_UNLISTED_KEY, false);
                 const grouped = await getSetting(GROUP_NOTIFICATIONS_KEY, true);
                 const uncropped = await getSetting(UNCROPPED_MEDIA_KEY, true);
+                const grid = await getSetting(MEDIA_GRID_KEY, false);
                 const spoilers = await getStringSetting(EXPAND_SPOILERS_KEY, '');
                 const sensitive = await getStringSetting(SHOW_SENSITIVE_KEY, '');
                 const cover = await getSetting(COVER_SENSITIVE_KEY, true);
@@ -123,6 +129,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 setReplyUnlistedState(unlistedReplies);
                 setGroupNotificationsState(grouped);
                 setUncroppedMediaState(uncropped);
+                setMediaGridState(grid);
                 setExpandSpoilersState(spoilers === '' ? null : spoilers === 'true');
                 setShowSensitiveMediaState(sensitive === '' ? null : sensitive === 'true');
                 setCoverSensitiveMediaState(cover);
@@ -182,6 +189,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const setGroupNotifications = async (value: boolean) => {
         setGroupNotificationsState(value);
         await saveSetting(GROUP_NOTIFICATIONS_KEY, value);
+    };
+
+    const setMediaGrid = async (value: boolean) => {
+        setMediaGridState(value);
+        await saveSetting(MEDIA_GRID_KEY, value);
     };
 
     const setUncroppedMedia = async (value: boolean) => {
@@ -247,6 +259,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 setGroupNotifications,
                 uncroppedMedia,
                 setUncroppedMedia,
+                mediaGrid,
+                setMediaGrid,
                 externalBrowser,
                 setExternalBrowser,
                 setExpandSpoilers,

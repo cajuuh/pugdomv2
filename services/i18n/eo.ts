@@ -278,6 +278,7 @@ export const eo: Dictionary = {
         unsupported: 'Via servilo ne subtenas ligilajn tempoliniojn. Vi ankoraŭ povas malfermi la artikolon rekte.',
     },
     post: {
+        moreMedia: '{{count}} pliaj',
         continuesThread: 'Daŭrigas sian propran fadenon',
         isReply: 'Respondo',
         readDescription: 'Legi la priskribon de la bildo',
@@ -926,6 +927,7 @@ export const eo: Dictionary = {
         later: 'Poste',
     },
     settings: {
+        mediaGrid: 'Pluraj bildoj en krado',
         title: 'Agordoj',
         close: 'Fermi agordojn',
         accounts: 'Kontoj',
