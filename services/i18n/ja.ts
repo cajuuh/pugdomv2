@@ -1015,6 +1015,9 @@ export const ja: Dictionary = {
         note: '削除するとサーバー上のアカウントから通知が消えるので、使っているすべてのアプリから消え、元に戻せません。新着として表示しないだけなら、✓✓「すべて既読にする」を使ってください。',
     },
     appearance: {
+        textSize: '文字サイズ',
+        textSizeHint: 'コンパクト表示でも',
+        textSizes: { small: '小', default: '標準', large: '大', larger: '特大' },
         title: '外観',
         back: '設定に戻る',
         light: 'ライト',

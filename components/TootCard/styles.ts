@@ -1,6 +1,14 @@
 import { StyleSheet } from 'react-native';
 import { ThemeColors } from '../../services/themeContext';
 import { radii, space } from '../../services/theme/shape';
+import type { PostTextSize } from '../../services/settingsContext';
+
+// Post text in each mode, scaled by the text size setting; anything measured in lines (the quote fold) uses it too
+const TEXT_SCALE: Record<PostTextSize, number> = { small: 0.9, default: 1, large: 1.15, larger: 1.3 };
+export const postTextMetrics = (compact: boolean, size: PostTextSize = 'default') => {
+    const scale = TEXT_SCALE[size] ?? 1;
+    return { fontSize: (compact ? 13 : 15.5) * scale, lineHeight: (compact ? 18 : 22.5) * scale };
+};
 
 export const CARD_MARGIN = 16;
 export const CARD_PADDING = 16;
@@ -147,18 +155,10 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     },
     // A long post folded in a timeline: about 12 lines of it, then "Show more"
     textFold: {
-        maxHeight: 270,
         overflow: 'hidden',
-    },
-    textFoldCompact: {
-        maxHeight: 216,
     },
     foldedText: {
         color: colors.textPrimary,
-    },
-    foldedTextCompact: {
-        fontSize: 13,
-        lineHeight: 18,
     },
     foldRow: {
         flexDirection: 'row',

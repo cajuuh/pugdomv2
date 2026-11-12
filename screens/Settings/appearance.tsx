@@ -8,6 +8,8 @@ import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { SettingsHeader } from './header';
 import { makeAppearanceStyles } from './styles';
 import { useI18n } from '../../services/i18n/i18nContext';
+import { POST_TEXT_SIZES, PostTextSize, useSettings } from '../../services/settingsContext';
+import { postTextMetrics } from '../../components/TootCard/styles';
 
 const MODES: ThemeType[] = ['light', 'dark', 'system'];
 
@@ -21,6 +23,8 @@ const Appearance: React.FC<AppearanceProps> = ({ onBack }) => {
     const { t } = useI18n();
     const coatName = t(`coats.${getCoat(coat).key}`);
     const modes: SegmentOption<ThemeType>[] = MODES.map(value => ({ value, label: t(`appearance.${value}`) }));
+    const { compactMode, postTextSize, setPostTextSize } = useSettings();
+    const sizes: SegmentOption<PostTextSize>[] = POST_TEXT_SIZES.map(value => ({ value, label: t(`appearance.textSizes.${value}`) }));
 
     return (
         <>
@@ -37,7 +41,7 @@ const Appearance: React.FC<AppearanceProps> = ({ onBack }) => {
                         </View>
                         <PillButton label={t('common.follow')} size="small" onPress={() => {}} />
                     </View>
-                    <Text style={[type.body, styles.previewBody]}>
+                    <Text style={[type.body, styles.previewBody, postTextMetrics(compactMode, postTextSize)]}>
                         {t('appearance.previewText', { coat: coatName })} <Text style={[type.name, styles.previewTag]}>#pugsofmastodon</Text>
                     </Text>
                     <View style={styles.pollBar}>
@@ -65,6 +69,12 @@ const Appearance: React.FC<AppearanceProps> = ({ onBack }) => {
 
                 <SectionLabel style={styles.sectionLabel}>{t('appearance.mode')}</SectionLabel>
                 <SegmentedPill options={modes} value={theme} onChange={setTheme} />
+
+                <View style={styles.coatHeader}>
+                    <SectionLabel>{t('appearance.textSize')}</SectionLabel>
+                    <Text style={[type.meta, styles.coatHint]}>{t('appearance.textSizeHint')}</Text>
+                </View>
+                <SegmentedPill options={sizes} value={postTextSize ?? 'default'} onChange={setPostTextSize} />
 
                 <View style={styles.coatHeader}>
                     <SectionLabel>{t('appearance.coat')}</SectionLabel>

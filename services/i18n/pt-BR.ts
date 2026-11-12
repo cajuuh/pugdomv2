@@ -1017,6 +1017,9 @@ export const ptBR: Dictionary = {
         note: 'Remover apaga as notificações da sua conta no servidor: elas somem em todos os apps que você usa, e não dá para desfazer. Para só deixar de vê-las como novas, use ✓✓ Marcar todas como lidas.',
     },
     appearance: {
+        textSize: 'Tamanho do texto',
+        textSizeHint: 'Também no modo compacto',
+        textSizes: { small: 'Pequeno', default: 'Padrão', large: 'Grande', larger: 'Maior' },
         title: 'Aparência',
         back: 'Voltar para configurações',
         light: 'Claro',

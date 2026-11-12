@@ -1016,6 +1016,9 @@ export const es419: Dictionary = {
         note: 'Quitar elimina las notificaciones de tu cuenta en tu servidor, así que desaparecen en todas las apps que uses, y no se puede deshacer. Para que solo dejen de aparecer como nuevas, usa ✓✓ Marcar todo como leído.',
     },
     appearance: {
+        textSize: 'Tamaño del texto',
+        textSizeHint: 'También en modo compacto',
+        textSizes: { small: 'Pequeño', default: 'Normal', large: 'Grande', larger: 'Más grande' },
         title: 'Apariencia',
         back: 'Volver a la configuración',
         light: 'Claro',

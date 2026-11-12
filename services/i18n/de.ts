@@ -1014,6 +1014,9 @@ export const de: Dictionary = {
         note: 'Entfernen löscht Benachrichtigungen aus deinem Konto auf deinem Server, also verschwinden sie in jeder App, die du nutzt, und das kann nicht rückgängig gemacht werden. Damit sie nur nicht mehr als neu erscheinen, nutze ✓✓ Alle als gelesen markieren.',
     },
     appearance: {
+        textSize: 'Textgröße',
+        textSizeHint: 'Auch im Kompaktmodus',
+        textSizes: { small: 'Klein', default: 'Standard', large: 'Groß', larger: 'Größer' },
         title: 'Aussehen',
         back: 'Zurück zu den Einstellungen',
         light: 'Hell',

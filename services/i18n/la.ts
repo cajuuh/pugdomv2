@@ -1015,6 +1015,9 @@ export const la: Dictionary = {
         note: 'Removere monitiones ex ratione tua in servitore delet, itaque ex omni applicatione qua uteris evanescunt, nec revocari potest. Ut tantum non iam ut novae appareant, utere ✓✓ Omnes ut lectas notare.',
     },
     appearance: {
+        textSize: 'Magnitudo litterarum',
+        textSizeHint: 'Etiam modo contracto',
+        textSizes: { small: 'Parva', default: 'Solita', large: 'Magna', larger: 'Maior' },
         title: 'Species',
         back: 'Ad optiones redire',
         light: 'Clara',

@@ -1014,6 +1014,9 @@ export const eo: Dictionary = {
         note: 'Forigado forviŝas sciigojn el via konto en via servilo, do ili malaperas en ĉiu aplikaĵo, kiun vi uzas, kaj ĝi ne povas esti malfarita. Por nur ĉesigi, ke ili aperu kiel novaj, uzu ✓✓ Marki ĉiujn legitaj.',
     },
     appearance: {
+        textSize: 'Tekstogrando',
+        textSizeHint: 'Ankaŭ en kompakta reĝimo',
+        textSizes: { small: 'Malgranda', default: 'Defaŭlta', large: 'Granda', larger: 'Pli granda' },
         title: 'Aspekto',
         back: 'Reen al agordoj',
         light: 'Hela',

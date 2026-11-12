@@ -1015,6 +1015,9 @@ export const zhCN: Dictionary = {
         note: '移除会从你服务器上的账号中删除通知，所以在你用的每个应用里都会消失，而且无法撤销。如果只是不想让它们显示为新的，请用 ✓✓ 全部标为已读。',
     },
     appearance: {
+        textSize: '文字大小',
+        textSizeHint: '紧凑模式也适用',
+        textSizes: { small: '小', default: '默认', large: '大', larger: '更大' },
         title: '外观',
         back: '返回设置',
         light: '浅色',

@@ -1014,6 +1014,9 @@ export const fr: Dictionary = {
         note: 'Supprimer efface les notifications de votre compte sur votre serveur : elles disparaissent de toutes les applis que vous utilisez, et c’est irréversible. Pour qu’elles ne s’affichent simplement plus comme nouvelles, utilisez ✓✓ Tout marquer comme lu.',
     },
     appearance: {
+        textSize: 'Taille du texte',
+        textSizeHint: 'Aussi en mode compact',
+        textSizes: { small: 'Petit', default: 'Normal', large: 'Grand', larger: 'Plus grand' },
         title: 'Apparence',
         back: 'Retour aux paramètres',
         light: 'Clair',

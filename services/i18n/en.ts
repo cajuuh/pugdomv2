@@ -1037,6 +1037,9 @@ export const en = {
         note: "Removing deletes notifications from your account on your server, so they're gone in every app you use, and it can't be undone. To only stop them showing as new, use ✓✓ Mark all as read.",
     },
     appearance: {
+        textSize: 'Text size',
+        textSizeHint: 'Compact Mode too',
+        textSizes: { small: 'Small', default: 'Default', large: 'Large', larger: 'Larger' },
         title: 'Appearance',
         back: 'Back to settings',
         light: 'Light',

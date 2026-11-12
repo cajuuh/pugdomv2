@@ -18,6 +18,7 @@ import {
     THREAD_AVATAR_GAP,
     makeStyles,
     threadCardMetrics,
+    postTextMetrics,
 } from './styles';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import {
@@ -55,6 +56,9 @@ import { EditHistorySheet } from './editHistorySheet';
 import { dialog } from '../../services/dialog';
 import { plainText, postSize, splitTrailingHashtags } from '../../services/htmlText';
 import { useIsAutoplayPost } from '../../services/media/autoplay';
+
+// A long post folds after this many lines, until "Show more"
+const FOLD_LINES = 12;
 
 export const getRelativeTime = (dateString: string, { t }: Translator) => {
     const now = new Date();
@@ -164,7 +168,7 @@ interface TootCardProps {
 }
 
 export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPressHashtag, onPress, threadMode, showReactions, hasThreadLineTop, hasThreadLineBottom, indent = 0, replyingTo, remote, fullText, filterContext }) => {
-    const { compactMode, hideCounts, coverSensitiveMedia, uncroppedMedia, mediaAutoplay } = useSettings();
+    const { compactMode, hideCounts, coverSensitiveMedia, uncroppedMedia, mediaAutoplay, postTextSize } = useSettings();
     const { colors, type } = useTheme();
     const styles = useThemedStyles(makeStyles);
     const { openCompose } = useCompose();
@@ -224,6 +228,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const textSize = fullText ? 'normal' : postSize(plain);
     const [isTextExpanded, setIsTextExpanded] = useRecyclingState(false, recyclingDeps);
     const isTextFolded = textSize !== 'normal' && !isTextExpanded;
+    const textMetrics = postTextMetrics(compactMode, postTextSize);
     const mediaDisplay = useMediaDisplay();
     // The carousel's page; its width is layout, not per-post state
     const [mediaPage, setMediaPage] = useRecyclingState(0, recyclingDeps);
@@ -534,18 +539,19 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         <>
             {hasText(bodyHtml) && (isTextFolded && textSize === 'huge' ? (
                 // Not even parsed as HTML until asked: only the start, as plain text
-                <Text style={[type.body, styles.foldedText, compactMode && styles.foldedTextCompact]} numberOfLines={12}>
+                <Text style={[type.body, styles.foldedText, textMetrics]} numberOfLines={FOLD_LINES}>
                     {renderTextWithEmojis(plain.slice(0, 1000), targetStatus.emojis, null)}
                 </Text>
             ) : (
                 // The same wrapper folded or not, so "Show more" doesn't rebuild the post's HTML
-                <View style={isTextFolded ? [styles.textFold, compactMode && styles.textFoldCompact] : undefined}>
+                <View style={isTextFolded ? [styles.textFold, { maxHeight: FOLD_LINES * textMetrics.lineHeight }] : undefined}>
                     <StatusHtmlContent
                         content={bodyHtml}
                         emojis={targetStatus.emojis}
                         colors={colors}
                         bodyFont={type.body}
                         compactMode={compactMode}
+                        textSize={postTextSize}
                         width={contentWidth}
                         onPressMention={onPressMention ?? handleMention}
                         onPressHashtag={onPressHashtag ?? openHashtag}
@@ -584,6 +590,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     onOpen={openQuoted}
                     timeOf={createdAt => getRelativeTime(createdAt, i18n)}
                     compactMode={compactMode}
+                    textSize={postTextSize}
                     onPressLink={openLinkInApp}
                     onPressHashtag={onPressHashtag ?? openHashtag}
                     onPressMention={openQuotedMention}

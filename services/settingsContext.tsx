@@ -3,6 +3,10 @@ import { getSetting, getStringSetting, saveSetting, saveStringSetting } from './
 import { DEFAULT_PUSH_ALERTS, PushAlerts, PushAlertType } from './push';
 import { setExternalBrowser as setLinksBrowser } from './links';
 
+// How big post text is, in both modes; 'default' keeps each mode's own size
+export type PostTextSize = 'small' | 'default' | 'large' | 'larger';
+export const POST_TEXT_SIZES: PostTextSize[] = ['small', 'default', 'large', 'larger'];
+
 interface SettingsContextType {
     notifications: boolean;
     mediaAutoplay: boolean;
@@ -45,6 +49,8 @@ interface SettingsContextType {
     setExpandSpoilers: (value: boolean) => Promise<void>;
     setShowSensitiveMedia: (value: boolean) => Promise<void>;
     setCoverSensitiveMedia: (value: boolean) => Promise<void>;
+    postTextSize: PostTextSize;
+    setPostTextSize: (value: PostTextSize) => Promise<void>;
     loadingSettings: boolean;
 }
 
@@ -65,6 +71,7 @@ export const EXPAND_SPOILERS_KEY = 'pugdom_settings_expand_spoilers';
 export const SHOW_SENSITIVE_KEY = 'pugdom_settings_show_sensitive';
 export const COVER_SENSITIVE_KEY = 'pugdom_settings_cover_sensitive';
 export const EXTERNAL_BROWSER_KEY = 'pugdom_settings_external_browser';
+export const POST_TEXT_SIZE_KEY = 'pugdom_settings_post_text_size';
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [notifications, setNotificationsState] = useState(true);
@@ -79,6 +86,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const [groupNotifications, setGroupNotificationsState] = useState(true);
     const [uncroppedMedia, setUncroppedMediaState] = useState(true);
     const [externalBrowser, setExternalBrowserState] = useState(false);
+    const [postTextSize, setPostTextSizeState] = useState<PostTextSize>('default');
     const [expandSpoilers, setExpandSpoilersState] = useState<boolean | null>(null);
     const [showSensitiveMedia, setShowSensitiveMediaState] = useState<boolean | null>(null);
     const [coverSensitiveMedia, setCoverSensitiveMediaState] = useState(true);
@@ -102,6 +110,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 const sensitive = await getStringSetting(SHOW_SENSITIVE_KEY, '');
                 const cover = await getSetting(COVER_SENSITIVE_KEY, true);
                 const external = await getSetting(EXTERNAL_BROWSER_KEY, false);
+                const textSize = await getStringSetting(POST_TEXT_SIZE_KEY, 'default');
                 setNotificationsState(notify);
                 // Types added in later versions start on
                 setPushAlertsState({ ...DEFAULT_PUSH_ALERTS, ...(alerts ? JSON.parse(alerts) : {}) });
@@ -119,6 +128,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 setCoverSensitiveMediaState(cover);
                 setExternalBrowserState(external);
                 setLinksBrowser(external);
+                if ((POST_TEXT_SIZES as string[]).includes(textSize)) setPostTextSizeState(textSize as PostTextSize);
             } catch (error) {
                 console.error('Failed to load settings:', error);
             } finally {
@@ -199,6 +209,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         await saveSetting(REPLY_UNLISTED_KEY, value);
     };
 
+    const setPostTextSize = async (value: PostTextSize) => {
+        setPostTextSizeState(value);
+        await saveStringSetting(POST_TEXT_SIZE_KEY, value);
+    };
+
     const setCoverSensitiveMedia = async (value: boolean) => {
         setCoverSensitiveMediaState(value);
         await saveSetting(COVER_SENSITIVE_KEY, value);
@@ -237,6 +252,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 setExpandSpoilers,
                 setShowSensitiveMedia,
                 setCoverSensitiveMedia,
+                postTextSize,
+                setPostTextSize,
                 loadingSettings,
             }}
         >
