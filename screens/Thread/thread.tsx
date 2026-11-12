@@ -26,7 +26,7 @@ import { useTheme } from '../../services/themeContext';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
 import { postListProps } from '../../services/media/autoplay';
-import { STATUS_DELETED_EVENT, STATUS_UPDATED_EVENT } from '../../hooks/useUpdateCachedStatus';
+import { STATUS_DELETED_EVENT, STATUS_UPDATED_EVENT, useUpdateCachedStatus } from '../../hooks/useUpdateCachedStatus';
 
 interface ThreadProps {
     statusId: string;
@@ -132,6 +132,8 @@ export default function Thread({
     // The post this thread is about (for a boost, the original's author)
     const mainAccount = statuses.find(status => status.isMain)?.account;
 
+    const updateCachedStatus = useUpdateCachedStatus();
+
     const loadThread = async () => {
         try {
             const [status, context] = await Promise.all([
@@ -150,6 +152,8 @@ export default function Thread({
                 mainStatus,
                 ...withoutHidden(context.descendants, 'thread'),
             ]);
+            // The feeds still show these as they were when they loaded; give them the fresh counts
+            updateCachedStatus([...context.ancestors, status, ...context.descendants]);
         } catch (error) {
             console.error('Failed to load thread:', error);
         } finally {

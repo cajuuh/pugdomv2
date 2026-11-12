@@ -214,11 +214,12 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     // Starts over when the preference arrives or changes, so cards drawn before it know it too
     const expandSpoilers = useExpandSpoilers();
     const [isSpoilerCollapsed, setIsSpoilerCollapsed] = useRecyclingState(hasContentWarning && !expandSpoilers, [targetStatus.id, expandSpoilers]);
-    const [isFavorited, setIsFavorited] = useRecyclingState(targetStatus.favourited, recyclingDeps);
-    const [isReblogged, setIsreblogged] = useRecyclingState(targetStatus.reblogged, recyclingDeps);
-    const [favCount, setFavCount] = useRecyclingState(targetStatus.favourites_count, recyclingDeps);
-    const [boostCount, setBoostCount] = useRecyclingState(targetStatus.reblogs_count, recyclingDeps);
-    const [isBookmarked, setIsBookmarked] = useRecyclingState(!!targetStatus.bookmarked, recyclingDeps);
+    // Shown at once when you tap; a fresher copy of the post (opening it refreshes the feeds) replaces them
+    const [isFavorited, setIsFavorited] = useRecyclingState(targetStatus.favourited, [targetStatus.id, targetStatus.favourited]);
+    const [isReblogged, setIsreblogged] = useRecyclingState(targetStatus.reblogged, [targetStatus.id, targetStatus.reblogged]);
+    const [favCount, setFavCount] = useRecyclingState(targetStatus.favourites_count, [targetStatus.id, targetStatus.favourites_count]);
+    const [boostCount, setBoostCount] = useRecyclingState(targetStatus.reblogs_count, [targetStatus.id, targetStatus.reblogs_count]);
+    const [isBookmarked, setIsBookmarked] = useRecyclingState(!!targetStatus.bookmarked, [targetStatus.id, targetStatus.bookmarked]);
     const [isMediaRevealed, setIsMediaRevealed] = useRecyclingState(false, recyclingDeps);
     const filtered = filterMatch(status, filterContext);
     const filterTitles = filtered?.action === 'warn' ? filtered.titles.join(', ') : '';

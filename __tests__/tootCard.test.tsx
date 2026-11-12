@@ -188,6 +188,23 @@ describe('TootCard bookmarks', () => {
         queryClient = createTestQueryClient();
     });
 
+    it('shows fresher counts when the same post comes back with them', async () => {
+        const view = await renderCard(statusA);
+        expect(screen.getByText('33')).toBeTruthy();
+
+        await view.rerender(
+            <QueryClientProvider client={queryClient}>
+                <MediaViewerProvider>
+                    <TootCard status={{ ...statusA, favourites_count: 40, reblogs_count: 23, favourited: true }} />
+                </MediaViewerProvider>
+            </QueryClientProvider>
+        );
+
+        expect(screen.getByText('40')).toBeTruthy();
+        expect(screen.getByText('23')).toBeTruthy();
+        expect(screen.queryByText('33')).toBeNull();
+    });
+
     it('bookmarks a post and shows it as bookmarked', async () => {
         mockedBookmark.mockResolvedValue({ ...statusA, bookmarked: true });
         await renderCard(statusA);

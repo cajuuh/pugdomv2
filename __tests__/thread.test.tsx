@@ -63,7 +63,7 @@ const reply = (id: string, to: string, minute: number): Status => ({
     account: { id: 'r1', username: 'replier', acct: 'replier', display_name: 'Replier', avatar: '', emojis: [] },
 });
 
-const renderThread = (onStatusPress = jest.fn()) =>
+const renderThread = (onStatusPress = jest.fn(), queryClient = createTestQueryClient()) =>
     render(
         <SafeAreaProvider
             initialMetrics={{
@@ -71,7 +71,7 @@ const renderThread = (onStatusPress = jest.fn()) =>
                 insets: { top: 47, left: 0, right: 0, bottom: 34 },
             }}
         >
-            <QueryClientProvider client={createTestQueryClient()}>
+            <QueryClientProvider client={queryClient}>
                 <MediaViewerProvider>
                     <Thread statusId="main" onBack={jest.fn()} onStatusPress={onStatusPress} />
                 </MediaViewerProvider>
@@ -128,6 +128,23 @@ describe('Thread', () => {
         await AsyncStorage.clear();
         mockedGetStatus.mockResolvedValue(makeStatus('main'));
         mockedGetContext.mockResolvedValue({ ancestors: [makeStatus('parent')], descendants: [makeStatus('reply')] });
+    });
+
+    it('gives the feeds the fresh counts of the posts it loads', async () => {
+        const queryClient = createTestQueryClient();
+        const stale = makeStatus('main');
+        const boostOfReply = { ...makeStatus('boost'), reblog: makeStatus('reply') };
+        queryClient.setQueryData(['timeline', 'home'], { pages: [[stale, boostOfReply]], pageParams: [undefined] });
+        mockedGetStatus.mockResolvedValue({ ...makeStatus('main'), favourites_count: 3, reblogs_count: 1, favourited: true });
+        mockedGetContext.mockResolvedValue({ ancestors: [], descendants: [{ ...makeStatus('reply'), favourites_count: 5 }] });
+
+        await renderThread(jest.fn(), queryClient);
+
+        await waitFor(() => {
+            const [page] = (queryClient.getQueryData(['timeline', 'home']) as { pages: Status[][] }).pages;
+            expect(page[0]).toMatchObject({ id: 'main', favourites_count: 3, reblogs_count: 1, favourited: true });
+            expect(page[1].reblog).toMatchObject({ id: 'reply', favourites_count: 5 });
+        });
     });
 
     it('pads the header by the top safe-area inset', async () => {
