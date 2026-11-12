@@ -353,6 +353,7 @@ export const es419: Dictionary = {
         backToVote: 'Volver a votar',
     },
     compose: {
+        mediaSensitive: 'Marcar el contenido multimedia como sensible',
         newPost: 'Nueva publicación',
         reply: 'Responder',
         post: 'Publicar',

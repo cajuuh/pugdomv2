@@ -353,6 +353,7 @@ export const zhCN: Dictionary = {
         backToVote: '返回投票',
     },
     compose: {
+        mediaSensitive: '将媒体标记为敏感内容',
         newPost: '发嘟',
         reply: '回复',
         post: '发布',

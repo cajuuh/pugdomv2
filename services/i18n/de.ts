@@ -352,6 +352,7 @@ export const de: Dictionary = {
         backToVote: 'Zurück zur Abstimmung',
     },
     compose: {
+        mediaSensitive: 'Medien als sensibel markieren',
         newPost: 'Neuer Beitrag',
         reply: 'Antworten',
         post: 'Veröffentlichen',

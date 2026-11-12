@@ -353,6 +353,7 @@ export const la: Dictionary = {
         backToVote: 'Ad suffragandum redire',
     },
     compose: {
+        mediaSensitive: 'Media ut delicata notare',
         newPost: 'Novus nuntius',
         reply: 'Respondere',
         post: 'Publicare',

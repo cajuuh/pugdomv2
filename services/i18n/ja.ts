@@ -353,6 +353,7 @@ export const ja: Dictionary = {
         backToVote: '投票に戻る',
     },
     compose: {
+        mediaSensitive: 'メディアをセンシティブにする',
         newPost: '新しい投稿',
         reply: '返信',
         post: '投稿',

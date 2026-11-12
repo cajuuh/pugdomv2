@@ -352,6 +352,7 @@ export const eo: Dictionary = {
         backToVote: 'Reen al voĉdonado',
     },
     compose: {
+        mediaSensitive: 'Marki aŭdvidaĵon kiel sentema',
         newPost: 'Nova afiŝo',
         reply: 'Respondi',
         post: 'Afiŝi',

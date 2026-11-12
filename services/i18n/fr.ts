@@ -352,6 +352,7 @@ export const fr: Dictionary = {
         backToVote: 'Revenir au vote',
     },
     compose: {
+        mediaSensitive: 'Marquer le média comme sensible',
         newPost: 'Nouveau message',
         reply: 'Répondre',
         post: 'Publier',

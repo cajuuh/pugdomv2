@@ -363,6 +363,7 @@ export const en = {
         backToVote: 'Back to voting',
     },
     compose: {
+        mediaSensitive: 'Mark media as sensitive',
         newPost: 'New post',
         reply: 'Reply',
         post: 'Post',

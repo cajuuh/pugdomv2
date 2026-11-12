@@ -353,6 +353,7 @@ export const ptBR: Dictionary = {
         backToVote: 'Voltar a votar',
     },
     compose: {
+        mediaSensitive: 'Marcar mídia como sensível',
         newPost: 'Nova publicação',
         reply: 'Responder',
         post: 'Publicar',
