@@ -947,6 +947,7 @@ export const en = {
         later: 'Later',
     },
     settings: {
+        absoluteDates: 'Show dates and times',
         mediaGrid: 'Several images in a grid',
         title: 'Settings',
         close: 'Close settings',

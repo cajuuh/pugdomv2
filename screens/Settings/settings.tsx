@@ -65,6 +65,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
         setUncroppedMedia,
         mediaGrid,
         setMediaGrid,
+        absoluteDates,
+        setAbsoluteDates,
         externalBrowser,
         setExternalBrowser,
         setExpandSpoilers,
@@ -305,6 +307,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
                     {switchRow('list-outline', t('settings.compactMode'), compactMode, setCompactMode)}
                     <View style={styles.divider} />
                     {switchRow('stats-chart-outline', t('settings.hideCounts'), hideCounts, setHideCounts)}
+                    <View style={styles.divider} />
+                    {switchRow('calendar-outline', t('settings.absoluteDates'), absoluteDates, setAbsoluteDates)}
                     <View style={styles.divider} />
                     {switchRow('warning-outline', t('settings.expandSpoilers'), expandSpoilers, setExpandSpoilers)}
                     <View style={styles.divider} />

@@ -927,6 +927,7 @@ export const eo: Dictionary = {
         later: 'Poste',
     },
     settings: {
+        absoluteDates: 'Montri daton kaj horon',
         mediaGrid: 'Pluraj bildoj en krado',
         title: 'Agordoj',
         close: 'Fermi agordojn',

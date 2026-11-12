@@ -928,6 +928,7 @@ export const zhCN: Dictionary = {
         later: '稍后',
     },
     settings: {
+        absoluteDates: '显示日期和时间',
         mediaGrid: '多张图片以网格显示',
         title: '设置',
         close: '关闭设置',

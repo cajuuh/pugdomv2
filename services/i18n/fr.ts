@@ -927,6 +927,7 @@ export const fr: Dictionary = {
         later: 'Plus tard',
     },
     settings: {
+        absoluteDates: 'Afficher la date et l’heure',
         mediaGrid: 'Plusieurs images en grille',
         title: 'Paramètres',
         close: 'Fermer les paramètres',

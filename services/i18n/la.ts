@@ -928,6 +928,7 @@ export const la: Dictionary = {
         later: 'Postea',
     },
     settings: {
+        absoluteDates: 'Diem et horam ostendere',
         mediaGrid: 'Plures imagines in cancellis',
         title: 'Optiones',
         close: 'Optiones claudere',

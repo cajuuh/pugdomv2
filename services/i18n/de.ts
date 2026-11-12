@@ -927,6 +927,7 @@ export const de: Dictionary = {
         later: 'Später',
     },
     settings: {
+        absoluteDates: 'Datum und Uhrzeit zeigen',
         mediaGrid: 'Mehrere Bilder als Raster',
         title: 'Einstellungen',
         close: 'Einstellungen schließen',

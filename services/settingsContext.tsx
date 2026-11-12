@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getSetting, getStringSetting, saveSetting, saveStringSetting } from './storage';
 import { DEFAULT_PUSH_ALERTS, PushAlerts, PushAlertType } from './push';
 import { setExternalBrowser as setLinksBrowser } from './links';
+import { setAbsoluteDates as setDatesAbsolute } from './dates';
 
 // How big post text is, in both modes; 'default' keeps each mode's own size
 export type PostTextSize = 'small' | 'default' | 'large' | 'larger';
@@ -48,6 +49,9 @@ interface SettingsContextType {
     // Links open in the phone's own browser instead of the in-app one
     externalBrowser: boolean;
     setExternalBrowser: (value: boolean) => Promise<void>;
+    // Dates as the date and time instead of "3h"
+    absoluteDates: boolean;
+    setAbsoluteDates: (value: boolean) => Promise<void>;
     setGroupNotifications: (value: boolean) => Promise<void>;
     setExpandSpoilers: (value: boolean) => Promise<void>;
     setShowSensitiveMedia: (value: boolean) => Promise<void>;
@@ -71,6 +75,7 @@ export const REPLY_UNLISTED_KEY = 'pugdom_settings_reply_unlisted';
 export const GROUP_NOTIFICATIONS_KEY ='pugdom_settings_group_notifications';
 export const UNCROPPED_MEDIA_KEY = 'pugdom_settings_uncropped_media';
 export const MEDIA_GRID_KEY = 'pugdom_settings_media_grid';
+export const ABSOLUTE_DATES_KEY = 'pugdom_settings_absolute_dates';
 export const EXPAND_SPOILERS_KEY = 'pugdom_settings_expand_spoilers';
 export const SHOW_SENSITIVE_KEY = 'pugdom_settings_show_sensitive';
 export const COVER_SENSITIVE_KEY = 'pugdom_settings_cover_sensitive';
@@ -90,6 +95,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const [groupNotifications, setGroupNotificationsState] = useState(true);
     const [uncroppedMedia, setUncroppedMediaState] = useState(true);
     const [mediaGrid, setMediaGridState] = useState(false);
+    const [absoluteDates, setAbsoluteDatesState] = useState(false);
     const [externalBrowser, setExternalBrowserState] = useState(false);
     const [postTextSize, setPostTextSizeState] = useState<PostTextSize>('default');
     const [expandSpoilers, setExpandSpoilersState] = useState<boolean | null>(null);
@@ -112,6 +118,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 const grouped = await getSetting(GROUP_NOTIFICATIONS_KEY, true);
                 const uncropped = await getSetting(UNCROPPED_MEDIA_KEY, true);
                 const grid = await getSetting(MEDIA_GRID_KEY, false);
+                const absolute = await getSetting(ABSOLUTE_DATES_KEY, false);
                 const spoilers = await getStringSetting(EXPAND_SPOILERS_KEY, '');
                 const sensitive = await getStringSetting(SHOW_SENSITIVE_KEY, '');
                 const cover = await getSetting(COVER_SENSITIVE_KEY, true);
@@ -130,6 +137,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 setGroupNotificationsState(grouped);
                 setUncroppedMediaState(uncropped);
                 setMediaGridState(grid);
+                setAbsoluteDatesState(absolute);
+                setDatesAbsolute(absolute);
                 setExpandSpoilersState(spoilers === '' ? null : spoilers === 'true');
                 setShowSensitiveMediaState(sensitive === '' ? null : sensitive === 'true');
                 setCoverSensitiveMediaState(cover);
@@ -189,6 +198,12 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const setGroupNotifications = async (value: boolean) => {
         setGroupNotificationsState(value);
         await saveSetting(GROUP_NOTIFICATIONS_KEY, value);
+    };
+
+    const setAbsoluteDates = async (value: boolean) => {
+        setAbsoluteDatesState(value);
+        setDatesAbsolute(value);
+        await saveSetting(ABSOLUTE_DATES_KEY, value);
     };
 
     const setMediaGrid = async (value: boolean) => {
@@ -261,6 +276,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 setUncroppedMedia,
                 mediaGrid,
                 setMediaGrid,
+                absoluteDates,
+                setAbsoluteDates,
                 externalBrowser,
                 setExternalBrowser,
                 setExpandSpoilers,

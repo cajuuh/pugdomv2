@@ -928,6 +928,7 @@ export const ja: Dictionary = {
         later: 'あとで',
     },
     settings: {
+        absoluteDates: '日付と時刻を表示',
         mediaGrid: '複数の画像をグリッドで表示',
         title: '設定',
         close: '設定を閉じる',

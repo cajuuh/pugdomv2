@@ -929,6 +929,7 @@ export const es419: Dictionary = {
         later: 'Más tarde',
     },
     settings: {
+        absoluteDates: 'Mostrar fecha y hora',
         mediaGrid: 'Varias imágenes en cuadrícula',
         title: 'Configuración',
         close: 'Cerrar configuración',

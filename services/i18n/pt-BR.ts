@@ -930,6 +930,7 @@ export const ptBR: Dictionary = {
         later: 'Depois',
     },
     settings: {
+        absoluteDates: 'Mostrar data e hora',
         mediaGrid: 'Várias imagens em grade',
         title: 'Configurações',
         close: 'Fechar configurações',

@@ -41,6 +41,7 @@ import { useMediaViewer } from '../MediaViewer/mediaViewer';
 import { hitSlopFor } from '../../services/theme/shape';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { defaultTranslator, TKey, Translator } from '../../services/i18n/translate';
+import { postTime } from '../../services/dates';
 import { useOpenAccount } from '../../hooks/useOpenAccount';
 import { FocusedImage } from './focusedImage';
 import { QuotedPost } from './quotedPost';
@@ -79,25 +80,8 @@ export const carouselPage = (offset: number, width: number, count: number) => {
     return offset >= end - 1 ? count - 1 : Math.min(count - 1, Math.max(0, Math.round(offset / interval)));
 };
 
-export const getRelativeTime = (dateString: string, { t }: Translator) => {
-    const now = new Date();
-    const created = new Date(dateString);
-    const diffMs = now.getTime() - created.getTime();
-    const diffSec = Math.floor(diffMs / 1000);
-    const diffMin = Math.floor(diffSec / 60);
-    const diffHr = Math.floor(diffMin / 60);
-    const diffDays = Math.floor(diffHr / 24);
-
-    if (diffSec < 60) {
-        return t('common.now');
-    } else if (diffMin < 60) {
-        return t('common.minutesShort', { count: diffMin });
-    } else if (diffHr < 24) {
-        return t('common.hoursShort', { count: diffHr });
-    } else {
-        return t('common.daysShort', { count: diffDays });
-    }
-};
+// Kept under its old name for the screens that import it from here
+export const getRelativeTime = (dateString: string, i18n: Translator) => postTime(dateString, i18n);
 
 // Alt text when the author wrote one, otherwise the media's position in the post
 const MEDIA_KIND = { image: 'post.image', video: 'post.video', gifv: 'post.gif', unknown: 'post.attachment' } as const;

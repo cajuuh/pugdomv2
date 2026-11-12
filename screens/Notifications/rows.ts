@@ -1,3 +1,4 @@
+import { absoluteDate, isAbsoluteDates } from '../../services/dates';
 import { NotificationGroup } from '../../services/mastodon/types';
 import { defaultTranslator, Translator } from '../../services/i18n/translate';
 import { isNewerId } from '../../services/mastodon/notifications';
@@ -39,9 +40,10 @@ export const buildListItems = (groups: NotificationGroup[], now = new Date(), { 
     );
 };
 
-// "now", "4m", "3h", then the weekday for the past week, then the date
+// "now", "4m", "3h", then the weekday for the past week, then the date (or always the date and time)
 export const notificationTime = (createdAt: string, now = new Date(), { t, locale }: Translator = defaultTranslator()) => {
     const created = new Date(createdAt);
+    if (isAbsoluteDates()) return absoluteDate(created, now, locale, true);
     const minutes = Math.floor((now.getTime() - created.getTime()) / 60000);
 
     if (minutes < 1) return t('common.now');
@@ -54,10 +56,7 @@ export const notificationTime = (createdAt: string, now = new Date(), { t, local
         });
     }
 
-    return created.toLocaleDateString(locale, {
-        month: 'short',
-        day: 'numeric',
-    });
+    return absoluteDate(created, now, locale, false);
 };
 
 export { plainText } from '../../services/htmlText';
