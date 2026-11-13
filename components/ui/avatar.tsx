@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Icon, IconName } from './icon';
 import { useTheme } from '../../services/themeContext';
+import { useOptionalSettings } from '../../services/settingsContext';
 
 interface AvatarProps {
     // Used for the initials fallback and the accessibility label
@@ -37,6 +38,9 @@ export const AvatarBadge: React.FC<{ icon: IconName }> = ({ icon }) => {
 
 export const Avatar: React.FC<AvatarProps> = ({ name, uri, size = 42, badge, ring = false }) => {
     const { colors, type } = useTheme();
+    // An animated avatar redraws the screen every frame, forever: a timeline full of them drained batteries
+    // They hold still unless media autoplay is on, like posts' GIFs.
+    const animate = useOptionalSettings()?.mediaAutoplay ?? false;
     const [failedUri, setFailedUri] = useState<string | null>(null);
     const showImage = !!uri && uri !== failedUri;
     const circle = { width: size, height: size, borderRadius: size / 2 };
@@ -50,6 +54,7 @@ export const Avatar: React.FC<AvatarProps> = ({ name, uri, size = 42, badge, rin
                     source={{ uri }}
                     recyclingKey={uri}
                     cachePolicy="memory-disk"
+                    autoplay={animate}
                     style={[circle, { backgroundColor: colors.inputBackground }]}
                     onError={() => setFailedUri(uri)}
                 />

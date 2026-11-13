@@ -1,10 +1,47 @@
-import apiClient from '../api/client';
+import apiClient, { publicClient } from '../api/client';
 import { FeedDescriptor } from './feedTypes';
 import { fetchHomeTimeline, fetchPublicTimeline, fetchNewerPosts, NEW_POSTS_LIMIT } from './timeline';
 import { getTrendingStatuses } from './trends';
 import { getTagTimeline, TagTimelineOptions } from './tags';
 import { Status } from './types';
-import { getServerTimeline } from './servers';
+import { getServerTimeline, serverUrl } from './servers';
+
+export interface FeedRange {
+    max_id?: string;
+    min_id?: string;
+    since_id?: string;
+    limit?: number;
+}
+
+// Feeds paged by post id, which can load around a gap. Trending pages by offset.
+export const canPageById = (feed: FeedDescriptor) => feed.kind !== 'trending';
+
+// Posts between ids, newest first: max_id (older than), since_id (the newest above it) or
+// min_id (the ones just above it)
+export async function fetchFeedRange(feed: FeedDescriptor, range: FeedRange): Promise<Status[]> {
+    const get = async (path: string, params: object = {}) =>
+        (await apiClient.get<Status[]>(path, { params: { ...params, ...range } })).data;
+    switch (feed.kind) {
+        case 'home':
+            return get('/timelines/home');
+        case 'local':
+            return get('/timelines/public', { local: true });
+        case 'federated':
+            return get('/timelines/public');
+        case 'list':
+            return feed.listId ? get(`/timelines/list/${feed.listId}`) : [];
+        case 'hashtag':
+            return feed.criteria?.tag
+                ? get(`/timelines/tag/${encodeURIComponent(feed.criteria.tag)}`, { any: feed.criteria.any, all: feed.criteria.all, none: feed.criteria.none })
+                : [];
+        case 'server':
+            return feed.domain
+                ? (await publicClient.get<Status[]>(serverUrl(feed.domain, '/v1/timelines/public'), { params: { local: true, ...range } })).data
+                : [];
+        default:
+            return [];
+    }
+}
 
 // Direct posts (Mastodon puts the ones mentioning you in Home and lists) belong in Messages only
 export const withoutDirect = (posts: Status[]): Status[] => posts.filter(post => post.visibility !== 'direct');

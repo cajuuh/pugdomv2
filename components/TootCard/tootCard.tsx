@@ -44,7 +44,7 @@ import { useI18n } from '../../services/i18n/i18nContext';
 import { defaultTranslator, TKey, Translator } from '../../services/i18n/translate';
 import { postTime } from '../../services/dates';
 import { useOpenAccount } from '../../hooks/useOpenAccount';
-import { FocusedImage } from './focusedImage';
+import { FocusedImage, formatDuration } from './focusedImage';
 import { QuotedPost } from './quotedPost';
 import { TranslationLine, usePostTranslation } from './postTranslation';
 import { useNavigator } from '../../services/navigationContext';
@@ -85,7 +85,7 @@ export const carouselPage = (offset: number, width: number, count: number) => {
 export const getRelativeTime = (dateString: string, i18n: Translator) => postTime(dateString, i18n);
 
 // Alt text when the author wrote one, otherwise the media's position in the post
-const MEDIA_KIND = { image: 'post.image', video: 'post.video', gifv: 'post.gif', unknown: 'post.attachment' } as const;
+const MEDIA_KIND = { image: 'post.image', video: 'post.video', gifv: 'post.gif', audio: 'post.audio', unknown: 'post.attachment' } as const;
 // The open post's visibility, named and drawn as in compose's picker
 const VISIBILITY: Record<Status['visibility'], { icon: IconName; label: TKey }> = {
     public: { icon: 'globe-outline', label: 'compose.public' },
@@ -94,9 +94,12 @@ const VISIBILITY: Record<Status['visibility'], { icon: IconName; label: TKey }> 
     direct: { icon: 'at', label: 'compose.mentioned' },
 };
 
-export const mediaLabel = (attachment: Attachment, index: number, count: number, { t }: Translator) =>
-    attachment.description ||
-    t('post.mediaPosition', { kind: t(MEDIA_KIND[attachment.type] ?? 'post.attachment'), index: index + 1, count });
+export const mediaLabel = (attachment: Attachment, index: number, count: number, { t }: Translator) => {
+    const duration = attachment.type === 'audio' ? attachment.meta?.original?.duration : undefined;
+    // An audio's length is all a listener can tell about it before playing: "Audio, 3:12"
+    const kind = t(MEDIA_KIND[attachment.type] ?? 'post.attachment') + (duration ? `, ${formatDuration(duration)}` : '');
+    return attachment.description || t('post.mediaPosition', { kind, index: index + 1, count });
+};
 
 // Uncropped, an image takes its own shape: from a wide strip up to a little taller than square
 export const uncroppedHeight = (width: number, attachment: Attachment) => {

@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { Account, Status } from './mastodon/types';
 import { FeedDescriptor } from './mastodon/feedTypes';
+import { NotificationRequest } from './mastodon/notificationRequests';
 
 // Screens that open on top of the tabs. Links and lists join in later phases.
 // An account route can carry the account we already have, so its profile shows at once.
@@ -33,7 +34,10 @@ export type Route =
     | { name: 'moderatedAccounts' }
     | { name: 'filters' }
     | { name: 'filterEditor'; filterId?: string }
-    | { name: 'accountNote'; account: Account; note: string };
+    | { name: 'accountNote'; account: Account; note: string }
+    | { name: 'notificationRequests' }
+    | { name: 'notificationRequest'; request: NotificationRequest }
+    | { name: 'notificationPolicy' };
 
 // Each entry gets its own key, so the same screen can sit in the stack twice (thread → other → same thread)
 export interface StackEntry {

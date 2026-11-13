@@ -21,6 +21,7 @@ import { useMediaViewer } from '../../components/MediaViewer/mediaViewer';
 import { useNotifyOff, useNotifyOn } from '../../hooks/useRelationships';
 import { dialog } from '../../services/dialog';
 import { useCompose } from '../../services/composeContext';
+import { useOptionalSettings } from '../../services/settingsContext';
 
 const originOf = (url?: string) => url?.match(/^https?:\/\/[^/?#]+/i)?.[0];
 
@@ -51,6 +52,8 @@ interface ProfileHeaderProps<T extends string> {
 export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChangeTab, onSettingsPress, onBack, relationship, topInset = 0 }: ProfileHeaderProps<T>) {
     const { colors, type, coat } = useTheme();
     const { t, locale } = useI18n();
+    // An animated header holds still unless media autoplay is on, like avatars
+    const mediaAutoplay = useOptionalSettings()?.mediaAutoplay ?? false;
     const styles = useThemedStyles(makeStyles);
     const { width } = useWindowDimensions();
     const { openMention, openHashtag, openLinkInApp } = useOpenAccount();
@@ -117,7 +120,7 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
             <View style={[styles.banner, topInset > 0 && { height: BANNER_HEIGHT + topInset }]}>
                 {hasHeaderImage(user) ? (
                     <Pressable onPress={() => viewImage(user.header!)} accessibilityRole="imagebutton" accessibilityLabel={t('profile.viewHeader', { name })}>
-                        <Image testID="profile-banner-image" source={{ uri: user.header }} style={styles.bannerImage} contentFit="cover" />
+                        <Image testID="profile-banner-image" source={{ uri: user.header }} style={styles.bannerImage} contentFit="cover" autoplay={mediaAutoplay} />
                     </Pressable>
                 ) : (
                     <View testID="profile-banner-mark" style={styles.bannerMark}>

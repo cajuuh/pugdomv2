@@ -5,12 +5,17 @@ import { act } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
 import { fetchHomeTimeline, fetchPublicTimeline } from '../services/mastodon/timeline';
+import { fetchFeedRange } from '../services/mastodon/feedService';
 import { NewPosts } from '../hooks/useNewPosts';
 import Timeline from '../screens/Timeline/timeline';
 import { Account, Status } from '../services/mastodon/types';
 
 // Pinned feeds are kept per account
-jest.mock('../services/settingsContext', () => ({ useSettings: () => ({ swipeFeeds: false, homeBoosts: true, homeReplies: true }) }));
+let mockKeepPlace = true;
+jest.mock('../services/settingsContext', () => ({
+    useOptionalSettings: () => null,
+    useSettings: () => ({ swipeFeeds: false, homeBoosts: true, homeReplies: true, keepPlace: mockKeepPlace }),
+}));
 jest.mock('../services/mastodon/tags', () => ({ ...jest.requireActual('../services/mastodon/tags'), getFollowedTags: jest.fn(async () => []) }));
 jest.mock('../services/authContext', () => ({ useAuth: () => ({ user: { id: 'me' } }), useOptionalAuth: () => ({ user: { id: 'me' } }) }));
 jest.mock('../services/themeContext', () => ({
@@ -38,6 +43,11 @@ jest.mock('../hooks/useNewPosts', () => ({
     ...jest.requireActual('../hooks/useNewPosts'),
     useNewPosts: () => mockNewPosts,
 }));
+jest.mock('../services/mastodon/markers', () => ({ getHomeMarker: jest.fn(async () => null), saveHomeMarker: jest.fn() }));
+jest.mock('../services/mastodon/feedService', () => ({
+    ...jest.requireActual('../services/mastodon/feedService'),
+    fetchFeedRange: jest.fn(async () => []),
+}));
 jest.mock('../services/mastodon/timeline', () => ({
     ...jest.requireActual('../services/mastodon/timeline'),
     fetchHomeTimeline: jest.fn(),
@@ -50,6 +60,7 @@ describe('Timeline new posts pill', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        mockKeepPlace = true;
         queryClient = createTestQueryClient();
         mockedHome.mockResolvedValue([post('10'), post('9')]);
         (fetchPublicTimeline as jest.Mock).mockResolvedValue([]);
@@ -163,11 +174,34 @@ describe('Timeline new posts pill', () => {
         expect(node?.props.scrollsChildToFocus).toBe(false);
     });
 
-    it('reloads only the first page when tapped', async () => {
-        mockNewPosts = { count: 1, more: false, accounts: [] };
+    it('puts the new posts on top when tapped, keeping the ones loaded', async () => {
+        mockNewPosts = { count: 2, more: false, accounts: [] };
         await renderTimeline();
         await screen.findByText('post 10');
         // Pretend a second page was loaded
+        queryClient.setQueryData(['timeline', 'home'], (data: any) => ({
+            pages: [...data.pages, [post('8')]],
+            pageParams: [...data.pageParams, '9'],
+        }));
+        (fetchFeedRange as jest.Mock).mockResolvedValue([post('12'), post('11')]);
+
+        await fireEvent.press(screen.getByRole('button', { name: '2 new posts' }));
+
+        await waitFor(() => expect(screen.getByText('post 12')).toBeTruthy());
+        expect(fetchFeedRange).toHaveBeenLastCalledWith(expect.objectContaining({ kind: 'home' }), { since_id: '10', limit: 40 });
+        const data = queryClient.getQueryData<{ pages: Status[][] }>(['timeline', 'home'])!;
+        expect(data.pages.flat().map(p => p.id)).toEqual(['12', '11', '10', '9', '8']);
+        expect(screen.queryByTestId('timeline-gap')).toBeNull();
+        expect(mockedHome).toHaveBeenCalledTimes(1);
+        // The pill stops loading once the list has scrolled up
+        await waitFor(() => expect(screen.getByRole('button', { name: '2 new posts' })).not.toBeBusy());
+    });
+
+    it('without "Keep your place", reloads only the first page and goes to the newest', async () => {
+        mockKeepPlace = false;
+        mockNewPosts = { count: 1, more: false, accounts: [] };
+        await renderTimeline();
+        await screen.findByText('post 10');
         queryClient.setQueryData(['timeline', 'home'], (data: any) => ({
             pages: [...data.pages, [post('8')]],
             pageParams: [...data.pageParams, '9'],
@@ -177,11 +211,28 @@ describe('Timeline new posts pill', () => {
         await fireEvent.press(screen.getByRole('button', { name: '1 new post' }));
 
         await waitFor(() => expect(screen.getByText('post 12')).toBeTruthy());
-        const data = queryClient.getQueryData<{ pages: Status[][] }>(['timeline', 'home'])!;
-        expect(data.pages).toHaveLength(1);
+        expect(queryClient.getQueryData<{ pages: Status[][] }>(['timeline', 'home'])!.pages).toHaveLength(1);
         expect(mockedHome).toHaveBeenLastCalledWith(undefined);
-        // The pill stops loading once the list has scrolled up
-        await waitFor(() => expect(screen.getByRole('button', { name: '1 new post' })).not.toBeBusy());
+        expect(fetchFeedRange).not.toHaveBeenCalled();
+    });
+
+    it("leaves a gap under a full page of new posts, and fills it from either end", async () => {
+        mockNewPosts = { count: 40, more: true, accounts: [] };
+        await renderTimeline();
+        await screen.findByText('post 10');
+        const page = Array.from({ length: 40 }, (_, i) => post(String(100 - i)));
+        (fetchFeedRange as jest.Mock).mockResolvedValueOnce(page);
+
+        await fireEvent.press(screen.getByRole('button', { name: '40+ new posts' }));
+        await waitFor(() => expect(screen.getByTestId('timeline-gap')).toBeTruthy());
+
+        // From under it: the posts just above "post 10". Less than a page closes it.
+        (fetchFeedRange as jest.Mock).mockResolvedValueOnce([post('30'), post('20')]);
+        await fireEvent.press(screen.getByRole('button', { name: 'Load newer' }));
+        expect(fetchFeedRange).toHaveBeenLastCalledWith(expect.objectContaining({ kind: 'home' }), { min_id: '10', max_id: '61', limit: 40 });
+        await waitFor(() => expect(screen.queryByTestId('timeline-gap')).toBeNull());
+        const ids = queryClient.getQueryData<{ pages: Status[][] }>(['timeline', 'home'])!.pages.flat().map(p => p.id);
+        expect(ids.slice(38)).toEqual(['62', '61', '30', '20', '10', '9']);
     });
 
     it('loads the newest posts and goes to the top when Home is tapped on Home', async () => {
@@ -189,7 +240,7 @@ describe('Timeline new posts pill', () => {
         const scrollTo = jest.spyOn(ScrollView.prototype as any, 'scrollTo');
         await renderTimeline();
         await screen.findByText('post 10');
-        mockedHome.mockResolvedValue([post('11'), post('10')]);
+        (fetchFeedRange as jest.Mock).mockResolvedValue([post('11')]);
         scrollTo.mockClear();
 
         await act(async () => {
@@ -255,13 +306,13 @@ describe('Timeline new posts pill', () => {
         await screen.findByText('post 10');
         await fireEvent.press(screen.getByRole('tab', { name: 'Local' }));
         await screen.findByText('post local');
-        (fetchPublicTimeline as jest.Mock).mockClear();
+        (fetchFeedRange as jest.Mock).mockClear();
 
         await act(async () => {
             DeviceEventEmitter.emit('scroll_to_top_home');
         });
 
-        await waitFor(() => expect(fetchPublicTimeline).toHaveBeenCalled());
-        expect(mockedHome).toHaveBeenCalledTimes(1);
+        await waitFor(() => expect(fetchFeedRange).toHaveBeenCalledWith(expect.objectContaining({ kind: 'local' }), { since_id: 'local', limit: 40 }));
+        expect(fetchFeedRange).toHaveBeenCalledTimes(1);
     });
 });

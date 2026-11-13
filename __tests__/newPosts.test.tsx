@@ -9,8 +9,13 @@ import { NEW_POSTS_INTERVAL_MS, summarizeNewPosts, useNewPosts } from '../hooks/
 import { useFeed } from '../hooks/useFeed';
 import { homeShows } from '../services/mastodon/feedService';
 import { Account, Status } from '../services/mastodon/types';
+import { saveSetting } from '../services/storage';
+import { KEEP_PLACE_KEY } from '../services/settingsContext';
+import { getHomeMarker } from '../services/mastodon/markers';
 
 jest.mock('../services/api/client', () => ({ __esModule: true, default: { get: jest.fn() } }));
+// No saved Home position: these load the newest posts
+jest.mock('../services/mastodon/markers', () => ({ getHomeMarker: jest.fn(async () => null), saveHomeMarker: jest.fn() }));
 
 const mockedGet = apiClient.get as jest.Mock;
 const account = (id: string): Account => ({ id, username: `user${id}`, acct: `user${id}`, display_name: `User ${id}`, avatar: '', emojis: [] });
@@ -63,11 +68,47 @@ describe('useFeed', () => {
         });
 
         await waitFor(() => expect(result.current.data?.pages).toHaveLength(1));
-        expect(result.current.data!.pages[0].map(status => status.id)).toEqual(['5', '3']);
+        expect(result.current.items.map(item => item.id)).toEqual(['5', '3']);
 
         await act(() => result.current.fetchNextPage());
         expect(mockedGet).toHaveBeenLastCalledWith('/timelines/home', expect.objectContaining({ params: expect.objectContaining({ max_id: '2' }) }));
-        await waitFor(() => expect(result.current.data!.pages.flat().map(status => status.id)).toEqual(['5', '3', '1']));
+        await waitFor(() => expect(result.current.items.map(item => item.id)).toEqual(['5', '3', '1']));
+    });
+});
+
+describe('useFeed reopening Home', () => {
+    beforeEach(() => {
+        (getHomeMarker as jest.Mock).mockClear().mockResolvedValue('5');
+        mockedGet.mockReset().mockImplementation(async (url: string, config?: { params?: Record<string, unknown> }) => {
+            if (url === '/statuses/5') return { data: post('5') };
+            if (config?.params?.max_id) return { data: [post('4')] };
+            return { data: [post('6')] };
+        });
+    });
+    afterEach(() => (getHomeMarker as jest.Mock).mockResolvedValue(null));
+
+    const renderFeed = () => {
+        const queryClient = createTestQueryClient();
+        return renderHook(() => useFeed({ id: 'home', kind: 'home' }, undefined, true), {
+            wrapper: ({ children }) => <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>,
+        });
+    };
+
+    it('opens on the saved post with "Keep your place" on', async () => {
+        await saveSetting(KEEP_PLACE_KEY, true);
+        const { result } = await renderFeed();
+
+        await waitFor(() => expect(result.current.restoredTo).toBe('5'));
+        expect(result.current.items.map(item => item.id)).toEqual(['6', '5', '4']);
+    });
+
+    it('opens on the newest posts with it off', async () => {
+        await saveSetting(KEEP_PLACE_KEY, false);
+        const { result } = await renderFeed();
+
+        await waitFor(() => expect(result.current.items.map(item => item.id)).toEqual(['6']));
+        expect(result.current.restoredTo).toBeUndefined();
+        expect(getHomeMarker).not.toHaveBeenCalled();
     });
 });
 
@@ -125,7 +166,7 @@ describe('Home without boosts or replies', () => {
         });
 
         await waitFor(() => expect(result.current.data?.pages).toHaveLength(1));
-        expect(result.current.data!.pages[0].map(status => status.id)).toEqual(['5']);
+        expect(result.current.items.map(item => item.id)).toEqual(['5']);
         await act(() => result.current.fetchNextPage());
         expect(mockedGet).toHaveBeenLastCalledWith('/timelines/home', expect.objectContaining({ params: expect.objectContaining({ max_id: '9' }) }));
     });

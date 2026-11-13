@@ -83,6 +83,39 @@ export const FocusedImage: React.FC<FocusedImageProps> = ({ attachment, style, b
         );
     }
 
+    // A podcast, song or voice note: its cover art when it has one, and a play button that says it's audio.
+    // Tapping the tile plays it in the media viewer; it never autoplays.
+    if (attachment.type === 'audio') {
+        return (
+            <View style={[style, styles.clip, styles.audio, styles.unavailable]} testID="audio-tile" onLayout={measure}>
+                {attachment.preview_url ? (
+                    <Image
+                        source={{ uri: attachment.preview_url }}
+                        placeholder={placeholder}
+                        recyclingKey={attachment.preview_url}
+                        style={StyleSheet.absoluteFill}
+                        contentFit={contain ? 'contain' : 'cover'}
+                        blurRadius={blurred ? HIDDEN_BLUR_RADIUS : undefined}
+                    />
+                ) : (
+                    !small && <Icon name="volume-high-outline" size={40} color={mediaColors.ink} />
+                )}
+                {/* Hidden while veiled, like the video badge, so it doesn't show through the sensitive label */}
+                {!blurred && (
+                    <View testID="audio-badge" style={[styles.audioPill, small && styles.audioPillSmall]} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+                        <Icon name="play" size={small ? 14 : 18} color={mediaColors.ink} />
+                        {!small && (
+                            <Text style={styles.cornerText}>
+                                {t('post.audio')}
+                                {duration ? ` · ${formatDuration(duration)}` : ''}
+                            </Text>
+                        )}
+                    </View>
+                )}
+            </View>
+        );
+    }
+
     return (
         <View
             style={[style, styles.clip]}
@@ -173,6 +206,25 @@ const styles = StyleSheet.create({
         color: mediaColors.ink,
         fontSize: 12,
         fontWeight: '700',
+    },
+    audioPill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: space.xs,
+        minHeight: 36,
+        paddingHorizontal: space.md,
+        borderRadius: radii.pill,
+        backgroundColor: mediaColors.scrimStrong,
+    },
+    audio: {
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    audioPillSmall: {
+        minHeight: 28,
+        width: 28,
+        paddingHorizontal: 0,
     },
     positioned: {
         position: 'absolute',

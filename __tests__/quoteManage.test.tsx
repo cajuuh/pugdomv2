@@ -32,7 +32,7 @@ jest.mock('../services/authContext', () => ({
 jest.mock('../services/themeContext', () => ({
     useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
 }));
-jest.mock('../services/settingsContext', () => ({
+jest.mock('../services/settingsContext', () => ({ useOptionalSettings: () => null,
     useSettings: () => ({ compactMode: false, mediaAutoplay: false, notifications: true, setNotifications: jest.fn(), setMediaAutoplay: jest.fn(), setCompactMode: jest.fn() }),
 }));
 jest.mock('../services/composeContext', () => ({

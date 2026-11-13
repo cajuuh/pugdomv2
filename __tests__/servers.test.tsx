@@ -36,7 +36,7 @@ jest.mock('../services/authContext', () => ({ useAuth: () => ({ user: { id: 'me'
 jest.mock('../services/themeContext', () => ({
     useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
 }));
-jest.mock('../services/settingsContext', () => ({
+jest.mock('../services/settingsContext', () => ({ useOptionalSettings: () => null,
     useSettings: () => ({ compactMode: false, mediaAutoplay: false }),
 }));
 jest.mock('../services/composeContext', () => ({

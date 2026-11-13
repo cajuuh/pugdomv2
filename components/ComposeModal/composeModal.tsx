@@ -19,7 +19,9 @@ import { Icon, IconName } from '../ui/icon';
 import { useAuth } from '../../services/authContext';
 import { useOptionalSettings } from '../../services/settingsContext';
 import { useTheme } from '../../services/themeContext';
-import { createStatus, editStatus, getStatusSource } from '../../services/mastodon/statuses';
+import { ContentType, createStatus, editStatus, getStatusSource } from '../../services/mastodon/statuses';
+import { MARKDOWN } from '../../services/mastodon/instance';
+import { getStringSetting, saveStringSetting } from '../../services/storage';
 import { plainText } from '../../services/htmlText';
 import { STATUS_UPDATED_EVENT, useUpdateCachedStatus } from '../../hooks/useUpdateCachedStatus';
 import type { ExistingPost } from '../../services/composeContext';
@@ -74,6 +76,9 @@ const stripHtml = (html: string) => {
         .replace(/<[^>]*>/g, '')
         .trim();
 };
+
+// The last format used for a new post (plain text or Markdown), on this device
+const CONTENT_TYPE_KEY = 'pugdom_compose_content_type';
 
 // Mastodon expects ISO 639-1 codes; region variants like en-US are ignored and the post falls
 // back to the account's default language
@@ -207,7 +212,9 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
     const [loading, setLoading] = useState(false);
     const [language, setLanguage] = useState(() => defaultLanguage(user, appLanguage));
     const [visibility, setVisibility] = useState<Visibility>(() => defaultVisibility(user, replyToStatus, quoteStatus, replyUnlisted));
-    const [picker, setPicker] = useState<'language' | 'visibility' | 'emoji' | 'quotePolicy' | 'camera' | 'schedule' | null>(null);
+    const [picker, setPicker] = useState<'language' | 'visibility' | 'emoji' | 'quotePolicy' | 'format' | 'camera' | 'schedule' | null>(null);
+    // Plain text or Markdown, on servers that take Markdown; new posts start from the last one used
+    const [contentType, setContentType] = useState<ContentType>('text/plain');
     // Publish later: the server posts it then (not for edits)
     const [scheduledAt, setScheduledAt] = useState<Date | null>(null);
     // The post being quoted (✕ drops it) and who may quote this one
@@ -370,6 +377,12 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
             setPollMultiple(false);
             setPicker(null);
             setScheduledAt(null);
+            setContentType('text/plain');
+            if (existingPost?.mode !== 'edit') {
+                getStringSetting(CONTENT_TYPE_KEY, 'text/plain')
+                    .then(saved => saved === MARKDOWN && setContentType(MARKDOWN))
+                    .catch(() => {});
+            }
             media.reset();
             if (shared?.media.length) addPicked(shared.media);
             setAltEditing(null);
@@ -408,6 +421,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                             cursor.current = written.text.length;
                             setSensitive(!!written.spoiler_text);
                             setSpoilerText(written.spoiler_text ?? '');
+                            if (written.content_type === MARKDOWN) setContentType(MARKDOWN);
                         })
                         .catch(error => console.warn('Could not load the post source:', error));
                 }
@@ -480,6 +494,15 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
     const shownQuotePolicy = effectiveQuotePolicy(quotePolicy, visibility);
     const quotePolicyLocked = shownQuotePolicy !== quotePolicy || visibility === 'private' || visibility === 'direct';
     const selectedQuotePolicy = quotePolicyOptions.find(option => option.value === shownQuotePolicy) ?? quotePolicyOptions[0];
+    const formatOptions: SheetOption<ContentType>[] = [
+        { value: 'text/plain', label: t('compose.plainText'), description: t('compose.plainTextHint'), icon: 'document-text-outline' },
+        { value: MARKDOWN, label: t('compose.markdown'), description: t('compose.markdownHint'), icon: 'code-slash-outline' },
+    ];
+    const selectedFormat = formatOptions.find(option => option.value === contentType) ?? formatOptions[0];
+    const pickFormat = (value: ContentType) => {
+        setContentType(value);
+        saveStringSetting(CONTENT_TYPE_KEY, value).catch(() => {});
+    };
 
     const resetPoll = () => {
         setShowPoll(false);
@@ -614,6 +637,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                     media_attributes: attributes.length > 0 ? attributes : undefined,
                     poll: lockedPoll ? unchangedPoll(lockedPoll) : undefined,
                     quote_approval_policy: instanceConfiguration.supportsQuotes ? shownQuotePolicy : undefined,
+                    content_type: instanceConfiguration.supportsMarkdown ? contentType : undefined,
                 });
                 updateCachedStatus(updated);
                 DeviceEventEmitter.emit(STATUS_UPDATED_EVENT, updated);
@@ -639,6 +663,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 quoted_status_id: quote?.id,
                 quote_approval_policy: instanceConfiguration.supportsQuotes ? shownQuotePolicy : undefined,
                 scheduled_at: scheduledAt?.toISOString(),
+                content_type: instanceConfiguration.supportsMarkdown ? contentType : undefined,
             });
 
             if (scheduledAt) {
@@ -820,6 +845,20 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                                         <Icon name="chatbox-ellipses-outline" size={14} color={colors.accentText} />
                                         <Text style={[type.name, styles.pillText]}>{selectedQuotePolicy.label}</Text>
                                         {!quotePolicyLocked && <Icon name="chevron-down" size={12} color={colors.textSecondary} />}
+                                    </Pressable>
+                                )}
+                                {instanceConfiguration.supportsMarkdown && (
+                                    <Pressable
+                                        testID="compose-format"
+                                        onPress={() => setPicker('format')}
+                                        accessibilityRole="button"
+                                        accessibilityLabel={t('compose.formatLabel', { value: selectedFormat.label })}
+                                        hitSlop={hitSlopFor(0, PILL_HEIGHT)}
+                                        style={({ pressed }) => [styles.pill, pressed && { opacity: 0.7 }]}
+                                    >
+                                        <Icon name={selectedFormat.icon!} size={14} color={colors.accentText} />
+                                        <Text style={[type.name, styles.pillText]}>{selectedFormat.label}</Text>
+                                        <Icon name="chevron-down" size={12} color={colors.textSecondary} />
                                     </Pressable>
                                 )}
                             </View>
@@ -1014,6 +1053,14 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 options={quotePolicyOptions}
                 value={quotePolicy}
                 onSelect={setQuotePolicy}
+                onClose={() => setPicker(null)}
+            />
+            <OptionSheet
+                visible={picker === 'format'}
+                title={t('compose.formatTitle')}
+                options={formatOptions}
+                value={contentType}
+                onSelect={pickFormat}
                 onClose={() => setPicker(null)}
             />
             <EmojiPicker visible={picker === 'emoji'} onPick={insertEmoji} onClose={() => setPicker(null)} accountId={user?.id} />

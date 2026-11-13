@@ -36,6 +36,9 @@ import { FocusedImage } from '../../components/TootCard/focusedImage';
 import { countMedia, mediaLabel } from '../../components/TootCard/tootCard';
 import { useReadDirectMentions } from '../../hooks/useConversations';
 import { Poll, optionPercent } from '../../components/Poll/poll';
+import { useNotificationPolicy } from '../../hooks/useNotificationRequests';
+import { notificationPolicyKey } from '../../services/mastodon/notificationRequests';
+import { useNavigator } from '../../services/navigationContext';
 
 interface NotificationsProps {
     onStatusPress?: (id: string) => void;
@@ -208,7 +211,7 @@ interface NotificationRowProps {
     onLongPress?: () => void;
 }
 
-const NotificationRow = ({ group, relationship, onStatusPress, onLongPress }: NotificationRowProps) => {
+export const NotificationRow = ({ group, relationship, onStatusPress, onLongPress }: NotificationRowProps) => {
     const { type } = useTheme();
     const styles = useThemedStyles(makeStyles);
     const i18n = useI18n();
@@ -447,6 +450,34 @@ const SelectableRow = ({ group, selected, onToggle, children }: { group: Notific
     );
 };
 
+// The way to what the server's notification policy held back (Mastodon 4.3+), only while something waits
+const FilteredRow = () => {
+    const { colors, type } = useTheme();
+    const styles = useThemedStyles(makeStyles);
+    const { t, tn } = useI18n();
+    const { push } = useNavigator();
+    const pending = useNotificationPolicy().data?.summary.pending_requests_count ?? 0;
+    if (!pending) return null;
+    const title = t('filteredNotifications.title');
+    const detail = tn('filteredNotifications.waiting', pending);
+    return (
+        <Pressable
+            testID="filtered-notifications"
+            onPress={() => push({ name: 'notificationRequests' })}
+            accessibilityRole="button"
+            accessibilityLabel={`${title}, ${detail}`}
+            style={({ pressed }) => [styles.filteredRow, pressed && { opacity: 0.7 }]}
+        >
+            <Icon name="options-outline" size={20} color={colors.accentText} />
+            <View style={{ flex: 1 }}>
+                <Text style={[type.name, { color: colors.textPrimary }]}>{title}</Text>
+                <Text style={[type.meta, { color: colors.textMuted }]}>{detail}</Text>
+            </View>
+            <Icon name="chevron-forward" size={16} color={colors.textMuted} />
+        </Pressable>
+    );
+};
+
 const Notifications = ({ onStatusPress }: NotificationsProps) => {
     const { colors, type } = useTheme();
     const i18n = useI18n();
@@ -608,12 +639,13 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
     // Track pull-to-refresh separately so background refetches (e.g. returning to the tab) don't show the spinner
     const handleRefresh = useCallback(async () => {
         setIsPullRefreshing(true);
+        queryClient.invalidateQueries({ queryKey: notificationPolicyKey });
         try {
             await refetch();
         } finally {
             setIsPullRefreshing(false);
         }
-    }, [refetch]);
+    }, [refetch, queryClient]);
 
     const handleLoadMore = () => {
         if (!isFetchingNextPage && hasNextPage) {
@@ -720,6 +752,7 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
             <View style={styles.filters}>
                 <SegmentedPill variant="chips" options={filters} value={activeFilter} onChange={filter => { setActiveFilter(filter); stopSelecting(); }} />
             </View>
+            {!selecting && <FilteredRow />}
             {isLoading && notifications.length === 0 ? (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size={'large'} color={colors.accentColor} />
