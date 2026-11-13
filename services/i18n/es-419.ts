@@ -286,6 +286,7 @@ export const es419: Dictionary = {
         image: 'Imagen',
         video: 'Video',
         gif: 'GIF',
+        audio: 'Audio',
         attachment: 'Adjunto',
         mediaPosition: '{{kind}} {{index}} de {{count}}',
         photos_one: '{{count}} foto',
@@ -751,6 +752,10 @@ export const es419: Dictionary = {
         saveFailedTitle: 'No se pudo guardar',
         saveFailed: 'pugdon no pudo guardar esto en tu celular. Puedes compartir su enlace en su lugar.',
         shareLink: 'Compartir enlace',
+        play: 'Reproducir',
+        pause: 'Pausar',
+        back15: 'Atrás 15 s',
+        forward15: 'Adelante 15 s',
     },
     notifications: {
         title: 'Notificaciones',

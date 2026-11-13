@@ -287,6 +287,7 @@ export const la: Dictionary = {
         image: 'Imago',
         video: 'Pellicula',
         gif: 'GIF',
+        audio: 'Sonus',
         attachment: 'Adiunctum',
         mediaPosition: '{{kind}} {{index}} ex {{count}}',
         photos_one: '{{count}} photographia',
@@ -751,6 +752,10 @@ export const la: Dictionary = {
         saveFailedTitle: 'Servari non potuit',
         saveFailed: 'pugdon hoc in telephono tuo servare non potuit. Nexum eius communicare potes.',
         shareLink: 'Nexum communicare',
+        play: 'Lude',
+        pause: 'Siste',
+        back15: 'Retro 15 s',
+        forward15: 'Porro 15 s',
     },
     notifications: {
         title: 'Monitiones',

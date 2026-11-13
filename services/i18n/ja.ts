@@ -287,6 +287,7 @@ export const ja: Dictionary = {
         image: '画像',
         video: '動画',
         gif: 'GIF',
+        audio: '音声',
         attachment: '添付ファイル',
         mediaPosition: '{{kind}} {{index}}/{{count}}',
         photos_one: '写真 {{count}}枚',
@@ -751,6 +752,10 @@ export const ja: Dictionary = {
         saveFailedTitle: '保存できませんでした',
         saveFailed: 'pugdon はこれをスマホに保存できませんでした。代わりにリンクを共有できます。',
         shareLink: 'リンクを共有',
+        play: '再生',
+        pause: '一時停止',
+        back15: '15秒戻る',
+        forward15: '15秒進む',
     },
     notifications: {
         title: '通知',

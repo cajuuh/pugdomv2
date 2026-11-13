@@ -16,7 +16,7 @@ jest.mock('expo-video', () => {
     const { Text } = require('react-native');
     return {
         useVideoPlayer: jest.fn((source: string, setup?: (player: any) => void) => {
-            const player = { source, loop: false, play: jest.fn(), pause: jest.fn() };
+            const player = { source, loop: false, playing: false, duration: 0, currentTime: 0, play: jest.fn(), pause: jest.fn(), replay: jest.fn(), seekBy: jest.fn(), addListener: jest.fn(() => ({ remove: jest.fn() })) };
             setup?.(player);
             return player;
         }),
@@ -190,6 +190,41 @@ describe('shared media viewer', () => {
         await fireEvent.press(screen.getByLabelText('GIF 1 of 1'));
 
         expect(screen.getByText('playing https://files.example.social/g1 loop=true')).toBeTruthy();
+    });
+
+    it('shows audio as a playable tile, not a picture, and plays it in the viewer', async () => {
+        const audio = { ...attachment('a1', 'audio'), meta: { original: { duration: 192 } } };
+        await renderCards(makeStatus('1', [audio]));
+
+        expect(screen.getByTestId('audio-tile')).toBeTruthy();
+        expect(screen.queryByTestId('focused-image')).toBeNull();
+        expect(screen.getByText('Audio · 3:12', { includeHiddenElements: true })).toBeTruthy();
+
+        await fireEvent.press(screen.getByLabelText('Audio, 3:12 1 of 1'));
+        const player = (useVideoPlayer as jest.Mock).mock.results.at(-1)?.value;
+        expect(player.source).toBe('https://files.example.social/a1');
+        expect(player.play).toHaveBeenCalled();
+        // Its own controls, always on screen, with the length from the post until the file loads
+        expect(screen.getByTestId('audio-controls')).toBeTruthy();
+        expect(screen.getByText('0:00 / 3:12')).toBeTruthy();
+        expect(screen.queryByLabelText('Save')).toBeNull();
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Forward 15 s' }));
+        expect(player.seekBy).toHaveBeenCalledWith(15);
+        await fireEvent.press(screen.getByRole('button', { name: 'Back 15 s' }));
+        expect(player.seekBy).toHaveBeenCalledWith(-15);
+        await fireEvent.press(screen.getByRole('button', { name: 'Play' }));
+        expect(player.play).toHaveBeenCalledTimes(2);
+
+        await fireEvent.press(screen.getByLabelText('Close'));
+        expect(screen.queryByTestId('audio-controls')).toBeNull();
+    });
+
+    it("keeps the audio badge off a sensitive post's veil", async () => {
+        await renderCards({ ...makeStatus('1', [attachment('a1', 'audio')]), sensitive: true });
+
+        expect(screen.getByTestId('audio-tile', { includeHiddenElements: true })).toBeTruthy();
+        expect(screen.queryByTestId('audio-badge', { includeHiddenElements: true })).toBeNull();
     });
 
     it('uses alt text as the accessibility label', async () => {

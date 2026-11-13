@@ -286,6 +286,7 @@ export const de: Dictionary = {
         image: 'Bild',
         video: 'Video',
         gif: 'GIF',
+        audio: 'Audio',
         attachment: 'Anhang',
         mediaPosition: '{{kind}} {{index}} von {{count}}',
         photos_one: '{{count}} Foto',
@@ -750,6 +751,10 @@ export const de: Dictionary = {
         saveFailedTitle: 'Speichern nicht möglich',
         saveFailed: 'pugdon konnte das nicht auf deinem Handy speichern. Du kannst stattdessen den Link weitergeben.',
         shareLink: 'Link weitergeben',
+        play: 'Abspielen',
+        pause: 'Pause',
+        back15: '15 s zurück',
+        forward15: '15 s vor',
     },
     notifications: {
         title: 'Benachrichtigungen',

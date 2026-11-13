@@ -287,6 +287,7 @@ export const zhCN: Dictionary = {
         image: '图片',
         video: '视频',
         gif: 'GIF',
+        audio: '音频',
         attachment: '附件',
         mediaPosition: '{{kind}} {{index}}/{{count}}',
         photos_one: '{{count}}张照片',
@@ -751,6 +752,10 @@ export const zhCN: Dictionary = {
         saveFailedTitle: '无法保存',
         saveFailed: 'pugdon 无法把它保存到你的手机。你可以改为分享它的链接。',
         shareLink: '分享链接',
+        play: '播放',
+        pause: '暂停',
+        back15: '后退 15 秒',
+        forward15: '前进 15 秒',
     },
     notifications: {
         title: '通知',

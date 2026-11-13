@@ -286,6 +286,7 @@ export const ptBR: Dictionary = {
         image: 'Imagem',
         video: 'Vídeo',
         gif: 'GIF',
+        audio: 'Áudio',
         attachment: 'Anexo',
         mediaPosition: '{{kind}} {{index}} de {{count}}',
         photos_one: '{{count}} foto',
@@ -752,6 +753,10 @@ export const ptBR: Dictionary = {
         saveFailedTitle: 'Não deu para salvar',
         saveFailed: 'O pugdon não conseguiu salvar isso no seu celular. Você pode compartilhar o link.',
         shareLink: 'Compartilhar link',
+        play: 'Tocar',
+        pause: 'Pausar',
+        back15: 'Voltar 15 s',
+        forward15: 'Avançar 15 s',
     },
     notifications: {
         title: 'Notificações',

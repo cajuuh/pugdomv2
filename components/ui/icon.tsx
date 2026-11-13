@@ -64,10 +64,13 @@ import News01Icon from '@hugeicons/core-free-icons/News01Icon';
 import Note01Icon from '@hugeicons/core-free-icons/Note01Icon';
 import Notification03Icon from '@hugeicons/core-free-icons/Notification03Icon';
 import PaintBoardIcon from '@hugeicons/core-free-icons/PaintBoardIcon';
+import PauseIcon from '@hugeicons/core-free-icons/PauseIcon';
 import PencilEdit02Icon from '@hugeicons/core-free-icons/PencilEdit02Icon';
 import PinIcon from '@hugeicons/core-free-icons/PinIcon';
 import PlayCircleIcon from '@hugeicons/core-free-icons/PlayCircleIcon';
 import PlayIcon from '@hugeicons/core-free-icons/PlayIcon';
+import GoBackward15SecIcon from '@hugeicons/core-free-icons/GoBackward15SecIcon';
+import GoForward15SecIcon from '@hugeicons/core-free-icons/GoForward15SecIcon';
 import RadioButtonIcon from '@hugeicons/core-free-icons/RadioButtonIcon';
 import RefreshIcon from '@hugeicons/core-free-icons/RefreshIcon';
 import RepeatIcon from '@hugeicons/core-free-icons/RepeatIcon';
@@ -193,7 +196,10 @@ const ICONS = {
     pin: { icon: PinIcon, solid: true },
     'pin-outline': PinIcon,
     'planet-outline': SaturnIcon,
+    pause: { icon: PauseIcon, solid: true },
     play: { icon: PlayIcon, solid: true },
+    'back-15': GoBackward15SecIcon,
+    'forward-15': GoForward15SecIcon,
     'play-circle-outline': PlayCircleIcon,
     'pricetag-outline': Tag01Icon,
     'radio-button-off': CircleIcon,

@@ -290,6 +290,7 @@ export const en = {
         image: 'Image',
         video: 'Video',
         gif: 'GIF',
+        audio: 'Audio',
         attachment: 'Attachment',
         // "Image 2 of 3", when the author wrote no alt text
         mediaPosition: '{{kind}} {{index}} of {{count}}',
@@ -766,6 +767,10 @@ export const en = {
         saveFailedTitle: "Couldn't save",
         saveFailed: "pugdon couldn't save this to your phone. You can share its link instead.",
         shareLink: 'Share link',
+        play: 'Play',
+        pause: 'Pause',
+        back15: 'Back 15 s',
+        forward15: 'Forward 15 s',
     },
     notifications: {
         title: 'Notifications',

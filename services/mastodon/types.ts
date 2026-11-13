@@ -9,7 +9,7 @@ export interface CustomEmoji {
 
 export interface Attachment {
     id: string;
-    type: 'image' | 'video' | 'gifv' | 'unknown';
+    type: 'image' | 'video' | 'gifv' | 'audio' | 'unknown';
     url: string;
     preview_url: string;
     // The file on the post's own server; null for local media
@@ -19,7 +19,7 @@ export interface Attachment {
     blurhash?: string | null;
     // Sizes and the focal point (-1..1, y up), when the server knows them
     meta?: {
-        // A video's or GIF's length in seconds
+        // A video's, GIF's or audio's length in seconds
         original?: { width?: number; height?: number; duration?: number };
         small?: { width?: number; height?: number };
         focus?: { x: number; y: number };

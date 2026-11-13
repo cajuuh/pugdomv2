@@ -286,6 +286,7 @@ export const eo: Dictionary = {
         image: 'Bildo',
         video: 'Video',
         gif: 'GIF',
+        audio: 'Sonaĵo',
         attachment: 'Aldonaĵo',
         mediaPosition: '{{kind}} {{index}} el {{count}}',
         photos_one: '{{count}} foto',
@@ -750,6 +751,10 @@ export const eo: Dictionary = {
         saveFailedTitle: 'Ne eblis konservi',
         saveFailed: 'pugdon ne povis konservi ĉi tion en via telefono. Vi povas kundividi ĝian ligilon anstataŭe.',
         shareLink: 'Kundividi ligilon',
+        play: 'Ludi',
+        pause: 'Paŭzi',
+        back15: '15 s malantaŭen',
+        forward15: '15 s antaŭen',
     },
     notifications: {
         title: 'Sciigoj',
