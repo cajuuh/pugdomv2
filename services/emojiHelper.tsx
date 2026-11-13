@@ -54,7 +54,8 @@ export const renderTextWithEmojis = (
 // A name on one line, its custom emoji beside the text rather than inside it. Android lays out text a
 // hair narrower than it measured it, so an emoji inside text wraps onto a line the row has no room for
 // and draws over whatever is below; pieces in a row can't wrap. Long names cut off with "…".
-export const renderNameWithEmojis = (text: string, emojis: CustomEmoji[], textStyle: any, emojiSize: number = 16) => {
+// iOS draws an emoji inside large text below the line and clips it, so big names (the profile) use this too.
+export const renderNameWithEmojis = (text: string, emojis: CustomEmoji[], textStyle: any, emojiSize: number = 16, lines = 1) => {
     if (!text) return null;
     const parts = text.split(/(:\w+:)/g).map(part => part.trim()).filter(Boolean);
     return (
@@ -64,7 +65,7 @@ export const renderNameWithEmojis = (text: string, emojis: CustomEmoji[], textSt
                 return emoji ? (
                     <RNImage key={index} source={{ uri: emoji.url }} style={{ width: emojiSize, height: emojiSize, resizeMode: 'contain' }} />
                 ) : (
-                    <Text key={index} style={[textStyle, styles.namePart]} numberOfLines={1}>{part}</Text>
+                    <Text key={index} style={[textStyle, styles.namePart]} numberOfLines={lines}>{part}</Text>
                 );
             })}
         </View>

@@ -206,6 +206,18 @@ describe('Post menu', () => {
     });
 });
 
+describe('Profile name', () => {
+    it('keeps a custom emoji beside the name, not inside the text where iOS clips it', async () => {
+        const fedora = { shortcode: 'fedora', url: 'https://x/fedora.png', static_url: 'https://x/fedora.png', visible_in_picker: true };
+        await render(wrap(<ProfileHeader user={{ ...ana, display_name: 'Ana :fedora:', emojis: [fedora] }} mode="other" tabs={[{ value: 'posts', label: 'Posts' }]} tab="posts" onChangeTab={jest.fn()} />));
+
+        expect(screen.getByRole('header', { name: 'Ana' })).toBeTruthy();
+        const text = screen.getByText('Ana');
+        expect(text).toHaveProp('numberOfLines', 2);
+        expect(JSON.stringify(text.props.children)).not.toContain('fedora');
+    });
+});
+
 describe('Profile picture', () => {
     it('opens full size in the viewer', async () => {
         await render(wrap(<ProfileHeader user={{ ...ana, avatar: 'https://x/ana.png' }} mode="other" tabs={[{ value: 'posts', label: 'Posts' }]} tab="posts" onChangeTab={jest.fn()} />));

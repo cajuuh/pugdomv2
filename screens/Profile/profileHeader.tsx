@@ -5,7 +5,7 @@ import { Icon } from '../../components/ui/icon';
 import { useTheme } from '../../services/themeContext';
 import { useNavigator } from '../../services/navigationContext';
 import { Account, Attachment, Relationship } from '../../services/mastodon/types';
-import { renderTextWithEmojis } from '../../services/emojiHelper';
+import { renderNameWithEmojis, renderTextWithEmojis } from '../../services/emojiHelper';
 import { PARAGRAPH_GAP, StatusHtmlContent, openLink } from '../../components/TootCard/htmlContent';
 import { Avatar, IconButton, PillButton, PugMark, RoleBadge, SegmentOption, SegmentedPill } from '../../components/ui';
 import { FollowButton } from '../../components/FollowButton/followButton';
@@ -214,9 +214,9 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
                 </View>
 
                 <View style={styles.names}>
-                    <Text accessibilityRole="header" style={[type.title, styles.name]} numberOfLines={2}>
-                        {renderTextWithEmojis(name, user.emojis || [], [type.title, styles.name], 24)}
-                    </Text>
+                    <View accessible accessibilityRole="header" accessibilityLabel={name.replace(/:\w+:/g, ' ').replace(/\s+/g, ' ').trim()}>
+                        {renderNameWithEmojis(name, user.emojis || [], [type.title, styles.name], 24, 2)}
+                    </View>
                     <Text style={[type.meta, styles.handle]} numberOfLines={1}>{fullHandle(user)}</Text>
                 </View>
 
