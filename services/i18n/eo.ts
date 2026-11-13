@@ -954,6 +954,7 @@ export const eo: Dictionary = {
         languageLabel: 'Lingvo, {{value}}',
         pushNotifications: 'Puŝaj sciigoj',
         pushAlerts: 'Specoj de puŝaj sciigoj',
+        pushUnavailable: 'Ĉi tiu versio ne havas la servojn de Google, do ĝi ne povas ricevi puŝ-sciigojn.',
         autoplay: 'Aŭtomate ludi aŭdovidaĵojn',
         compactMode: 'Kompakta reĝimo',
         hideCounts: 'Kaŝi nombrojn ĉe afiŝoj',

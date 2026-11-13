@@ -974,6 +974,7 @@ export const en = {
         languageLabel: 'Language, {{value}}',
         pushNotifications: 'Push Notifications',
         pushAlerts: 'Push notification types',
+        pushUnavailable: 'This version has no Google services, so it can\'t get push notifications.',
         autoplay: 'Autoplay Media',
         compactMode: 'Compact Mode',
         hideCounts: 'Hide numbers on posts',

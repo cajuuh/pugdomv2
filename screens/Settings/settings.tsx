@@ -265,7 +265,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
                         <Icon name="chevron-forward" size={16} color={colors.textMuted} />
                     </Pressable>
                     <View style={styles.divider} />
-                    {pushAvailable && (
+                    {pushAvailable ? (
                         <>
                             {switchRow('notifications-outline', t('settings.pushNotifications'), notifications, changePush)}
                             {notifications && (
@@ -278,6 +278,24 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
                                     </Pressable>
                                 </>
                             )}
+                            <View style={styles.divider} />
+                        </>
+                    ) : (
+                        <>
+                            {/* The F-Droid / GitHub build leaves out Google's push, so the permission is greyed out in
+                                Android settings: say why here instead of a missing switch */}
+                            <View
+                                testID="push-unavailable"
+                                style={styles.row}
+                                accessible
+                                accessibilityLabel={`${t('settings.pushNotifications')}. ${t('settings.pushUnavailable')}`}
+                            >
+                                <Icon name="notifications-outline" size={20} color={colors.textMuted} />
+                                <View style={styles.rowText}>
+                                    <Text style={labelStyle}>{t('settings.pushNotifications')}</Text>
+                                    <Text style={[type.meta, styles.rowDetail]}>{t('settings.pushUnavailable')}</Text>
+                                </View>
+                            </View>
                             <View style={styles.divider} />
                         </>
                     )}

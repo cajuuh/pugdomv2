@@ -954,6 +954,7 @@ export const de: Dictionary = {
         languageLabel: 'Sprache, {{value}}',
         pushNotifications: 'Push-Benachrichtigungen',
         pushAlerts: 'Arten von Push-Benachrichtigungen',
+        pushUnavailable: 'Diese Version hat keine Google-Dienste und kann daher keine Push-Benachrichtigungen empfangen.',
         autoplay: 'Medien automatisch abspielen',
         compactMode: 'Kompakter Modus',
         hideCounts: 'Zahlen an Beiträgen ausblenden',

@@ -957,6 +957,7 @@ export const ptBR: Dictionary = {
         languageLabel: 'Idioma, {{value}}',
         pushNotifications: 'Notificações push',
         pushAlerts: 'Tipos de notificação push',
+        pushUnavailable: 'Esta versão não tem os serviços do Google, então não recebe notificações push.',
         autoplay: 'Reproduzir mídia automaticamente',
         compactMode: 'Modo compacto',
         hideCounts: 'Esconder os números nas publicações',

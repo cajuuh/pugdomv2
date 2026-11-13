@@ -954,6 +954,7 @@ export const fr: Dictionary = {
         languageLabel: 'Langue, {{value}}',
         pushNotifications: 'Notifications push',
         pushAlerts: 'Types de notifications push',
+        pushUnavailable: 'Cette version n’a pas les services Google : elle ne peut pas recevoir de notifications push.',
         autoplay: 'Lecture automatique des médias',
         compactMode: 'Mode compact',
         hideCounts: 'Masquer les chiffres sur les messages',

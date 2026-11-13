@@ -955,6 +955,7 @@ export const la: Dictionary = {
         languageLabel: 'Lingua, {{value}}',
         pushNotifications: 'Monitiones impulsae',
         pushAlerts: 'Genera monitionum impulsarum',
+        pushUnavailable: 'Haec versio officia Google non habet, itaque nuntia impulsa accipere non potest.',
         autoplay: 'Media sponte agere',
         compactMode: 'Modus compactus',
         hideCounts: 'Numeros in nuntiis celare',

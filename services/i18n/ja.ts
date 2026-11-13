@@ -955,6 +955,7 @@ export const ja: Dictionary = {
         languageLabel: '言語、{{value}}',
         pushNotifications: 'プッシュ通知',
         pushAlerts: 'プッシュ通知の種類',
+        pushUnavailable: 'このバージョンにはGoogleサービスがないため、プッシュ通知を受け取れません。',
         autoplay: 'メディアを自動再生',
         compactMode: 'コンパクトモード',
         hideCounts: '投稿の数字を隠す',

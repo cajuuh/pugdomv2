@@ -955,6 +955,7 @@ export const zhCN: Dictionary = {
         languageLabel: '语言，{{value}}',
         pushNotifications: '推送通知',
         pushAlerts: '推送通知类型',
+        pushUnavailable: '此版本没有 Google 服务，因此无法接收推送通知。',
         autoplay: '自动播放媒体',
         compactMode: '紧凑模式',
         hideCounts: '隐藏嘟文上的数字',

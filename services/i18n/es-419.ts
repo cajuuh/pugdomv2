@@ -956,6 +956,7 @@ export const es419: Dictionary = {
         languageLabel: 'Idioma, {{value}}',
         pushNotifications: 'Notificaciones push',
         pushAlerts: 'Tipos de notificaciones push',
+        pushUnavailable: 'Esta versión no tiene los servicios de Google, así que no recibe notificaciones push.',
         autoplay: 'Reproducir multimedia automáticamente',
         compactMode: 'Modo compacto',
         hideCounts: 'Ocultar números en las publicaciones',
