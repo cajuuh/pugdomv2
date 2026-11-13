@@ -15,6 +15,8 @@ export interface Attachment {
     // The file on the post's own server; null for local media
     remote_url?: string | null;
     description?: string;
+    // A tiny blurred sketch of the picture, to show while it loads
+    blurhash?: string | null;
     // Sizes and the focal point (-1..1, y up), when the server knows them
     meta?: {
         // A video's or GIF's length in seconds

@@ -101,7 +101,7 @@ describe('Avatar', () => {
         await render(<Avatar name="alice" uri="https://example.social/a.png" />);
         expect(screen.queryByText('A')).toBeNull();
 
-        await fireEvent(screen.getByTestId('avatar-image'), 'error');
+        await fireEvent(screen.getByTestId('avatar-image'), 'error', { nativeEvent: { error: 'Not found' } });
         expect(screen.getByText('A')).toBeTruthy();
     });
 

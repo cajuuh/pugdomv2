@@ -1,0 +1,7 @@
+• Imagens mais rápidas: as já vistas aparecem na hora, com prévia borrada nas novas
+• Filtros, hashtags silenciadas, silenciar por um tempo, listas de silenciados e bloqueados
+• Traduza publicações, notas privadas em perfis, seus favoritos
+• Deslize entre linhas do tempo, reordene feeds, Início sem boosts ou respostas
+• Fotos em carrossel ou grade, tamanho do texto, datas após uma semana
+• Espanhol e mais seis idiomas
+E muitas correções. Ainda sem notificações push nesta versão.

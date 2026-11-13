@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Image, Platform, Pressable, Share, Text, View, useWindowDimensions } from 'react-native';
+import { Platform, Pressable, Share, Text, View, useWindowDimensions } from 'react-native';
+import { Image } from 'expo-image';
 import { Icon } from '../../components/ui/icon';
 import { useTheme } from '../../services/themeContext';
 import { useNavigator } from '../../services/navigationContext';
 import { Account, Attachment, Relationship } from '../../services/mastodon/types';
-import { renderTextWithEmojis } from '../../services/emojiHelper';
+import { renderNameWithEmojis, renderTextWithEmojis } from '../../services/emojiHelper';
 import { PARAGRAPH_GAP, StatusHtmlContent, openLink } from '../../components/TootCard/htmlContent';
 import { Avatar, IconButton, PillButton, PugMark, RoleBadge, SegmentOption, SegmentedPill } from '../../components/ui';
 import { FollowButton } from '../../components/FollowButton/followButton';
@@ -116,7 +117,7 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
             <View style={[styles.banner, topInset > 0 && { height: BANNER_HEIGHT + topInset }]}>
                 {hasHeaderImage(user) ? (
                     <Pressable onPress={() => viewImage(user.header!)} accessibilityRole="imagebutton" accessibilityLabel={t('profile.viewHeader', { name })}>
-                        <Image testID="profile-banner-image" source={{ uri: user.header }} style={styles.bannerImage} />
+                        <Image testID="profile-banner-image" source={{ uri: user.header }} style={styles.bannerImage} contentFit="cover" />
                     </Pressable>
                 ) : (
                     <View testID="profile-banner-mark" style={styles.bannerMark}>
@@ -213,9 +214,9 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
                 </View>
 
                 <View style={styles.names}>
-                    <Text accessibilityRole="header" style={[type.title, styles.name]} numberOfLines={2}>
-                        {renderTextWithEmojis(name, user.emojis || [], [type.title, styles.name], 24)}
-                    </Text>
+                    <View accessible accessibilityRole="header" accessibilityLabel={name.replace(/:\w+:/g, ' ').replace(/\s+/g, ' ').trim()}>
+                        {renderNameWithEmojis(name, user.emojis || [], [type.title, styles.name], 24, 2)}
+                    </View>
                     <Text style={[type.meta, styles.handle]} numberOfLines={1}>{fullHandle(user)}</Text>
                 </View>
 
