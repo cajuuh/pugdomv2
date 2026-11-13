@@ -2,9 +2,10 @@ import { useCallback, useMemo, useState } from 'react';
 import { InfiniteData, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { FeedDescriptor } from '../services/mastodon/feedTypes';
 import { canPageById, fetchFeedPage, fetchFeedRange } from '../services/mastodon/feedService';
-import { afterLoad, feedItems, Gap, GapEnd, GAP_LIMIT, gapRange, Gaps, insertAfter, newestFirst, prepend, restoreHome } from '../services/mastodon/timelineGaps';
+import { afterLoad, compareIds, feedItems, Gap, GapEnd, GAP_LIMIT, gapRange, Gaps, insertAfter, newestFirst, prepend, restoreHome } from '../services/mastodon/timelineGaps';
 import { Status } from '../services/mastodon/types';
 import { getSetting } from '../services/storage';
+import { newPostsKey } from './useNewPosts';
 import { KEEP_PLACE_KEY } from '../services/settingsContext';
 
 type Pages = InfiniteData<Status[], string | undefined>;
@@ -101,5 +102,22 @@ export const useFeed = (feed: FeedDescriptor, shows?: (post: Status) => boolean,
         }
     }, [queryClient, key, feed]);
 
-    return { ...query, fetchNextPage, posts, items, restoredTo, loadNewest, loadGap, loadingGap };
+    // Posts that arrived live: on the list when you're at its top, else counted in the new posts pill,
+    // so the list doesn't move while you read
+    const addStreamed = useCallback((streamed: Status[], atTop: boolean) => {
+        const top = queryClient.getQueryData<Pages>(key)?.pages[0]?.[0];
+        const newer = top ? streamed.filter(post => compareIds(post.id, top.id) > 0) : [];
+        if (!top || !newer.length) return;
+        if (atTop) {
+            queryClient.setQueryData<Pages>(key, current => current && { ...current, pages: prepend(current.pages, newer) });
+            return;
+        }
+        queryClient.setQueryData<Status[]>(newPostsKey(feed.id, top.id), waiting => {
+            const byId = new Map([...(waiting ?? []), ...newer].map(post => [post.id, post]));
+            // A full page reads "40+"
+            return newestFirst([...byId.values()]).slice(0, GAP_LIMIT);
+        });
+    }, [queryClient, key, feed.id]);
+
+    return { ...query, fetchNextPage, posts, items, restoredTo, loadNewest, loadGap, loadingGap, addStreamed };
 };

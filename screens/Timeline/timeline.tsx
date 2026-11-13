@@ -28,9 +28,13 @@ import { TAB_BAR_CLEARANCE } from '../../components/TabBar/styles';
 import { compareIds, FeedItem, Gap, GapEnd, isGap } from '../../services/mastodon/timelineGaps';
 import { saveHomeMarker } from '../../services/mastodon/markers';
 import { dialog } from '../../services/dialog';
+import { eventKey, feedStream, streaming, streamKey } from '../../services/mastodon/streaming';
 
 // How far a sideways drag has to travel to change the feed, in points
 const SWIPE_FEED_AT = 60;
+
+// Scrolled less than this, in points, you're reading the top of the list
+const AT_TOP = 40;
 
 // FlashList keeps the first visible post in place while posts above it get measured, which cut an
 // animated scrollToOffset(0) short after scrolling far. scrollToIndex pauses that correction, jumps
@@ -89,7 +93,34 @@ const FeedList = ({ feed, current, visible, onStatusPress }: FeedListProps) => {
         loadGap,
         loadingGap,
         refetch,
+        addStreamed,
     } = useFeed(feed, shows, keepPlace);
+
+    // Live posts for the feed on screen, gathered for a second so a busy one doesn't redraw for each
+    const atTop = useRef(true);
+    useEffect(() => {
+        const params = feedStream(feed);
+        if (!params || !current) return;
+        const key = streamKey(params);
+        let arrived: Status[] = [];
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const unsubscribe = streaming.subscribe(params);
+        const unlisten = streaming.listen(event => {
+            if (event.event !== 'update' || !event.payload || eventKey(event.stream) !== key) return;
+            arrived.push(JSON.parse(event.payload));
+            timer ??= setTimeout(() => {
+                timer = undefined;
+                addStreamed(arrived, atTop.current);
+                arrived = [];
+            }, 1000);
+        });
+        return () => {
+            unsubscribe();
+            unlisten();
+            clearTimeout(timer);
+        };
+        // The feed's stream only changes with the feed
+    }, [feed.id, current, addStreamed]);
 
     const newPosts = useNewPosts(feed, posts[0]?.id, current, shows);
     const [loadingNewPosts, setLoadingNewPosts] = useState(false);
@@ -270,6 +301,12 @@ const FeedList = ({ feed, current, visible, onStatusPress }: FeedListProps) => {
                         onScrollBeginDrag={() => {
                             if (newPosts.count > 0) setNewPostsCollapsed(true);
                         }}
+                        onScroll={event => {
+                            atTop.current = event.nativeEvent.contentOffset.y <= AT_TOP;
+                        }}
+                        scrollEventThrottle={100}
+                        // At the top, posts added above (live ones) come into view instead of waiting above it
+                        maintainVisibleContentPosition={{ autoscrollToTopThreshold: AT_TOP }}
                         onViewableItemsChanged={onViewableItemsChanged}
                         data={items}
                         initialScrollIndex={startAt.current || undefined}

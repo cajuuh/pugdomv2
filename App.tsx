@@ -52,6 +52,7 @@ import { useUnreadNotifications } from './hooks/useUnreadNotifications';
 import { DialogHost } from './components/Dialog/dialogHost';
 import { useAppUpdates } from './hooks/useAppUpdates';
 import { usePushNotifications } from './hooks/usePushNotifications';
+import { useStreaming } from './hooks/useStreaming';
 
 // Keep the pug splash up until the fonts and the saved account are loaded
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -184,6 +185,8 @@ function NavigationRoot() {
     reset();
     setActiveTab('notifications');
   });
+  // New posts, deletions, edits and notifications as they happen
+  useStreaming(ready && !!user && !isAddingAccount && !needsSetup);
 
   useEffect(() => {
     if (ready) {

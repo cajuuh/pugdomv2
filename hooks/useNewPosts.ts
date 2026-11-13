@@ -8,6 +8,9 @@ import { Account, Status } from '../services/mastodon/types';
 
 export const NEW_POSTS_INTERVAL_MS = 3 * 60_000;
 
+// Holds the posts newer than `newestId` the server sent (or the stream brought)
+export const newPostsKey = (feedId: string, newestId: string | undefined) => ['newPosts', feedId, newestId];
+
 export interface NewPosts {
     count: number;
     // The server returned a full page, so there may be more ("40+")
@@ -46,7 +49,7 @@ export const useNewPosts = (feed: FeedType | FeedDescriptor, newestId: string | 
     const select = useCallback((fetched: Status[]) => summarizeNewPosts(fetched, shows), [shows]);
 
     const { data } = useQuery({
-        queryKey: ['newPosts', descriptor.id, newestId],
+        queryKey: newPostsKey(descriptor.id, newestId),
         queryFn: () => fetchFeedNewer(descriptor, newestId!),
         enabled: !!newestId && active && checking && descriptor.kind !== 'trending',
         // The list was just loaded, so the first check waits a full interval

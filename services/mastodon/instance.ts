@@ -19,6 +19,8 @@ export interface InstanceConfiguration {
     supportsQuotes: boolean;
     // The server can translate posts (POST /statuses/:id/translate)
     supportsTranslation: boolean;
+    // Where the streaming API lives (wss://…), when the server says; it can be another host
+    streamingUrl?: string;
 }
 
 // Mastodon's own defaults, used when the instance doesn't report its limits
@@ -42,6 +44,7 @@ const QUOTES_API_VERSION = 7;
 interface InstanceV2 {
     api_versions?: { mastodon?: number };
     configuration?: {
+        urls?: { streaming?: string };
         statuses?: { max_characters?: number; max_media_attachments?: number };
         polls?: { max_options?: number; max_characters_per_option?: number };
         translation?: { enabled?: boolean };
@@ -57,6 +60,7 @@ interface InstanceV2 {
 
 // Akkoma and Pleroma name their limits differently, in v1 only
 interface InstanceV1 extends Pick<InstanceV2, 'configuration'> {
+    urls?: { streaming_api?: string };
     max_toot_chars?: number;
     poll_limits?: { max_options?: number; max_option_chars?: number };
     description_limit?: number;
@@ -90,5 +94,6 @@ export async function fetchInstanceConfiguration(): Promise<InstanceConfiguratio
         supportedMimeTypes: media?.supported_mime_types ?? defaults.supportedMimeTypes,
         supportsQuotes: (v2?.api_versions?.mastodon ?? 0) >= QUOTES_API_VERSION,
         supportsTranslation: !!v2?.configuration?.translation?.enabled,
+        streamingUrl: v2?.configuration?.urls?.streaming ?? v1?.urls?.streaming_api,
     };
 }
