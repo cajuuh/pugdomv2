@@ -239,6 +239,25 @@ describe('Compose with images', () => {
         expect(api.put).not.toHaveBeenCalled();
     });
 
+    it('marks only the media as sensitive, with no content warning', async () => {
+        await renderCompose();
+        await pick('a.jpg');
+        await waitFor(() => expect(screen.getByRole('button', { name: 'Post' })).toBeEnabled());
+
+        await fireEvent(screen.getByRole('switch', { name: 'Mark media as sensitive' }), 'valueChange', true);
+        await post();
+        await fireEvent.press(await screen.findByRole('button', { name: 'Post anyway' }));
+
+        await waitFor(() => expect(createStatus).toHaveBeenCalledWith(expect.objectContaining({ sensitive: true, spoiler_text: undefined, media_ids: ['m1'] })));
+    });
+
+    it('offers to mark media sensitive only when there is media', async () => {
+        await renderCompose();
+        expect(screen.queryByRole('switch', { name: 'Mark media as sensitive' })).toBeNull();
+        await pick('a.jpg');
+        expect(await screen.findByRole('switch', { name: 'Mark media as sensitive' })).toBeTruthy();
+    });
+
     it('describes an image, saving the description before posting', async () => {
         await renderCompose();
         await pick('a.jpg');

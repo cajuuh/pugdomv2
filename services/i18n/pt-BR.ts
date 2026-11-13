@@ -278,6 +278,9 @@ export const ptBR: Dictionary = {
         unsupported: 'Seu servidor não suporta linha do tempo de links. Você ainda pode abrir a notícia diretamente.',
     },
     post: {
+        moreMedia: 'mais {{count}}',
+        continuesThread: 'Continua a própria conversa',
+        isReply: 'Resposta',
         readDescription: 'Ler a descrição da imagem',
         descriptionTitle: 'Descrição da imagem',
         image: 'Imagem',
@@ -350,6 +353,7 @@ export const ptBR: Dictionary = {
         backToVote: 'Voltar a votar',
     },
     compose: {
+        mediaSensitive: 'Marcar mídia como sensível',
         newPost: 'Nova publicação',
         reply: 'Responder',
         post: 'Publicar',
@@ -927,6 +931,8 @@ export const ptBR: Dictionary = {
         later: 'Depois',
     },
     settings: {
+        absoluteDates: 'Mostrar data e hora',
+        mediaGrid: 'Várias imagens em grade',
         title: 'Configurações',
         close: 'Fechar configurações',
         accounts: 'Contas',
@@ -1015,6 +1021,9 @@ export const ptBR: Dictionary = {
         note: 'Remover apaga as notificações da sua conta no servidor: elas somem em todos os apps que você usa, e não dá para desfazer. Para só deixar de vê-las como novas, use ✓✓ Marcar todas como lidas.',
     },
     appearance: {
+        textSize: 'Tamanho do texto',
+        textSizeHint: 'Também no modo compacto',
+        textSizes: { small: 'Pequeno', default: 'Padrão', large: 'Grande', larger: 'Maior' },
         title: 'Aparência',
         back: 'Voltar para configurações',
         light: 'Claro',

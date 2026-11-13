@@ -33,7 +33,7 @@ import { useMarkNotificationsSeen } from '../../hooks/useUnreadNotifications';
 import { dialog } from '../../services/dialog';
 import { useMediaViewer } from '../../components/MediaViewer/mediaViewer';
 import { FocusedImage } from '../../components/TootCard/focusedImage';
-import { mediaLabel } from '../../components/TootCard/tootCard';
+import { countMedia, mediaLabel } from '../../components/TootCard/tootCard';
 import { useReadDirectMentions } from '../../hooks/useConversations';
 import { Poll, optionPercent } from '../../components/Poll/poll';
 
@@ -155,7 +155,8 @@ const MentionActions = ({ status }: { status: Status }) => {
     );
 };
 
-// A mention's pictures and videos as small thumbnails, so a reply that's only a picture isn't just a name.
+// A post's pictures and videos as small thumbnails, so a reply that's only a picture isn't just a name
+// and a favourite of your photo shows the photo.
 // Tapping one opens the viewer; sensitive ones stay blurred.
 const MediaThumbnails = ({ status, onOpenPost }: { status: Status; onOpenPost?: () => void }) => {
     const styles = useThemedStyles(makeStyles);
@@ -303,6 +304,7 @@ const NotificationRow = ({ group, relationship, onStatusPress, onLongPress }: No
                             </Text>
                         </Well>
                     )}
+                    {status && <MediaThumbnails status={status} onOpenPost={openStatus} />}
                     {/* An ended poll: its results, as on the post */}
                     {group.type === 'poll' && status?.poll && <Poll initialPoll={status.poll} readOnly />}
                 </>
@@ -313,7 +315,9 @@ const NotificationRow = ({ group, relationship, onStatusPress, onLongPress }: No
     const results = group.type === 'poll' && status?.poll
         ? status.poll.options.map(option => t('poll.option', { title: option.title, percent: optionPercent(status.poll!, option) })).join(', ')
         : '';
-    const spoken = [text, results].filter(Boolean).join('. ');
+    // Outside mentions the row is one element, so its pictures are read in the label
+    const media = group.type !== 'mention' && status?.media_attachments?.length ? countMedia(status.media_attachments, i18n) : '';
+    const spoken = [text, media, results].filter(Boolean).join('. ');
     const label = t(spoken ? 'notifications.rowWithText' : 'notifications.row', {
         actors: pollSentence ? '' : actors,
         action: pollSentence || action,

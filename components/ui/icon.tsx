@@ -4,6 +4,7 @@ import { HugeiconsIcon } from '@hugeicons/react-native';
 import Add01Icon from '@hugeicons/core-free-icons/Add01Icon';
 import AddCircleIcon from '@hugeicons/core-free-icons/AddCircleIcon';
 import Album02Icon from '@hugeicons/core-free-icons/Album02Icon';
+import GridViewIcon from '@hugeicons/core-free-icons/GridViewIcon';
 import Alert01Icon from '@hugeicons/core-free-icons/Alert01Icon';
 import Alert02Icon from '@hugeicons/core-free-icons/Alert02Icon';
 import AlertCircleIcon from '@hugeicons/core-free-icons/AlertCircleIcon';
@@ -144,6 +145,7 @@ const ICONS = {
     'ellipse-outline': CircleIcon,
     'ellipsis-horizontal': MoreHorizontalIcon,
     'expand-outline': ArrowExpand01Icon,
+    'grid-outline': GridViewIcon,
     'eye-off-outline': ViewOffSlashIcon,
     'eye-outline': ViewIcon,
     'flag-outline': Flag02Icon,

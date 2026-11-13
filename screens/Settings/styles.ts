@@ -117,7 +117,7 @@ export const makeAppearanceStyles = (colors: ThemeColors) => StyleSheet.create({
         color: colors.textPrimary,
     },
     previewTag: {
-        color: colors.accentText,
+        color: colors.linkColor,
     },
     pollBar: {
         height: 36,

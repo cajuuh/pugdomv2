@@ -26,7 +26,7 @@ export const PostHashtags: React.FC<{ tags: string[]; onPress: (tag: string) => 
                     hitSlop={hitSlopFor(0, CHIP_HEIGHT)}
                     style={[styles.chip, { backgroundColor: colors.inputBackground }]}
                 >
-                    <Text style={[type.meta, { color: colors.accentText }]} numberOfLines={1}>#{tag}</Text>
+                    <Text style={[type.meta, { color: colors.linkColor }]} numberOfLines={1}>#{tag}</Text>
                 </Pressable>
             ))}
             {/* The rest as one more chip, the same size as the tags */}

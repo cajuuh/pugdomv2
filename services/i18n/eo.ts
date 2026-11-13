@@ -278,6 +278,9 @@ export const eo: Dictionary = {
         unsupported: 'Via servilo ne subtenas ligilajn tempoliniojn. Vi ankoraŭ povas malfermi la artikolon rekte.',
     },
     post: {
+        moreMedia: '{{count}} pliaj',
+        continuesThread: 'Daŭrigas sian propran fadenon',
+        isReply: 'Respondo',
         readDescription: 'Legi la priskribon de la bildo',
         descriptionTitle: 'Priskribo de la bildo',
         image: 'Bildo',
@@ -349,6 +352,7 @@ export const eo: Dictionary = {
         backToVote: 'Reen al voĉdonado',
     },
     compose: {
+        mediaSensitive: 'Marki aŭdvidaĵon kiel sentema',
         newPost: 'Nova afiŝo',
         reply: 'Respondi',
         post: 'Afiŝi',
@@ -924,6 +928,8 @@ export const eo: Dictionary = {
         later: 'Poste',
     },
     settings: {
+        absoluteDates: 'Montri daton kaj horon',
+        mediaGrid: 'Pluraj bildoj en krado',
         title: 'Agordoj',
         close: 'Fermi agordojn',
         accounts: 'Kontoj',
@@ -1012,6 +1018,9 @@ export const eo: Dictionary = {
         note: 'Forigado forviŝas sciigojn el via konto en via servilo, do ili malaperas en ĉiu aplikaĵo, kiun vi uzas, kaj ĝi ne povas esti malfarita. Por nur ĉesigi, ke ili aperu kiel novaj, uzu ✓✓ Marki ĉiujn legitaj.',
     },
     appearance: {
+        textSize: 'Tekstogrando',
+        textSizeHint: 'Ankaŭ en kompakta reĝimo',
+        textSizes: { small: 'Malgranda', default: 'Defaŭlta', large: 'Granda', larger: 'Pli granda' },
         title: 'Aspekto',
         back: 'Reen al agordoj',
         light: 'Hela',

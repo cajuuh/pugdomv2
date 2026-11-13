@@ -278,6 +278,9 @@ export const fr: Dictionary = {
         unsupported: 'Votre serveur ne prend pas en charge les fils de liens. Vous pouvez quand même ouvrir l’article directement.',
     },
     post: {
+        moreMedia: '{{count}} de plus',
+        continuesThread: 'Suite de son propre fil',
+        isReply: 'Réponse',
         readDescription: 'Lire la description de l’image',
         descriptionTitle: 'Description de l’image',
         image: 'Image',
@@ -349,6 +352,7 @@ export const fr: Dictionary = {
         backToVote: 'Revenir au vote',
     },
     compose: {
+        mediaSensitive: 'Marquer le média comme sensible',
         newPost: 'Nouveau message',
         reply: 'Répondre',
         post: 'Publier',
@@ -924,6 +928,8 @@ export const fr: Dictionary = {
         later: 'Plus tard',
     },
     settings: {
+        absoluteDates: 'Afficher la date et l’heure',
+        mediaGrid: 'Plusieurs images en grille',
         title: 'Paramètres',
         close: 'Fermer les paramètres',
         accounts: 'Comptes',
@@ -1012,6 +1018,9 @@ export const fr: Dictionary = {
         note: 'Supprimer efface les notifications de votre compte sur votre serveur : elles disparaissent de toutes les applis que vous utilisez, et c’est irréversible. Pour qu’elles ne s’affichent simplement plus comme nouvelles, utilisez ✓✓ Tout marquer comme lu.',
     },
     appearance: {
+        textSize: 'Taille du texte',
+        textSizeHint: 'Aussi en mode compact',
+        textSizes: { small: 'Petit', default: 'Normal', large: 'Grand', larger: 'Plus grand' },
         title: 'Apparence',
         back: 'Retour aux paramètres',
         light: 'Clair',

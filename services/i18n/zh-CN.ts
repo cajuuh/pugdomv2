@@ -279,6 +279,9 @@ export const zhCN: Dictionary = {
         unsupported: '你的服务器不支持链接时间线。你仍然可以直接打开文章。',
     },
     post: {
+        moreMedia: '还有 {{count}} 张',
+        continuesThread: '延续自己的嘟文串',
+        isReply: '回复',
         readDescription: '阅读图片描述',
         descriptionTitle: '图片描述',
         image: '图片',
@@ -350,6 +353,7 @@ export const zhCN: Dictionary = {
         backToVote: '返回投票',
     },
     compose: {
+        mediaSensitive: '将媒体标记为敏感内容',
         newPost: '发嘟',
         reply: '回复',
         post: '发布',
@@ -925,6 +929,8 @@ export const zhCN: Dictionary = {
         later: '稍后',
     },
     settings: {
+        absoluteDates: '显示日期和时间',
+        mediaGrid: '多张图片以网格显示',
         title: '设置',
         close: '关闭设置',
         accounts: '账号',
@@ -1013,6 +1019,9 @@ export const zhCN: Dictionary = {
         note: '移除会从你服务器上的账号中删除通知，所以在你用的每个应用里都会消失，而且无法撤销。如果只是不想让它们显示为新的，请用 ✓✓ 全部标为已读。',
     },
     appearance: {
+        textSize: '文字大小',
+        textSizeHint: '紧凑模式也适用',
+        textSizes: { small: '小', default: '默认', large: '大', larger: '更大' },
         title: '外观',
         back: '返回设置',
         light: '浅色',

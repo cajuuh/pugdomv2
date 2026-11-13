@@ -19,6 +19,8 @@ import {
     THREAD_AVATAR_GAP,
     makeStyles,
     threadCardMetrics,
+    postTextMetrics,
+    SLIDE_GAP,
 } from './styles';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import {
@@ -40,6 +42,7 @@ import { useMediaViewer } from '../MediaViewer/mediaViewer';
 import { hitSlopFor } from '../../services/theme/shape';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { defaultTranslator, TKey, Translator } from '../../services/i18n/translate';
+import { postTime } from '../../services/dates';
 import { useOpenAccount } from '../../hooks/useOpenAccount';
 import { FocusedImage } from './focusedImage';
 import { QuotedPost } from './quotedPost';
@@ -57,25 +60,29 @@ import { dialog } from '../../services/dialog';
 import { plainText, postSize, splitTrailingHashtags } from '../../services/htmlText';
 import { useIsAutoplayPost } from '../../services/media/autoplay';
 
-export const getRelativeTime = (dateString: string, { t }: Translator) => {
-    const now = new Date();
-    const created = new Date(dateString);
-    const diffMs = now.getTime() - created.getTime();
-    const diffSec = Math.floor(diffMs / 1000);
-    const diffMin = Math.floor(diffSec / 60);
-    const diffHr = Math.floor(diffMin / 60);
-    const diffDays = Math.floor(diffHr / 24);
+// A long post folds after this many lines, until "Show more"
+const FOLD_LINES = 12;
 
-    if (diffSec < 60) {
-        return t('common.now');
-    } else if (diffMin < 60) {
-        return t('common.minutesShort', { count: diffMin });
-    } else if (diffHr < 24) {
-        return t('common.hoursShort', { count: diffHr });
-    } else {
-        return t('common.daysShort', { count: diffDays });
-    }
+// The grid shows at most four; its height from the post's width (Compact Mode: fixed and short)
+const GRID_MAX = 4;
+const GRID_RATIO = 0.66;
+const GRID_HEIGHT_COMPACT = 160;
+
+// Several images: each slide leaves the next one peeking in at the edge, so it's clear there's more to see
+const PEEK_SLIDE = 0.88;
+export const carouselMetrics = (width: number) => {
+    const slide = Math.round(width * PEEK_SLIDE);
+    return { slide, interval: slide + SLIDE_GAP };
 };
+// The slide a scroll stopped at; the last one can't scroll to the start, so the far end counts as it
+export const carouselPage = (offset: number, width: number, count: number) => {
+    const { slide, interval } = carouselMetrics(width);
+    const end = count * slide + (count - 1) * SLIDE_GAP - width;
+    return offset >= end - 1 ? count - 1 : Math.min(count - 1, Math.max(0, Math.round(offset / interval)));
+};
+
+// Kept under its old name for the screens that import it from here
+export const getRelativeTime = (dateString: string, i18n: Translator) => postTime(dateString, i18n);
 
 // Alt text when the author wrote one, otherwise the media's position in the post
 const MEDIA_KIND = { image: 'post.image', video: 'post.video', gifv: 'post.gif', unknown: 'post.attachment' } as const;
@@ -103,6 +110,15 @@ export const countMedia = (attachments: Attachment[], { tn }: Translator = defau
     const nouns = new Set(attachments.map(a => (a.type === 'image' ? 'photos' : a.type === 'video' || a.type === 'gifv' ? 'videos' : 'attachments')));
     const noun = nouns.size === 1 ? [...nouns][0] : 'attachments';
     return tn(`post.${noun}` as 'post.photos' | 'post.videos' | 'post.attachments', attachments.length);
+};
+
+// "Replying to @acct" for a reply outside a thread: to the author themselves, it continues their thread;
+// with no mention of whom it answers, just "Reply"
+export const feedReplyText = (status: Status, { t }: Translator) => {
+    if (!status.in_reply_to_id) return '';
+    if (status.in_reply_to_account_id === status.account.id) return t('post.continuesThread');
+    const parent = status.mentions?.find(mention => mention.id === status.in_reply_to_account_id);
+    return parent ? t('thread.replyingTo', { name: `@${parent.acct}` }) : t('post.isReply');
 };
 
 const hasText = (html: string) => html.replace(/<[^>]*>/g, '').trim().length > 0;
@@ -156,7 +172,7 @@ interface TootCardProps {
 }
 
 export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPressHashtag, onPress, threadMode, showReactions, hasThreadLineTop, hasThreadLineBottom, indent = 0, replyingTo, remote, fullText, filterContext }) => {
-    const { compactMode, hideCounts, coverSensitiveMedia, uncroppedMedia, mediaAutoplay } = useSettings();
+    const { compactMode, hideCounts, coverSensitiveMedia, uncroppedMedia, mediaAutoplay, postTextSize, mediaGrid } = useSettings();
     const { colors, type } = useTheme();
     const styles = useThemedStyles(makeStyles);
     const { openCompose } = useCompose();
@@ -199,11 +215,12 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     // Starts over when the preference arrives or changes, so cards drawn before it know it too
     const expandSpoilers = useExpandSpoilers();
     const [isSpoilerCollapsed, setIsSpoilerCollapsed] = useRecyclingState(hasContentWarning && !expandSpoilers, [targetStatus.id, expandSpoilers]);
-    const [isFavorited, setIsFavorited] = useRecyclingState(targetStatus.favourited, recyclingDeps);
-    const [isReblogged, setIsreblogged] = useRecyclingState(targetStatus.reblogged, recyclingDeps);
-    const [favCount, setFavCount] = useRecyclingState(targetStatus.favourites_count, recyclingDeps);
-    const [boostCount, setBoostCount] = useRecyclingState(targetStatus.reblogs_count, recyclingDeps);
-    const [isBookmarked, setIsBookmarked] = useRecyclingState(!!targetStatus.bookmarked, recyclingDeps);
+    // Shown at once when you tap; a fresher copy of the post (opening it refreshes the feeds) replaces them
+    const [isFavorited, setIsFavorited] = useRecyclingState(targetStatus.favourited, [targetStatus.id, targetStatus.favourited]);
+    const [isReblogged, setIsreblogged] = useRecyclingState(targetStatus.reblogged, [targetStatus.id, targetStatus.reblogged]);
+    const [favCount, setFavCount] = useRecyclingState(targetStatus.favourites_count, [targetStatus.id, targetStatus.favourites_count]);
+    const [boostCount, setBoostCount] = useRecyclingState(targetStatus.reblogs_count, [targetStatus.id, targetStatus.reblogs_count]);
+    const [isBookmarked, setIsBookmarked] = useRecyclingState(!!targetStatus.bookmarked, [targetStatus.id, targetStatus.bookmarked]);
     const [isMediaRevealed, setIsMediaRevealed] = useRecyclingState(false, recyclingDeps);
     const filtered = filterMatch(status, filterContext);
     const filterTitles = filtered?.action === 'warn' ? filtered.titles.join(', ') : '';
@@ -216,6 +233,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const textSize = fullText ? 'normal' : postSize(plain);
     const [isTextExpanded, setIsTextExpanded] = useRecyclingState(false, recyclingDeps);
     const isTextFolded = textSize !== 'normal' && !isTextExpanded;
+    const textMetrics = postTextMetrics(compactMode, postTextSize);
     const mediaDisplay = useMediaDisplay();
     // The carousel's page; its width is layout, not per-post state
     const [mediaPage, setMediaPage] = useRecyclingState(0, recyclingDeps);
@@ -375,6 +393,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
 
     // The carousel's own width, once laid out; until then the width the body should have
     const slideWidth = carouselWidth || contentWidth;
+    const carousel = carouselMetrics(slideWidth);
 
     const renderMedia = (attachments: Attachment[]) => {
         if (!attachments || attachments.length === 0) {
@@ -390,7 +409,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         // Autoplay: the carousel's current video or GIF, while this is the post in view
         const plays = (idx: number) => mediaAutoplay && isAutoplayPost && !veiled && idx === mediaPage && (attachments[idx].type === 'video' || attachments[idx].type === 'gifv');
         const mediaHeight = uncropped
-            ? { height: Math.max(...attachments.map(item => uncroppedHeight(count === 1 ? contentWidth : slideWidth, item))) }
+            ? { height: Math.max(...attachments.map(item => uncroppedHeight(count === 1 ? contentWidth : carousel.slide, item))) }
             : undefined;
         // Images with a description say so; tapping the chip reads it, tapping the image still opens it
         const altChip = (item: Attachment) =>
@@ -408,6 +427,43 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     <Text style={[type.label, styles.altChipText]}>ALT</Text>
                 </Pressable>
             );
+        // A grid tile: cropped to its focal point; the fourth says how many more there are past it
+        const gridTile = (idx: number) => {
+            const more = idx === GRID_MAX - 1 ? count - GRID_MAX : 0;
+            const item = attachments[idx];
+            return (
+                <Pressable
+                    key={item.id || idx}
+                    style={styles.gridTile}
+                    onPress={() => openMedia(attachments, idx, undefined, targetStatus.url ?? targetStatus.uri)}
+                    accessibilityRole="imagebutton"
+                    accessibilityLabel={more > 0 ? `${mediaLabel(item, idx, count, i18n)}, ${t('post.moreMedia', { count: more })}` : mediaLabel(item, idx, count, i18n)}
+                >
+                    <FocusedImage attachment={item} style={styles.mediaImage} blurred={veiled} playing={plays(idx)} />
+                    {more > 0 ? (
+                        <View style={styles.gridMore}>
+                            <Text style={[type.title, styles.gridMoreText]}>+{more}</Text>
+                        </View>
+                    ) : altChip(item)}
+                </Pressable>
+            );
+        };
+        // Two side by side; three: one large and two stacked; four or more: two by two
+        const grid = () => (
+            <View testID="media-grid" style={[styles.grid, count > 3 && styles.gridRows, { height: compactMode ? GRID_HEIGHT_COMPACT : Math.round(contentWidth * GRID_RATIO) }]}>
+                {count === 2 ? [gridTile(0), gridTile(1)] : count === 3 ? (
+                    <>
+                        {gridTile(0)}
+                        <View style={styles.gridColumn}>{gridTile(1)}{gridTile(2)}</View>
+                    </>
+                ) : (
+                    <>
+                        <View style={styles.gridRow}>{gridTile(0)}{gridTile(1)}</View>
+                        <View style={styles.gridRow}>{gridTile(2)}{gridTile(3)}</View>
+                    </>
+                )}
+            </View>
+        );
         const tiles = count === 1 ? (
             <Pressable
                 style={[styles.singleMedia, compactMode && styles.singleMediaCompact, mediaHeight]}
@@ -418,23 +474,25 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 <FocusedImage attachment={attachments[0]} style={styles.mediaImage} blurred={veiled} contain={uncropped} playing={plays(0)} />
                 {altChip(attachments[0])}
             </Pressable>
-        ) : (
-            // Several images: one at a time, swiped sideways, with a dot for each
+        ) : mediaGrid ? grid() : (
+            // Several images: swiped sideways one at a time, the next peeking in, with a dot for each
             <View>
                 <ScrollView
                     key={targetStatus.id}
                     testID="media-carousel"
                     horizontal
-                    pagingEnabled
+                    snapToInterval={carousel.interval}
+                    decelerationRate="fast"
+                    disableIntervalMomentum
                     showsHorizontalScrollIndicator={false}
                     onLayout={event => setCarouselWidth(event.nativeEvent.layout.width)}
-                    onMomentumScrollEnd={event => setMediaPage(Math.round(event.nativeEvent.contentOffset.x / slideWidth))}
-                    style={styles.carousel}
+                    onMomentumScrollEnd={event => setMediaPage(carouselPage(event.nativeEvent.contentOffset.x, slideWidth, count))}
+                    contentContainerStyle={styles.carouselTrack}
                 >
                     {attachments.map((item, idx) => (
                         <Pressable
                             key={item.id || idx}
-                            style={[styles.carouselSlide, compactMode && styles.singleMediaCompact, mediaHeight, { width: slideWidth }]}
+                            style={[styles.carouselSlide, compactMode && styles.singleMediaCompact, mediaHeight, { width: carousel.slide }]}
                             onPress={() => openMedia(attachments, idx, undefined, targetStatus.url ?? targetStatus.uri)}
                             accessibilityRole="imagebutton"
                             accessibilityLabel={mediaLabel(item, idx, count, i18n)}
@@ -532,18 +590,19 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         <>
             {hasText(bodyHtml) && (isTextFolded && textSize === 'huge' ? (
                 // Not even parsed as HTML until asked: only the start, as plain text
-                <Text style={[type.body, styles.foldedText, compactMode && styles.foldedTextCompact]} numberOfLines={12}>
+                <Text style={[type.body, styles.foldedText, textMetrics]} numberOfLines={FOLD_LINES}>
                     {renderTextWithEmojis(plain.slice(0, 1000), targetStatus.emojis, null)}
                 </Text>
             ) : (
                 // The same wrapper folded or not, so "Show more" doesn't rebuild the post's HTML
-                <View style={isTextFolded ? [styles.textFold, compactMode && styles.textFoldCompact] : undefined}>
+                <View style={isTextFolded ? [styles.textFold, { maxHeight: FOLD_LINES * textMetrics.lineHeight }] : undefined}>
                     <StatusHtmlContent
                         content={bodyHtml}
                         emojis={targetStatus.emojis}
                         colors={colors}
                         bodyFont={type.body}
                         compactMode={compactMode}
+                        textSize={postTextSize}
                         width={contentWidth}
                         onPressMention={onPressMention ?? handleMention}
                         onPressHashtag={onPressHashtag ?? openHashtag}
@@ -582,6 +641,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     onOpen={openQuoted}
                     timeOf={createdAt => getRelativeTime(createdAt, i18n)}
                     compactMode={compactMode}
+                    textSize={postTextSize}
                     onPressLink={openLinkInApp}
                     onPressHashtag={onPressHashtag ?? openHashtag}
                     onPressMention={openQuotedMention}
@@ -802,11 +862,15 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         </View>
     );
 
-    const replyLabel = replyingTo && (
+    // In a thread the screen says whom it answers; elsewhere the post does, so a reply isn't taken for a thread's start
+    const replyText = threadMode
+        ? replyingTo && t('thread.replyingTo', { name: replyingTo })
+        : feedReplyText(targetStatus, i18n);
+    const replyLabel = !!replyText && (
         <View style={styles.directRow}>
             <Icon name="return-down-forward" size={13} color={colors.textMuted} />
             <Text style={[type.meta, { color: colors.textMuted }]} numberOfLines={1}>
-                {t('thread.replyingTo', { name: replyingTo })}
+                {replyText}
             </Text>
         </View>
     );
@@ -868,6 +932,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                         {time}
                     </View>
                     {privateMention}
+                    {replyLabel}
                     {renderContent()}
                     {details}
                     {actions}

@@ -209,6 +209,17 @@ describe('Notifications', () => {
         expect(mockOpenMedia).toHaveBeenCalledWith([picture], 0, undefined);
     });
 
+    it('shows the pictures of your post when someone favourites it', async () => {
+        const fav = notification('1', 'favourite', account('a', 'alice'));
+        const picture = { id: 'm1', type: 'image', url: 'u', preview_url: 'p', description: 'Arte' };
+        mockedFetch.mockResolvedValue([{ ...fav, status: { ...fav.status, content: '<p>arte</p>', media_attachments: [picture] } }]);
+        await renderScreen();
+
+        expect(await screen.findByLabelText(/arte\. 1 photo/)).toBeTruthy();
+        await fireEvent.press(screen.getByRole('imagebutton', { name: 'Arte' }));
+        expect(mockOpenMedia).toHaveBeenCalledWith([picture], 0, undefined);
+    });
+
     it('shows when someone quotes your post, with what they wrote', async () => {
         mockedFetch.mockResolvedValue([notification('1', 'quote', account('a', 'alice'))]);
         await renderScreen();

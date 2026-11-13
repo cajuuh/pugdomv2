@@ -14,6 +14,8 @@ import { radii, space } from '../../services/theme/shape';
 import { Avatar, PillButton } from '../ui';
 import { FocusedImage } from './focusedImage';
 import { PARAGRAPH_GAP, StatusHtmlContent } from './htmlContent';
+import { postTextMetrics } from './styles';
+import type { PostTextSize } from '../../services/settingsContext';
 
 const MAX_THUMBS = 4;
 // Longer quotes fold here, with "Show more" under them; tapping the card opens the whole post
@@ -36,6 +38,7 @@ interface QuotedPostProps {
     // "3h", "Mon": the same relative time the card shows; without it, no time
     timeOf?: (createdAt: string) => string;
     compactMode?: boolean;
+    textSize?: PostTextSize;
     // Links in the quoted text, as in the post around it; without them links open in the browser
     onPressLink?: (href: string) => void;
     onPressHashtag?: (tag: string) => void;
@@ -46,7 +49,7 @@ interface QuotedPostProps {
 
 // The post a post quotes, as a small card inside it; tapping opens it. Quotes that can't be shown
 // (waiting for approval, removed, deleted…) say why instead.
-export const QuotedPost: React.FC<QuotedPostProps> = ({ quote, onOpen, timeOf, compactMode = false, onPressLink = openLink, onPressHashtag, onPressMention, renderLinkPreview }) => {
+export const QuotedPost: React.FC<QuotedPostProps> = ({ quote, onOpen, timeOf, compactMode = false, textSize, onPressLink = openLink, onPressHashtag, onPressMention, renderLinkPreview }) => {
     const { colors, type } = useTheme();
     const { t } = useI18n();
     const { width } = useWindowDimensions();
@@ -79,7 +82,7 @@ export const QuotedPost: React.FC<QuotedPostProps> = ({ quote, onOpen, timeOf, c
     const media = status.media_attachments ?? [];
     const hideMedia = status.sensitive || !!status.spoiler_text;
     const nested = !!status.quote;
-    const foldHeight = MAX_LINES * (compactMode ? 18 : 22.5);
+    const foldHeight = MAX_LINES * postTextMetrics(compactMode, textSize).lineHeight;
 
     return (
         <Pressable
@@ -121,6 +124,7 @@ export const QuotedPost: React.FC<QuotedPostProps> = ({ quote, onOpen, timeOf, c
                                 colors={colors}
                                 bodyFont={type.body}
                                 compactMode={compactMode}
+                                textSize={textSize}
                                 width={width}
                                 onPressMention={pressMention}
                                 onPressHashtag={onPressHashtag}
