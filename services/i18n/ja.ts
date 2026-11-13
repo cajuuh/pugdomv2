@@ -91,6 +91,10 @@ export const ja: Dictionary = {
         newPosts_other: '新しい投稿 {{count}}件',
         newPostsMany: '新しい投稿 {{count}}件以上',
         newPostsHint: '読み込んで一番上へ移動します',
+        gap: "ここに読み込まれていない投稿があります",
+        gapNewer: "新しい投稿を読み込む",
+        gapOlder: "古い投稿を読み込む",
+        loadFailed: "投稿を読み込めませんでした。もう一度お試しください。",
     },
     lists: {
         title: 'リスト',

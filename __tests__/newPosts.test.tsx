@@ -11,6 +11,8 @@ import { homeShows } from '../services/mastodon/feedService';
 import { Account, Status } from '../services/mastodon/types';
 
 jest.mock('../services/api/client', () => ({ __esModule: true, default: { get: jest.fn() } }));
+// No saved Home position: these load the newest posts
+jest.mock('../services/mastodon/markers', () => ({ getHomeMarker: jest.fn(async () => null), saveHomeMarker: jest.fn() }));
 
 const mockedGet = apiClient.get as jest.Mock;
 const account = (id: string): Account => ({ id, username: `user${id}`, acct: `user${id}`, display_name: `User ${id}`, avatar: '', emojis: [] });
@@ -63,11 +65,11 @@ describe('useFeed', () => {
         });
 
         await waitFor(() => expect(result.current.data?.pages).toHaveLength(1));
-        expect(result.current.data!.pages[0].map(status => status.id)).toEqual(['5', '3']);
+        expect(result.current.items.map(item => item.id)).toEqual(['5', '3']);
 
         await act(() => result.current.fetchNextPage());
         expect(mockedGet).toHaveBeenLastCalledWith('/timelines/home', expect.objectContaining({ params: expect.objectContaining({ max_id: '2' }) }));
-        await waitFor(() => expect(result.current.data!.pages.flat().map(status => status.id)).toEqual(['5', '3', '1']));
+        await waitFor(() => expect(result.current.items.map(item => item.id)).toEqual(['5', '3', '1']));
     });
 });
 
@@ -125,7 +127,7 @@ describe('Home without boosts or replies', () => {
         });
 
         await waitFor(() => expect(result.current.data?.pages).toHaveLength(1));
-        expect(result.current.data!.pages[0].map(status => status.id)).toEqual(['5']);
+        expect(result.current.items.map(item => item.id)).toEqual(['5']);
         await act(() => result.current.fetchNextPage());
         expect(mockedGet).toHaveBeenLastCalledWith('/timelines/home', expect.objectContaining({ params: expect.objectContaining({ max_id: '9' }) }));
     });

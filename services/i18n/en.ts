@@ -93,6 +93,10 @@ export const en = {
         newPosts_other: '{{count}} new posts',
         newPostsMany: '{{count}}+ new posts',
         newPostsHint: 'Loads them and goes to the top',
+        gap: "Some posts weren't loaded here",
+        gapNewer: "Load newer",
+        gapOlder: "Load older",
+        loadFailed: "Couldn't load posts. Try again.",
     },
     lists: {
         title: 'Lists',

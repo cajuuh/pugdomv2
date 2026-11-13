@@ -90,6 +90,10 @@ export const es419: Dictionary = {
         newPosts_other: '{{count}} publicaciones nuevas',
         newPostsMany: '{{count}}+ publicaciones nuevas',
         newPostsHint: 'Las carga y va al principio',
+        gap: "Aquí faltan algunas publicaciones",
+        gapNewer: "Cargar más nuevas",
+        gapOlder: "Cargar más antiguas",
+        loadFailed: "No se pudieron cargar las publicaciones. Intenta de nuevo.",
     },
     lists: {
         title: 'Listas',

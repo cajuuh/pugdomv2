@@ -90,6 +90,10 @@ export const de: Dictionary = {
         newPosts_other: '{{count}} neue Beiträge',
         newPostsMany: '{{count}}+ neue Beiträge',
         newPostsHint: 'Lädt sie und springt nach oben',
+        gap: "Hier fehlen einige Beiträge",
+        gapNewer: "Neuere laden",
+        gapOlder: "Ältere laden",
+        loadFailed: "Beiträge konnten nicht geladen werden. Versuch es noch einmal.",
     },
     lists: {
         title: 'Listen',

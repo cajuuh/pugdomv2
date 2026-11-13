@@ -91,6 +91,10 @@ export const zhCN: Dictionary = {
         newPosts_other: '{{count}}条新嘟文',
         newPostsMany: '{{count}}+ 条新嘟文',
         newPostsHint: '加载并回到顶部',
+        gap: "这里有些嘟文没有加载",
+        gapNewer: "加载较新的",
+        gapOlder: "加载较早的",
+        loadFailed: "无法加载嘟文，请重试。",
     },
     lists: {
         title: '列表',

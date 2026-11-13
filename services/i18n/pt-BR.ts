@@ -90,6 +90,10 @@ export const ptBR: Dictionary = {
         newPosts_other: '{{count}} novas publicações',
         newPostsMany: '{{count}}+ novas publicações',
         newPostsHint: 'Carrega e vai para o topo',
+        gap: "Algumas publicações não foram carregadas aqui",
+        gapNewer: "Carregar mais novas",
+        gapOlder: "Carregar mais antigas",
+        loadFailed: "Não deu para carregar as publicações. Tente de novo.",
     },
     lists: {
         title: 'Listas',

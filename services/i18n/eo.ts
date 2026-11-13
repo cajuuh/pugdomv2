@@ -90,6 +90,10 @@ export const eo: Dictionary = {
         newPosts_other: '{{count}} novaj afiŝoj',
         newPostsMany: '{{count}}+ novaj afiŝoj',
         newPostsHint: 'Ŝargas ilin kaj iras supren',
+        gap: "Kelkaj afiŝoj ne ŝargiĝis ĉi tie",
+        gapNewer: "Ŝargi pli novajn",
+        gapOlder: "Ŝargi pli malnovajn",
+        loadFailed: "Ne eblis ŝargi afiŝojn. Reprovu.",
     },
     lists: {
         title: 'Listoj',

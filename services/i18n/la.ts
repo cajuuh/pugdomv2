@@ -91,6 +91,10 @@ export const la: Dictionary = {
         newPosts_other: '{{count}} nuntii novi',
         newPostsMany: '{{count}}+ nuntii novi',
         newPostsHint: 'Eos onerat et ad summum it',
+        gap: "Hic nonnulli nuntii desunt",
+        gapNewer: "Recentiores onera",
+        gapOlder: "Antiquiores onera",
+        loadFailed: "Nuntii onerari non potuerunt. Iterum tempta.",
     },
     lists: {
         title: 'Indices',

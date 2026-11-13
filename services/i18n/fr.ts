@@ -90,6 +90,10 @@ export const fr: Dictionary = {
         newPosts_other: '{{count}} nouveaux messages',
         newPostsMany: '{{count}}+ nouveaux messages',
         newPostsHint: 'Les charge et remonte en haut',
+        gap: "Des messages manquent ici",
+        gapNewer: "Charger les plus récents",
+        gapOlder: "Charger les plus anciens",
+        loadFailed: "Impossible de charger les messages. Réessayez.",
     },
     lists: {
         title: 'Listes',
