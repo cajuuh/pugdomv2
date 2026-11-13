@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon } from '../../components/ui/icon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FlashList } from '@shopify/flash-list';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useTheme } from '../../services/themeContext';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { useOptionalAuth } from '../../services/authContext';
-import { getReactions, Reaction, ReactionsPage } from '../../services/mastodon/statuses';
-import { FollowList, getFollows } from '../../services/mastodon/accounts';
+import { getReactions, Reaction } from '../../services/mastodon/statuses';
+import { FollowList, FollowsPage, getFollows, HomeAccount } from '../../services/mastodon/accounts';
 import { TKey } from '../../services/i18n/translate';
 import { useRelationships } from '../../hooks/useRelationships';
 import { radii, space } from '../../services/theme/shape';
@@ -39,11 +39,13 @@ export const matchesSearch = (account: Pick<Account, 'display_name' | 'username'
 interface ReactionsProps {
     id: string;
     kind: AccountListKind;
+    // Whose followers or following: someone on another server has them read from there
+    account?: Account;
     onBack: () => void;
 }
 
 // A list of people, each with a follow button: who favourited or boosted a post, or someone's followers or following
-const Reactions = ({ id, kind, onBack }: ReactionsProps) => {
+const Reactions = ({ id, kind, account, onBack }: ReactionsProps) => {
     const { colors, type } = useTheme();
     const { t } = useI18n();
     const insets = useSafeAreaInsets();
@@ -51,11 +53,16 @@ const Reactions = ({ id, kind, onBack }: ReactionsProps) => {
 
     const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useInfiniteQuery({
         queryKey: ['reactions', id, kind],
-        queryFn: ({ pageParam }) => kind === 'followers' || kind === 'following' ? getFollows(id, kind, pageParam) : getReactions(id, kind, pageParam),
-        initialPageParam: undefined as string | undefined,
-        getNextPageParam: (page: ReactionsPage) => page.nextMaxId,
+        queryFn: ({ pageParam }): Promise<FollowsPage> =>
+            kind === 'followers' || kind === 'following'
+                ? getFollows(account ?? { id, acct: '' }, kind, pageParam.maxId, pageParam.home)
+                : getReactions(id, kind, pageParam.maxId),
+        initialPageParam: {} as { maxId?: string; home?: HomeAccount },
+        getNextPageParam: (page: FollowsPage) => (page.nextMaxId ? { maxId: page.nextMaxId, home: page.home } : undefined),
     });
     const allAccounts = data?.pages.flatMap(page => page.accounts) ?? [];
+    // Read from their server: no relationships or follow buttons, the ids aren't ours
+    const remote = !!data?.pages[0]?.home;
     // Followers and following can be searched
     const searchable = kind === 'followers' || kind === 'following';
     const [query, setQuery] = useState('');
@@ -66,7 +73,7 @@ const Reactions = ({ id, kind, onBack }: ReactionsProps) => {
     useEffect(() => {
         if (loadingRest && !isFetchingNextPage) fetchNextPage();
     }, [loadingRest, isFetchingNextPage, pages, fetchNextPage]);
-    const relationships = useRelationships(accounts.filter(account => account.id !== me?.id).map(account => account.id));
+    const relationships = useRelationships(remote ? [] : accounts.filter(person => person.id !== me?.id).map(person => person.id));
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -80,7 +87,7 @@ const Reactions = ({ id, kind, onBack }: ReactionsProps) => {
 
             {searchable && (
                 <View style={[styles.field, { backgroundColor: colors.inputBackground }]}>
-                    <Ionicons name="search" size={18} color={colors.textMuted} />
+                    <Icon name="search" size={18} color={colors.textMuted} />
                     <TextInput
                         value={query}
                         onChangeText={setQuery}
@@ -94,7 +101,7 @@ const Reactions = ({ id, kind, onBack }: ReactionsProps) => {
                     />
                     {query.length > 0 && (
                         <Pressable onPress={() => setQuery('')} accessibilityRole="button" accessibilityLabel={t('search.clear')} hitSlop={10}>
-                            <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+                            <Icon name="close-circle" size={18} color={colors.textMuted} />
                         </Pressable>
                     )}
                 </View>
@@ -107,7 +114,7 @@ const Reactions = ({ id, kind, onBack }: ReactionsProps) => {
                     data={accounts}
                     extraData={relationships}
                     keyExtractor={account => account.id}
-                    renderItem={({ item }) => <AccountRow account={item} relationship={relationships.get(item.id)} isSelf={item.id === me?.id} />}
+                    renderItem={({ item }) => <AccountRow account={item} relationship={relationships.get(item.id)} isSelf={!remote && item.id === me?.id} remote={remote} />}
                     contentContainerStyle={styles.list}
                     onEndReached={() => hasNextPage && !isFetchingNextPage && fetchNextPage()}
                     keyboardShouldPersistTaps="handled"

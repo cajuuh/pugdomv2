@@ -1,11 +1,26 @@
 import { DEFAULT_LANGUAGE, Language } from './defaults';
 import { Dictionary, en } from './en';
 import { ptBR } from './pt-BR';
+import { es419 } from './es-419';
+import { de } from './de';
+import { fr } from './fr';
+import { eo } from './eo';
+import { la } from './la';
+import { ja } from './ja';
+import { zhCN } from './zh-CN';
 
-export const DICTIONARIES: Record<Language, Dictionary> = { en, 'pt-BR': ptBR };
+export const DICTIONARIES: Record<Language, Dictionary> = { en, 'pt-BR': ptBR, 'es-419': es419, de, fr, eo, la, ja, 'zh-CN': zhCN };
 
 // Locale for dates and numbers
-export const LOCALES: Record<Language, string> = { en: 'en-US', 'pt-BR': 'pt-BR' };
+export const LOCALES: Record<Language, string> = {
+    en: 'en-US', 'pt-BR': 'pt-BR', 'es-419': 'es-419', de: 'de-DE', fr: 'fr-FR', eo: 'eo', la: 'la', ja: 'ja-JP', 'zh-CN': 'zh-CN',
+};
+
+// The language posts are translated into, among Mastodon's own locales (it has es, es-AR and es-MX, no es-419).
+// Translation services don't do Latin, so Latin readers get English.
+export const MASTODON_LOCALES: Record<Language, string> = {
+    en: 'en', 'pt-BR': 'pt-BR', 'es-419': 'es', de: 'de', fr: 'fr', eo: 'eo', la: 'en', ja: 'ja', 'zh-CN': 'zh-CN',
+};
 
 // Every dotted path to a string in the dictionary, e.g. 'settings.title'
 type Leaves<T, P extends string = ''> = {
@@ -35,9 +50,10 @@ const lookup = (dict: Dictionary, key: string): string | undefined => {
 const interpolate = (text: string, params?: Params) =>
     params ? text.replace(/\{\{(\w+)\}\}/g, (match, name: string) => (name in params ? String(params[name]) : match)) : text;
 
-// Portuguese uses the singular for 0 and 1 ("0 voto", "1 voto"); English only for 1
+// Portuguese and French use the singular for 0 and 1 ("0 voto", "1 voto"); the others only for 1
+// (Japanese and Chinese have one form, so their _one and _other say the same)
 export const pluralForm = (language: Language, count: number): 'one' | 'other' =>
-    language === 'pt-BR' ? (Math.abs(count) < 2 ? 'one' : 'other') : count === 1 ? 'one' : 'other';
+    language === 'pt-BR' || language === 'fr' ? (Math.abs(count) < 2 ? 'one' : 'other') : count === 1 ? 'one' : 'other';
 
 const translators = new Map<Language, Translator>();
 

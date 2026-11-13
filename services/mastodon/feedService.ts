@@ -9,6 +9,11 @@ import { getServerTimeline } from './servers';
 // Direct posts (Mastodon puts the ones mentioning you in Home and lists) belong in Messages only
 export const withoutDirect = (posts: Status[]): Status[] => posts.filter(post => post.visibility !== 'direct');
 
+// Home's "show boosts" and "show replies", as in Mastodon's web app: hidden replies still show when
+// they're to you. Mastodon can't filter Home itself, so it's done on the posts that arrive.
+export const homeShows = (boosts: boolean, replies: boolean, me?: string) => (post: Status) =>
+    (boosts || !post.reblog) && (replies || !post.in_reply_to_id || post.in_reply_to_account_id === me);
+
 export const parseTrendingOffset = (cursor?: string): number => {
     if (cursor && cursor.startsWith('offset:')) {
         const val = parseInt(cursor.slice(7), 10);

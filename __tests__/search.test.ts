@@ -1,5 +1,5 @@
 import apiClient from '../services/api/client';
-import { resolveAccount } from '../services/mastodon/search';
+import { resolveAccount, searchAccountNames } from '../services/mastodon/search';
 
 jest.mock('../services/api/client', () => ({ __esModule: true, default: { get: jest.fn() } }));
 jest.mock('../services/storage', () => ({
@@ -7,6 +7,18 @@ jest.mock('../services/storage', () => ({
 }));
 
 const mockedGet = apiClient.get as jest.Mock;
+
+describe('searchAccountNames', () => {
+    it("asks the autocomplete search, which doesn't look in bios, and only sends the filters in use", async () => {
+        mockedGet.mockResolvedValue({ data: [{ id: 'isa' }] });
+
+        expect(await searchAccountNames('isa', { following: true, limit: 20 })).toEqual([{ id: 'isa' }]);
+        expect(mockedGet).toHaveBeenCalledWith('/accounts/search', { params: { q: 'isa', following: true, resolve: undefined, limit: 20 } });
+
+        await searchAccountNames('isa@far.social', { resolve: true });
+        expect(mockedGet).toHaveBeenCalledWith('/accounts/search', { params: { q: 'isa@far.social', following: undefined, resolve: true, limit: undefined } });
+    });
+});
 
 describe('resolveAccount', () => {
     it('asks our server to look the account up, on the v2 search endpoint', async () => {

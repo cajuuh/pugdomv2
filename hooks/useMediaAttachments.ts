@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { InstanceConfiguration } from '../services/mastodon/instance';
-import { updateMedia, uploadMedia } from '../services/mastodon/media';
-import { imageType, isVideoPick, PickedImage, prepareImage } from '../services/media/prepare';
+import { updateMedia, UploadFile, uploadMedia } from '../services/mastodon/media';
+import { imageType, isVideoPick, PickedImage, prepareImage, toJpeg } from '../services/media/prepare';
 import { fromMastodonFocus, ImageEdits, NO_EDITS, Point, toMastodonFocus } from '../services/media/geometry';
 import { Attachment } from '../services/mastodon/types';
 
@@ -31,6 +31,11 @@ export interface ComposeAttachment {
 
 const sameFocus = (a?: Point, b?: Point) => a?.x === b?.x && a?.y === b?.y;
 
+// How Mastodon answers a file it can't take: 422 for the wrong type or size, 500 when it can't process it
+const fileRejected = (error: any) => error?.response?.status === 422 || error?.response?.status === 500;
+// What the server said, for telling the person. Nothing when it never answered
+const failureReason = (error: any): string | undefined => error?.response?.data?.error ?? (error?.response?.status ? `HTTP ${error.response.status}` : undefined);
+
 type Limits = Pick<InstanceConfiguration, 'maxMediaAttachments' | 'imageSizeLimit' | 'imageMatrixLimit' | 'supportedMimeTypes' | 'videoSizeLimit'>;
 
 // What `add` left out: a video with other media (Mastodon takes one video, alone), or one over the size limit
@@ -41,7 +46,7 @@ export interface AddResult {
 
 // Images (or one video) attached to the post being written. Each one uploads as soon as it's picked, so it's ready
 // by the time you post; removing one cancels its upload.
-export const useMediaAttachments = (limits: Limits) => {
+export const useMediaAttachments = (limits: Limits, onUploadFailed?: (reason?: string) => void) => {
     const [attachments, setAttachments] = useState<ComposeAttachment[]>([]);
     // Per attachment: the image being uploaded, and the picked original with the edits that made it
     const uploads = useRef(new Map<string, { image: PickedImage; original: PickedImage; edits: ImageEdits; controller: AbortController }>());
@@ -49,6 +54,8 @@ export const useMediaAttachments = (limits: Limits) => {
     // Latest limits for uploads started from callbacks
     const limitsRef = useRef(limits);
     limitsRef.current = limits;
+    const onUploadFailedRef = useRef(onUploadFailed);
+    onUploadFailedRef.current = onUploadFailed;
     // Counts attachments added but not rendered yet, so two quick picks can't go over the limit
     const count = useRef(0);
     count.current = Math.max(count.current, attachments.length);
@@ -67,10 +74,17 @@ export const useMediaAttachments = (limits: Limits) => {
                 ? { uri: image.uri, name: image.fileName ?? 'video.mp4', type: image.mimeType ?? 'video/mp4' }
                 : await prepareImage(image, limitsRef.current);
             if (controller.signal.aborted) return;
-            const media = await uploadMedia(file, {
+            const send = (toSend: UploadFile) => uploadMedia(toSend, {
                 signal: controller.signal,
                 video,
                 onProgress: progress => update(key, { progress }),
+            });
+            const media = await send(file).catch(async error => {
+                // The name can lie (an AVIF called .jpeg shows here but the server refuses it), and any server
+                // takes a plain JPEG. Not GIFs, which it would flatten, nor what's already been converted.
+                if (video || file.uri !== image.uri || imageType(image) === 'image/gif' || !fileRejected(error)) throw error;
+                update(key, { progress: 0 });
+                return send(await toJpeg(image));
             });
             if (!controller.signal.aborted) update(key, { status: 'ready', progress: 1, mediaId: media.id });
         } catch (error) {
@@ -78,6 +92,7 @@ export const useMediaAttachments = (limits: Limits) => {
             if (!controller.signal.aborted) {
                 console.warn('Media upload failed:', error);
                 update(key, { status: 'failed' });
+                onUploadFailedRef.current?.(failureReason(error));
             }
         }
     }, [update]);

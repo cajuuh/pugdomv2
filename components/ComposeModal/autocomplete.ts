@@ -29,3 +29,15 @@ export const completeToken = (text: string, start: number, cursor: number, repla
     const piece = `${replacement}${/^\s/.test(after) ? '' : ' '}`;
     return { text: text.slice(0, start) + piece + after, cursor: start + piece.length };
 };
+
+// Who to suggest for a mention: people you follow, then your server's (their acct has no server), then
+// everyone else, each in the server's order. Your server counts you among those you follow, so you're left out.
+export const rankMentions = <T extends { id: string; acct: string }>(following: T[], everyone: T[], myId?: string): T[] => {
+    const followed = new Set(following.map(account => account.id));
+    const others = everyone.filter(account => !followed.has(account.id));
+    return [
+        ...following,
+        ...others.filter(account => !account.acct.includes('@')),
+        ...others.filter(account => account.acct.includes('@')),
+    ].filter(account => account.id !== myId);
+};

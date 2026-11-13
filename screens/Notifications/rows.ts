@@ -1,19 +1,26 @@
+import { absoluteDate, isAbsoluteDates } from '../../services/dates';
 import { NotificationGroup } from '../../services/mastodon/types';
 import { defaultTranslator, Translator } from '../../services/i18n/translate';
+import { isNewerId } from '../../services/mastodon/notifications';
 
 // One entry in the list: a section label, or a notification row inside that section's inset group
 export type ListItem =
     | { kind: 'section'; key: string; label: string }
-    | { kind: 'row'; key: string; group: NotificationGroup; first: boolean; last: boolean };
+    | { kind: 'row'; key: string; group: NotificationGroup; first: boolean; last: boolean; unread: boolean };
 
 const isSameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
 
-// Splits rows (newest first) into "Today" and "Earlier" sections
-export const buildListItems = (groups: NotificationGroup[], now = new Date(), { t }: Translator = defaultTranslator()): ListItem[] => {
-    const today = groups.filter(g => isSameDay(new Date(g.created_at), now));
-    const earlier = groups.filter(g => !isSameDay(new Date(g.created_at), now));
+// Splits rows (newest first) into "New", "Today" and "Earlier" sections. New: newer than `readPoint`, where
+// you'd read up to (null: nothing read yet); while it's still loading (undefined) there's no "New"
+export const buildListItems = (groups: NotificationGroup[], now = new Date(), { t }: Translator = defaultTranslator(), readPoint?: string | null): ListItem[] => {
+    const isNew = (g: NotificationGroup) => readPoint !== undefined && (readPoint === null || isNewerId(g.newestId, readPoint));
+    const unread = groups.filter(isNew);
+    const read = groups.filter(g => !isNew(g));
+    const today = read.filter(g => isSameDay(new Date(g.created_at), now));
+    const earlier = read.filter(g => !isSameDay(new Date(g.created_at), now));
 
     return [
+        { id: 'new', label: t('notifications.new'), items: unread },
         { id: 'today', label: t('notifications.today'), items: today },
         { id: 'earlier', label: t('notifications.earlier'), items: earlier },
     ].flatMap(({ id, label, items }): ListItem[] =>
@@ -27,14 +34,16 @@ export const buildListItems = (groups: NotificationGroup[], now = new Date(), { 
                     group,
                     first: index === 0,
                     last: index === items.length - 1,
+                    unread: id === 'new',
                 })),
             ]
     );
 };
 
-// "now", "4m", "3h", then the weekday for the past week, then the date
+// "now", "4m", "3h", then the weekday for the past week, then the date (or always the date and time)
 export const notificationTime = (createdAt: string, now = new Date(), { t, locale }: Translator = defaultTranslator()) => {
     const created = new Date(createdAt);
+    if (isAbsoluteDates()) return absoluteDate(created, now, locale, true);
     const minutes = Math.floor((now.getTime() - created.getTime()) / 60000);
 
     if (minutes < 1) return t('common.now');
@@ -47,10 +56,7 @@ export const notificationTime = (createdAt: string, now = new Date(), { t, local
         });
     }
 
-    return created.toLocaleDateString(locale, {
-        month: 'short',
-        day: 'numeric',
-    });
+    return absoluteDate(created, now, locale, false);
 };
 
 export { plainText } from '../../services/htmlText';
@@ -63,5 +69,11 @@ export const actorsText = (names: string[], count: number, { t, tn }: Translator
     return shown.length === 2 ? t('common.listAnd', { list: shown[0], last: shown[1] }) : shown[0] ?? '';
 };
 
-// Replies start with the handles they're addressed to; drop them unless that's all the post says
-export const withoutLeadingMentions = (text: string) => text.replace(/^(?:@[\w.-]+(?:@[\w.-]+)?\s+)+/, '') || text;
+// Replies start with the handles they're addressed to. Yours goes, since the row is already for you; the
+// others stay, to show who else it's for. All of it stays if that's all the post says.
+export const withoutOwnMention = (text: string, username?: string) => {
+    const leading = text.match(/^(?:@[\w.-]+(?:@[\w.-]+)?\s+)+/)?.[0];
+    if (!leading || !username) return text;
+    const others = leading.trim().split(/\s+/).filter(handle => handle.slice(1).split('@')[0].toLowerCase() !== username.toLowerCase());
+    return [...others, text.slice(leading.length)].filter(Boolean).join(' ') || text;
+};

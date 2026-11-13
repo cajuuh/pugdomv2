@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
+import { Icon, IconName } from './icon';
 import { useTheme } from '../../services/themeContext';
 
 interface AvatarProps {
@@ -9,7 +10,7 @@ interface AvatarProps {
     uri?: string | null;
     size?: number;
     // Type glyph in an accent circle at the bottom-right (e.g. a notification's type)
-    badge?: React.ComponentProps<typeof Ionicons>['name'];
+    badge?: IconName;
     ring?: boolean;
 }
 
@@ -25,11 +26,11 @@ export const initialsOf = (name: string) =>
 const BADGE_SIZE = 22;
 
 // Type glyph in an accent circle, pinned to the bottom-right of the avatar (or avatar stack) it sits in
-export const AvatarBadge: React.FC<{ icon: React.ComponentProps<typeof Ionicons>['name'] }> = ({ icon }) => {
+export const AvatarBadge: React.FC<{ icon: IconName }> = ({ icon }) => {
     const { colors } = useTheme();
     return (
         <View testID="avatar-badge" style={[styles.badge, { backgroundColor: colors.accentColor, borderColor: colors.cardBackground }]}>
-            <Ionicons name={icon} size={12} color={colors.buttonTextColor} />
+            <Icon name={icon} size={12} color={colors.buttonTextColor} />
         </View>
     );
 };
@@ -43,7 +44,15 @@ export const Avatar: React.FC<AvatarProps> = ({ name, uri, size = 42, badge, rin
     return (
         <View accessible accessibilityRole="image" accessibilityLabel={name} style={circle}>
             {showImage ? (
-                <Image testID="avatar-image" source={{ uri }} style={[circle, { backgroundColor: colors.inputBackground }]} onError={() => setFailedUri(uri)} />
+                // Kept in memory as well as on disk: the same faces come back all over the timeline
+                <Image
+                    testID="avatar-image"
+                    source={{ uri }}
+                    recyclingKey={uri}
+                    cachePolicy="memory-disk"
+                    style={[circle, { backgroundColor: colors.inputBackground }]}
+                    onError={() => setFailedUri(uri)}
+                />
             ) : (
                 <View style={[circle, styles.initials, { backgroundColor: colors.accentSoft }]}>
                     <Text style={[type.name, { fontSize: size * 0.38, lineHeight: size * 0.5, color: colors.accentText }]}>

@@ -1,11 +1,13 @@
 import React from 'react';
-import { Image } from 'react-native';
-import * as WebBrowser from 'expo-web-browser';
-import RenderHtml, { HTMLElementModel, HTMLContentModel, defaultSystemFonts } from 'react-native-render-html';
+import { Image, Platform, Pressable, Share } from 'react-native';
+import RenderHtml, { HTMLElementModel, HTMLContentModel, defaultSystemFonts, useInternalRenderer } from 'react-native-render-html';
+import { useOptionalMediaViewer } from '../MediaViewer/mediaViewer';
 import { CustomEmoji } from '../../services/mastodon/types';
+import { inlineEmojiStyle } from '../../services/emojiHelper';
 import { fontFamilies } from '../../services/theme/typography';
 import { tagFromHref } from '../../services/mastodon/tags';
-import { withoutQuoteInline } from '../../services/htmlText';
+import { breakLongRuns, withoutQuoteInline } from '../../services/htmlText';
+import { postTextMetrics } from './styles';
 
 // Post (and bio) HTML: custom emoji inline, mentions / hashtags / links routed to the handlers
 
@@ -20,16 +22,41 @@ const customHTMLElementModels = {
     })
 };
 
-const renderers = {
-    emoji: ({ tnode }: any) => {
-        return (
-            <Image
-                source={{ uri: tnode.attributes.src }}
-                style={{ width: 16, height: 16, resizeMode: 'contain', marginHorizontal: 2 }}
-            />
-        );
-    }
+// Tapping an emoji shows it bigger, in the media viewer
+const InlineEmoji = ({ src, shortcode }: { src: string; shortcode: string }) => {
+    const viewer = useOptionalMediaViewer();
+    const label = `:${shortcode}:`;
+    return (
+        <Pressable
+            testID="inline-emoji"
+            disabled={!viewer}
+            onPress={() => viewer?.openMedia([{ id: src, type: 'image', url: src, preview_url: src, description: label }], 0)}
+            accessibilityRole="imagebutton"
+            accessibilityLabel={label}
+        >
+            <Image source={{ uri: src }} style={[inlineEmojiStyle(16), { marginHorizontal: 2 }]} />
+        </Pressable>
+    );
 };
+
+// Holding a link offers it to copy or send, instead of opening it on release (tester request). The share
+// sheet has Copy on both platforms; iOS builds a link preview from `url`, Android only shares `message`.
+export const shareLink = (url: string) => Share.share(Platform.OS === 'ios' ? { url } : { message: url }).catch(() => {});
+
+const LinkRenderer = (props: any) => {
+    const { Renderer, rendererProps } = useInternalRenderer('a', props);
+    const href = props.tnode.attributes.href;
+    if (!href) return <Renderer {...rendererProps} />;
+    return <Renderer {...rendererProps} textProps={{ ...rendererProps.textProps, onLongPress: () => shareLink(href) }} />;
+};
+
+const renderers = {
+    emoji: ({ tnode }: any) => <InlineEmoji src={tnode.attributes.src} shortcode={tnode.attributes.shortcode} />,
+    a: LinkRenderer,
+};
+
+// Below each paragraph, the last one included
+export const PARAGRAPH_GAP = 10;
 
 // Holding the text selects it, to copy (tester request); links and taps on the card still work
 const defaultTextProps = { selectable: true };
@@ -48,7 +75,7 @@ export const linkKind = (href: string, attribs: { class?: string; rel?: string }
     return 'link';
 };
 
-export const StatusHtmlContent = React.memo(({ content, emojis, colors, bodyFont, compactMode, width, onPressMention, onPressHashtag, onPressLink }: any) => {
+export const StatusHtmlContent = React.memo(({ content, emojis, colors, bodyFont, compactMode, textSize, width, onPressMention, onPressHashtag, onPressLink }: any) => {
     const renderersProps = React.useMemo(() => ({
         a: {
             onPress: (event: any, href: string, htmlAttribs: any) => {
@@ -72,21 +99,22 @@ export const StatusHtmlContent = React.memo(({ content, emojis, colors, bodyFont
         body: {
             ...bodyFont,
             color: colors.textPrimary,
-            fontSize: compactMode ? 13 : 15.5,
-            lineHeight: compactMode ? 18 : 22.5,
+            ...postTextMetrics(!!compactMode, textSize),
         },
         a: {
-            color: colors.accentText,
+            color: colors.linkColor,
             textDecorationLine: 'none' as const,
         },
         p: {
             marginTop: 0,
-            marginBottom: 10,
+            marginBottom: PARAGRAPH_GAP,
         }
-    }), [colors, bodyFont, compactMode]);
+    }), [colors, bodyFont, compactMode, textSize]);
 
     const processedHtml = React.useMemo(() => {
-        let html = withoutQuoteInline(content || '');
+        // One <p> for the whole post: each <p> is its own Text, and a selection can't cross Texts, so
+        // holding a word could only copy that paragraph
+        let html = withoutQuoteInline(content || '').replace(/<\/p>\s*<p[^>]*>/gi, '<br><br>');
         html = html.replace(/<span class="invisible">https?:\/\/<\/span>/gi, '');
         html = html.replace(/<span class="invisible">.*?<\/span>/gi, (match: string) => {
             const inner = match.replace(/<[^>]*>/g, '');
@@ -98,10 +126,10 @@ export const StatusHtmlContent = React.memo(({ content, emojis, colors, bodyFont
                 const regex = new RegExp(`:${emoji.shortcode}:`, 'g');
                 // Closed explicitly: HTML ignores "/>" on custom tags, so everything after the first
                 // emoji (more emoji, the rest of the text) would end up inside it, unseen
-                html = html.replace(regex, `<emoji src="${emoji.url}"></emoji>`);
+                html = html.replace(regex, `<emoji src="${emoji.url}" shortcode="${emoji.shortcode}"></emoji>`);
             });
         }
-        return html;
+        return breakLongRuns(html);
     }, [content, emojis]);
 
     return (
@@ -120,10 +148,4 @@ export const StatusHtmlContent = React.memo(({ content, emojis, colors, bodyFont
 
 // Module-level so it's the same function on every render; a new one would defeat StatusHtmlContent's memo
 // and make RenderHtml rebuild the post's tree on every card re-render
-export const openLink = async (url: string) => {
-    try {
-        await WebBrowser.openBrowserAsync(url);
-    } catch (error) {
-        console.error('Failed to open link:', error);
-    }
-};
+export { openLink } from '../../services/links';

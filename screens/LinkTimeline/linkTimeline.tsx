@@ -2,14 +2,15 @@ import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, RefreshControl, Text, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon } from '../../components/ui/icon';
 import { useTheme } from '../../services/themeContext';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { useLinkTimeline } from '../../hooks/useExplore';
 import { Status } from '../../services/mastodon/types';
-import { autoplayViewability } from '../../services/media/autoplay';
+import { postListProps } from '../../services/media/autoplay';
 import { TootCard } from '../../components/TootCard/tootCard';
+import { withoutHidden } from '../../services/mastodon/filters';
 import { IconButton, PillButton } from '../../components/ui';
 import { openLink } from '../../components/TootCard/htmlContent';
 import { makeStyles } from './styles';
@@ -42,7 +43,7 @@ const LinkTimeline = ({ url, title, onBack, onStatusPress }: LinkTimelineProps) 
 
     const { data, isLoading, isError, isFetchingNextPage, hasNextPage, fetchNextPage, refetch } =
         useLinkTimeline(url);
-    const statuses = data?.pages.flat() ?? [];
+    const statuses = withoutHidden(data?.pages.flat() ?? [], 'public');
 
     const handleRefresh = useCallback(async () => {
         setIsPullRefreshing(true);
@@ -58,7 +59,7 @@ const LinkTimeline = ({ url, title, onBack, onStatusPress }: LinkTimelineProps) 
     const intro = (
         <View style={styles.intro}>
             <View style={styles.domainBadge}>
-                <Ionicons name="link-outline" size={14} color={colors.accentText} />
+                <Icon name="link-outline" size={14} color={colors.accentText} />
                 <Text style={[type.label, styles.domainText]}>{domain}</Text>
             </View>
             <Text accessibilityRole="header" style={[type.title, styles.title]}>
@@ -88,10 +89,10 @@ const LinkTimeline = ({ url, title, onBack, onStatusPress }: LinkTimelineProps) 
             </View>
 
             <FlashList
-                {...autoplayViewability}
+                {...postListProps}
                 data={statuses}
                 keyExtractor={(item: Status) => item.id}
-                renderItem={({ item }) => <TootCard status={item} onPress={onStatusPress} />}
+                renderItem={({ item }) => <TootCard status={item} onPress={onStatusPress} filterContext="public" />}
                 ListHeaderComponent={intro}
                 ListEmptyComponent={
                     <View style={styles.empty}>

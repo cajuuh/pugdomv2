@@ -15,11 +15,14 @@ const mapPage = (page: StatusPage, update: (status: Status) => Status): StatusPa
 export const STATUS_UPDATED_EVENT = 'status_updated';
 export const STATUS_DELETED_EVENT = 'status_deleted';
 
-// Replaces a status in every cached timeline, including where it appears as a boost, and in cached notifications
+// Replaces statuses in every cached timeline, including where they appear as boosts, and in cached notifications.
+// Takes several at once (a freshly loaded thread) so the caches are walked once.
 export const useUpdateCachedStatus = () => {
     const queryClient = useQueryClient();
 
-    return useCallback((updated: Status) => {
+    return useCallback((updates: Status | Status[]) => {
+        const fresh = new Map((Array.isArray(updates) ? updates : [updates]).map(status => [status.id, status]));
+        if (fresh.size === 0) return;
         queryClient.setQueriesData<InfiniteData<StatusPage>>({ queryKey: ['timeline'] }, (data) => {
             if (!data) {
                 return data;
@@ -27,13 +30,12 @@ export const useUpdateCachedStatus = () => {
             return {
                 ...data,
                 pages: data.pages.map(page => mapPage(page, status => {
-                    if (status.id === updated.id) {
-                        return updated;
+                    const own = fresh.get(status.id);
+                    if (own) {
+                        return own;
                     }
-                    if (status.reblog?.id === updated.id) {
-                        return { ...status, reblog: updated };
-                    }
-                    return status;
+                    const boosted = status.reblog && fresh.get(status.reblog.id);
+                    return boosted ? { ...status, reblog: boosted } : status;
                 })),
             };
         });
@@ -45,7 +47,10 @@ export const useUpdateCachedStatus = () => {
                 ...data,
                 pages: data.pages.map(page => ({
                     ...page,
-                    groups: page.groups.map(group => (group.status?.id === updated.id ? { ...group, status: updated } : group)),
+                    groups: page.groups.map(group => {
+                        const own = group.status && fresh.get(group.status.id);
+                        return own ? { ...group, status: own } : group;
+                    }),
                 })),
             };
         });

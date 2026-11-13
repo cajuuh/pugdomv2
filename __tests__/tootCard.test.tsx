@@ -12,7 +12,7 @@ import { Poll } from '../components/Poll/poll';
 import { bookmarkStatus, favouriteStatus, unbookmarkStatus } from '../services/mastodon/statuses';
 import { votePoll } from '../services/mastodon/polls';
 import { Attachment, Poll as PollType, Status } from '../services/mastodon/types';
-import { autoplayViewability, setAutoplayPost, useIsAutoplayPost } from '../services/media/autoplay';
+import { postListProps, setAutoplayPost, useIsAutoplayPost } from '../services/media/autoplay';
 
 // An observable stand-in for the native video player
 jest.mock('expo-video', () => {
@@ -41,7 +41,7 @@ jest.mock('../services/mastodon/polls', () => ({
 }));
 
 // Mutable so the Compact Mode tests can turn it on
-const mockSettings: { compactMode: boolean; mediaAutoplay: boolean; hideCounts: boolean; expandSpoilers: boolean | null; coverSensitiveMedia: boolean; uncroppedMedia: boolean } = { compactMode: false, mediaAutoplay: false, hideCounts: false, expandSpoilers: null, coverSensitiveMedia: true, uncroppedMedia: false };
+const mockSettings: { compactMode: boolean; mediaAutoplay: boolean; hideCounts: boolean; expandSpoilers: boolean | null; coverSensitiveMedia: boolean; uncroppedMedia: boolean; mediaGrid?: boolean } = { compactMode: false, mediaAutoplay: false, hideCounts: false, expandSpoilers: null, coverSensitiveMedia: true, uncroppedMedia: false };
 jest.mock('../services/settingsContext', () => ({
     useSettings: () => mockSettings,
 }));
@@ -188,6 +188,23 @@ describe('TootCard bookmarks', () => {
         queryClient = createTestQueryClient();
     });
 
+    it('shows fresher counts when the same post comes back with them', async () => {
+        const view = await renderCard(statusA);
+        expect(screen.getByText('33')).toBeTruthy();
+
+        await view.rerender(
+            <QueryClientProvider client={queryClient}>
+                <MediaViewerProvider>
+                    <TootCard status={{ ...statusA, favourites_count: 40, reblogs_count: 23, favourited: true }} />
+                </MediaViewerProvider>
+            </QueryClientProvider>
+        );
+
+        expect(screen.getByText('40')).toBeTruthy();
+        expect(screen.getByText('23')).toBeTruthy();
+        expect(screen.queryByText('33')).toBeNull();
+    });
+
     it('bookmarks a post and shows it as bookmarked', async () => {
         mockedBookmark.mockResolvedValue({ ...statusA, bookmarked: true });
         await renderCard(statusA);
@@ -304,13 +321,13 @@ describe('TootCard content', () => {
                 media_attachments: [{ id: 'm1', type: 'image', url: 'https://example.social/m1.png', preview_url: 'https://example.social/m1-small.png', meta: { small: { width: 400, height: 300 } } }],
             } as Status);
 
-            expect(screen.getByTestId('focused-image-whole').props.resizeMode).toBe('contain');
+            expect(screen.getByTestId('focused-image-whole').props.contentFit).toBe('contain');
         } finally {
             mockSettings.uncroppedMedia = false;
         }
     });
 
-    it('shows several images as a carousel, one page at a time', async () => {
+    it('shows several images as a carousel, one at a time, the next peeking in', async () => {
         const image = (id: string) => ({ id, type: 'image', url: `https://example.social/${id}.png`, preview_url: `https://example.social/${id}-small.png` });
         await renderCard({ ...statusA, media_attachments: [image('m1'), image('m2'), image('m3')] } as Status);
 
@@ -321,8 +338,13 @@ describe('TootCard content', () => {
 
         const carousel = screen.getByTestId('media-carousel');
         await fireEvent(carousel, 'layout', { nativeEvent: { layout: { width: 300, height: 200 } } });
-        await fireEvent(carousel, 'momentumScrollEnd', { nativeEvent: { contentOffset: { x: 300, y: 0 } } });
+        // 300 wide: 264-wide slides, 8 apart, so the next one peeks in
+        expect(StyleSheet.flatten(screen.getByRole('imagebutton', { name: 'Image 1 of 3' }).props.style).width).toBe(264);
+        await fireEvent(carousel, 'momentumScrollEnd', { nativeEvent: { contentOffset: { x: 272, y: 0 } } });
         expect(dots()).toEqual(['carousel-dot', 'carousel-dot-active', 'carousel-dot']);
+        // The far end, where the last slide lines up with the edge
+        await fireEvent(carousel, 'momentumScrollEnd', { nativeEvent: { contentOffset: { x: 3 * 264 + 2 * 8 - 300, y: 0 } } });
+        expect(dots()).toEqual(['carousel-dot', 'carousel-dot', 'carousel-dot-active']);
     });
 
     it('shows sensitive posts without a CW, veiling only the media', async () => {
@@ -371,6 +393,23 @@ describe('TootCard content', () => {
         } finally {
             mockMediaDisplay = 'default';
         }
+    });
+
+    it('shows the media, not the post, when the Sensitive label is tapped', async () => {
+        const onPress = jest.fn();
+        await render(
+            <QueryClientProvider client={createTestQueryClient()}>
+                <MediaViewerProvider>
+                    <TootCard status={withMedia({ ...statusA, sensitive: true })} onPress={onPress} />
+                </MediaViewerProvider>
+            </QueryClientProvider>
+        );
+
+        await fireEvent.press(screen.getByText(/^Sensitive/));
+
+        expect(screen.queryByTestId('media-veil')).toBeNull();
+        expect(screen.getByRole('button', { name: 'Hide media' })).toBeTruthy();
+        expect(onPress).not.toHaveBeenCalled();
     });
 
     it('shows sensitive media on request and can hide it again', async () => {
@@ -723,7 +762,7 @@ describe('TootCard autoplay', () => {
 
     it('picks the first post in view with a video or GIF, boosts and wrapped rows included', async () => {
         const pick = (...items: unknown[]) =>
-            act(async () => autoplayViewability.onViewableItemsChanged({ viewableItems: items.map((item, index) => ({ item, index, key: String(index), isViewable: true })) as any }));
+            act(async () => postListProps.onViewableItemsChanged({ viewableItems: items.map((item, index) => ({ item, index, key: String(index), isViewable: true })) as any }));
         const gif = { ...statusB, media_attachments: [{ ...video, type: 'gifv' }] } as Status;
         const isB = await renderHook(() => useIsAutoplayPost('B'));
         const isA = await renderHook(() => useIsAutoplayPost('A'));
@@ -738,5 +777,222 @@ describe('TootCard autoplay', () => {
         await pick({ ...statusA, media_attachments: [image] });
         expect(isA.result.current).toBe(false);
         expect(isB.result.current).toBe(false);
+    });
+});
+
+describe('TootCard long posts', () => {
+    const renderCard = (status: Status, fullText?: boolean) =>
+        render(
+            <QueryClientProvider client={createTestQueryClient()}>
+                <MediaViewerProvider>
+                    <TootCard status={status} fullText={fullText} />
+                </MediaViewerProvider>
+            </QueryClientProvider>
+        );
+
+    const long = { ...statusA, content: `<p>${'word '.repeat(200)}the end</p>` };
+    // A chain of characters made to choke apps
+    const huge = { ...statusA, content: `<p>${'A'.repeat(20000)}</p>` };
+
+    it('leaves short posts as they are', async () => {
+        await renderCard(statusA);
+
+        expect(screen.queryByRole('button', { name: 'Show more' })).toBeNull();
+    });
+
+    it('shows the hashtags a post ends with below its media, five until asked', async () => {
+        const tag = (name: string) => `<a href="https://x/tags/${name}" class="mention hashtag" rel="tag">#<span>${name}</span></a>`;
+        const names = ['a1', 'b2', 'c3', 'd4', 'e5', 'f6', 'g7'];
+        await renderCard({ ...statusA, content: `<p>hello</p><p>${names.map(tag).join(' ')}</p>` } as Status);
+
+        expect(screen.getAllByRole('link', { name: /^#/ })).toHaveLength(5);
+        expect(screen.queryByText('#f6')).toBeNull();
+
+        // The rest as a chip like the tags
+        expect(screen.getByText('+2')).toBeTruthy();
+        await fireEvent.press(screen.getByRole('button', { name: 'Show 2 more hashtags' }));
+
+        expect(screen.getAllByRole('link', { name: /^#/ })).toHaveLength(7);
+        expect(screen.queryByRole('button', { name: 'Show 2 more hashtags' })).toBeNull();
+    });
+
+    it('moves the hashtags of a post that is only hashtags below its link card', async () => {
+        const tag = `<a href="https://x/tags/Sabafoto" class="mention hashtag" rel="tag">#<span>Sabafoto</span></a>`;
+        const card = { url: 'https://news.example/a', title: 'A photo', description: '', type: 'link', image: null };
+        await renderCard({ ...statusA, content: `<p>${tag}</p>`, card } as unknown as Status);
+
+        // No text block left, only the hashtag row
+        expect(screen.queryByTestId('html')).toBeNull();
+        expect(screen.getByRole('link', { name: '#Sabafoto' })).toBeTruthy();
+    });
+
+    it('folds a long post behind Show more and opens it in place', async () => {
+        await renderCard(long);
+
+        expect(screen.getByText(/the end/)).toBeTruthy();
+        await fireEvent.press(screen.getByRole('button', { name: 'Show more' }));
+        expect(screen.queryByRole('button', { name: 'Show more' })).toBeNull();
+        expect(screen.getByText(/the end/)).toBeTruthy();
+    });
+
+    it("shows only the start of a huge post as plain text, with its length, until it's opened", async () => {
+        await renderCard(huge);
+
+        // Plain text (the post's HTML draws selectable text) and only its first 1,000 characters
+        const preview = screen.getByText(/^A+$/);
+        expect(preview.props.children).toHaveLength(1000);
+        expect(preview).not.toHaveProp('selectable', true);
+        expect(screen.getByText(`Very long post · ${(20000).toLocaleString('en')} characters`)).toBeTruthy();
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Show more' }));
+        expect(screen.queryByText(/Very long post/)).toBeNull();
+        // The whole post now, drawn from its HTML (selectable) with the run broken up to wrap
+        expect(screen.getByText(/^A{40}\u200B/)).toHaveProp('selectable', true);
+    });
+
+    it("shows the whole text of a thread's main post", async () => {
+        await renderCard(huge, true);
+
+        expect(screen.queryByRole('button', { name: 'Show more' })).toBeNull();
+        expect(screen.queryByText(/Very long post/)).toBeNull();
+    });
+});
+
+describe('TootCard filters', () => {
+    const warned = {
+        ...statusA,
+        filtered: [{
+            filter: { id: 'f1', title: 'Spoilers', context: ['home'], expires_at: null, filter_action: 'warn' },
+            keyword_matches: ['finale'],
+            status_matches: null,
+        }],
+    } as Status;
+    const renderCard = (status: Status, filterContext?: 'home' | 'thread') =>
+        render(
+            <QueryClientProvider client={createTestQueryClient()}>
+                <MediaViewerProvider>
+                    <TootCard status={status} filterContext={filterContext} />
+                </MediaViewerProvider>
+            </QueryClientProvider>
+        );
+
+    it('covers a post a warn filter matches until you show it', async () => {
+        await renderCard(warned, 'home');
+        expect(screen.getByText('Spoilers')).toBeTruthy();
+        expect(screen.queryByText('status A')).toBeNull();
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Show' }));
+        expect(screen.getByText('status A')).toBeTruthy();
+    });
+
+    it('leaves it alone where the filter does not apply', async () => {
+        await renderCard(warned, 'thread');
+        expect(screen.getByText('status A')).toBeTruthy();
+        expect(screen.queryByText('Spoilers')).toBeNull();
+    });
+});
+
+describe('TootCard replies', () => {
+    const renderCard = (status: Status, threadMode = false) =>
+        render(
+            <QueryClientProvider client={createTestQueryClient()}>
+                <MediaViewerProvider>
+                    <TootCard status={status} threadMode={threadMode} />
+                </MediaViewerProvider>
+            </QueryClientProvider>
+        );
+    const bob = { id: 'b1', username: 'bob', acct: 'bob@pug.social', url: '' };
+    const reply = { ...statusA, in_reply_to_id: 'P', in_reply_to_account_id: 'b1', mentions: [bob] };
+
+    it('says whom a reply in a feed answers', async () => {
+        await renderCard(reply);
+        expect(screen.getByText('Replying to @bob@pug.social')).toBeTruthy();
+    });
+
+    it("says a reply to the author's own post continues their thread", async () => {
+        await renderCard({ ...reply, in_reply_to_account_id: 'a1' });
+        expect(screen.getByText('Continues their own thread')).toBeTruthy();
+    });
+
+    it("says only that it's a reply when it doesn't mention whom it answers", async () => {
+        await renderCard({ ...reply, mentions: [] });
+        expect(screen.getByText('Reply')).toBeTruthy();
+    });
+
+    it('says it in Compact Mode too', async () => {
+        mockSettings.compactMode = true;
+        try {
+            await renderCard(reply);
+            expect(screen.getByText('Replying to @bob@pug.social')).toBeTruthy();
+        } finally {
+            mockSettings.compactMode = false;
+        }
+    });
+
+    it('marks the boosted post when a boost is a reply', async () => {
+        await renderCard({ ...statusB, reblog: reply });
+        expect(screen.getByText('Replying to @bob@pug.social')).toBeTruthy();
+    });
+
+    it("leaves posts that aren't replies unmarked", async () => {
+        await renderCard(statusA);
+        expect(screen.queryByText(/Replying to|Continues their own thread/)).toBeNull();
+    });
+
+    it('leaves threads to say whom a post answers', async () => {
+        await renderCard(reply, true);
+        expect(screen.queryByText(/Replying to/)).toBeNull();
+    });
+});
+
+describe('TootCard media grid', () => {
+    const image = (id: string, description = '') => ({ id, type: 'image', url: `https://example.social/${id}.png`, preview_url: `https://example.social/${id}-small.png`, description });
+    const renderWith = async (count: number) => {
+        mockSettings.mediaGrid = true;
+        await render(
+            <QueryClientProvider client={createTestQueryClient()}>
+                <MediaViewerProvider>
+                    <TootCard status={{ ...statusA, media_attachments: Array.from({ length: count }, (_, i) => image(`m${i + 1}`)) } as Status} />
+                </MediaViewerProvider>
+            </QueryClientProvider>
+        );
+    };
+    afterEach(() => { mockSettings.mediaGrid = false; });
+
+    it('shows every image at once instead of the carousel', async () => {
+        await renderWith(3);
+        expect(screen.getByTestId('media-grid')).toBeTruthy();
+        expect(screen.queryByTestId('media-carousel')).toBeNull();
+        expect(screen.getAllByRole('imagebutton').map(tile => tile.props.accessibilityLabel)).toEqual(['Image 1 of 3', 'Image 2 of 3', 'Image 3 of 3']);
+    });
+
+    it('shows four, and says how many more there are on the last', async () => {
+        await renderWith(6);
+        expect(screen.getAllByRole('imagebutton')).toHaveLength(4);
+        expect(screen.getByText('+2')).toBeTruthy();
+        expect(screen.getByRole('imagebutton', { name: 'Image 4 of 6, 2 more' })).toBeTruthy();
+    });
+
+    it('reads four in rows, left to right', async () => {
+        await renderWith(4);
+        expect(screen.getAllByRole('imagebutton').map(tile => tile.props.accessibilityLabel)).toEqual(['Image 1 of 4', 'Image 2 of 4', 'Image 3 of 4', 'Image 4 of 4']);
+        expect(screen.queryByText(/^\+/)).toBeNull();
+    });
+
+    it('keeps one image as it is', async () => {
+        await renderWith(1);
+        expect(screen.queryByTestId('media-grid')).toBeNull();
+        expect(screen.getByRole('imagebutton', { name: 'Image 1 of 1' })).toBeTruthy();
+    });
+
+    it('keeps the carousel when the grid is off', async () => {
+        await render(
+            <QueryClientProvider client={createTestQueryClient()}>
+                <MediaViewerProvider>
+                    <TootCard status={{ ...statusA, media_attachments: [image('m1'), image('m2')] } as Status} />
+                </MediaViewerProvider>
+            </QueryClientProvider>
+        );
+        expect(screen.getByTestId('media-carousel')).toBeTruthy();
     });
 });

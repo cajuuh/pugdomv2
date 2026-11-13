@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Image, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { LayoutChangeEvent, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { Image } from 'expo-image';
+import { Icon } from '../ui/icon';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { mediaColors } from '../../services/theme/media';
 import { radii, space } from '../../services/theme/shape';
 import { Attachment } from '../../services/mastodon/types';
+import { useI18n } from '../../services/i18n/i18nContext';
 import { focusedCover, fromMastodonFocus, Size } from '../../services/media/geometry';
 
 interface FocusedImageProps {
@@ -58,33 +60,51 @@ export const FocusedImage: React.FC<FocusedImageProps> = ({ attachment, style, b
     // The tile's size: layout, not per-post state, so it doesn't need resetting when the card is reused
     const [box, setBox] = useState<Size | null>(null);
     const uri = attachment.preview_url || attachment.url;
+    // Mastodon's blurred sketch of the picture, shown until it loads
+    const placeholder = attachment.blurhash ? { blurhash: attachment.blurhash } : undefined;
     const focus = attachment.meta?.focus;
     const size = attachment.meta?.original ?? attachment.meta?.small;
     const focused = !!focus && (focus.x !== 0 || focus.y !== 0) && !!size?.width && !!size?.height;
     const duration = attachment.meta?.original?.duration;
     const small = !!box && box.width < SMALL_TILE;
+    const { t } = useI18n();
+    const measure = (event: LayoutChangeEvent) => {
+        const { width, height } = event.nativeEvent.layout;
+        setBox(current => (current?.width === width && current?.height === height ? current : { width, height }));
+    };
+
+    // Media the server didn't keep (it rejects that server's media, or the file is gone): nothing to draw
+    if (attachment.type === 'unknown') {
+        return (
+            <View style={[style, styles.clip, styles.center, styles.unavailable]} testID="media-unavailable" onLayout={measure}>
+                <Icon name="alert-circle-outline" size={small ? 18 : 24} color={mediaColors.ink} />
+                {!small && <Text style={styles.unavailableText}>{t('post.mediaUnavailable')}</Text>}
+            </View>
+        );
+    }
 
     return (
         <View
             style={[style, styles.clip]}
             testID="focused-image"
-            onLayout={event => {
-                const { width, height } = event.nativeEvent.layout;
-                setBox(current => (current?.width === width && current?.height === height ? current : { width, height }));
-            }}
+            onLayout={measure}
         >
             {!focused || blurred || contain ? (
                 <Image
                     source={{ uri }}
+                    placeholder={placeholder}
+                    recyclingKey={uri}
                     testID={blurred ? 'focused-image-blurred' : contain ? 'focused-image-whole' : undefined}
                     style={StyleSheet.absoluteFill}
-                    resizeMode={contain ? 'contain' : 'cover'}
+                    contentFit={contain ? 'contain' : 'cover'}
                     blurRadius={blurred ? HIDDEN_BLUR_RADIUS : undefined}
                 />
             ) : (
                 box && (
                     <Image
                         source={{ uri }}
+                        placeholder={placeholder}
+                        recyclingKey={uri}
                         testID="focused-image-picture"
                         style={[styles.positioned, focusedCover(box, { width: size!.width!, height: size!.height! }, fromMastodonFocus(focus!))]}
                     />
@@ -95,7 +115,7 @@ export const FocusedImage: React.FC<FocusedImageProps> = ({ attachment, style, b
             {!blurred && !playing && attachment.type === 'video' && (
                 <View pointerEvents="none" style={styles.center} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
                     <View testID="video-badge" style={[styles.play, small && styles.playSmall]}>
-                        <Ionicons name="play" size={small ? 14 : 24} color={mediaColors.ink} style={styles.playIcon} />
+                        <Icon name="play" size={small ? 14 : 24} color={mediaColors.ink} style={styles.playIcon} />
                     </View>
                 </View>
             )}
@@ -156,5 +176,16 @@ const styles = StyleSheet.create({
     },
     positioned: {
         position: 'absolute',
+    },
+    unavailable: {
+        gap: space.xs,
+        padding: space.sm,
+        backgroundColor: mediaColors.scrim,
+    },
+    unavailableText: {
+        color: mediaColors.ink,
+        fontSize: 13,
+        fontWeight: '600',
+        textAlign: 'center',
     },
 });

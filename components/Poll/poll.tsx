@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon } from '../ui/icon';
 import { useRecyclingState } from '@shopify/flash-list';
 import { Poll as PollType, PollOption } from '../../services/mastodon/types';
 import { getPoll, votePoll } from '../../services/mastodon/polls';
@@ -54,6 +54,7 @@ export const Poll: React.FC<PollProps> = ({ initialPoll, onPollUpdated, readOnly
     const [poll, setPoll] = useRecyclingState<PollType>(initialPoll, [initialPoll.id]);
     const [selectedChoices, setSelectedChoices] = useRecyclingState<number[]>([], [initialPoll.id]);
     const [isVoting, setIsVoting] = useRecyclingState(false, [initialPoll.id]);
+    const [peeking, setPeeking] = useRecyclingState(false, [initialPoll.id]);
 
     // Lets the vote handler skip state updates if the card was recycled while voting
     const renderedPollId = useRef(initialPoll.id);
@@ -61,6 +62,9 @@ export const Poll: React.FC<PollProps> = ({ initialPoll, onPollUpdated, readOnly
 
     const ended = pollEnded(poll);
     const isClosed = ended || poll.voted || !!readOnly;
+    // Mastodon sends no option counts while the results aren't published, so there's nothing to peek at
+    const canPeek = !isClosed && poll.options.every(option => option.votes_count != null);
+    const showResults = isClosed || (peeking && canPeek);
     const totalVotes = poll.voters_count || poll.votes_count || 0;
     const topVotes = Math.max(0, ...poll.options.map(option => option.votes_count || 0));
 
@@ -107,18 +111,21 @@ export const Poll: React.FC<PollProps> = ({ initialPoll, onPollUpdated, readOnly
     };
 
     const renderResult = (option: PollOption, index: number) => {
-        const votesCount = option.votes_count || 0;
         const percent = optionPercent(poll, option);
-        const isWinner = totalVotes > 0 && votesCount === topVotes;
+        const isWinner = totalVotes > 0 && option.votes_count === topVotes;
         const isOwnVote = poll.own_votes?.includes(index);
         const labelOnAccent = isWinner && percent >= ON_ACCENT_LABEL_MIN_PERCENT;
+        const unpublished = option.votes_count == null;
+        const accessibilityLabel = unpublished
+            ? (isOwnVote ? t('poll.optionYourVoteNoCount', { title: option.title }) : option.title)
+            : t(isOwnVote ? 'poll.optionYourVote' : 'poll.option', { title: option.title, percent });
 
         return (
             <View
                 key={index}
                 style={styles.result}
                 accessible
-                accessibilityLabel={t(isOwnVote ? 'poll.optionYourVote' : 'poll.option', { title: option.title, percent })}
+                accessibilityLabel={accessibilityLabel}
             >
                 <View style={[styles.resultBar, isWinner && styles.resultBarWinner, { width: `${percent}%` }]} />
                 <View style={styles.resultLabels}>
@@ -129,9 +136,11 @@ export const Poll: React.FC<PollProps> = ({ initialPoll, onPollUpdated, readOnly
                         14
                     )}
                     {isOwnVote && (
-                        <Ionicons name="checkmark" size={16} color={labelOnAccent ? colors.buttonTextColor : colors.accentText} />
+                        <Icon name="checkmark" size={16} color={labelOnAccent ? colors.buttonTextColor : colors.accentText} />
                     )}
-                    <Text style={[type.name, styles.resultPercent, isWinner && styles.resultPercentWinner]}>{percent}%</Text>
+                    {!unpublished && (
+                        <Text style={[type.name, styles.resultPercent, isWinner && styles.resultPercentWinner]}>{percent}%</Text>
+                    )}
                 </View>
             </View>
         );
@@ -150,7 +159,7 @@ export const Poll: React.FC<PollProps> = ({ initialPoll, onPollUpdated, readOnly
                 accessibilityState={{ checked: isSelected, disabled: isVoting }}
             >
                 <View style={[styles.indicator, poll.multiple && styles.indicatorMultiple, isSelected && styles.indicatorSelected]}>
-                    {isSelected && <Ionicons name="checkmark" size={12} color={colors.buttonTextColor} />}
+                    {isSelected && <Icon name="checkmark" size={12} color={colors.buttonTextColor} />}
                 </View>
                 {renderTextWithEmojis(
                     option.title,
@@ -168,18 +177,31 @@ export const Poll: React.FC<PollProps> = ({ initialPoll, onPollUpdated, readOnly
     const summary = [tn('poll.votes', poll.votes_count), timeLeft, remoteHint].filter(Boolean).join(' · ');
 
     return (
-        <Well style={styles.container} accessibilityRole={isClosed ? undefined : poll.multiple ? undefined : 'radiogroup'}>
-            {poll.options.map(isClosed ? renderResult : renderChoice)}
+        <Well style={styles.container} accessibilityRole={showResults || poll.multiple ? undefined : 'radiogroup'}>
+            {poll.options.map(showResults ? renderResult : renderChoice)}
 
             <View style={styles.footer}>
                 <Text style={[type.meta, styles.footerText]}>{summary}</Text>
                 {!isClosed && (
-                    <PillButton
-                        label={t('poll.vote')}
-                        onPress={handleVote}
-                        loading={isVoting}
-                        disabled={selectedChoices.length === 0}
-                    />
+                    <View style={styles.footerActions}>
+                        {canPeek && (
+                            <PillButton
+                                variant="ghost"
+                                size="small"
+                                label={t(peeking ? 'poll.backToVote' : 'poll.seeResults')}
+                                onPress={() => setPeeking(!peeking)}
+                                disabled={isVoting}
+                            />
+                        )}
+                        {!showResults && (
+                            <PillButton
+                                label={t('poll.vote')}
+                                onPress={handleVote}
+                                loading={isVoting}
+                                disabled={selectedChoices.length === 0}
+                            />
+                        )}
+                    </View>
                 )}
             </View>
         </Well>

@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Animated, Modal, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon, IconName } from '../ui/icon';
 import { useTheme } from '../../services/themeContext';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { space } from '../../services/theme/shape';
@@ -74,7 +74,7 @@ export interface SheetOption<T extends string | number> {
     value: T;
     label: string;
     description?: string;
-    icon?: React.ComponentProps<typeof Ionicons>['name'];
+    icon?: IconName;
 }
 
 interface OptionSheetProps<T extends string | number> {
@@ -108,12 +108,12 @@ export function OptionSheet<T extends string | number>({ visible, title, options
                             accessibilityLabel={option.description ? `${option.label}, ${option.description}` : option.label}
                             style={({ pressed }) => [styles.option, (selected || pressed) && styles.optionSelected]}
                         >
-                            {option.icon && <Ionicons name={option.icon} size={20} color={colors.accentText} />}
+                            {option.icon && <Icon name={option.icon} size={20} color={colors.accentText} />}
                             <View style={styles.optionText}>
                                 <Text style={[type.name, styles.optionLabel]}>{option.label}</Text>
                                 {option.description && <Text style={[type.meta, styles.optionDescription]}>{option.description}</Text>}
                             </View>
-                            {selected && <Ionicons name="checkmark" size={18} color={colors.accentText} />}
+                            {selected && <Icon name="checkmark" size={18} color={colors.accentText} />}
                         </Pressable>
                     );
                 })}
@@ -126,7 +126,7 @@ export interface SheetAction {
     key: string;
     label: string;
     description?: string;
-    icon?: React.ComponentProps<typeof Ionicons>['name'];
+    icon?: IconName;
     // Shown, but can't be picked; the description says why
     disabled?: boolean;
     onPress: () => void;
@@ -161,7 +161,7 @@ export function ActionSheet({ visible, title, subtitle, actions, onClose }: Acti
                     accessibilityState={{ disabled: !!action.disabled }}
                     style={({ pressed }) => [styles.option, pressed && styles.optionSelected, action.disabled && { opacity: 0.5 }]}
                 >
-                    {action.icon && <Ionicons name={action.icon} size={20} color={action.disabled ? colors.textMuted : colors.accentText} />}
+                    {action.icon && <Icon name={action.icon} size={20} color={action.disabled ? colors.textMuted : colors.accentText} />}
                     <View style={styles.optionText}>
                         <Text style={[type.name, styles.optionLabel]}>{action.label}</Text>
                         {action.description && <Text style={[type.meta, styles.optionDescription]}>{action.description}</Text>}

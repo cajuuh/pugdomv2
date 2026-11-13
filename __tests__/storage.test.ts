@@ -101,6 +101,18 @@ describe('saved accounts storage', () => {
         expect(accounts[0].accessToken).toBe('new-token');
     });
 
+    it('keeps an account in its place when it is saved again', async () => {
+        const storage = loadStorage();
+        await storage.addSavedAccount('a', 'https://one.social', makeAccount('alice'));
+        await storage.addSavedAccount('b', 'https://two.social', makeAccount('bob'));
+
+        await storage.addSavedAccount('a', 'https://one.social', { ...makeAccount('alice'), avatar: 'https://one.social/new.jpg' });
+
+        const accounts = await storage.getSavedAccounts();
+        expect(accounts.map(a => a.id)).toEqual(['alice@https://one.social', 'bob@https://two.social']);
+        expect(accounts[0].userInfo.avatar).toBe('https://one.social/new.jpg');
+    });
+
     it('removes an account and its record', async () => {
         const storage = loadStorage();
         await storage.addSavedAccount('a', 'https://one.social', makeAccount('alice'));

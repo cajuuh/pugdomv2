@@ -8,4 +8,5 @@ export const mockTheme = {
     type: buildType(true),
     isDark: false,
     coat: DEFAULT_COAT,
+    dockBlur: true,
 };

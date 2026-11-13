@@ -1,5 +1,7 @@
 import React from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getRecentEmojis } from '../services/recentEmojis';
 import { Dimensions, Keyboard, Platform, StyleSheet } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
@@ -10,7 +12,7 @@ import { shouldDismiss } from '../components/ComposeModal/sheetTransition';
 import { counterState } from '../components/ComposeModal/characterCounter';
 import { fetchCustomEmojis } from '../services/mastodon/customEmojis';
 import { createStatus } from '../services/mastodon/statuses';
-import { search } from '../services/mastodon/search';
+import { searchAccountNames } from '../services/mastodon/search';
 import { dialog } from '../services/dialog';
 import { DEFAULT_INSTANCE_CONFIGURATION, fetchInstanceConfiguration } from '../services/mastodon/instance';
 import { Account, Status } from '../services/mastodon/types';
@@ -29,7 +31,7 @@ jest.mock('../services/mastodon/statuses', () => ({
     createStatus: jest.fn(),
 }));
 
-jest.mock('../services/mastodon/search', () => ({ search: jest.fn() }));
+jest.mock('../services/mastodon/search', () => ({ searchAccountNames: jest.fn() }));
 
 jest.mock('../services/mastodon/customEmojis', () => ({
     fetchCustomEmojis: jest.fn(),
@@ -68,8 +70,9 @@ describe('ComposeModal', () => {
 
     const composer = () => screen.getByPlaceholderText(/What's on your mind\?|Write your reply/);
 
-    beforeEach(() => {
+    beforeEach(async () => {
         jest.clearAllMocks();
+        await AsyncStorage.clear();
         mockedCreateStatus.mockResolvedValue({} as Status);
         mockedInstance.mockResolvedValue({ ...DEFAULT_INSTANCE_CONFIGURATION, maxCharacters: 500, maxPollOptions: 4, maxCharactersPerPollOption: 50 });
     });
@@ -90,6 +93,21 @@ describe('ComposeModal', () => {
 
         expect(composer().props.value).toBe('@bob@other.social @carol ');
         expect(screen.getByText('@bob@other.social')).toBeTruthy();
+    });
+
+    it("starts a direct message with the account's mention, sent to mentioned people only", async () => {
+        queryClient = createTestQueryClient();
+        const bob = { id: '2', username: 'bob', acct: 'bob@other.social', display_name: 'Bob', avatar: '', emojis: [] } as unknown as Account;
+        await render(
+            <QueryClientProvider client={queryClient}>
+                <ComposeModal isOpen replyToStatus={null} directTo={bob} closeCompose={jest.fn()} />
+            </QueryClientProvider>
+        );
+
+        expect(composer().props.value).toBe('@bob@other.social ');
+        await fireEvent.changeText(composer(), '@bob@other.social oi');
+        await fireEvent.press(screen.getByRole('button', { name: 'Post' }));
+        expect(mockedCreateStatus).toHaveBeenCalledWith(expect.objectContaining({ status: '@bob@other.social oi', visibility: 'direct' }));
     });
 
     it("posts in the account's default language as an ISO 639-1 code", async () => {
@@ -113,10 +131,10 @@ describe('ComposeModal', () => {
     it('counts URLs as 23 characters against the instance limit', async () => {
         mockedInstance.mockResolvedValue({ ...DEFAULT_INSTANCE_CONFIGURATION, maxCharacters: 1000, maxPollOptions: 4, maxCharactersPerPollOption: 50 });
         await renderCompose();
-        await screen.findByText('1000');
+        await screen.findByLabelText('1000 characters left');
 
         await fireEvent.changeText(composer(), `hi https://example.social/${'a'.repeat(200)}`);
-        expect(screen.getByText(String(1000 - 3 - 23))).toBeTruthy();
+        expect(screen.getByLabelText(`${1000 - 3 - 23} characters left`)).toBeTruthy();
     });
 
     it('does not publish a poll with fewer than two choices', async () => {
@@ -172,6 +190,19 @@ describe('ComposeModal', () => {
         expect(defaultVisibility({ ...me, source: { privacy: 'private' } }, { ...replyTarget, visibility: 'direct' } as Status)).toBe('direct');
     });
 
+    it('starts replies to public posts as unlisted with the setting on', () => {
+        const reply = (visibility: Status['visibility']) => ({ ...replyTarget, visibility }) as Status;
+        expect(defaultVisibility(me, reply('public'), null, true)).toBe('unlisted');
+        expect(defaultVisibility(me, reply('public'), null, false)).toBe('public');
+        for (const visibility of ['unlisted', 'private', 'direct'] as const) {
+            expect(defaultVisibility(me, reply(visibility), null, true)).toBe(visibility);
+        }
+        // New posts keep the account default
+        expect(defaultVisibility(me, null, null, true)).toBe('public');
+        // Quoting a followers-only post still wins
+        expect(defaultVisibility(me, reply('public'), reply('private'), true)).toBe('private');
+    });
+
     it("defaults the post language to the account's, else the app's", () => {
         expect(defaultLanguage({ ...me, source: { language: 'de' } }, 'pt-BR')).toBe('de');
         // Akkoma and Pleroma send no posting language
@@ -183,10 +214,13 @@ describe('ComposeModal', () => {
     it('warns near the limit and blocks posting over it', async () => {
         mockedInstance.mockResolvedValue({ ...DEFAULT_INSTANCE_CONFIGURATION, maxCharacters: 30, maxPollOptions: 4, maxCharactersPerPollOption: 50 });
         await renderCompose();
-        await screen.findByText('30');
+        // Far from the limit: the ring alone, the count only for screen readers
+        expect(await screen.findByLabelText('30 characters left')).toBeTruthy();
+        expect(screen.queryByText('30')).toBeNull();
 
         await fireEvent.changeText(composer(), 'a'.repeat(15));
         expect(screen.getByLabelText('15 characters left')).toBeTruthy();
+        expect(screen.getByText('15')).toBeTruthy();
 
         await fireEvent.changeText(composer(), 'a'.repeat(42));
         expect(screen.getByText('12 over')).toBeTruthy();
@@ -375,23 +409,33 @@ describe('ComposeModal', () => {
         await fireEvent.press(screen.getByRole('button', { name: ':blobfox:' }));
 
         expect(composer().props.value).toBe('hi :blobfox: ');
+        // Remembered for the picker's Recent row
+        await waitFor(async () => expect(await getRecentEmojis('1')).toContain('blobfox'));
         expect(screen.queryByRole('button', { name: ':blobcat:' })).toBeNull();
     });
 
     it('suggests people while typing a mention, and completes the one picked', async () => {
-        (search as jest.Mock).mockResolvedValue({
-            accounts: [{ id: '1', username: 'ana', acct: 'ana@pug.social', display_name: 'Ana', avatar: '', emojis: [] }],
-            hashtags: [],
-            statuses: [],
-        });
+        const person = (id: string, acct: string, display_name: string) => ({ id, username: acct, acct, display_name, avatar: '', emojis: [] });
+        const followed = person('2', 'ana@pug.social', 'Ana');
+        (searchAccountNames as jest.Mock).mockImplementation(async (_q: string, options: { following?: boolean }) =>
+            options.following ? [followed] : [person('3', 'anabel@far.social', 'Anabel'), followed, person('4', 'anita', 'Anita')]
+        );
         await renderCompose();
 
         await fireEvent.changeText(composer(), 'oi @an');
         await fireEvent(composer(), 'selectionChange', { nativeEvent: { selection: { start: 6, end: 6 } } });
 
-        await fireEvent.press(await screen.findByRole('button', { name: 'Ana, @ana@pug.social' }));
+        const picked = await screen.findByRole('button', { name: 'Ana, @ana@pug.social' });
+        // Who you follow, then your server, then everyone else
+        expect(screen.getAllByRole('button', { name: /, @/ }).map(button => button.props.accessibilityLabel)).toEqual([
+            'Ana, @ana@pug.social',
+            'Anita, @anita',
+            'Anabel, @anabel@far.social',
+        ]);
+        await fireEvent.press(picked);
 
-        expect(search).toHaveBeenCalledWith({ q: 'an', type: 'accounts', limit: 8, resolve: false });
+        expect(searchAccountNames).toHaveBeenCalledWith('an', { following: true, limit: 20 });
+        expect(searchAccountNames).toHaveBeenCalledWith('an', { resolve: false, limit: 40 });
         expect(composer().props.value).toBe('oi @ana@pug.social ');
     });
 
@@ -410,5 +454,6 @@ describe('ComposeModal', () => {
 
         expect(screen.queryByRole('button', { name: ':hidden:' })).toBeNull();
         expect(composer().props.value).toBe('hello :blobcat: world');
+        await waitFor(async () => expect(await getRecentEmojis('1')).toEqual(['blobcat']));
     });
 });

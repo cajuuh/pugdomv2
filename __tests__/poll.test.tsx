@@ -141,6 +141,46 @@ describe('Poll results', () => {
     });
 });
 
+describe('Poll results before voting', () => {
+    const unpublished = [
+        { title: 'On the sofa', votes_count: null },
+        { title: 'In a sunbeam', votes_count: null },
+    ];
+
+    it('shows them without voting, and goes back with your choice kept', async () => {
+        await render(<Poll initialPoll={makePoll()} />);
+        await fireEvent.press(screen.getByRole('radio', { name: 'In a sunbeam' }));
+
+        await fireEvent.press(screen.getByRole('button', { name: 'See results' }));
+        expect(screen.getByLabelText('In a sunbeam, 64 percent')).toBeTruthy();
+        expect(screen.queryByRole('radio')).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Vote' })).toBeNull();
+        expect(mockedVote).not.toHaveBeenCalled();
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Back to voting' }));
+        expect(screen.getByRole('radio', { name: 'In a sunbeam' })).toBeChecked();
+        expect(screen.getByRole('button', { name: 'Vote' })).toBeEnabled();
+    });
+
+    it('offers nothing once you can only see results', async () => {
+        await render(<Poll initialPoll={makePoll({ voted: true, own_votes: [0] })} />);
+        expect(screen.queryByRole('button', { name: 'See results' })).toBeNull();
+    });
+
+    it('offers nothing while the results are not published', async () => {
+        await render(<Poll initialPoll={makePoll({ options: unpublished })} />);
+        expect(screen.queryByRole('button', { name: 'See results' })).toBeNull();
+        expect(screen.getAllByRole('radio')).toHaveLength(2);
+    });
+
+    it('shows no percentages for results that are not published', async () => {
+        await render(<Poll initialPoll={makePoll({ voted: true, own_votes: [0], options: unpublished })} />);
+        expect(screen.getByLabelText('On the sofa, your vote')).toBeTruthy();
+        expect(screen.getByLabelText('In a sunbeam')).toBeTruthy();
+        expect(screen.queryByText(/%/)).toBeNull();
+    });
+});
+
 describe('pollTimeLeft', () => {
     const now = Date.parse('2026-09-29T12:00:00Z');
     const at = (ms: number) => new Date(now + ms).toISOString();

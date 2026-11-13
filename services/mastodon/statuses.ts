@@ -1,6 +1,19 @@
+import { Linking } from 'react-native';
 import apiClient from '../api/client';
+import { getCredentials } from '../storage';
 import { nextMaxIdFromLink } from './bookmarks';
 import { Account, Status, StatusEdit, StatusSource } from './types';
+
+// The post on your own server's site, even when it came from another one: that's where you're signed in,
+// and where a moderator reaches its moderation interface. Not for posts read from another server: their ids aren't ours.
+export async function openStatusInBrowser(status: Pick<Status, 'id' | 'account'>) {
+    try {
+        const { instanceUrl } = await getCredentials();
+        await Linking.openURL(`${instanceUrl}/@${status.account.acct}/${status.id}`);
+    } catch (error) {
+        console.error('Failed to open the post in the browser:', error);
+    }
+}
 
 export interface CreateStatusParams {
     status: string;
@@ -128,5 +141,19 @@ export async function getStatusSource(id: string): Promise<StatusSource> {
 // Every version of an edited post, oldest first
 export async function getStatusHistory(id: string): Promise<StatusEdit[]> {
     const response = await apiClient.get<StatusEdit[]>(`/statuses/${id}/history`);
+    return response.data;
+}
+
+// A post in another language, translated by the server (when its translation is on). `lang` is what to
+// translate into: one of Mastodon's locales, like "pt-BR" or "en". Anything else (even "pt") is ignored
+// and the server uses the account's locale.
+export interface Translation {
+    content: string;
+    spoiler_text: string;
+    detected_source_language: string;
+    provider: string;
+}
+export async function translateStatus(id: string, lang: string): Promise<Translation> {
+    const response = await apiClient.post<Translation>(`/statuses/${id}/translate`, { lang });
     return response.data;
 }

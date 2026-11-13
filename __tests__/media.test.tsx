@@ -239,6 +239,25 @@ describe('Compose with images', () => {
         expect(api.put).not.toHaveBeenCalled();
     });
 
+    it('marks only the media as sensitive, with no content warning', async () => {
+        await renderCompose();
+        await pick('a.jpg');
+        await waitFor(() => expect(screen.getByRole('button', { name: 'Post' })).toBeEnabled());
+
+        await fireEvent(screen.getByRole('switch', { name: 'Mark media as sensitive' }), 'valueChange', true);
+        await post();
+        await fireEvent.press(await screen.findByRole('button', { name: 'Post anyway' }));
+
+        await waitFor(() => expect(createStatus).toHaveBeenCalledWith(expect.objectContaining({ sensitive: true, spoiler_text: undefined, media_ids: ['m1'] })));
+    });
+
+    it('offers to mark media sensitive only when there is media', async () => {
+        await renderCompose();
+        expect(screen.queryByRole('switch', { name: 'Mark media as sensitive' })).toBeNull();
+        await pick('a.jpg');
+        expect(await screen.findByRole('switch', { name: 'Mark media as sensitive' })).toBeTruthy();
+    });
+
     it('describes an image, saving the description before posting', async () => {
         await renderCompose();
         await pick('a.jpg');
@@ -282,6 +301,69 @@ describe('Compose with images', () => {
 
         await waitFor(() => expect(screen.getByRole('button', { name: 'Post' })).toBeEnabled());
         expect(api.post).toHaveBeenCalledTimes(2);
+    });
+
+    describe('when the server refuses a file', () => {
+        const refusal = (status: number, error?: string) => Object.assign(new Error('refused'), { response: { status, data: error ? { error } : '<html>' } });
+
+        it('sends a picture again as a JPEG', async () => {
+            api.post.mockRejectedValueOnce(refusal(422, 'File content type is invalid'));
+            await renderCompose();
+            await pick('reddit.jpeg');
+
+            await waitFor(() => expect(screen.getByRole('button', { name: 'Post' })).toBeEnabled());
+            expect(api.post).toHaveBeenCalledTimes(2);
+            expect(ImageManipulator.manipulate).toHaveBeenCalledWith('file:///photos/reddit.jpeg');
+            expect(screen.queryByText(/Upload failed/)).toBeNull();
+        });
+
+        it("says why when the JPEG is refused too", async () => {
+            api.post.mockRejectedValueOnce(refusal(500, 'Error processing')).mockRejectedValueOnce(refusal(422, 'File content type is invalid'));
+            await renderCompose();
+            await pick('reddit.jpeg');
+
+            expect(await screen.findByText('Upload failed: File content type is invalid')).toBeTruthy();
+            expect(api.post).toHaveBeenCalledTimes(2);
+            expect(screen.getByRole('button', { name: 'Post' })).toBeDisabled();
+        });
+
+        it('gives the status when the answer has no reason', async () => {
+            api.post.mockRejectedValue(refusal(413));
+            await renderCompose();
+            await pick('big.jpg');
+
+            expect(await screen.findByText('Upload failed: HTTP 413')).toBeTruthy();
+            expect(api.post).toHaveBeenCalledTimes(1);
+        });
+
+        it('sends nothing twice when the server never answered', async () => {
+            api.post.mockRejectedValueOnce(new Error('offline'));
+            await renderCompose();
+            await pick('a.jpg');
+
+            expect(await screen.findByText(/Upload failed. Check your connection/)).toBeTruthy();
+            expect(api.post).toHaveBeenCalledTimes(1);
+        });
+
+        it("doesn't flatten a GIF", async () => {
+            api.post.mockRejectedValueOnce(refusal(422, 'No'));
+            await renderCompose();
+            library.mockResolvedValueOnce({ canceled: false, assets: [photo('a.gif', { mimeType: 'image/gif' })] });
+            await fireEvent.press(screen.getByRole('button', { name: 'Add images or a video' }));
+
+            expect(await screen.findByText('Upload failed: No')).toBeTruthy();
+            expect(api.post).toHaveBeenCalledTimes(1);
+        });
+
+        it("says why a video can't go, without re-encoding it", async () => {
+            api.post.mockRejectedValueOnce(refusal(422, '8000x6000 videos are not supported'));
+            await renderCompose();
+            library.mockResolvedValueOnce({ canceled: false, assets: [photo('a.mp4', { mimeType: 'video/mp4', type: 'video' })] });
+            await fireEvent.press(screen.getByRole('button', { name: 'Add images or a video' }));
+
+            expect(await screen.findByText('Upload failed: 8000x6000 videos are not supported')).toBeTruthy();
+            expect(api.post).toHaveBeenCalledTimes(1);
+        });
     });
 
     it('removes an image, and keeps images and polls apart', async () => {

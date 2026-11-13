@@ -15,8 +15,9 @@ import {
     useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon, IconName } from '../ui/icon';
 import { useAuth } from '../../services/authContext';
+import { useOptionalSettings } from '../../services/settingsContext';
 import { useTheme } from '../../services/themeContext';
 import { createStatus, editStatus, getStatusSource } from '../../services/mastodon/statuses';
 import { plainText } from '../../services/htmlText';
@@ -24,8 +25,8 @@ import { STATUS_UPDATED_EVENT, useUpdateCachedStatus } from '../../hooks/useUpda
 import type { ExistingPost } from '../../services/composeContext';
 import { ScheduleSheet, formatScheduleTime } from './scheduleSheet';
 import { Suggestion, SuggestionRow } from './suggestionRow';
-import { completeToken, tokenAtCursor } from './autocomplete';
-import { search } from '../../services/mastodon/search';
+import { completeToken, rankMentions, tokenAtCursor } from './autocomplete';
+import { searchAccountNames } from '../../services/mastodon/search';
 import { useDebounced } from '../../hooks/useSearch';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { searchEmojis } from './emojiPicker';
@@ -40,9 +41,10 @@ import { statusLength } from '../../services/mastodon/statusLength';
 import { useInstanceConfiguration } from '../../hooks/useInstanceConfiguration';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { hitSlopFor, space } from '../../services/theme/shape';
-import { Avatar, IconButton, PillButton, Well } from '../ui';
+import { Avatar, IconButton, PillButton, ThemedSwitch, Well } from '../ui';
 import { CharacterCounter } from './characterCounter';
 import { EmojiPicker } from './emojiPicker';
+import { addRecentEmoji } from '../../services/recentEmojis';
 import { ActionSheet, OptionSheet, SheetOption } from './optionSheet';
 import { DEFAULT_POLL_DURATION, PollEditor } from './pollEditor';
 import { useKeyboard } from '../../hooks/useKeyboard';
@@ -81,14 +83,21 @@ export const LANGUAGES = [
     { code: 'es', label: 'Español' },
     { code: 'fr', label: 'Français' },
     { code: 'de', label: 'Deutsch' },
+    { code: 'eo', label: 'Esperanto' },
+    { code: 'la', label: 'Latin' },
+    { code: 'ja', label: '日本語' },
+    { code: 'zh', label: '中文' },
 ];
 
-const LANGUAGE_OPTIONS: SheetOption<string>[] = LANGUAGES.map(({ code, label }) => ({ value: code, label, description: code.toUpperCase() }));
+// Each language goes by its own name, except Latin, which reads in the app's language (Latim, Latein…)
+const languageLabel = ({ code, label }: typeof LANGUAGES[number], i18n: Translator) => code === 'la' ? i18n.dict.languageNames.la : label;
+const languageOptions = (i18n: Translator): SheetOption<string>[] =>
+    LANGUAGES.map(option => ({ value: option.code, label: languageLabel(option, i18n), description: option.code.toUpperCase() }));
 
 type Visibility = Status['visibility'];
 
 // Mastodon calls followers-only "private" and mentioned-only "direct"
-type VisibilityOption = SheetOption<Visibility> & { icon: React.ComponentProps<typeof Ionicons>['name'] };
+type VisibilityOption = SheetOption<Visibility> & { icon: IconName };
 export const visibilities = ({ t }: Translator): VisibilityOption[] => [
     { value: 'public', label: t('compose.public'), description: t('compose.publicDescription'), icon: 'globe-outline' },
     { value: 'unlisted', label: t('compose.unlisted'), description: t('compose.unlistedDescription'), icon: 'lock-open-outline' },
@@ -103,10 +112,17 @@ export const defaultLanguage = (user: Account | null, appLanguage?: string) =>
         .map(code => code?.split('-')[0])
         .find(code => code && LANGUAGES.some(l => l.code === code)) ?? 'en';
 
-// Replies keep the parent's visibility; new posts use the account's default. Quoting a followers-only
-// post makes the quote followers-only too (Mastodon enforces it).
-export const defaultVisibility = (user: Account | null, replyToStatus: Status | null, quoteStatus: Status | null = null): Visibility => {
-    const visibility = replyToStatus?.visibility ?? user?.source?.privacy ?? 'public';
+// Replies keep the parent's visibility (a public one becomes unlisted with the "reply as unlisted" setting);
+// new posts use the account's default. Quoting a followers-only post makes the quote followers-only too
+// (Mastodon enforces it).
+export const defaultVisibility = (
+    user: Account | null,
+    replyToStatus: Status | null,
+    quoteStatus: Status | null = null,
+    replyUnlisted = false
+): Visibility => {
+    const parent = replyToStatus?.visibility;
+    const visibility = parent === 'public' && replyUnlisted ? 'unlisted' : parent ?? user?.source?.privacy ?? 'public';
     return quoteStatus?.visibility === 'private' && (visibility === 'public' || visibility === 'unlisted') ? 'private' : visibility;
 };
 
@@ -151,6 +167,8 @@ interface ComposeModalProps {
     incoming?: SharedContent | null;
     // A draft put aside on this phone, reopened
     draft?: Draft | null;
+    // A direct message to this account (from its profile)
+    directTo?: Account | null;
     closeCompose: () => void;
 }
 
@@ -164,8 +182,9 @@ const unchangedPoll = (poll: NonNullable<Status['poll']>) => ({
 
 const WOOF_CHANCE = 0.1;
 
-const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quoteStatus = null, existingPost = null, shared = null, incoming = null, draft = null, closeCompose }) => {
+const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quoteStatus = null, existingPost = null, shared = null, incoming = null, draft = null, directTo = null, closeCompose }) => {
     const { user } = useAuth();
+    const replyUnlisted = useOptionalSettings()?.replyUnlisted ?? false;
     const { colors, type } = useTheme();
     const i18n = useI18n();
     const { t, locale, language: appLanguage } = i18n;
@@ -181,11 +200,13 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
     const instanceConfiguration = useInstanceConfiguration(isOpen && !!user);
 
     const [text, setText] = useState('');
+    // `sensitive` is the content warning; media can also be marked sensitive on its own, with no warning
     const [sensitive, setSensitive] = useState(false);
+    const [mediaSensitive, setMediaSensitive] = useState(false);
     const [spoilerText, setSpoilerText] = useState('');
     const [loading, setLoading] = useState(false);
     const [language, setLanguage] = useState(() => defaultLanguage(user, appLanguage));
-    const [visibility, setVisibility] = useState<Visibility>(() => defaultVisibility(user, replyToStatus, quoteStatus));
+    const [visibility, setVisibility] = useState<Visibility>(() => defaultVisibility(user, replyToStatus, quoteStatus, replyUnlisted));
     const [picker, setPicker] = useState<'language' | 'visibility' | 'emoji' | 'quotePolicy' | 'camera' | 'schedule' | null>(null);
     // Publish later: the server posts it then (not for edits)
     const [scheduledAt, setScheduledAt] = useState<Date | null>(null);
@@ -199,7 +220,10 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
     const [pollDuration, setPollDuration] = useState<number>(DEFAULT_POLL_DURATION);
     const [pollMultiple, setPollMultiple] = useState(false);
 
-    const media = useMediaAttachments(instanceConfiguration);
+    // Publishing waits for a failed upload to be retried or removed, so say what went wrong
+    const media = useMediaAttachments(instanceConfiguration, reason => {
+        dialog.toast(reason ? t('attachments.failedBecause', { reason }) : t('attachments.failedNoReason'));
+    });
     // The image whose description (and focal point) is being edited, shown in place of the post
     const [altEditing, setAltEditing] = useState<{ key: string; draft: string; focus?: Point } | null>(null);
     const [reminderOpen, setReminderOpen] = useState(false);
@@ -222,8 +246,15 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
     // People, once typing pauses; the server only looks up unknown accounts for a full @user@server
     const mentionQuery = useDebounced(token?.trigger === '@' ? token.query : '', 250);
     const { data: mentionMatches } = useQuery({
-        queryKey: ['mentionSuggestions', mentionQuery],
-        queryFn: async () => (await search({ q: mentionQuery, type: 'accounts', limit: 8, resolve: mentionQuery.includes('@') })).accounts,
+        queryKey: ['mentionSuggestions', user?.id, mentionQuery],
+        queryFn: async () => {
+            const [following, everyone] = await Promise.all([
+                // Without it the list still works, just not with those you follow first
+                searchAccountNames(mentionQuery, { following: true, limit: 20 }).catch(() => []),
+                searchAccountNames(mentionQuery, { resolve: mentionQuery.includes('@'), limit: 40 }),
+            ]);
+            return rankMentions(following, everyone, user?.id);
+        },
         enabled: isOpen && mentionQuery.length > 0,
         staleTime: 60_000,
     });
@@ -257,6 +288,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                     text,
                     spoilerText,
                     sensitive,
+                    mediaSensitive,
                     visibility,
                     language,
                     quotePolicy,
@@ -317,7 +349,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
 
     useEffect(() => {
         if (isOpen) {
-            const startText = replyToStatus ? replyMentionsText(replyToStatus, user) : '';
+            const startText = replyToStatus ? replyMentionsText(replyToStatus, user) : directTo ? `@${directTo.acct} ` : '';
             initialText.current = startText;
             drag.setValue(0);
             // Something shared from another app counts as a draft, so closing asks first
@@ -325,9 +357,10 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
             setText(withShared);
             cursor.current = withShared.length;
             setSensitive(false);
+            setMediaSensitive(false);
             setSpoilerText('');
             setLanguage(defaultLanguage(user, appLanguage));
-            setVisibility(defaultVisibility(user, replyToStatus, quoteStatus));
+            setVisibility(directTo ? 'direct' : defaultVisibility(user, replyToStatus, quoteStatus, replyUnlisted));
             setQuote(quoteStatus);
             setQuotePolicy(user?.source?.quote_policy ?? 'public');
             setLoading(false);
@@ -353,6 +386,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 setText(source);
                 cursor.current = source.length;
                 setSensitive(!!post.spoiler_text);
+                setMediaSensitive(post.sensitive && !post.spoiler_text);
                 setSpoilerText(post.spoiler_text ?? '');
                 setVisibility(post.visibility);
                 if (post.language && LANGUAGES.some(option => option.code === post.language)) setLanguage(post.language);
@@ -385,6 +419,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 setText(draft.text);
                 cursor.current = draft.text.length;
                 setSensitive(draft.sensitive);
+                setMediaSensitive(!!draft.mediaSensitive);
                 setSpoilerText(draft.spoilerText);
                 setVisibility(draft.visibility);
                 setLanguage(draft.language);
@@ -405,7 +440,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 current = false;
             };
         }
-    }, [isOpen, replyToStatus, quoteStatus, existingPost, shared, draft, drag]);
+    }, [isOpen, replyToStatus, quoteStatus, existingPost, shared, draft, directTo, drag]);
 
     // What arrives while composing joins the draft: its media, its words at the cursor
     useEffect(() => {
@@ -430,6 +465,8 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
     const isOverLimit = remaining < 0;
     // Images can be posted without text
     const isEmpty = text.trim().length === 0 && media.attachments.length === 0;
+    // A content warning hides the media too; without one, the switch under the media marks just the media
+    const marksSensitive = sensitive || (mediaSensitive && media.attachments.length > 0);
     const pollError = showPoll ? pollValidationError(pollOptions, i18n) : null;
     const isPublishDisabled = isEmpty || isOverLimit || !!pollError || media.pending || loading;
     const editingAttachment = altEditing ? media.attachments.find(attachment => attachment.key === altEditing.key) : undefined;
@@ -437,6 +474,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
     const visibilityOptions = visibilities(i18n);
     const selectedVisibility = visibilityOptions.find(v => v.value === visibility) ?? visibilityOptions[0];
     const selectedLanguage = LANGUAGES.find(l => l.code === language) ?? LANGUAGES[0];
+    const selectedLanguageLabel = languageLabel(selectedLanguage, i18n);
     // Followers-only and private posts can't be quoted by others, whatever the setting says
     const quotePolicyOptions = quotePolicies(i18n);
     const shownQuotePolicy = effectiveQuotePolicy(quotePolicy, visibility);
@@ -451,6 +489,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
     };
 
     const insertEmoji = (shortcode: string) => {
+        addRecentEmoji(shortcode, user?.id);
         const next = insertAt(text, cursor.current, `:${shortcode}:`);
         setText(next.text);
         cursor.current = next.cursor;
@@ -469,9 +508,12 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
         token?.trigger === ':'
             ? emojiMatches.map(emoji => ({
                   key: emoji.shortcode,
-                  image: emoji.static_url || emoji.url,
+                  image: emoji.url || emoji.static_url,
                   title: `:${emoji.shortcode}:`,
-                  onPick: () => complete(`:${emoji.shortcode}:`),
+                  onPick: () => {
+                      addRecentEmoji(emoji.shortcode, user?.id);
+                      complete(`:${emoji.shortcode}:`);
+                  },
               }))
             : token?.trigger === '@'
               ? (mentionMatches ?? []).map(account => ({
@@ -566,7 +608,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 const updated = await editStatus(existing.status.id, {
                     status: text,
                     spoiler_text: sensitive ? spoilerText : '',
-                    sensitive,
+                    sensitive: marksSensitive,
                     language,
                     media_ids: ids,
                     media_attributes: attributes.length > 0 ? attributes : undefined,
@@ -588,7 +630,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
             await createStatus({
                 status: text,
                 in_reply_to_id: reply ? reply.id : existing?.status.in_reply_to_id ?? null,
-                sensitive,
+                sensitive: marksSensitive,
                 spoiler_text: sensitive ? spoilerText : undefined,
                 language: language,
                 visibility,
@@ -621,7 +663,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
         }
     };
 
-    const tool = (icon: React.ComponentProps<typeof Ionicons>['name'], label: string, onPress: () => void, active = false, disabled = false) => (
+    const tool = (icon: IconName, label: string, onPress: () => void, active = false, disabled = false) => (
         <IconButton
             icon={icon}
             accessibilityLabel={label}
@@ -749,21 +791,21 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                                     hitSlop={hitSlopFor(0, PILL_HEIGHT)}
                                     style={({ pressed }) => [styles.pill, (pressed || editing) && { opacity: 0.7 }]}
                                 >
-                                    <Ionicons name={selectedVisibility.icon} size={14} color={colors.accentText} />
+                                    <Icon name={selectedVisibility.icon} size={14} color={colors.accentText} />
                                     <Text style={[type.name, styles.pillText]}>{selectedVisibility.label}</Text>
-                                    {!editing && <Ionicons name="chevron-down" size={12} color={colors.textSecondary} />}
+                                    {!editing && <Icon name="chevron-down" size={12} color={colors.textSecondary} />}
                                 </Pressable>
                                 <Pressable
                                     onPress={() => setPicker('language')}
                                     accessibilityRole="button"
-                                    accessibilityLabel={t('compose.languageLabel', { value: selectedLanguage.label })}
+                                    accessibilityLabel={t('compose.languageLabel', { value: selectedLanguageLabel })}
                                     hitSlop={hitSlopFor(0, PILL_HEIGHT)}
                                     style={({ pressed }) => [styles.pill, pressed && { opacity: 0.7 }]}
                                 >
                                     <Text style={[type.name, styles.pillText]}>
-                                        {selectedLanguage.code.toUpperCase()} · {selectedLanguage.label}
+                                        {selectedLanguage.code.toUpperCase()} · {selectedLanguageLabel}
                                     </Text>
-                                    <Ionicons name="chevron-down" size={12} color={colors.textSecondary} />
+                                    <Icon name="chevron-down" size={12} color={colors.textSecondary} />
                                 </Pressable>
                                 {instanceConfiguration.supportsQuotes && (
                                     <Pressable
@@ -775,9 +817,9 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                                         hitSlop={hitSlopFor(0, PILL_HEIGHT)}
                                         style={({ pressed }) => [styles.pill, (pressed || quotePolicyLocked) && { opacity: 0.7 }]}
                                     >
-                                        <Ionicons name="chatbox-ellipses-outline" size={14} color={colors.accentText} />
+                                        <Icon name="chatbox-ellipses-outline" size={14} color={colors.accentText} />
                                         <Text style={[type.name, styles.pillText]}>{selectedQuotePolicy.label}</Text>
-                                        {!quotePolicyLocked && <Ionicons name="chevron-down" size={12} color={colors.textSecondary} />}
+                                        {!quotePolicyLocked && <Icon name="chevron-down" size={12} color={colors.textSecondary} />}
                                     </Pressable>
                                 )}
                             </View>
@@ -791,7 +833,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
 
                 {sensitive && (
                     <View style={styles.contentWarning}>
-                        <Ionicons name="warning-outline" size={18} color={colors.accentText} />
+                        <Icon name="warning-outline" size={18} color={colors.accentText} />
                         <TextInput
                             style={[type.body, styles.contentWarningInput]}
                             placeholder={t('compose.cwPlaceholder')}
@@ -854,6 +896,15 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                     onRemove={media.remove}
                     onRetry={media.retry}
                 />
+                {media.attachments.length > 0 && !sensitive && (
+                    <View style={styles.mediaSensitive}>
+                        <Icon name="eye-off-outline" size={16} color={colors.textSecondary} />
+                        <Text style={[type.name, styles.multipleText, styles.mediaSensitiveText]} importantForAccessibility="no" accessibilityElementsHidden>
+                            {t('compose.mediaSensitive')}
+                        </Text>
+                        <ThemedSwitch value={mediaSensitive} onValueChange={setMediaSensitive} accessibilityLabel={t('compose.mediaSensitive')} />
+                    </View>
+                )}
 
                 {showPoll && (
                     <PollEditor
@@ -884,7 +935,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                         accessibilityLabel={t('schedule.scheduledFor', { when: formatScheduleTime(scheduledAt, locale) })}
                         style={[styles.scheduledChip, { backgroundColor: colors.accentSoft }]}
                     >
-                        <Ionicons name="calendar" size={14} color={colors.accentText} />
+                        <Icon name="calendar" size={14} color={colors.accentText} />
                         <Text style={[type.label, { color: colors.accentText }]} numberOfLines={1}>
                             {t('schedule.scheduledFor', { when: formatScheduleTime(scheduledAt, locale) })}
                         </Text>
@@ -897,14 +948,22 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 accessibilityRole="toolbar"
                 style={[styles.toolbar, { paddingBottom: keyboard.visible ? 10 : Math.max(insets.bottom, 10) }, altEditing && styles.hidden]}
             >
-                {/* A post has either images or a poll */}
-                {tool('image-outline', t('compose.addMedia'), addFromLibrary, false, showPoll || !!lockedPoll || media.room === 0)}
-                {tool('camera-outline', t('compose.camera'), addFromCamera, false, showPoll || !!lockedPoll || media.room === 0)}
-                {tool(showPoll ? 'stats-chart' : 'stats-chart-outline', t('compose.poll'), () => (showPoll ? resetPoll() : setShowPoll(true)), showPoll, media.attachments.length > 0 || editing)}
-                {tool('warning-outline', t('compose.contentWarning'), () => setSensitive(!sensitive), sensitive)}
-                {tool('happy-outline', t('compose.customEmoji'), () => setPicker('emoji'))}
-                {!editing && tool(scheduledAt ? 'calendar' : 'calendar-outline', t('schedule.title'), () => setPicker('schedule'), !!scheduledAt)}
-                <View style={styles.toolbarSpacer} />
+                {/* The tools scroll on narrow phones, so the counter beside them is never cut off */}
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                    style={styles.tools}
+                    contentContainerStyle={styles.toolsContent}
+                >
+                    {/* A post has either images or a poll */}
+                    {tool('image-outline', t('compose.addMedia'), addFromLibrary, false, showPoll || !!lockedPoll || media.room === 0)}
+                    {tool('camera-outline', t('compose.camera'), addFromCamera, false, showPoll || !!lockedPoll || media.room === 0)}
+                    {tool(showPoll ? 'stats-chart' : 'stats-chart-outline', t('compose.poll'), () => (showPoll ? resetPoll() : setShowPoll(true)), showPoll, media.attachments.length > 0 || editing)}
+                    {tool('warning-outline', t('compose.contentWarning'), () => setSensitive(!sensitive), sensitive)}
+                    {tool('happy-outline', t('compose.customEmoji'), () => setPicker('emoji'))}
+                    {!editing && tool(scheduledAt ? 'calendar' : 'calendar-outline', t('schedule.title'), () => setPicker('schedule'), !!scheduledAt)}
+                </ScrollView>
                 <CharacterCounter remaining={remaining} max={instanceConfiguration.maxCharacters} />
             </View>
         </Animated.View>
@@ -944,7 +1003,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
             <OptionSheet
                 visible={picker === 'language'}
                 title={t('compose.postLanguage')}
-                options={LANGUAGE_OPTIONS}
+                options={languageOptions(i18n)}
                 value={language}
                 onSelect={setLanguage}
                 onClose={() => setPicker(null)}
@@ -957,7 +1016,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 onSelect={setQuotePolicy}
                 onClose={() => setPicker(null)}
             />
-            <EmojiPicker visible={picker === 'emoji'} onPick={insertEmoji} onClose={() => setPicker(null)} />
+            <EmojiPicker visible={picker === 'emoji'} onPick={insertEmoji} onClose={() => setPicker(null)} accountId={user?.id} />
             <ActionSheet
                 visible={picker === 'camera'}
                 title={t('compose.camera')}

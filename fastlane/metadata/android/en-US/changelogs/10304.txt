@@ -1,0 +1,7 @@
+• Faster images: ones you've seen show at once, with a blurred preview while new ones load
+• Filters, muted hashtags, timed mutes, lists of muted and blocked accounts
+• Translate posts, private notes on profiles, your favourites
+• Swipe between timelines, rearrange pinned feeds, Home without boosts or replies
+• Photo sets as a carousel or a grid, post text size, dates after a week
+• Spanish and six more languages
+Plus many fixes. No push notifications in this build yet.

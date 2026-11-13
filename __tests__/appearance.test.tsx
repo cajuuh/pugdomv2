@@ -5,6 +5,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
 import Settings from '../screens/Settings/settings';
 import { ThemeProvider } from '../services/themeContext';
+import { openLink } from '../services/links';
 
 // Settings live in AsyncStorage (jest.setup.js mock); SecureStore only holds settings saved by builds before 1.1.0
 const mockStore = new Map<string, string>();
@@ -17,6 +18,7 @@ jest.mock('expo-secure-store', () => ({
         mockStore.delete(key);
     }),
 }));
+jest.mock('../services/links', () => ({ ...jest.requireActual('../services/links'), openLink: jest.fn() }));
 jest.mock('expo-font', () => ({ ...jest.requireActual('expo-font'), useFonts: () => [true, null] }));
 jest.mock('../services/authContext', () => ({
     useOptionalAuth: () => undefined,
@@ -34,6 +36,7 @@ jest.mock('../services/authContext', () => ({
     }),
 }));
 jest.mock('../services/settingsContext', () => ({
+    ...jest.requireActual('../services/settingsContext'),
     useSettings: () => ({
         notifications: true,
         setNotifications: jest.fn(),
@@ -41,14 +44,17 @@ jest.mock('../services/settingsContext', () => ({
         setMediaAutoplay: jest.fn(),
         compactMode: false,
         setCompactMode: jest.fn(),
+        postTextSize: 'default',
+        setPostTextSize: mockSetPostTextSize,
     }),
 }));
+const mockSetPostTextSize = jest.fn();
 
 const renderAppearance = async () => {
     await render(
         <QueryClientProvider client={createTestQueryClient()}>
             <ThemeProvider>
-                <Settings onBack={jest.fn()} onScheduledPosts={jest.fn()} onDrafts={jest.fn()} />
+                <Settings onBack={jest.fn()} onScheduledPosts={jest.fn()} onDrafts={jest.fn()} onModeratedAccounts={jest.fn()} onFilters={jest.fn()} />
             </ThemeProvider>
         </QueryClientProvider>
     );
@@ -96,6 +102,15 @@ describe('Appearance settings', () => {
         await waitFor(async () => expect(await AsyncStorage.getItem('pugdom_settings_theme')).toBe('dark'));
     });
 
+    it('picks the post text size', async () => {
+        await renderAppearance();
+        expect(screen.getByRole('tab', { name: 'Default' })).toBeSelected();
+
+        await fireEvent.press(screen.getByRole('tab', { name: 'Larger' }));
+
+        expect(mockSetPostTextSize).toHaveBeenCalledWith('larger');
+    });
+
     it('turns the surface tint off and saves it', async () => {
         await renderAppearance();
         const tint = screen.getByRole('switch', { name: 'Tint surfaces with coat' });
@@ -108,12 +123,31 @@ describe('Appearance settings', () => {
     });
 });
 
+describe('Bottom menu blur', () => {
+    it('is on by default, and turning it off is saved', async () => {
+        await renderAppearance();
+        const blur = screen.getByRole('switch', { name: 'Blur the bottom menu' });
+        expect(blur).toBeChecked();
+
+        await fireEvent(blur, 'valueChange', false);
+
+        expect(screen.getByRole('switch', { name: 'Blur the bottom menu' })).not.toBeChecked();
+        await waitFor(async () => expect(await AsyncStorage.getItem('pugdom_settings_dock_blur')).toBe('false'));
+    });
+
+    it('stays off after a restart', async () => {
+        await AsyncStorage.setItem('pugdom_settings_dock_blur', 'false');
+        await renderAppearance();
+        await waitFor(() => expect(screen.getByRole('switch', { name: 'Blur the bottom menu' })).not.toBeChecked());
+    });
+});
+
 describe('Clear notifications help', () => {
     it('opens from Settings, explains the three ways and goes back', async () => {
         await render(
             <QueryClientProvider client={createTestQueryClient()}>
                 <ThemeProvider>
-                    <Settings onBack={jest.fn()} onScheduledPosts={jest.fn()} onDrafts={jest.fn()} />
+                    <Settings onBack={jest.fn()} onScheduledPosts={jest.fn()} onDrafts={jest.fn()} onModeratedAccounts={jest.fn()} onFilters={jest.fn()} />
                 </ThemeProvider>
             </QueryClientProvider>
         );
@@ -126,5 +160,19 @@ describe('Clear notifications help', () => {
 
         await fireEvent.press(screen.getByRole('button', { name: 'Back to settings' }));
         expect(await screen.findByRole('button', { name: 'Clear notifications' })).toBeTruthy();
+    });
+});
+
+describe('Server settings', () => {
+    it("opens the server's own settings pages", async () => {
+        await render(
+            <QueryClientProvider client={createTestQueryClient()}>
+                <ThemeProvider>
+                    <Settings onBack={jest.fn()} onScheduledPosts={jest.fn()} onDrafts={jest.fn()} onModeratedAccounts={jest.fn()} onFilters={jest.fn()} />
+                </ThemeProvider>
+            </QueryClientProvider>
+        );
+        await fireEvent.press(await screen.findByRole('link', { name: 'Settings on pug.town' }));
+        expect(openLink).toHaveBeenCalledWith('https://pug.town/settings/profile');
     });
 });

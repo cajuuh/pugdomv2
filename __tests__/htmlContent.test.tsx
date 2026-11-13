@@ -1,8 +1,14 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { Platform, Share } from 'react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
+import { useOptionalMediaViewer } from '../components/MediaViewer/mediaViewer';
 import { StatusHtmlContent } from '../components/TootCard/htmlContent';
 import { mockTheme } from '../testUtils/theme';
 import { CustomEmoji } from '../services/mastodon/types';
+import { renderNameWithEmojis, renderTextWithEmojis } from '../services/emojiHelper';
+import { HUGE_POST, LONG_POST, breakLongRuns, postSize, splitTrailingHashtags } from '../services/htmlText';
+
+jest.mock('../components/MediaViewer/mediaViewer', () => ({ useOptionalMediaViewer: jest.fn(() => undefined) }));
 
 const emoji = (shortcode: string): CustomEmoji => ({
     shortcode,
@@ -35,5 +41,140 @@ describe('StatusHtmlContent text', () => {
         await renderPost('<p>copy me</p>', []);
 
         expect(screen.getByText('copy me')).toHaveProp('selectable', true);
+    });
+
+    it('selects across paragraphs, as one text', async () => {
+        const { toJSON } = await renderPost('<p>first paragraph</p><p class="x">second <a href="https://pug.example/a">link</a></p>', []);
+
+        const selectable: any[] = [];
+        const walk = (node: any) => {
+            if (!node || typeof node !== 'object') return;
+            if (node.type === 'Text' && node.props.selectable) selectable.push(node);
+            else node.children?.forEach(walk);
+        };
+        walk(toJSON());
+        expect(selectable).toHaveLength(1);
+        expect(JSON.stringify(selectable[0])).toMatch(/first paragraph[\s\S]*second[\s\S]*link/);
+    });
+});
+
+describe('holding a link', () => {
+    it('offers it to copy or share, without opening it', async () => {
+        const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.sharedAction });
+        const onPressLink = jest.fn();
+        await render(
+            <StatusHtmlContent content='<p><a href="https://pug.example/a">a link</a></p>' emojis={[]} colors={mockTheme.colors} bodyFont={mockTheme.type.body} width={320} onPressLink={onPressLink} />
+        );
+
+        await fireEvent(screen.getByText('a link'), 'longPress');
+        expect(share).toHaveBeenCalledWith(expect.objectContaining(Platform.OS === 'ios' ? { url: 'https://pug.example/a' } : { message: 'https://pug.example/a' }));
+        expect(onPressLink).not.toHaveBeenCalled();
+
+        await fireEvent.press(screen.getByText('a link'));
+        expect(onPressLink).toHaveBeenCalledWith('https://pug.example/a');
+        share.mockRestore();
+    });
+});
+
+describe('long posts', () => {
+    it('sizes posts by length and by line count', () => {
+        expect(postSize('a'.repeat(LONG_POST))).toBe('normal');
+        expect(postSize('a'.repeat(LONG_POST + 1))).toBe('long');
+        expect(postSize('line\n'.repeat(15))).toBe('long');
+        expect(postSize('a'.repeat(HUGE_POST + 1))).toBe('huge');
+    });
+
+    it('breaks runs with no spaces every 40 characters, outside tags, keeping entities and emoji whole', () => {
+        const run = 'A'.repeat(100);
+        expect(breakLongRuns(`<p>${run}</p>`)).toBe(`<p>${'A'.repeat(40)}\u200B${'A'.repeat(40)}\u200B${'A'.repeat(20)}</p>`);
+        expect(breakLongRuns(`<a href="https://x/${run}">short</a>`)).toBe(`<a href="https://x/${run}">short</a>`);
+        expect(breakLongRuns(`<p>${'&amp;'.repeat(50)}</p>`).replace(/\u200B/g, '')).toBe(`<p>${'&amp;'.repeat(50)}</p>`);
+        expect(breakLongRuns(`<p>${'&amp;'.repeat(50)}</p>`)).not.toMatch(/&[^;]*\u200B/);
+        expect(breakLongRuns(`<p>${'🐶'.repeat(50)}</p>`)).not.toMatch(/[\uD800-\uDBFF]\u200B/);
+        expect(breakLongRuns('<p>normal words stay as they are</p>')).toBe('<p>normal words stay as they are</p>');
+    });
+
+    it('lets a long run of characters wrap in the rendered post', async () => {
+        await renderPost(`<p>${'A'.repeat(80)}</p>`, []);
+
+        expect(screen.getByText(`${'A'.repeat(40)}\u200B${'A'.repeat(40)}`)).toBeTruthy();
+    });
+});
+
+describe('trailing hashtags', () => {
+    const tag = (name: string) => `<a href="https://x/tags/${name}" class="mention hashtag" rel="tag">#<span>${name}</span></a>`;
+
+    it('takes a last paragraph of only hashtags out of the text', () => {
+        expect(splitTrailingHashtags(`<p>hello</p><p>${tag('pug')} ${tag('dog')}</p>`)).toEqual({ html: '<p>hello</p>', tags: ['pug', 'dog'] });
+    });
+
+    it('takes a last line of only hashtags after a line break', () => {
+        expect(splitTrailingHashtags(`<p>hello<br />${tag('pug')}<br>${tag('dog')}</p>`)).toEqual({ html: '<p>hello</p>', tags: ['pug', 'dog'] });
+    });
+
+    it('leaves hashtags in a sentence, and text after them', () => {
+        const sentence = `<p>hello ${tag('pug')}</p>`;
+        const textAfter = `<p>${tag('pug')}</p><p>bye</p>`;
+        expect(splitTrailingHashtags(sentence)).toEqual({ html: sentence, tags: [] });
+        expect(splitTrailingHashtags(textAfter)).toEqual({ html: textAfter, tags: [] });
+    });
+
+    it('leaves a post that is nothing but hashtags as it is', () => {
+        const only = `<p>${tag('pug')} ${tag('dog')}</p>`;
+        expect(splitTrailingHashtags(only)).toEqual({ html: only, tags: [] });
+    });
+
+    it('takes them out too when the post has a photo, a link card, a poll or a quote to show', () => {
+        expect(splitTrailingHashtags(`<p>${tag('Sabafoto')}</p>`, true)).toEqual({ html: '', tags: ['Sabafoto'] });
+        // Mastodon's "RE:" line for apps without quotes isn't text either
+        expect(splitTrailingHashtags(`<p class="quote-inline">RE: <a href="x">x</a></p><p>${tag('pug')}</p>`, true)).toEqual({ html: '', tags: ['pug'] });
+        expect(splitTrailingHashtags(`<p>hello</p><p>${tag('pug')}</p>`, true)).toEqual({ html: '<p>hello</p>', tags: ['pug'] });
+    });
+
+    it('takes accented hashtags, and handles a post with no paragraphs', () => {
+        expect(splitTrailingHashtags(`<p>oi</p><p>${tag('São_Paulo')}</p>`).tags).toEqual(['São_Paulo']);
+        expect(splitTrailingHashtags('')).toEqual({ html: '', tags: [] });
+    });
+});
+
+describe('an emoji in a line of text', () => {
+    it('sits lowered in post text, by a share of its size', async () => {
+        const { toJSON } = await renderPost('<p>hi :pug:</p>', [emoji('pug')]);
+        expect(JSON.stringify(toJSON())).toContain('"translateY":3.2');
+    });
+
+    it('sits lowered in names too', async () => {
+        const { toJSON } = await render(renderTextWithEmojis('Pug :pug:', [emoji('pug')], null, 15)!);
+        expect(JSON.stringify(toJSON())).toContain('"translateY":3');
+    });
+});
+
+describe('a name on one line', () => {
+    it("keeps its emoji beside the text, not inside it, so they can't wrap", async () => {
+        const { toJSON } = await render(renderNameWithEmojis('jo :pug: dev', [emoji('pug')], null, 13)!);
+        const row = toJSON() as any;
+
+        expect(row.type).toBe('View');
+        expect(row.children.map((child: any) => child.type)).toEqual(['Text', 'Image', 'Text']);
+        expect(screen.getByText('jo')).toHaveProp('numberOfLines', 1);
+        expect(screen.getByText('dev')).toHaveProp('numberOfLines', 1);
+    });
+});
+
+describe('tapping an emoji', () => {
+    it('shows it bigger, in the media viewer', async () => {
+        const openMedia = jest.fn();
+        (useOptionalMediaViewer as jest.Mock).mockReturnValueOnce({ openMedia }).mockReturnValue({ openMedia });
+        await renderPost('<p>hi :pug:</p>', [emoji('pug')]);
+
+        await fireEvent.press(screen.getByRole('imagebutton', { name: ':pug:' }));
+
+        expect(openMedia).toHaveBeenCalledWith([expect.objectContaining({ type: 'image', url: 'https://x/pug.png', description: ':pug:' })], 0);
+        (useOptionalMediaViewer as jest.Mock).mockReturnValue(undefined);
+    });
+
+    it('still draws it outside the viewer', async () => {
+        const { toJSON } = await renderPost('<p>:pug:</p>', [emoji('pug')]);
+        expect(shownEmoji(toJSON())).toEqual(['https://x/pug.png']);
     });
 });

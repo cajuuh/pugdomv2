@@ -7,6 +7,7 @@ import apiClient from '../services/api/client';
 import { fetchNewerPosts, NEW_POSTS_LIMIT } from '../services/mastodon/timeline';
 import { NEW_POSTS_INTERVAL_MS, summarizeNewPosts, useNewPosts } from '../hooks/useNewPosts';
 import { useFeed } from '../hooks/useFeed';
+import { homeShows } from '../services/mastodon/feedService';
 import { Account, Status } from '../services/mastodon/types';
 
 jest.mock('../services/api/client', () => ({ __esModule: true, default: { get: jest.fn() } }));
@@ -70,6 +71,66 @@ describe('useFeed', () => {
     });
 });
 
+describe('useFeed while reloading', () => {
+    it('keeps the reload when the list asks for more meanwhile, so the new posts arrive', async () => {
+        mockedGet.mockReset().mockResolvedValueOnce({ data: [post('10'), post('9')] });
+        const queryClient = createTestQueryClient();
+        const { result } = await renderHook(() => useFeed({ id: 'home', kind: 'home' }), {
+            wrapper: ({ children }) => <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>,
+        });
+        await waitFor(() => expect(result.current.data?.pages).toHaveLength(1));
+
+        let arrive: (value: { data: Status[] }) => void = () => {};
+        mockedGet.mockImplementationOnce(() => new Promise(resolve => { arrive = resolve; })).mockResolvedValue({ data: [post('8')] });
+        let reloading: Promise<unknown> = Promise.resolve();
+        await act(async () => {
+            reloading = result.current.refetch();
+        });
+        await act(async () => {
+            result.current.fetchNextPage();
+        });
+        await act(async () => {
+            arrive({ data: [post('12'), post('11'), post('10')] });
+            await reloading;
+        });
+
+        await waitFor(() => expect(result.current.data!.pages[0][0].id).toBe('12'));
+    });
+});
+
+describe('Home without boosts or replies', () => {
+    const boost = { ...post('9', 'b'), reblog: post('8', 'c') } as Status;
+    const reply = { ...post('7', 'd'), in_reply_to_id: '1', in_reply_to_account_id: 'e' } as Status;
+    const replyToMe = { ...post('6', 'f'), in_reply_to_id: '2', in_reply_to_account_id: 'me' } as Status;
+    const plain = post('5', 'g');
+    const ids = (shows: (p: Status) => boolean) => [boost, reply, replyToMe, plain].filter(shows).map(p => p.id);
+
+    it('hides boosts, replies or both; replies to you stay', () => {
+        expect(ids(homeShows(true, true, 'me'))).toEqual(['9', '7', '6', '5']);
+        expect(ids(homeShows(false, true, 'me'))).toEqual(['7', '6', '5']);
+        expect(ids(homeShows(true, false, 'me'))).toEqual(['9', '6', '5']);
+        expect(ids(homeShows(false, false, 'me'))).toEqual(['6', '5']);
+    });
+
+    it("doesn't count hidden posts as new", () => {
+        expect(summarizeNewPosts([boost, reply, plain], homeShows(false, false, 'me')).count).toBe(1);
+    });
+
+    it('leaves them out of the feed, but pages on from the last post the server sent', async () => {
+        mockedGet.mockReset().mockResolvedValueOnce({ data: [plain, boost] }).mockResolvedValueOnce({ data: [] });
+        const shows = homeShows(false, true, 'me');
+        const queryClient = createTestQueryClient();
+        const { result } = await renderHook(() => useFeed({ id: 'home', kind: 'home' }, shows), {
+            wrapper: ({ children }) => <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>,
+        });
+
+        await waitFor(() => expect(result.current.data?.pages).toHaveLength(1));
+        expect(result.current.data!.pages[0].map(status => status.id)).toEqual(['5']);
+        await act(() => result.current.fetchNextPage());
+        expect(mockedGet).toHaveBeenLastCalledWith('/timelines/home', expect.objectContaining({ params: expect.objectContaining({ max_id: '9' }) }));
+    });
+});
+
 describe('useNewPosts', () => {
     let appStateListener: ((state: AppStateStatus) => void) | undefined;
 
@@ -87,9 +148,9 @@ describe('useNewPosts', () => {
         jest.restoreAllMocks();
     });
 
-    const renderNewPosts = (newestId: string | undefined) => {
+    const renderNewPosts = (newestId: string | undefined, checking?: boolean) => {
         const queryClient = createTestQueryClient();
-        return renderHook(() => useNewPosts('home', newestId), {
+        return renderHook(() => useNewPosts('home', newestId, checking), {
             wrapper: ({ children }) => <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>,
         });
     };
@@ -110,6 +171,16 @@ describe('useNewPosts', () => {
     it('stops checking while the app is in the background', async () => {
         await renderNewPosts('199');
         await act(async () => appStateListener?.('background'));
+
+        await act(async () => {
+            await jest.advanceTimersByTimeAsync(NEW_POSTS_INTERVAL_MS * 3);
+        });
+
+        expect(mockedGet).not.toHaveBeenCalled();
+    });
+
+    it('stops checking for a feed hidden behind another', async () => {
+        await renderNewPosts('199', false);
 
         await act(async () => {
             await jest.advanceTimersByTimeAsync(NEW_POSTS_INTERVAL_MS * 3);

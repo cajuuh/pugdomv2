@@ -3,7 +3,9 @@ import { AppState, DeviceEventEmitter } from 'react-native';
 import axios from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
 import { UNAUTHORIZED_EVENT } from './api/client';
+import * as Linking from 'expo-linking';
 import { getCurrentAccount } from './mastodon/accounts';
+import { finishSignIn } from './mastodon/auth';
 import { Account } from './mastodon/types';
 import { getCredentials, clearCredentials, saveCredentials, getSavedAccounts, addSavedAccount, removeSavedAccount, SavedAccount } from './storage';
 import { useI18n } from './i18n/i18nContext';
@@ -42,6 +44,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // The server couldn't be reached, so `user` may be the saved copy and is checked again later
     const unverified = useRef(false);
 
+    // The account list keeps the name and photo from sign-in, and Mastodon deletes an old photo once
+    // it's changed, so each fresh copy of the signed-in account is saved over it
+    const saveAccount = (account: Account, token: string, instanceUrl: string) =>
+        addSavedAccount(token, instanceUrl, account)
+            .then(() => getSavedAccounts())
+            .then(setSavedAccounts)
+            .catch(error => console.error('Failed to save account:', error));
+
     const checkLoginStatus = async () => {
         let accounts: SavedAccount[] = [];
         let accessToken: string | null = null;
@@ -55,6 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const account = await getCurrentAccount();
                 unverified.current = false;
                 setUser(account);
+                saveAccount(account, credentials.accessToken, credentials.instanceUrl);
             }
         } catch (error) {
             console.error('Failed to login, status: ', error);
@@ -76,7 +87,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkLoginStatusRef.current = checkLoginStatus;
 
     useEffect(() => {
-        checkLoginStatus();
+        // Android can kill pugdon while the sign-in page is open: the server's redirect then starts
+        // a fresh copy, which finishes that sign-in before loading the account
+        Linking.getInitialURL()
+            .then(finishSignIn)
+            .catch(error => {
+                console.error('Failed to finish sign-in:', error);
+                dialog.alert(t('login.failed'), error?.message || t('login.unexpected'));
+                return null;
+            })
+            .then(async signedIn => {
+                await checkLoginStatusRef.current();
+                if (signedIn) setNeedsSetup(true);
+            });
         // ponytail: retries on returning to the app, not the moment the connection comes back
         const subscription = AppState.addEventListener('change', state => {
             if (state === 'active' && unverified.current) {
@@ -98,11 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(newUser);
         setAddingAccount(false);
         setNeedsSetup(true);
-        if (token && instanceUrl) {
-            addSavedAccount(token, instanceUrl, newUser).then(() => {
-                getSavedAccounts().then(setSavedAccounts);
-            });
-        }
+        if (token && instanceUrl) saveAccount(newUser, token, instanceUrl);
     }
 
     const switchAccount = async (accountId: string) => {
@@ -116,6 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const account = await getCurrentAccount();
                 setUser(account);
                 setAddingAccount(false);
+                saveAccount(account, target.accessToken, target.instanceUrl);
             }
         } catch (error) {
             console.error('Error switching account:', error);

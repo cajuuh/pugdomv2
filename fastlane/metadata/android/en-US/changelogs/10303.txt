@@ -1,0 +1,1 @@
+First build for F-Droid and IzzyOnDroid: all of pugdon, with no Google code and no over-the-air updates. Push notifications aren't in this build yet.

@@ -55,14 +55,15 @@ const makeStatus = (id: string): Status => ({
     emojis: [],
 });
 
-// A reply to `to`, posted `minute` minutes into the thread
+// A reply to `to`, posted `minute` minutes into the thread, by someone other than the post's author
 const reply = (id: string, to: string, minute: number): Status => ({
     ...makeStatus(id),
     in_reply_to_id: to,
     created_at: new Date(Date.UTC(2026, 9, 14, 12, minute)).toISOString(),
+    account: { id: 'r1', username: 'replier', acct: 'replier', display_name: 'Replier', avatar: '', emojis: [] },
 });
 
-const renderThread = (onStatusPress = jest.fn()) =>
+const renderThread = (onStatusPress = jest.fn(), queryClient = createTestQueryClient()) =>
     render(
         <SafeAreaProvider
             initialMetrics={{
@@ -70,7 +71,7 @@ const renderThread = (onStatusPress = jest.fn()) =>
                 insets: { top: 47, left: 0, right: 0, bottom: 34 },
             }}
         >
-            <QueryClientProvider client={createTestQueryClient()}>
+            <QueryClientProvider client={queryClient}>
                 <MediaViewerProvider>
                     <Thread statusId="main" onBack={jest.fn()} onStatusPress={onStatusPress} />
                 </MediaViewerProvider>
@@ -99,6 +100,23 @@ describe('threadRows', () => {
         expect(threadRows(statuses, true).map(row => row.status.id)).toEqual(['main', 'second', 'first']);
     });
 
+    it("keeps the author's own thread right after the post, then everyone else's replies", () => {
+        const own = (status: Status) => ({ ...status, account: main.account });
+        const statuses = [
+            main,
+            reply('other1', 'main', 1),
+            own(reply('self1', 'main', 2)),
+            reply('other2', 'self1', 3),
+            own(reply('self2', 'self1', 4)),
+            // A second reply of theirs to the post starts a branch like anyone's
+            own(reply('self1b', 'main', 5)),
+        ];
+        const rows = (newest: boolean) => threadRows(statuses, newest).map(row => `${row.status.id}:${row.depth}`);
+
+        expect(rows(false)).toEqual(['main:0', 'self1:0', 'self2:0', 'other1:1', 'other2:1', 'self1b:1']);
+        expect(rows(true)).toEqual(['self1b:1', 'other2:1', 'other1:1', 'self2:0', 'self1:0', 'main:0']);
+    });
+
     it('hangs a reply whose parent is gone off the post', () => {
         expect(threadRows([main, reply('orphan', 'deleted', 1)], false).map(row => row.depth)).toEqual([0, 1]);
     });
@@ -110,6 +128,23 @@ describe('Thread', () => {
         await AsyncStorage.clear();
         mockedGetStatus.mockResolvedValue(makeStatus('main'));
         mockedGetContext.mockResolvedValue({ ancestors: [makeStatus('parent')], descendants: [makeStatus('reply')] });
+    });
+
+    it('gives the feeds the fresh counts of the posts it loads', async () => {
+        const queryClient = createTestQueryClient();
+        const stale = makeStatus('main');
+        const boostOfReply = { ...makeStatus('boost'), reblog: makeStatus('reply') };
+        queryClient.setQueryData(['timeline', 'home'], { pages: [[stale, boostOfReply]], pageParams: [undefined] });
+        mockedGetStatus.mockResolvedValue({ ...makeStatus('main'), favourites_count: 3, reblogs_count: 1, favourited: true });
+        mockedGetContext.mockResolvedValue({ ancestors: [], descendants: [{ ...makeStatus('reply'), favourites_count: 5 }] });
+
+        await renderThread(jest.fn(), queryClient);
+
+        await waitFor(() => {
+            const [page] = (queryClient.getQueryData(['timeline', 'home']) as { pages: Status[][] }).pages;
+            expect(page[0]).toMatchObject({ id: 'main', favourites_count: 3, reblogs_count: 1, favourited: true });
+            expect(page[1].reblog).toMatchObject({ id: 'reply', favourites_count: 5 });
+        });
     });
 
     it('pads the header by the top safe-area inset', async () => {
@@ -175,7 +210,7 @@ describe('Thread', () => {
         // parent → post, and first → its branch
         expect(screen.getAllByTestId('thread-line-top')).toHaveLength(1);
         expect(screen.getAllByTestId('thread-line-bottom')).toHaveLength(2);
-        expect(screen.getByText('Replying to @user')).toBeTruthy();
+        expect(screen.getByText('Replying to @replier')).toBeTruthy();
     });
 
     it('has no order choice for a lone post', async () => {

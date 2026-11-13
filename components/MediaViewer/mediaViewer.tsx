@@ -1,9 +1,9 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { Modal, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon } from '../ui/icon';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import * as WebBrowser from 'expo-web-browser';
+import { openLink } from '../../services/links';
 import { ImageGallery } from './imageGallery';
 import { SaveMediaButton } from './saveMediaButton';
 import { DialogHost } from '../Dialog/dialogHost';
@@ -15,7 +15,8 @@ import { useTheme } from '../../services/themeContext';
 
 interface MediaViewerContextType {
     // With onOpenPost (e.g. from a profile's media grid), the viewer also offers to open the post
-    openMedia: (attachments: Attachment[], index: number, onOpenPost?: () => void) => void;
+    // postUrl: the post on its own server, where media our server didn't keep can still be seen
+    openMedia: (attachments: Attachment[], index: number, onOpenPost?: () => void, postUrl?: string) => void;
 }
 
 const MediaViewerContext = createContext<MediaViewerContextType | undefined>(undefined);
@@ -34,7 +35,7 @@ const OpenPostButton = ({ onPress }: { onPress: () => void }) => {
     const { type } = useTheme();
     return (
         <TouchableOpacity onPress={onPress} style={[styles.openPostButton, { top: insets.top + 12 }]} accessibilityRole="button" accessibilityLabel={t('media.viewPost')}>
-            <Ionicons name="chatbox-outline" size={18} color={mediaColors.ink} />
+            <Icon name="chatbox-outline" size={18} color={mediaColors.ink} />
             <Text style={[type.name, { color: mediaColors.ink }]}>{t('media.viewPost')}</Text>
         </TouchableOpacity>
     );
@@ -47,6 +48,8 @@ const VideoModal = ({ attachment, onClose, onOpenPost }: { attachment: Attachmen
     const player = useVideoPlayer(attachment.url, player => {
         // gifv attachments are silent looping GIFs converted to video
         player.loop = attachment.type === 'gifv';
+        // Android starts with this off, whatever the docs say, so the speed menu shifted the pitch
+        player.preservesPitch = true;
         player.play();
     });
 
@@ -66,7 +69,7 @@ const VideoModal = ({ attachment, onClose, onOpenPost }: { attachment: Attachmen
                     style={[styles.closeButton, { top: insets.top + 12 }]}
                     accessibilityLabel={t('media.closeVideo')}
                 >
-                    <Ionicons name="close" size={30} color={mediaColors.ink} />
+                    <Icon name="close" size={30} color={mediaColors.ink} />
                 </TouchableOpacity>
                 {/* Left of the close button (38 wide, 20 from the edge) */}
                 <SaveMediaButton url={attachment.url} style={{ top: insets.top + 12, right: 66 }} />
@@ -82,7 +85,7 @@ const VideoModal = ({ attachment, onClose, onOpenPost }: { attachment: Attachmen
 export const MediaViewerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [open, setOpen] = useState<OpenMedia | null>(null);
 
-    const openMedia = useCallback((attachments: Attachment[], index: number, onOpenPost?: () => void) => {
+    const openMedia = useCallback((attachments: Attachment[], index: number, onOpenPost?: () => void, postUrl?: string) => {
         const selected = attachments[index];
         if (!selected) {
             return;
@@ -94,8 +97,9 @@ export const MediaViewerProvider: React.FC<{ children: React.ReactNode }> = ({ c
             const images = attachments.filter(attachment => attachment.type === 'image');
             setOpen({ kind: 'images', images, index: images.indexOf(selected), onOpenPost });
         } else {
-            // Unknown media types can't be previewed in-app
-            WebBrowser.openBrowserAsync(selected.url).catch(error => console.error('Failed to open media:', error));
+            // Media our server didn't keep: its own copy is a dead link (or a proxy that 404s), so show the
+            // post where it lives, or else the original file, as Mastodon's web app links it
+            openLink(postUrl ?? selected.remote_url ?? selected.url);
         }
     }, []);
 
@@ -122,6 +126,9 @@ export const MediaViewerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         </MediaViewerContext.Provider>
     );
 };
+
+// For what can also show outside the app's screens
+export const useOptionalMediaViewer = () => useContext(MediaViewerContext);
 
 export const useMediaViewer = () => {
     const context = useContext(MediaViewerContext);

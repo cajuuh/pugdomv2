@@ -9,8 +9,8 @@ import * as Linking from 'expo-linking'
 // services
 import { registerOnServer, ServerError } from '../../services/mastodon/apps'
 import { getServerDirectory, matchServers, normalizeDomain, ServerSuggestion } from '../../services/mastodon/servers'
-import { exchangeCodeForToken } from '../../services/mastodon/auth'
-import { getSavedAccounts, saveCredentials } from '../../services/storage'
+import { finishSignIn } from '../../services/mastodon/auth'
+import { getSavedAccounts, savePendingSignIn } from '../../services/storage'
 import { getCurrentAccount } from '../../services/mastodon/accounts'
 import { useAuth } from '../../services/authContext'
 import { useTheme } from '../../services/themeContext'
@@ -68,27 +68,20 @@ const Login: React.FC<LoginProps> = ({ onCancel }) => {
             const scopes = 'read write follow push';
             const authUrl = `${formattedInstance}/oauth/authorize?client_id=${appData.client_id}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scopes)}`;
 
-            // open auth page
+            // Saved first: if Android kills pugdon while the page is open, the restarted app finishes it (AuthProvider)
+            await savePendingSignIn({ instanceUrl: formattedInstance, clientId: appData.client_id, clientSecret: appData.client_secret, redirectUri });
             const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
 
             if (result.type === 'success' && result.url) {
-                const code = result.url.split('code=')[1]?.split('&')[0];
-                if (!code) {
+                if (!/[?&]code=/.test(result.url)) {
                     throw new Error('Failed to retrieve auth information from redirect (code)')
                 }
-                const tokenData = await exchangeCodeForToken(
-                    formattedInstance,
-                    appData.client_id,
-                    appData.client_secret,
-                    code,
-                    redirectUri
-                );
-                // save credentials
-                await saveCredentials(tokenData.access_token, formattedInstance);
-
-                // get user information
-                const account = await getCurrentAccount();
-                login(account, tokenData.access_token, formattedInstance);
+                // Null when the restarted app already took this redirect
+                const signedIn = await finishSignIn(result.url);
+                if (signedIn) {
+                    const account = await getCurrentAccount();
+                    login(account, signedIn.accessToken, signedIn.instanceUrl);
+                }
             }
         } catch (error: any) {
             console.error(error);

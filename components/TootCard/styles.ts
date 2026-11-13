@@ -1,6 +1,15 @@
 import { StyleSheet } from 'react-native';
 import { ThemeColors } from '../../services/themeContext';
 import { radii, space } from '../../services/theme/shape';
+import { mediaColors } from '../../services/theme/media';
+import type { PostTextSize } from '../../services/settingsContext';
+
+// Post text in each mode, scaled by the text size setting; anything measured in lines (the quote fold) uses it too
+const TEXT_SCALE: Record<PostTextSize, number> = { small: 0.9, default: 1, large: 1.15, larger: 1.3 };
+export const postTextMetrics = (compact: boolean, size: PostTextSize = 'default') => {
+    const scale = TEXT_SCALE[size] ?? 1;
+    return { fontSize: (compact ? 13 : 15.5) * scale, lineHeight: (compact ? 18 : 22.5) * scale };
+};
 
 export const CARD_MARGIN = 16;
 export const CARD_PADDING = 16;
@@ -10,6 +19,8 @@ export const COMPACT_AVATAR = 32;
 export const COMPACT_PADDING = 12;
 export const COMPACT_ACTION_HEIGHT = 32;
 export const COMPACT_ACTION_ICON = 18;
+// Between a carousel's slides
+export const SLIDE_GAP = 8;
 const CARD_PADDING_TOP = 14;
 const COMPACT_PADDING_TOP = 10;
 
@@ -145,6 +156,23 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         marginTop: 10,
         gap: space.md,
     },
+    // A long post folded in a timeline: about 12 lines of it, then "Show more"
+    textFold: {
+        overflow: 'hidden',
+    },
+    foldedText: {
+        color: colors.textPrimary,
+    },
+    foldRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: space.sm,
+    },
+    foldMeta: {
+        flexShrink: 1,
+        color: colors.textSecondary,
+    },
     // Content warning, collapsed
     cwRibbon: {
         marginTop: space.md,
@@ -222,8 +250,44 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         borderRadius: radii.well,
         overflow: 'hidden',
     },
+    grid: {
+        flexDirection: 'row',
+        gap: SLIDE_GAP / 2,
+        borderRadius: radii.well,
+        overflow: 'hidden',
+    },
+    gridRows: {
+        flexDirection: 'column',
+    },
+    gridColumn: {
+        flex: 1,
+        gap: SLIDE_GAP / 2,
+    },
+    gridRow: {
+        flex: 1,
+        flexDirection: 'row',
+        gap: SLIDE_GAP / 2,
+    },
+    gridTile: {
+        flex: 1,
+        overflow: 'hidden',
+        backgroundColor: colors.inputBackground,
+    },
+    gridMore: {
+        ...StyleSheet.absoluteFill,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: mediaColors.scrim,
+    },
+    gridMoreText: {
+        color: mediaColors.ink,
+    },
+    carouselTrack: {
+        gap: SLIDE_GAP,
+    },
     carouselSlide: {
         height: 200,
+        borderRadius: radii.well,
         overflow: 'hidden',
         backgroundColor: colors.inputBackground,
     },
@@ -368,6 +432,9 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         justifyContent: 'center',
         gap: 6,
         paddingHorizontal: space.sm,
+    },
+    actionLocked: {
+        opacity: 0.5,
     },
     actionCount: {
         fontSize: 13,

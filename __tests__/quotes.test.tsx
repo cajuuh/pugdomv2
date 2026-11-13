@@ -113,6 +113,56 @@ describe('Quote posts', () => {
         expect(onPress).toHaveBeenCalledWith('q1');
     });
 
+    it("shows the quoted text like a post's: links shortened and tappable, mentions to the quoted post's people", async () => {
+        const onPressLink = jest.fn();
+        const onPressMention = jest.fn();
+        const mentions = [{ id: 'joon', username: 'joon', acct: 'joon', url: 'https://pug.example/@joon' }];
+        const { QuotedPost } = jest.requireActual('../components/TootCard/quotedPost');
+        const html =
+            '<p>Read <a href="https://news.example/a/very/long/path"><span class="invisible">https://</span><span class="">news.example/a/very</span><span class="invisible">/long/path</span></a> ' +
+            '<span class="h-card"><a href="https://pug.example/@joon" class="u-url mention">@<span>joon</span></a></span></p>';
+        await render(
+            <QuotedPost
+                quote={{ state: 'accepted', quoted_status: { ...quoted, content: html, mentions } }}
+                onPressLink={onPressLink}
+                onPressMention={onPressMention}
+            />
+        );
+
+        expect(screen.queryByText(/long\/path/)).toBeNull();
+        await fireEvent.press(screen.getByText('news.example/a/very...'));
+        expect(onPressLink).toHaveBeenCalledWith('https://news.example/a/very/long/path');
+        await fireEvent.press(screen.getByText('joon'));
+        expect(onPressMention).toHaveBeenCalledWith('https://pug.example/@joon', mentions);
+    });
+
+    const card = { url: 'https://news.example/pugs', title: 'Pugs win again', description: '', type: 'link', image: null } as any;
+
+    it('says when a long quote goes on, and opens it in place', async () => {
+        const onPress = jest.fn();
+        await renderCard(quoting({ state: 'accepted', quoted_status: quoted }), { onPress });
+        // Short text fits the fold: nothing to add
+        await fireEvent(screen.getByText('Pugs are the best'), 'layout', { nativeEvent: { layout: { height: 40 } } });
+        expect(screen.queryByRole('button', { name: 'Show more' })).toBeNull();
+
+        // Taller than its six lines: the rest is cut, so say so
+        await fireEvent(screen.getByText('Pugs are the best'), 'layout', { nativeEvent: { layout: { height: 400 } } });
+        await fireEvent.press(screen.getByRole('button', { name: 'Show more' }));
+
+        expect(screen.queryByRole('button', { name: 'Show more' })).toBeNull();
+        expect(onPress).not.toHaveBeenCalled();
+    });
+
+    it("shows the quoted post's link preview", async () => {
+        await renderCard(quoting({ state: 'accepted', quoted_status: { ...quoted, card } }));
+        expect(screen.getByRole('link', { name: 'Pugs win again' })).toBeTruthy();
+    });
+
+    it("keeps the link preview hidden behind the quoted post's content warning", async () => {
+        await renderCard(quoting({ state: 'accepted', quoted_status: { ...quoted, card, spoiler_text: 'spoilers' } }));
+        expect(screen.queryByRole('link', { name: 'Pugs win again' })).toBeNull();
+    });
+
     it('says when the quoted post has a poll', async () => {
         const poll = { id: 'p1', expires_at: null, expired: false, multiple: false, votes_count: 0, voters_count: 0, voted: false, own_votes: [], options: [], emojis: [] };
         await renderCard(quoting({ state: 'accepted', quoted_status: { ...quoted, poll } }));

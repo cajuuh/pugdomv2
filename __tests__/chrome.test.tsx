@@ -11,6 +11,14 @@ jest.mock('../services/themeContext', () => ({
     useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
 }));
 
+let mockAuth: any = null;
+jest.mock('../services/authContext', () => ({ useOptionalAuth: () => mockAuth }));
+
+jest.mock('expo-blur', () => {
+    const { View } = jest.requireActual('react-native');
+    return { BlurView: (props: object) => <View testID="dock-blur" {...props} /> };
+});
+
 const { colors } = mockTheme;
 
 describe('TabBar', () => {
@@ -42,6 +50,34 @@ describe('TabBar', () => {
 
         await fireEvent.press(screen.getByRole('button', { name: 'New post' }));
         expect(onComposePress).toHaveBeenCalled();
+    });
+
+    describe('blur', () => {
+        const target = { current: null };
+        const renderBlur = async (dockBlur: boolean) => {
+            mockTheme.dockBlur = dockBlur;
+            await render(<TabBar activeTab="home" onTabPress={jest.fn()} onComposePress={jest.fn()} blurTarget={target} />);
+            return screen.getByTestId('dock-blur').props;
+        };
+
+        afterEach(() => {
+            mockTheme.dockBlur = true;
+        });
+
+        // Android draws no blur without both the method and the target
+        it('gives Android a blur method and what to blur by default', async () => {
+            const { blurMethod, blurTarget, intensity } = await renderBlur(true);
+            expect(blurMethod).toBe('dimezisBlurViewSdk31Plus');
+            expect(blurTarget).toBe(target);
+            expect(intensity).toBeGreaterThan(0);
+        });
+
+        it('draws no blur once turned off', async () => {
+            const { blurMethod, intensity } = await renderBlur(false);
+            expect(blurMethod).toBe('none');
+            // The tests run as iOS, which would still blur at any other intensity
+            expect(intensity).toBe(0);
+        });
     });
 
     it('keeps tab screens scrollable past the dock', () => {
@@ -87,6 +123,33 @@ describe('TopBar', () => {
         await fireEvent.press(screen.getByRole('button', { name: 'Account menu' }));
         await fireEvent.press(screen.getByRole('button', { name: 'Log Out' }));
         expect(onLogoutPress).toHaveBeenCalled();
+    });
+
+    it('switches to another saved account, or adds one, from the menu', async () => {
+        const saved = (id: string, acct: string, display_name: string, instanceUrl: string) => ({
+            id: `${acct}@${instanceUrl}`, accessToken: id, instanceUrl, userInfo: { id, username: acct, acct, display_name, avatar: '' },
+        });
+        mockAuth = {
+            savedAccounts: [saved('1', 'pug', 'Pug Dom', 'https://one.social'), saved('2', 'ana', 'Ana :blob:', 'https://art.social')],
+            switchAccount: jest.fn(),
+            setAddingAccount: jest.fn(),
+        };
+        try {
+            await renderHeader();
+            await fireEvent.press(screen.getByRole('button', { name: 'Account menu' }));
+
+            // Not the account you're on
+            expect(screen.queryByRole('button', { name: 'Switch to Pug Dom' })).toBeNull();
+            expect(screen.getByText('@ana • art.social')).toBeTruthy();
+            await fireEvent.press(screen.getByRole('button', { name: 'Switch to Ana' }));
+            expect(mockAuth.switchAccount).toHaveBeenCalledWith('ana@https://art.social');
+
+            await fireEvent.press(screen.getByRole('button', { name: 'Account menu' }));
+            await fireEvent.press(screen.getByRole('button', { name: 'Add Account' }));
+            expect(mockAuth.setAddingAccount).toHaveBeenCalledWith(true);
+        } finally {
+            mockAuth = null;
+        }
     });
 });
 

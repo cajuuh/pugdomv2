@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { Account, Status } from './mastodon/types';
+import { FeedDescriptor } from './mastodon/feedTypes';
 
 // Screens that open on top of the tabs. Links and lists join in later phases.
 // An account route can carry the account we already have, so its profile shows at once.
@@ -13,7 +14,7 @@ export type Route =
     | { name: 'account'; accountId: string; account?: Account }
     | { name: 'hashtag'; tag: string }
     | { name: 'link'; url: string; title?: string }
-    | { name: 'feedEditor' }
+    | { name: 'feedEditor'; feed?: FeedDescriptor }
     | { name: 'listEditor'; listId?: string }
     | { name: 'serverPicker' }
     // Reporting an account to the server's moderators, about one of their posts when given
@@ -27,8 +28,12 @@ export type Route =
     // Who favourited or boosted a post
     | { name: 'reactions'; statusId: string; reaction: 'favourites' | 'boosts' }
     // Who follows someone, or whom they follow
-    | { name: 'follows'; accountId: string; list: 'followers' | 'following' }
-    | { name: 'editProfile' };
+    | { name: 'follows'; accountId: string; list: 'followers' | 'following'; account?: Account }
+    | { name: 'editProfile' }
+    | { name: 'moderatedAccounts' }
+    | { name: 'filters' }
+    | { name: 'filterEditor'; filterId?: string }
+    | { name: 'accountNote'; account: Account; note: string };
 
 // Each entry gets its own key, so the same screen can sit in the stack twice (thread → other → same thread)
 export interface StackEntry {

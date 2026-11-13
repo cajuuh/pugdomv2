@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Platform, Share, StyleProp, StyleSheet, Text, TouchableOpacity, ViewStyle } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon } from '../ui/icon';
 import { saveToGallery } from '../../services/media/save';
 import { dialog } from '../../services/dialog';
 import { mediaColors } from '../../services/theme/media';
@@ -39,7 +39,7 @@ export const SaveMediaButton = ({ url, style }: { url: string; style?: StyleProp
             accessibilityLabel={t(saving ? 'media.saving' : 'media.save')}
             accessibilityState={{ busy: saving, disabled: saving }}
         >
-            <Ionicons name="download-outline" size={18} color={mediaColors.ink} />
+            <Icon name="download-outline" size={18} color={mediaColors.ink} />
             <Text style={[type.name, { color: mediaColors.ink }]}>{t(saving ? 'media.saving' : 'media.save')}</Text>
         </TouchableOpacity>
     );

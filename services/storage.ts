@@ -70,6 +70,33 @@ export async function getCredentials(): Promise<Credentials> {
     return { accessToken, instanceUrl };
 }
 
+// A sign-in waiting for the server's redirect. Kept on disk because Android can kill pugdon
+// while the sign-in page is open, and the fresh copy that gets the redirect must finish it
+const PENDING_SIGN_IN_KEY = 'pugdom_pending_sign_in';
+
+export interface PendingSignIn {
+    instanceUrl: string;
+    clientId: string;
+    clientSecret: string;
+    redirectUri: string;
+}
+
+export async function savePendingSignIn(pending: PendingSignIn) {
+    await setItem(PENDING_SIGN_IN_KEY, JSON.stringify(pending));
+}
+
+// Reads and forgets it: a pending sign-in is used at most once
+export async function takePendingSignIn(): Promise<PendingSignIn | null> {
+    const saved = await getItem(PENDING_SIGN_IN_KEY);
+    if (!saved) return null;
+    await deleteItem(PENDING_SIGN_IN_KEY);
+    try {
+        return JSON.parse(saved);
+    } catch {
+        return null;
+    }
+}
+
 export async function clearCredentials() {
     await deleteItem(TOKEN_KEY);
     await deleteItem(INSTANCE_KEY);
@@ -137,8 +164,9 @@ export async function addSavedAccount(accessToken: string, instanceUrl: string, 
 
     // Write the record before the index, so the index never points at a missing account
     await setItem(accountStorageKey(id), JSON.stringify(newAccount));
+    // A saved account keeps its place when its details are refreshed
     const index = await readAccountIndex();
-    await writeAccountIndex([...index.filter(existing => existing !== id), id]);
+    if (!index.includes(id)) await writeAccountIndex([...index, id]);
 }
 
 export async function removeSavedAccount(id: string) {

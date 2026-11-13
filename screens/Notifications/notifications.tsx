@@ -1,15 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, Text, View, useWindowDimensions } from 'react-native';
 import { FlashList, useRecyclingState } from '@shopify/flash-list';
-import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { InfiniteData, useQueryClient } from '@tanstack/react-query';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon, IconName } from '../../components/ui/icon';
 import { Account, Notification, NotificationGroup, Relationship, Status } from '../../services/mastodon/types';
 import { NotificationGroupsPage, clearNotifications, dismissNotificationGroup, isNewerId, mergeGroups } from '../../services/mastodon/notifications';
 import { ActionSheet } from '../../components/ComposeModal/optionSheet';
 import { favouriteStatus, unfavouriteStatus } from '../../services/mastodon/statuses';
-import { markNotificationsRead } from '../../services/mastodon/markers';
+import { getNotificationsMarker, markNotificationsRead } from '../../services/mastodon/markers';
+import { getSeenNotificationId } from '../../services/notificationsSeen';
 import { useTheme } from '../../services/themeContext';
 import { useCompose } from '../../services/composeContext';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
@@ -23,7 +24,8 @@ import { Avatar, AvatarBadge, IconButton, PillButton, SectionLabel, SegmentOptio
 import { hitSlopFor } from '../../services/theme/shape';
 import { FAVOURITE_SIZE, STACKED_AVATAR, makeStyles } from './styles';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
-import { ListItem, actorsText, buildListItems, notificationTime, plainText, withoutLeadingMentions } from './rows';
+import { ListItem, actorsText, buildListItems, notificationTime, plainText, withoutOwnMention } from './rows';
+import { filterMatch } from '../../services/mastodon/filters';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { TKey, Translator } from '../../services/i18n/translate';
 import { useOpenAccount } from '../../hooks/useOpenAccount';
@@ -31,7 +33,7 @@ import { useMarkNotificationsSeen } from '../../hooks/useUnreadNotifications';
 import { dialog } from '../../services/dialog';
 import { useMediaViewer } from '../../components/MediaViewer/mediaViewer';
 import { FocusedImage } from '../../components/TootCard/focusedImage';
-import { mediaLabel } from '../../components/TootCard/tootCard';
+import { countMedia, mediaLabel } from '../../components/TootCard/tootCard';
 import { useReadDirectMentions } from '../../hooks/useConversations';
 import { Poll, optionPercent } from '../../components/Poll/poll';
 
@@ -42,7 +44,7 @@ interface NotificationsProps {
 const FILTERS: NotificationFilter[] = ['all', 'mentions', 'follows'];
 
 // Types share the accent and differ by glyph and wording
-const TYPE_CONFIG: Record<string, { badge: React.ComponentProps<typeof Ionicons>['name']; action: TKey }> = {
+const TYPE_CONFIG: Record<string, { badge: IconName; action: TKey }> = {
     mention: { badge: 'at', action: 'notifications.mention' },
     // A mention in a direct post
     privateMention: { badge: 'lock-closed', action: 'notifications.privateMention' },
@@ -93,11 +95,13 @@ const FollowRequestActions = ({ account }: { account: Account }) => {
 
 const nameOf = (account: Account) => account.display_name || account.username;
 
-// What the row shows of the post: the content warning when there is one, never the text behind it
-const statusText = (status: Status, type: Notification['type'], { t }: Translator) => {
+// What the row shows of the post: the filter or content warning covering it, never the text behind it
+const statusText = (status: Status, type: Notification['type'], { t }: Translator, username?: string) => {
+    const filtered = filterMatch(status, 'notifications');
+    if (filtered?.action === 'warn') return t('notifications.filtered', { text: filtered.titles.join(', ') });
     if (status.spoiler_text) return t('notifications.cw', { text: status.spoiler_text });
     const text = plainText(status.content);
-    return type === 'mention' ? withoutLeadingMentions(text) : text;
+    return type === 'mention' ? withoutOwnMention(text, username) : text;
 };
 
 const MentionActions = ({ status }: { status: Status }) => {
@@ -141,7 +145,7 @@ const MentionActions = ({ status }: { status: Status }) => {
                 hitSlop={hitSlopFor(FAVOURITE_SIZE, FAVOURITE_SIZE)}
                 style={({ pressed }) => [styles.favourite, isFavourited && styles.favouriteOn, pressed && { opacity: 0.7 }]}
             >
-                <Ionicons
+                <Icon
                     name={isFavourited ? 'star' : 'star-outline'}
                     size={16}
                     color={isFavourited ? colors.accentText : colors.textSecondary}
@@ -151,7 +155,8 @@ const MentionActions = ({ status }: { status: Status }) => {
     );
 };
 
-// A mention's pictures and videos as small thumbnails, so a reply that's only a picture isn't just a name.
+// A post's pictures and videos as small thumbnails, so a reply that's only a picture isn't just a name
+// and a favourite of your photo shows the photo.
 // Tapping one opens the viewer; sensitive ones stay blurred.
 const MediaThumbnails = ({ status, onOpenPost }: { status: Status; onOpenPost?: () => void }) => {
     const styles = useThemedStyles(makeStyles);
@@ -181,7 +186,7 @@ const MediaThumbnails = ({ status, onOpenPost }: { status: Status; onOpenPost?: 
 };
 
 // The two most recent people in a group, overlapping, with the type badge
-const StackedAvatars = ({ accounts, badge }: { accounts: Account[]; badge: React.ComponentProps<typeof Ionicons>['name'] }) => {
+const StackedAvatars = ({ accounts, badge }: { accounts: Account[]; badge: IconName }) => {
     const styles = useThemedStyles(makeStyles);
     return (
         <View testID="avatar-stack" style={styles.stack44}>
@@ -278,7 +283,7 @@ const NotificationRow = ({ group, relationship, onStatusPress, onLongPress }: No
         );
     }
 
-    const text = status ? statusText(status, group.type, i18n) : '';
+    const text = status ? statusText(status, group.type, i18n, me?.username) : '';
     const body = (
         <>
             <View style={styles.headline}>
@@ -299,6 +304,7 @@ const NotificationRow = ({ group, relationship, onStatusPress, onLongPress }: No
                             </Text>
                         </Well>
                     )}
+                    {status && <MediaThumbnails status={status} onOpenPost={openStatus} />}
                     {/* An ended poll: its results, as on the post */}
                     {group.type === 'poll' && status?.poll && <Poll initialPoll={status.poll} readOnly />}
                 </>
@@ -309,7 +315,9 @@ const NotificationRow = ({ group, relationship, onStatusPress, onLongPress }: No
     const results = group.type === 'poll' && status?.poll
         ? status.poll.options.map(option => t('poll.option', { title: option.title, percent: optionPercent(status.poll!, option) })).join(', ')
         : '';
-    const spoken = [text, results].filter(Boolean).join('. ');
+    // Outside mentions the row is one element, so its pictures are read in the label
+    const media = group.type !== 'mention' && status?.media_attachments?.length ? countMedia(status.media_attachments, i18n) : '';
+    const spoken = [text, media, results].filter(Boolean).join('. ');
     const label = t(spoken ? 'notifications.rowWithText' : 'notifications.row', {
         actors: pollSentence ? '' : actors,
         action: pollSentence || action,
@@ -348,57 +356,71 @@ const NotificationRow = ({ group, relationship, onStatusPress, onLongPress }: No
     );
 };
 
-// Behind a row swiped to the right: letting go past it removes the notification
-const RemoveAction = () => {
+// Behind a row swiped to the right
+const RemoveAction = ({ style }: { style: React.ComponentProps<typeof Animated.View>['style'] }) => {
     const { colors, type } = useTheme();
     const styles = useThemedStyles(makeStyles);
     const { t } = useI18n();
     return (
-        <View style={styles.removeAction}>
-            <Ionicons name="trash-outline" size={20} color={colors.cardBackground} />
+        <Animated.View style={[styles.removeAction, style]}>
+            <Icon name="trash-outline" size={20} color={colors.cardBackground} />
             <Text style={[type.label, styles.removeText]}>{t('notifications.remove')}</Text>
-        </View>
+        </Animated.View>
     );
 };
 
 // Card-toss timing: the row flies off while the swipe finishes, then the gap closes
 const FLY_MS = 220;
 const COLLAPSE_MS = 200;
+// How far across the screen a row has to be dragged before letting go removes it
+const REMOVE_AT = 0.75;
 
-// A row swiped most of the way to the right flies off, tilting and fading, then its space closes and
-// only then it leaves the list, so the rows below slide up instead of jumping
-const SwipeToRemove = ({ threshold, onRemove, children }: { threshold: number; onRemove: () => void; children: React.ReactNode }) => {
+// A row dragged nearly all the way to the right flies off, tilting and fading, then its space closes and
+// only then it leaves the list, so the rows below slide up instead of jumping. Only the distance counts:
+// ReanimatedSwipeable adds the finger's speed to it, so a quick flick removed a row that had barely moved.
+const SwipeToRemove = ({ onRemove, children }: { onRemove: () => void; children: React.ReactNode }) => {
     const styles = useThemedStyles(makeStyles);
+    const { width } = useWindowDimensions();
+    const x = useSharedValue(0);
     const flying = useSharedValue(0);
     const height = useSharedValue(-1);
     const measured = useRef(0);
     const card = useAnimatedStyle(() => ({
         opacity: 1 - flying.value * 0.7,
-        transform: [{ rotate: `${flying.value * 8}deg` }, { translateY: -flying.value * 16 }],
+        transform: [{ translateX: x.value }, { rotate: `${flying.value * 8}deg` }, { translateY: -flying.value * 16 }],
     }));
-    const cell = useAnimatedStyle(() => (height.value < 0 ? {} : { height: height.value, overflow: 'hidden' }));
+    const behind = useAnimatedStyle(() => ({ opacity: x.value > 0 ? 1 : 0 }));
+    const cell = useAnimatedStyle(() => (height.value < 0 ? {} : { height: height.value }));
     const collapse = () => {
         height.value = measured.current;
         height.value = withTiming(0, { duration: COLLAPSE_MS }, finished => {
             if (finished) runOnJS(onRemove)();
         });
     };
+    // Starts only after a clear sideways drag, and never during a scroll
+    const pan = Gesture.Pan()
+        .withTestId('swipe-to-remove')
+        .activeOffsetX(24)
+        .failOffsetY([-20, 20])
+        .onUpdate(event => {
+            x.value = Math.max(0, event.translationX);
+        })
+        .onEnd((event, success) => {
+            if (!success || event.translationX < width * REMOVE_AT) {
+                x.value = withTiming(0, { duration: FLY_MS });
+                return;
+            }
+            flying.value = withTiming(1, { duration: FLY_MS });
+            x.value = withTiming(width, { duration: FLY_MS }, finished => {
+                if (finished) runOnJS(collapse)();
+            });
+        });
     return (
-        <Animated.View style={cell} onLayout={event => (measured.current = event.nativeEvent.layout.height)}>
-            <ReanimatedSwipeable
-                renderLeftActions={() => <RemoveAction />}
-                // Removes only when dragged most of the way across, and only after a clear sideways drag
-                leftThreshold={threshold}
-                dragOffsetFromLeftEdge={24}
-                overshootLeft={false}
-                animationOptions={{ duration: FLY_MS }}
-                onSwipeableWillOpen={() => {
-                    flying.value = withTiming(1, { duration: FLY_MS });
-                }}
-                onSwipeableOpen={collapse}
-            >
+        <Animated.View style={[styles.swipeCell, cell]} onLayout={event => (measured.current = event.nativeEvent.layout.height)}>
+            <RemoveAction style={behind} />
+            <GestureDetector gesture={pan}>
                 <Animated.View style={[styles.swipeRow, card]}>{children}</Animated.View>
-            </ReanimatedSwipeable>
+            </GestureDetector>
         </Animated.View>
     );
 };
@@ -417,7 +439,7 @@ const SelectableRow = ({ group, selected, onToggle, children }: { group: Notific
             accessibilityLabel={label}
             style={[styles.selectable, selected && styles.selectableOn]}
         >
-            <Ionicons name={selected ? 'checkmark-circle' : 'ellipse-outline'} size={24} color={selected ? colors.accentText : colors.textMuted} />
+            <Icon name={selected ? 'checkmark-circle' : 'ellipse-outline'} size={24} color={selected ? colors.accentText : colors.textMuted} />
             <View style={styles.selectableContent} pointerEvents="none" importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
                 {children}
             </View>
@@ -435,20 +457,34 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
     const [activeFilter, setActiveFilter] = useState<NotificationFilter>('all');
     const [isPullRefreshing, setIsPullRefreshing] = useState(false);
     const [markedReadId, setMarkedReadId] = useState<string | null>(null);
+    // Where you'd read up to when the tab opened (the newer of the server's marker and what this phone
+    // last showed): rows past it are "New" while you're here, though opening the tab clears the bell.
+    // Undefined while it loads.
+    const accountId = useOptionalAuth()?.user?.id;
+    const [readPoint, setReadPoint] = useState<string | null | undefined>(undefined);
+    useEffect(() => {
+        if (!accountId) return;
+        let cancelled = false;
+        Promise.all([getNotificationsMarker().catch(() => null), getSeenNotificationId(accountId)]).then(([marker, seen]) => {
+            if (!cancelled) setReadPoint(marker && seen ? (isNewerId(marker, seen) ? marker : seen) : marker ?? seen);
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [accountId]);
     // Picking notifications to remove: the keys of the ticked rows
     const [selecting, setSelecting] = useState(false);
     const [selected, setSelected] = useState<Set<string>>(() => new Set());
     const [clearMenuOpen, setClearMenuOpen] = useState(false);
-    const removeThreshold = useWindowDimensions().width * 0.65;
 
     const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage, refetch } = useNotifications(activeFilter);
 
-    // The server already filters by type; this guards against types the screen can't render
+    // The server already filters by type; this guards against types the screen can't render, and drops posts your hide filters cover
     const notifications = useMemo(
-        () => mergeGroups(data?.pages.flatMap(page => page.groups) ?? []).filter(g => SUPPORTED_NOTIFICATION_TYPES.includes(g.type)),
+        () => mergeGroups(data?.pages.flatMap(page => page.groups) ?? []).filter(g => SUPPORTED_NOTIFICATION_TYPES.includes(g.type) && !(g.status && filterMatch(g.status, 'notifications')?.action === 'hide')),
         [data]
     );
-    const listItems = useMemo(() => buildListItems(notifications, new Date(), i18n), [notifications, i18n]);
+    const listItems = useMemo(() => buildListItems(notifications, new Date(), i18n, readPoint), [notifications, i18n, readPoint]);
 
     const followerIds = useMemo(
         () => notifications.filter(g => g.type === 'follow' && g.accounts[0]).map(g => g.accounts[0].id),
@@ -465,11 +501,16 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
         return ids.reduce<string | null>((newest, id) => (!newest || isNewerId(id, newest) ? id : newest), null);
     }, [queryClient, data]);
 
-    // Showing them counts as seeing them: the bell's dot goes away (the server's marker stays)
+    // Showing them counts as reading them: the bell's dot goes away, and the server's read marker moves so
+    // the web and other apps stop counting them too (if that fails, the next visit tries again). After the
+    // read point is read, or it would already count them as read.
     const markSeen = useMarkNotificationsSeen();
+    const readPointLoaded = readPoint !== undefined;
     useEffect(() => {
-        if (newestId) markSeen(newestId);
-    }, [newestId, markSeen]);
+        if (!newestId || !readPointLoaded) return;
+        markSeen(newestId);
+        markNotificationsRead(newestId).catch(() => {});
+    }, [newestId, readPointLoaded, markSeen]);
     // Direct messages read here clear the envelope's dot too
     const directMentionIds = useMemo(
         () => notifications.flatMap(group => (group.type === 'mention' && group.status?.visibility === 'direct' ? [group.status.id] : [])),
@@ -482,6 +523,7 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
         try {
             await markNotificationsRead(newestId);
             setMarkedReadId(newestId);
+            setReadPoint(newestId);
         } catch (error) {
             dialog.toast(t('notifications.markReadFailed'));
         }
@@ -583,13 +625,20 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
         if (item.kind === 'section') {
             return <SectionLabel style={[styles.sectionLabel, index > 0 && styles.sectionLabelSpaced]}>{item.label}</SectionLabel>;
         }
-        const row = (
+        const notificationRow = (
             <NotificationRow
                 group={item.group}
                 relationship={item.group.accounts[0] && relationships.get(item.group.accounts[0].id)}
                 onStatusPress={onStatusPress}
                 onLongPress={selecting ? undefined : () => startSelecting(item.group.key)}
             />
+        );
+        // A new row gets a coat dot by its avatar (screen readers hear the "New" section title instead)
+        const row = (
+            <View>
+                {notificationRow}
+                {item.unread && <View testID="unread-row-dot" style={styles.unreadDot} />}
+            </View>
         );
         return (
             <View style={[styles.segment, item.first && styles.segmentFirst, item.last && styles.segmentLast]}>
@@ -600,7 +649,7 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
                     </SelectableRow>
                 ) : (
                     // Keyed by the notification so a recycled cell never comes back half swiped or collapsed
-                    <SwipeToRemove key={item.group.key} threshold={removeThreshold} onRemove={() => removeOne(item.group)}>
+                    <SwipeToRemove key={item.group.key} onRemove={() => removeOne(item.group)}>
                         {row}
                     </SwipeToRemove>
                 )}
@@ -646,7 +695,7 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
                 </View>
             ) : (
                 <View style={styles.header}>
-                    <Text accessibilityRole="header" style={[type.title, styles.title]}>{t('notifications.title')}</Text>
+                    <Text accessibilityRole="header" numberOfLines={1} adjustsFontSizeToFit style={[type.title, styles.title]}>{t('notifications.title')}</Text>
                     <View style={styles.headerActions}>
                         <PillButton
                             label={t('notifications.clear')}

@@ -12,7 +12,11 @@ export interface Attachment {
     type: 'image' | 'video' | 'gifv' | 'unknown';
     url: string;
     preview_url: string;
+    // The file on the post's own server; null for local media
+    remote_url?: string | null;
     description?: string;
+    // A tiny blurred sketch of the picture, to show while it loads
+    blurhash?: string | null;
     // Sizes and the focal point (-1..1, y up), when the server knows them
     meta?: {
         // A video's or GIF's length in seconds
@@ -35,6 +39,9 @@ export interface Account {
     acct: string;
     display_name: string;
     avatar: string;
+    avatar_static?: string;
+    // Only in your list of muted accounts: when a timed mute ends (null: until you unmute)
+    mute_expires_at?: string | null;
     header?: string;
     note?: string;
     followers_count?: number;
@@ -115,12 +122,42 @@ export interface Status {
     poll?: Poll | null;
     // When it was last edited, if ever
     edited_at?: string | null;
+    // The app it was posted with: only on your server's posts, and only when the author shows it
+    application?: { name: string; website?: string | null } | null;
     // The source text, only in the answer to a delete (for "delete and redraft")
     text?: string;
     // Quote posts (Mastodon 4.4+); older servers send none of these
     quote?: Quote | null;
     quotes_count?: number;
     quote_approval?: QuoteApproval | null;
+    // Your filters that match it (Mastodon 4.0+), whatever their context: the app checks the context
+    filtered?: FilterResult[];
+}
+
+// Where a filter applies: Home and lists, notifications, public and hashtag timelines, threads, profiles
+export type FilterContext = 'home' | 'notifications' | 'public' | 'thread' | 'account';
+// warn covers the post, hide drops it, blur (Mastodon 4.4) veils only its media
+export type FilterAction = 'warn' | 'hide' | 'blur';
+
+export interface FilterKeyword {
+    id: string;
+    keyword: string;
+    whole_word: boolean;
+}
+
+export interface Filter {
+    id: string;
+    title: string;
+    context: FilterContext[];
+    expires_at: string | null;
+    filter_action: FilterAction;
+    keywords?: FilterKeyword[];
+}
+
+export interface FilterResult {
+    filter: Filter;
+    keyword_matches: string[] | null;
+    status_matches: string[] | null;
 }
 
 // What a post was written as, to edit it
@@ -195,6 +232,8 @@ export interface Relationship {
     notifying?: boolean;
     blocking?: boolean;
     muting?: boolean;
+    // Your private note on them (only you see it)
+    note?: string;
 }
 
 // One of a server's rules (shown when reporting)

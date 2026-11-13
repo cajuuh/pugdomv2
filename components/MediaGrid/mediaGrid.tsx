@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon } from '../ui/icon';
 import { Attachment, Status } from '../../services/mastodon/types';
 import { useTheme } from '../../services/themeContext';
 import { useI18n } from '../../services/i18n/i18nContext';
@@ -60,7 +60,7 @@ export const MediaGridRow: React.FC<MediaGridRowProps> = ({ row, onStatusPress }
                     <Pressable
                         key={`${status.id}-${index}`}
                         style={[styles.tile, { backgroundColor: colors.inputBackground }]}
-                        onPress={() => openMedia(attachments, index, () => openPost(status.id))}
+                        onPress={() => openMedia(attachments, index, () => openPost(status.id), status.url ?? status.uri)}
                         onLongPress={() => openPost(status.id)}
                         accessibilityRole="imagebutton"
                         accessibilityLabel={mediaLabel(attachment, index, attachments.length, i18n)}
@@ -71,20 +71,26 @@ export const MediaGridRow: React.FC<MediaGridRowProps> = ({ row, onStatusPress }
                         <View style={styles.badges}>
                             {status.sensitive && (
                                 <View style={[styles.badge, { backgroundColor: colors.veilStrong }]}>
-                                    <Ionicons name="eye-off-outline" size={14} color={colors.textPrimary} />
+                                    <Icon name="eye-off-outline" size={14} color={colors.textPrimary} />
                                 </View>
                             )}
                             {count > 1 ? (
                                 <View style={[styles.badge, styles.countBadge, { backgroundColor: colors.veilStrong }]}>
-                                    <Ionicons name="copy-outline" size={13} color={colors.textPrimary} />
+                                    <Icon name="copy-outline" size={13} color={colors.textPrimary} />
                                     <Text style={[type.label, styles.countText, { color: colors.textPrimary }]}>{count}</Text>
                                 </View>
                             ) : (
-                                attachment.type !== 'image' && (
-                                    <View style={[styles.badge, { backgroundColor: colors.veilStrong }]}>
-                                        <Ionicons name="play" size={14} color={colors.textPrimary} />
+                                // The thumbnail already puts a play button on a video it shows; a veiled one needs this
+                                attachment.type === 'video' && status.sensitive && (
+                                    <View testID="grid-play-badge" style={[styles.badge, { backgroundColor: colors.veilStrong }]}>
+                                        <Icon name="play" size={14} color={colors.textPrimary} />
                                     </View>
                                 )
+                            )}
+                            {count === 1 && attachment.type === 'gifv' && (
+                                <View style={[styles.badge, styles.countBadge, { backgroundColor: colors.veilStrong }]}>
+                                    <Text style={[type.label, styles.countText, { color: colors.textPrimary }]}>GIF</Text>
+                                </View>
                             )}
                         </View>
                     </Pressable>

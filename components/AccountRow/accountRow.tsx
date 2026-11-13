@@ -14,19 +14,25 @@ interface AccountRowProps {
     relationship?: Relationship;
     // Your own account has no follow button
     isSelf?: boolean;
+    // A line under the handle, such as when a mute ends
+    detail?: string;
+    // In place of the follow button
+    action?: React.ReactNode;
+    // From another server's list: its id isn't ours, so the row opens by profile link, without a follow button
+    remote?: boolean;
 }
 
 // A person in a list: avatar, name, handle and a follow button; the row opens their profile
-export const AccountRow: React.FC<AccountRowProps> = ({ account, relationship, isSelf }) => {
+export const AccountRow: React.FC<AccountRowProps> = ({ account, relationship, isSelf, detail, action, remote }) => {
     const { colors, type } = useTheme();
     const { t } = useI18n();
-    const { openAccount } = useOpenAccount();
+    const { openAccount, openLinkInApp } = useOpenAccount();
     const name = account.display_name || account.username;
 
     return (
         <View style={styles.row}>
             <Pressable
-                onPress={() => openAccount(account)}
+                onPress={() => (remote ? openLinkInApp(account.url ?? '') : openAccount(account))}
                 accessibilityRole="link"
                 accessibilityLabel={t('post.openProfile', { name })}
                 style={({ pressed }) => [styles.person, pressed && { opacity: 0.7 }]}
@@ -37,9 +43,10 @@ export const AccountRow: React.FC<AccountRowProps> = ({ account, relationship, i
                         {renderTextWithEmojis(name, account.emojis || [], [type.name, { color: colors.textPrimary }], 16)}
                     </Text>
                     <Text style={[type.meta, { color: colors.textMuted }]} numberOfLines={1}>@{account.acct}</Text>
+                    {!!detail && <Text style={[type.meta, { color: colors.textMuted }]} numberOfLines={1}>{detail}</Text>}
                 </View>
             </Pressable>
-            {!isSelf && <FollowButton accountId={account.id} name={name} relationship={relationship} allowUnfollow />}
+            {action ?? (!isSelf && !remote && <FollowButton accountId={account.id} name={name} relationship={relationship} allowUnfollow />)}
         </View>
     );
 };

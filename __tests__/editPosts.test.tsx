@@ -28,6 +28,7 @@ jest.mock('../services/themeContext', () => ({
 }));
 jest.mock('../services/settingsContext', () => ({
     useSettings: () => ({ compactMode: false, mediaAutoplay: false }),
+    useOptionalSettings: () => null,
 }));
 const mockOpenCompose = jest.fn();
 jest.mock('../services/composeContext', () => ({
@@ -243,6 +244,24 @@ describe('Compose with your post', () => {
         expect(api.post).not.toHaveBeenCalledWith('/statuses', expect.anything(), expect.anything());
         expect(updated).toHaveBeenCalledWith(expect.objectContaining({ id: 'p1' }));
         subscription.remove();
+    });
+
+    it('keeps media marked sensitive without a warning, and lets you unmark it', async () => {
+        api.get.mockImplementation(async (url: string) =>
+            url === '/statuses/p1/source' ? { data: { id: 'p1', text: 'Hello #pugs', spoiler_text: '' } } : { data: [] }
+        );
+        await renderCompose('edit', post({ media_attachments: [image], sensitive: true, spoiler_text: '' }));
+
+        const toggle = await screen.findByRole('switch', { name: 'Mark media as sensitive' });
+        expect(toggle.props.value).toBe(true);
+        await fireEvent.press(screen.getByRole('button', { name: 'Save' }));
+        await waitFor(() => expect(api.put).toHaveBeenCalledWith('/statuses/p1', expect.objectContaining({ sensitive: true, spoiler_text: '' })));
+
+        api.put.mockClear();
+        await renderCompose('edit', post({ media_attachments: [image], sensitive: true, spoiler_text: '' }));
+        await fireEvent(await screen.findByRole('switch', { name: 'Mark media as sensitive' }), 'valueChange', false);
+        await fireEvent.press(screen.getByRole('button', { name: 'Save' }));
+        await waitFor(() => expect(api.put).toHaveBeenCalledWith('/statuses/p1', expect.objectContaining({ sensitive: false })));
     });
 
     it("keeps an edited post's poll as it is", async () => {

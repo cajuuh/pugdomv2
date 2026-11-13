@@ -6,25 +6,26 @@ import { useAuth } from '../../services/authContext';
 import { useTheme } from '../../services/themeContext';
 import { Status } from '../../services/mastodon/types';
 import { accountStatusesKey, ProfileTab, useProfileStatuses } from '../../hooks/useAccountStatuses';
-import { useBookmarks } from '../../hooks/useBookmarks';
+import { OwnList, useOwnList } from '../../hooks/useBookmarks';
 import { TootCard } from '../../components/TootCard/tootCard';
+import { withoutHidden } from '../../services/mastodon/filters';
 import { SegmentOption } from '../../components/ui';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { makeStyles } from './styles';
 import { fullHandle, ProfileHeader } from './profileHeader';
 import { MediaGridRow, MediaTile, toMediaRows } from '../../components/MediaGrid/mediaGrid';
 import { useI18n } from '../../services/i18n/i18nContext';
-import { autoplayViewability } from '../../services/media/autoplay';
+import { postListProps } from '../../services/media/autoplay';
 
 interface ProfileProps {
     onStatusPress?: (id: string) => void;
 }
 
-// Bookmarks are private to you, and this is always your own profile
-type Tab = ProfileTab | 'bookmarks';
+// Bookmarks and favourites are private to you, and this is always your own profile
+type Tab = ProfileTab | OwnList;
 
 // Pinned comes first, and only when there are pinned posts
-const tabsFor = (hasPinned: boolean): Tab[] => [...(hasPinned ? ['pinned' as const] : []), 'posts', 'replies', 'media', 'bookmarks'];
+const tabsFor = (hasPinned: boolean): Tab[] => [...(hasPinned ? ['pinned' as const] : []), 'posts', 'replies', 'media', 'bookmarks', 'favourites'];
 
 const EMPTY_TEXT = {
     posts: 'profile.emptyPosts',
@@ -32,6 +33,7 @@ const EMPTY_TEXT = {
     media: 'profile.emptyMedia',
     pinned: 'profile.emptyPinned',
     bookmarks: 'profile.emptyBookmarks',
+    favourites: 'profile.emptyFavourites',
 } as const;
 
 export { fullHandle };
@@ -46,13 +48,13 @@ const Profile = ({ onStatusPress }: ProfileProps) => {
     const [tab, setTab] = useState<Tab>('posts');
     const [isPullRefreshing, setIsPullRefreshing] = useState(false);
 
-    const showBookmarks = tab === 'bookmarks';
-    const accountStatuses = useProfileStatuses(user?.id, showBookmarks ? 'posts' : tab, !showBookmarks);
+    const ownList = tab === 'bookmarks' || tab === 'favourites' ? tab : null;
+    const accountStatuses = useProfileStatuses(user?.id, ownList ? 'posts' : (tab as ProfileTab), !ownList);
     const { hasPinned } = accountStatuses;
     const tabs: SegmentOption<Tab>[] = tabsFor(hasPinned).map(value => ({ value, label: t(`profile.${value}`), icon: value === 'pinned' ? 'pin' : undefined }));
-    const bookmarks = useBookmarks(showBookmarks);
-    const { isLoading, isFetchingNextPage, hasNextPage, fetchNextPage, refetch } = showBookmarks ? bookmarks : accountStatuses;
-    const statuses = showBookmarks ? bookmarks.data?.pages.flatMap(page => page.statuses) ?? [] : accountStatuses.statuses;
+    const own = useOwnList(ownList ?? 'bookmarks', !!ownList);
+    const { isLoading, isFetchingNextPage, hasNextPage, fetchNextPage, refetch } = ownList ? own : accountStatuses;
+    const statuses = ownList ? own.data?.pages.flatMap(page => page.statuses) ?? [] : withoutHidden(accountStatuses.statuses, 'account');
 
     // Unpinning the last pinned post takes the Pinned tab away
     useEffect(() => {
@@ -102,14 +104,14 @@ const Profile = ({ onStatusPress }: ProfileProps) => {
     return (
         <View style={styles.container}>
             <FlashList
-                {...autoplayViewability}
+                {...postListProps}
                 data={showGrid ? toMediaRows(statuses) : statuses}
                 keyExtractor={(item: Status | MediaTile[]) => (Array.isArray(item) ? `row-${item[0].status.id}-${item[0].index}` : item.id)}
                 getItemType={(item: Status | MediaTile[]) => (Array.isArray(item) ? 'mediaRow' : 'post')}
                 renderItem={({ item }) =>
                     Array.isArray(item)
                         ? <MediaGridRow row={item} onStatusPress={onStatusPress} />
-                        : <TootCard status={item} onPress={onStatusPress} />
+                        : <TootCard status={item} onPress={onStatusPress} filterContext={ownList ? undefined : 'account'} />
                 }
                 ListHeaderComponent={<ProfileHeader user={user} mode="self" tabs={tabs} tab={tab} onChangeTab={setTab} />}
                 ListEmptyComponent={renderEmpty}

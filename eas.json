@@ -41,7 +41,7 @@
         "appleTeamId": "G6H6CPS7BU"
       },
       "android": {
-        "track": "Mastodon Teste Alpha",
+        "track": "beta",
         "releaseStatus": "draft"
       }
     }

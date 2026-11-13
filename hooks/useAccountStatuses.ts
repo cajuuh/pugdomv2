@@ -4,10 +4,11 @@ import { Status } from '../services/mastodon/types';
 
 export type ProfileTab = 'posts' | 'replies' | 'media' | 'pinned';
 
-// Posts leave out replies, Replies is everything (as on Mastodon's "Posts and replies"), Media only posts with attachments
+// Posts leave out replies (boosts show there, as on Mastodon's Posts), Replies is posts and replies
+// without boosts (tester request), Media only posts with attachments
 export const PROFILE_TAB_FILTERS: Record<ProfileTab, AccountStatusesFilter> = {
     posts: { exclude_replies: true },
-    replies: {},
+    replies: { exclude_reblogs: true },
     media: { only_media: true },
     pinned: { pinned: true },
 };

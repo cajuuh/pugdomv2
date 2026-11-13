@@ -1,9 +1,13 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { Image, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Platform, Pressable, ScrollView, Share, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Image } from 'expo-image';
+import { Icon, IconName } from '../ui/icon';
+import { openLink } from '../../services/links';
 import { useRecyclingState } from '@shopify/flash-list';
-import { Status, Attachment, PreviewCard } from '../../services/mastodon/types';
+import { Status, Attachment, FilterContext, Mention, PreviewCard } from '../../services/mastodon/types';
+import { filterMatch } from '../../services/mastodon/filters';
 import { StatusHtmlContent } from './htmlContent';
+import { PostHashtags } from './postHashtags';
 import { useSettings } from '../../services/settingsContext';
 import { useExpandSpoilers, useMediaDisplay } from '../../hooks/useExpandSpoilers';
 import { useTheme } from '../../services/themeContext';
@@ -15,18 +19,21 @@ import {
     THREAD_AVATAR_GAP,
     makeStyles,
     threadCardMetrics,
+    postTextMetrics,
+    SLIDE_GAP,
 } from './styles';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import {
     bookmarkStatus,
     favouriteStatus,
+    openStatusInBrowser,
     reblogStatus,
     unbookmarkStatus,
     unfavouriteStatus,
     unreblogStatus,
 } from '../../services/mastodon/statuses';
 import { useQueryClient } from '@tanstack/react-query';
-import { BOOKMARKS_KEY } from '../../hooks/useBookmarks';
+import { BOOKMARKS_KEY, FAVOURITES_KEY } from '../../hooks/useBookmarks';
 import { Poll } from '../Poll/poll';
 import { Avatar, Card, PillButton } from '../ui';
 import { renderTextWithEmojis } from '../../services/emojiHelper';
@@ -34,10 +41,12 @@ import { useUpdateCachedStatus } from '../../hooks/useUpdateCachedStatus';
 import { useMediaViewer } from '../MediaViewer/mediaViewer';
 import { hitSlopFor } from '../../services/theme/shape';
 import { useI18n } from '../../services/i18n/i18nContext';
-import { defaultTranslator, Translator } from '../../services/i18n/translate';
+import { defaultTranslator, TKey, Translator } from '../../services/i18n/translate';
+import { postTime } from '../../services/dates';
 import { useOpenAccount } from '../../hooks/useOpenAccount';
 import { FocusedImage } from './focusedImage';
 import { QuotedPost } from './quotedPost';
+import { TranslationLine, usePostTranslation } from './postTranslation';
 import { useNavigator } from '../../services/navigationContext';
 import { ActionSheet, BottomSheet } from '../ComposeModal/optionSheet';
 import { currentQuotePolicy, QuotePolicy, quotePermission, quotePolicies, setQuotePolicy } from '../../services/mastodon/quotes';
@@ -48,30 +57,43 @@ import { useModeration } from '../../hooks/useModeration';
 import { usePostActions } from '../../hooks/usePostActions';
 import { EditHistorySheet } from './editHistorySheet';
 import { dialog } from '../../services/dialog';
+import { plainText, postSize, splitTrailingHashtags } from '../../services/htmlText';
 import { useIsAutoplayPost } from '../../services/media/autoplay';
 
-export const getRelativeTime = (dateString: string, { t }: Translator) => {
-    const now = new Date();
-    const created = new Date(dateString);
-    const diffMs = now.getTime() - created.getTime();
-    const diffSec = Math.floor(diffMs / 1000);
-    const diffMin = Math.floor(diffSec / 60);
-    const diffHr = Math.floor(diffMin / 60);
-    const diffDays = Math.floor(diffHr / 24);
+// A long post folds after this many lines, until "Show more"
+const FOLD_LINES = 12;
 
-    if (diffSec < 60) {
-        return t('common.now');
-    } else if (diffMin < 60) {
-        return t('common.minutesShort', { count: diffMin });
-    } else if (diffHr < 24) {
-        return t('common.hoursShort', { count: diffHr });
-    } else {
-        return t('common.daysShort', { count: diffDays });
-    }
+// The grid shows at most four; its height from the post's width (Compact Mode: fixed and short)
+const GRID_MAX = 4;
+const GRID_RATIO = 0.66;
+const GRID_HEIGHT_COMPACT = 160;
+
+// Several images: each slide leaves the next one peeking in at the edge, so it's clear there's more to see
+const PEEK_SLIDE = 0.88;
+export const carouselMetrics = (width: number) => {
+    const slide = Math.round(width * PEEK_SLIDE);
+    return { slide, interval: slide + SLIDE_GAP };
 };
+// The slide a scroll stopped at; the last one can't scroll to the start, so the far end counts as it
+export const carouselPage = (offset: number, width: number, count: number) => {
+    const { slide, interval } = carouselMetrics(width);
+    const end = count * slide + (count - 1) * SLIDE_GAP - width;
+    return offset >= end - 1 ? count - 1 : Math.min(count - 1, Math.max(0, Math.round(offset / interval)));
+};
+
+// Kept under its old name for the screens that import it from here
+export const getRelativeTime = (dateString: string, i18n: Translator) => postTime(dateString, i18n);
 
 // Alt text when the author wrote one, otherwise the media's position in the post
 const MEDIA_KIND = { image: 'post.image', video: 'post.video', gifv: 'post.gif', unknown: 'post.attachment' } as const;
+// The open post's visibility, named and drawn as in compose's picker
+const VISIBILITY: Record<Status['visibility'], { icon: IconName; label: TKey }> = {
+    public: { icon: 'globe-outline', label: 'compose.public' },
+    unlisted: { icon: 'lock-open-outline', label: 'compose.unlisted' },
+    private: { icon: 'lock-closed-outline', label: 'compose.followers' },
+    direct: { icon: 'at', label: 'compose.mentioned' },
+};
+
 export const mediaLabel = (attachment: Attachment, index: number, count: number, { t }: Translator) =>
     attachment.description ||
     t('post.mediaPosition', { kind: t(MEDIA_KIND[attachment.type] ?? 'post.attachment'), index: index + 1, count });
@@ -88,6 +110,15 @@ export const countMedia = (attachments: Attachment[], { tn }: Translator = defau
     const nouns = new Set(attachments.map(a => (a.type === 'image' ? 'photos' : a.type === 'video' || a.type === 'gifv' ? 'videos' : 'attachments')));
     const noun = nouns.size === 1 ? [...nouns][0] : 'attachments';
     return tn(`post.${noun}` as 'post.photos' | 'post.videos' | 'post.attachments', attachments.length);
+};
+
+// "Replying to @acct" for a reply outside a thread: to the author themselves, it continues their thread;
+// with no mention of whom it answers, just "Reply"
+export const feedReplyText = (status: Status, { t }: Translator) => {
+    if (!status.in_reply_to_id) return '';
+    if (status.in_reply_to_account_id === status.account.id) return t('post.continuesThread');
+    const parent = status.mentions?.find(mention => mention.id === status.in_reply_to_account_id);
+    return parent ? t('thread.replyingTo', { name: `@${parent.acct}` }) : t('post.isReply');
 };
 
 const hasText = (html: string) => html.replace(/<[^>]*>/g, '').trim().length > 0;
@@ -134,10 +165,14 @@ interface TootCardProps {
     // A post read from another server (its ids aren't ours): no buttons that act on it here; tapping it,
     // its author or "open to interact" finds it through our server first
     remote?: boolean;
+    // The whole text however long (a thread's main post); elsewhere long posts fold behind "Show more"
+    fullText?: boolean;
+    // Where it's shown, for your filters: warn covers it, blur veils its media (hide is the list's job)
+    filterContext?: FilterContext;
 }
 
-export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPressHashtag, onPress, threadMode, showReactions, hasThreadLineTop, hasThreadLineBottom, indent = 0, replyingTo, remote }) => {
-    const { compactMode, hideCounts, coverSensitiveMedia, uncroppedMedia, mediaAutoplay } = useSettings();
+export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPressHashtag, onPress, threadMode, showReactions, hasThreadLineTop, hasThreadLineBottom, indent = 0, replyingTo, remote, fullText, filterContext }) => {
+    const { compactMode, hideCounts, coverSensitiveMedia, uncroppedMedia, mediaAutoplay, postTextSize, mediaGrid } = useSettings();
     const { colors, type } = useTheme();
     const styles = useThemedStyles(makeStyles);
     const { openCompose } = useCompose();
@@ -164,9 +199,14 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         (quoted: Status) => (remote ? openLinkInApp(quoted.url ?? quoted.uri) : onPress ? onPress(quoted.id) : push({ name: 'thread', statusId: quoted.id })),
         [remote, openLinkInApp, onPress, push]
     );
+    // A remote post's mentions carry the other server's ids, so those are looked up instead
+    const openQuotedMention = useCallback(
+        (href: string, mentions?: Mention[]) => openMention(href, remote ? undefined : mentions),
+        [openMention, remote]
+    );
     const openPerson = (account: Status['account']) => (remote && account.url ? openLinkInApp(account.url) : openAccount(account));
     const i18n = useI18n();
-    const { t, tn } = i18n;
+    const { t, tn, locale } = i18n;
 
     // FlashList reuses this component for other statuses, so all per-status state resets when the status changes
     const recyclingDeps = [targetStatus.id];
@@ -175,12 +215,25 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     // Starts over when the preference arrives or changes, so cards drawn before it know it too
     const expandSpoilers = useExpandSpoilers();
     const [isSpoilerCollapsed, setIsSpoilerCollapsed] = useRecyclingState(hasContentWarning && !expandSpoilers, [targetStatus.id, expandSpoilers]);
-    const [isFavorited, setIsFavorited] = useRecyclingState(targetStatus.favourited, recyclingDeps);
-    const [isReblogged, setIsreblogged] = useRecyclingState(targetStatus.reblogged, recyclingDeps);
-    const [favCount, setFavCount] = useRecyclingState(targetStatus.favourites_count, recyclingDeps);
-    const [boostCount, setBoostCount] = useRecyclingState(targetStatus.reblogs_count, recyclingDeps);
-    const [isBookmarked, setIsBookmarked] = useRecyclingState(!!targetStatus.bookmarked, recyclingDeps);
+    // Shown at once when you tap; a fresher copy of the post (opening it refreshes the feeds) replaces them
+    const [isFavorited, setIsFavorited] = useRecyclingState(targetStatus.favourited, [targetStatus.id, targetStatus.favourited]);
+    const [isReblogged, setIsreblogged] = useRecyclingState(targetStatus.reblogged, [targetStatus.id, targetStatus.reblogged]);
+    const [favCount, setFavCount] = useRecyclingState(targetStatus.favourites_count, [targetStatus.id, targetStatus.favourites_count]);
+    const [boostCount, setBoostCount] = useRecyclingState(targetStatus.reblogs_count, [targetStatus.id, targetStatus.reblogs_count]);
+    const [isBookmarked, setIsBookmarked] = useRecyclingState(!!targetStatus.bookmarked, [targetStatus.id, targetStatus.bookmarked]);
     const [isMediaRevealed, setIsMediaRevealed] = useRecyclingState(false, recyclingDeps);
+    const filtered = filterMatch(status, filterContext);
+    const filterTitles = filtered?.action === 'warn' ? filtered.titles.join(', ') : '';
+    const [isFilterCovered, setIsFilterCovered] = useRecyclingState(!!filterTitles, [targetStatus.id, filterTitles]);
+    const postTranslation = usePostTranslation(targetStatus, remote, recyclingDeps);
+    const shownContent = postTranslation.translation?.content ?? targetStatus.content;
+    const hasMore = (targetStatus.media_attachments?.length ?? 0) > 0 || !!targetStatus.card || !!targetStatus.poll || !!targetStatus.quote;
+    const { html: bodyHtml, tags: trailingTags } = React.useMemo(() => splitTrailingHashtags(shownContent, hasMore), [shownContent, hasMore]);
+    const plain = React.useMemo(() => plainText(bodyHtml), [bodyHtml]);
+    const textSize = fullText ? 'normal' : postSize(plain);
+    const [isTextExpanded, setIsTextExpanded] = useRecyclingState(false, recyclingDeps);
+    const isTextFolded = textSize !== 'normal' && !isTextExpanded;
+    const textMetrics = postTextMetrics(compactMode, postTextSize);
     const mediaDisplay = useMediaDisplay();
     // The carousel's page; its width is layout, not per-post state
     const [mediaPage, setMediaPage] = useRecyclingState(0, recyclingDeps);
@@ -218,6 +271,8 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 ? await unfavouriteStatus(targetStatus.id)
                 : await favouriteStatus(targetStatus.id);
             updateCachedStatus(updated);
+            // Your Favourites list gains or loses this post
+            queryClient.invalidateQueries({ queryKey: FAVOURITES_KEY });
         } catch (error) {
             if (renderedStatusId.current !== targetStatus.id) {
                 return;
@@ -274,6 +329,10 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     // On servers with quote posts, boost opens a menu to boost or quote; elsewhere it boosts at once
     const quoting = quotePermission(targetStatus);
     const pressBoost = () => {
+        if (boostLocked) {
+            dialog.toast(t('post.boostNotAllowed'));
+            return;
+        }
         if (quoting === null) {
             toggleReblog();
             return;
@@ -292,9 +351,14 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     // delete; other people's, report, mute and block.
     const showPostMenu = !remote && !!auth?.user;
     const ownPost = !!auth?.user && auth.user.id === targetStatus.account.id;
+    // The server's rule: followers-only posts can only be boosted by their author, private mentions by nobody
+    const boostAllowed = targetStatus.visibility !== 'direct' && (targetStatus.visibility !== 'private' || ownPost);
+    // A follower may still be allowed to quote a followers-only post: the menu then stays, with Boost disabled in it
+    const boostLocked = !boostAllowed && (quoting === null || quoting === 'denied');
     const author = targetStatus.account;
     const quotesCount = targetStatus.quotes_count ?? 0;
     const viewQuotes = { key: 'quotes', icon: 'chatbox-ellipses-outline' as const, label: tn('quotes.viewQuotes', quotesCount), onPress: () => push({ name: 'quotes', status: targetStatus }) };
+    const openInBrowser = { key: 'openInBrowser', icon: 'open-outline' as const, label: t('post.openInBrowser'), description: t('post.openInBrowserHint'), onPress: () => openStatusInBrowser(targetStatus) };
     // Servers with quotes send quote_approval; followers-only and private posts can't be quoted by others anyway
     const canChangeQuotePolicy = ownPost && !!targetStatus.quote_approval && (targetStatus.visibility === 'public' || targetStatus.visibility === 'unlisted');
     const changeQuotePolicy = async (policy: QuotePolicy) => {
@@ -329,6 +393,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
 
     // The carousel's own width, once laid out; until then the width the body should have
     const slideWidth = carouselWidth || contentWidth;
+    const carousel = carouselMetrics(slideWidth);
 
     const renderMedia = (attachments: Attachment[]) => {
         if (!attachments || attachments.length === 0) {
@@ -337,14 +402,14 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
 
         const count = attachments.length;
         // Sensitive media starts veiled, unless the account (or the app) shows it all; "hide all" veils everything
-        const hidesMedia = mediaDisplay === 'hide_all' || (mediaDisplay === 'default' && targetStatus.sensitive);
+        const hidesMedia = mediaDisplay === 'hide_all' || (mediaDisplay === 'default' && targetStatus.sensitive) || filtered?.action === 'blur';
         const veiled = hidesMedia && !isMediaRevealed;
         // Compact Mode keeps its short tiles; uncropped ones show the whole picture
         const uncropped = uncroppedMedia && !compactMode;
         // Autoplay: the carousel's current video or GIF, while this is the post in view
         const plays = (idx: number) => mediaAutoplay && isAutoplayPost && !veiled && idx === mediaPage && (attachments[idx].type === 'video' || attachments[idx].type === 'gifv');
         const mediaHeight = uncropped
-            ? { height: Math.max(...attachments.map(item => uncroppedHeight(count === 1 ? contentWidth : slideWidth, item))) }
+            ? { height: Math.max(...attachments.map(item => uncroppedHeight(count === 1 ? contentWidth : carousel.slide, item))) }
             : undefined;
         // Images with a description say so; tapping the chip reads it, tapping the image still opens it
         const altChip = (item: Attachment) =>
@@ -362,34 +427,73 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     <Text style={[type.label, styles.altChipText]}>ALT</Text>
                 </Pressable>
             );
+        // A grid tile: cropped to its focal point; the fourth says how many more there are past it
+        const gridTile = (idx: number) => {
+            const more = idx === GRID_MAX - 1 ? count - GRID_MAX : 0;
+            const item = attachments[idx];
+            return (
+                <Pressable
+                    key={item.id || idx}
+                    style={styles.gridTile}
+                    onPress={() => openMedia(attachments, idx, undefined, targetStatus.url ?? targetStatus.uri)}
+                    accessibilityRole="imagebutton"
+                    accessibilityLabel={more > 0 ? `${mediaLabel(item, idx, count, i18n)}, ${t('post.moreMedia', { count: more })}` : mediaLabel(item, idx, count, i18n)}
+                >
+                    <FocusedImage attachment={item} style={styles.mediaImage} blurred={veiled} playing={plays(idx)} />
+                    {more > 0 ? (
+                        <View style={styles.gridMore}>
+                            <Text style={[type.title, styles.gridMoreText]}>+{more}</Text>
+                        </View>
+                    ) : altChip(item)}
+                </Pressable>
+            );
+        };
+        // Two side by side; three: one large and two stacked; four or more: two by two
+        const grid = () => (
+            <View testID="media-grid" style={[styles.grid, count > 3 && styles.gridRows, { height: compactMode ? GRID_HEIGHT_COMPACT : Math.round(contentWidth * GRID_RATIO) }]}>
+                {count === 2 ? [gridTile(0), gridTile(1)] : count === 3 ? (
+                    <>
+                        {gridTile(0)}
+                        <View style={styles.gridColumn}>{gridTile(1)}{gridTile(2)}</View>
+                    </>
+                ) : (
+                    <>
+                        <View style={styles.gridRow}>{gridTile(0)}{gridTile(1)}</View>
+                        <View style={styles.gridRow}>{gridTile(2)}{gridTile(3)}</View>
+                    </>
+                )}
+            </View>
+        );
         const tiles = count === 1 ? (
             <Pressable
                 style={[styles.singleMedia, compactMode && styles.singleMediaCompact, mediaHeight]}
-                onPress={() => openMedia(attachments, 0)}
+                onPress={() => openMedia(attachments, 0, undefined, targetStatus.url ?? targetStatus.uri)}
                 accessibilityRole="imagebutton"
                 accessibilityLabel={mediaLabel(attachments[0], 0, count, i18n)}
             >
                 <FocusedImage attachment={attachments[0]} style={styles.mediaImage} blurred={veiled} contain={uncropped} playing={plays(0)} />
                 {altChip(attachments[0])}
             </Pressable>
-        ) : (
-            // Several images: one at a time, swiped sideways, with a dot for each
+        ) : mediaGrid ? grid() : (
+            // Several images: swiped sideways one at a time, the next peeking in, with a dot for each
             <View>
                 <ScrollView
                     key={targetStatus.id}
                     testID="media-carousel"
                     horizontal
-                    pagingEnabled
+                    snapToInterval={carousel.interval}
+                    decelerationRate="fast"
+                    disableIntervalMomentum
                     showsHorizontalScrollIndicator={false}
                     onLayout={event => setCarouselWidth(event.nativeEvent.layout.width)}
-                    onMomentumScrollEnd={event => setMediaPage(Math.round(event.nativeEvent.contentOffset.x / slideWidth))}
-                    style={styles.carousel}
+                    onMomentumScrollEnd={event => setMediaPage(carouselPage(event.nativeEvent.contentOffset.x, slideWidth, count))}
+                    contentContainerStyle={styles.carouselTrack}
                 >
                     {attachments.map((item, idx) => (
                         <Pressable
                             key={item.id || idx}
-                            style={[styles.carouselSlide, compactMode && styles.singleMediaCompact, mediaHeight, { width: slideWidth }]}
-                            onPress={() => openMedia(attachments, idx)}
+                            style={[styles.carouselSlide, compactMode && styles.singleMediaCompact, mediaHeight, { width: carousel.slide }]}
+                            onPress={() => openMedia(attachments, idx, undefined, targetStatus.url ?? targetStatus.uri)}
                             accessibilityRole="imagebutton"
                             accessibilityLabel={mediaLabel(item, idx, count, i18n)}
                         >
@@ -418,13 +522,15 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 </View>
                 {veiled ? (
                     <View style={StyleSheet.absoluteFill}>
-                        <View testID="media-veil" style={[styles.veil, !coverSensitiveMedia && styles.veilBare]}>
+                        {/* A tap anywhere on it shows the media, not the post. Not one accessible element, so
+                            screen readers still reach its label and Show button */}
+                        <Pressable testID="media-veil" accessible={false} onPress={() => setIsMediaRevealed(true)} style={[styles.veil, !coverSensitiveMedia && styles.veilBare]}>
                             <View style={styles.veilLabel}>
-                                <Ionicons name="eye-off-outline" size={16} color={colors.textPrimary} />
+                                <Icon name="eye-off-outline" size={16} color={colors.textPrimary} />
                                 <Text style={[type.name, styles.veilText]}>{t(targetStatus.sensitive ? 'post.sensitive' : 'post.hiddenMedia', { media: countMedia(attachments, i18n) })}</Text>
                             </View>
                             <PillButton label={t('common.show')} size="small" variant="secondary" onPress={() => setIsMediaRevealed(true)} />
-                        </View>
+                        </Pressable>
                     </View>
                 ) : (
                     <Pressable
@@ -434,7 +540,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                         accessibilityLabel={t('post.hideMedia')}
                         hitSlop={6}
                     >
-                        <Ionicons name="eye-off-outline" size={14} color={colors.textPrimary} />
+                        <Icon name="eye-off-outline" size={14} color={colors.textPrimary} />
                         <Text style={[type.label, styles.hideMediaText]}>{t('post.hideMedia')}</Text>
                     </Pressable>
                 )}
@@ -449,7 +555,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             return (
                 <Pressable style={[styles.linkPlain, compactMode && styles.linkPlainCompact]} onPress={() => openLinkInApp(card.url)} accessibilityRole="link" accessibilityLabel={card.title || domain}>
                     <View style={styles.linkIconBox}>
-                        <Ionicons name="link" size={18} color={colors.accentText} />
+                        <Icon name="link" size={18} color={colors.accentText} />
                     </View>
                     <View style={styles.linkBody}>
                         <Text style={[type.name, styles.linkTitle]} numberOfLines={1}>{card.title || domain}</Text>
@@ -461,7 +567,13 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
         return (
             <Pressable style={styles.linkPreview} onPress={() => openLinkInApp(card.url)} accessibilityRole="link" accessibilityLabel={card.title || domain}>
                 <View style={styles.linkThumb}>
-                    <Image source={{ uri: card.image }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                    <Image
+                        source={{ uri: card.image }}
+                        placeholder={card.blurhash ? { blurhash: card.blurhash } : undefined}
+                        recyclingKey={card.image}
+                        style={StyleSheet.absoluteFill}
+                        contentFit="cover"
+                    />
                 </View>
                 <View style={styles.linkBody}>
                     <Text style={[type.label, styles.linkProvider]} numberOfLines={1}>{card.provider_name || domain}</Text>
@@ -476,17 +588,42 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
 
     const body = (
         <>
-            {hasText(targetStatus.content) && (
-                <StatusHtmlContent
-                    content={targetStatus.content}
-                    emojis={targetStatus.emojis}
-                    colors={colors}
-                    bodyFont={type.body}
-                    compactMode={compactMode}
-                    width={contentWidth}
-                    onPressMention={onPressMention ?? handleMention}
-                    onPressHashtag={onPressHashtag ?? openHashtag}
-                    onPressLink={openLinkInApp}
+            {hasText(bodyHtml) && (isTextFolded && textSize === 'huge' ? (
+                // Not even parsed as HTML until asked: only the start, as plain text
+                <Text style={[type.body, styles.foldedText, textMetrics]} numberOfLines={FOLD_LINES}>
+                    {renderTextWithEmojis(plain.slice(0, 1000), targetStatus.emojis, null)}
+                </Text>
+            ) : (
+                // The same wrapper folded or not, so "Show more" doesn't rebuild the post's HTML
+                <View style={isTextFolded ? [styles.textFold, { maxHeight: FOLD_LINES * textMetrics.lineHeight }] : undefined}>
+                    <StatusHtmlContent
+                        content={bodyHtml}
+                        emojis={targetStatus.emojis}
+                        colors={colors}
+                        bodyFont={type.body}
+                        compactMode={compactMode}
+                        textSize={postTextSize}
+                        width={contentWidth}
+                        onPressMention={onPressMention ?? handleMention}
+                        onPressHashtag={onPressHashtag ?? openHashtag}
+                        onPressLink={openLinkInApp}
+                    />
+                </View>
+            ))}
+            {isTextFolded && (
+                <View style={styles.foldRow}>
+                    {textSize === 'huge' && (
+                        <Text style={[type.meta, styles.foldMeta]}>{t('post.veryLong', { count: plain.length.toLocaleString(locale) })}</Text>
+                    )}
+                    <PillButton label={t('post.showMore')} size="small" variant="subtle" onPress={() => setIsTextExpanded(true)} />
+                </View>
+            )}
+            {postTranslation.available && hasText(targetStatus.content) && (
+                <TranslationLine
+                    translation={postTranslation.translation}
+                    loading={postTranslation.loading}
+                    onShow={postTranslation.show}
+                    onHide={postTranslation.hide}
                 />
             )}
             {targetStatus.poll && (
@@ -499,12 +636,36 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             {renderMedia(targetStatus.media_attachments)}
             {targetStatus.card && renderLinkPreview(targetStatus.card)}
             {targetStatus.quote && (
-                <QuotedPost quote={targetStatus.quote} onOpen={openQuoted} timeOf={createdAt => getRelativeTime(createdAt, i18n)} />
+                <QuotedPost
+                    quote={targetStatus.quote}
+                    onOpen={openQuoted}
+                    timeOf={createdAt => getRelativeTime(createdAt, i18n)}
+                    compactMode={compactMode}
+                    textSize={postTextSize}
+                    onPressLink={openLinkInApp}
+                    onPressHashtag={onPressHashtag ?? openHashtag}
+                    onPressMention={openQuotedMention}
+                    renderLinkPreview={renderLinkPreview}
+                />
             )}
+            <PostHashtags tags={trailingTags} onPress={onPressHashtag ?? openHashtag} />
         </>
     );
 
     const renderContent = () => {
+        // A warn filter covers the post, content warning and all, until you show it
+        if (isFilterCovered) {
+            return (
+                <View style={styles.cwRibbon}>
+                    <Icon name="options-outline" size={22} color={colors.accentText} />
+                    <View style={styles.cwText}>
+                        <Text style={[type.label, styles.cwLabel]}>{t('post.filtered')}</Text>
+                        <Text style={[type.name, styles.cwSpoiler]}>{filterTitles}</Text>
+                    </View>
+                    <PillButton label={t('common.show')} variant="secondary" onPress={() => setIsFilterCovered(false)} style={styles.cwButton} />
+                </View>
+            );
+        }
         if (!hasContentWarning) {
             return <View style={[styles.content, compactMode && styles.contentCompact]}>{body}</View>;
         }
@@ -512,7 +673,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             const hidden = describeHidden(targetStatus, i18n);
             return (
                 <View style={styles.cwRibbon}>
-                    <Ionicons name="warning-outline" size={22} color={colors.accentText} />
+                    <Icon name="warning-outline" size={22} color={colors.accentText} />
                     <View style={styles.cwText}>
                         <Text style={[type.label, styles.cwLabel]}>{t('post.contentWarning')}</Text>
                         {renderTextWithEmojis(targetStatus.spoiler_text, targetStatus.emojis, [type.name, styles.cwSpoiler], 15)}
@@ -582,7 +743,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     hitSlop={hitSlopFor(18, 22)}
                     style={styles.postMenuButton}
                 >
-                    <Ionicons name="ellipsis-horizontal" size={18} color={colors.textMuted} />
+                    <Icon name="ellipsis-horizontal" size={18} color={colors.textMuted} />
                 </Pressable>
             )}
         </>
@@ -603,7 +764,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     const actionHitSlop = compactMode ? hitSlopFor(44, COMPACT_ACTION_HEIGHT) : undefined;
     const shareButton = (
         <Pressable style={actionButtonStyle} hitSlop={actionHitSlop} onPress={handleShare} accessibilityRole="button" accessibilityLabel={t('post.share')}>
-            <Ionicons name="share-outline" size={actionIcon} color={colors.textMuted} />
+            <Icon name="share-outline" size={actionIcon} color={colors.textMuted} />
         </Pressable>
     );
     const actions = remote ? (
@@ -616,7 +777,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 accessibilityLabel={t('servers.openToInteract')}
                 accessibilityHint={t('servers.openToInteractHint')}
             >
-                <Ionicons name="log-in-outline" size={actionIcon} color={colors.accentText} />
+                <Icon name="log-in-outline" size={actionIcon} color={colors.accentText} />
                 <Text style={[type.meta, styles.actionCount, styles.actionCountActive]}>{t('servers.openToInteract')}</Text>
             </Pressable>
             {shareButton}
@@ -630,18 +791,18 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 accessibilityRole="button"
                 accessibilityLabel={tn('post.replies', targetStatus.replies_count || 0)}
             >
-                <Ionicons name="arrow-undo-outline" size={actionIcon} color={colors.textMuted} />
+                <Icon name="arrow-undo-outline" size={actionIcon} color={colors.textMuted} />
                 {!hideCounts && <Text style={[type.meta, styles.actionCount]}>{targetStatus.replies_count || 0}</Text>}
             </Pressable>
             <Pressable
-                style={actionButtonStyle}
+                style={[actionButtonStyle, boostLocked && styles.actionLocked]}
                 hitSlop={actionHitSlop}
                 onPress={pressBoost}
                 accessibilityRole="button"
-                accessibilityLabel={tn(isReblogged ? 'post.boostedCount' : 'post.boost', boostCount || 0)}
-                accessibilityState={{ selected: isReblogged }}
+                accessibilityLabel={boostLocked ? t('post.boostNotAllowed') : tn(isReblogged ? 'post.boostedCount' : 'post.boost', boostCount || 0)}
+                accessibilityState={{ selected: isReblogged, disabled: boostLocked }}
             >
-                <Ionicons name="repeat" size={actionIcon} color={isReblogged ? colors.accentText : colors.textMuted} />
+                <Icon name={boostLocked ? 'lock-closed-outline' : 'repeat'} size={actionIcon} color={isReblogged ? colors.accentText : colors.textMuted} />
                 {!hideCounts && <Text style={[type.meta, styles.actionCount, isReblogged && styles.actionCountActive]}>{boostCount || 0}</Text>}
             </Pressable>
             <Pressable
@@ -652,7 +813,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 accessibilityLabel={tn(isFavorited ? 'post.favouritedCount' : 'post.favourite', favCount || 0)}
                 accessibilityState={{ selected: isFavorited }}
             >
-                <Ionicons name={isFavorited ? 'star' : 'star-outline'} size={actionIcon} color={isFavorited ? colors.accentText : colors.textMuted} />
+                <Icon name={isFavorited ? 'star' : 'star-outline'} size={actionIcon} color={isFavorited ? colors.accentText : colors.textMuted} />
                 {!hideCounts && <Text style={[type.meta, styles.actionCount, isFavorited && styles.actionCountActive]}>{favCount || 0}</Text>}
             </Pressable>
             <Pressable
@@ -663,7 +824,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                 accessibilityLabel={isBookmarked ? t('post.bookmarked') : t('post.bookmark')}
                 accessibilityState={{ selected: isBookmarked }}
             >
-                <Ionicons name={isBookmarked ? 'bookmark' : 'bookmark-outline'} size={actionIcon} color={isBookmarked ? colors.accentText : colors.textMuted} />
+                <Icon name={isBookmarked ? 'bookmark' : 'bookmark-outline'} size={actionIcon} color={isBookmarked ? colors.accentText : colors.textMuted} />
             </Pressable>
             {shareButton}
         </View>
@@ -672,38 +833,68 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
     // Not for posts from another server: their ids aren't ours
     const reactions = (showReactions || ownPost) && !remote && <ReactionLinks status={targetStatus} />;
 
+    // The open post in a thread: who can see it, and the app it came from (when its server says)
+    const app = targetStatus.application;
+    const details = showReactions && (
+        <View style={styles.directRow}>
+            <Icon name={VISIBILITY[targetStatus.visibility].icon} size={13} color={colors.textMuted} />
+            <Text style={[type.meta, { color: colors.textMuted }]}>
+                {t(VISIBILITY[targetStatus.visibility].label)}
+                {app?.name && ' · '}
+                {app?.name && (
+                    <Text
+                        onPress={app.website ? () => openLink(app.website!) : undefined}
+                        accessibilityRole={app.website ? 'link' : undefined}
+                        style={app.website ? { color: colors.accentText } : undefined}
+                    >
+                        {t('post.via', { app: app.name })}
+                    </Text>
+                )}
+            </Text>
+        </View>
+    );
+
     // Under the name, in the text column: clear of a thread's avatar line, and shown even behind a content warning
     const privateMention = isDirect && (
         <View style={styles.directRow}>
-            <Ionicons name="lock-closed" size={13} color={colors.accentText} />
+            <Icon name="lock-closed" size={13} color={colors.accentText} />
             <Text style={[type.meta, styles.directText]}>{t('post.privateMention')}</Text>
         </View>
     );
 
-    const replyLabel = replyingTo && (
+    // In a thread the screen says whom it answers; elsewhere the post does, so a reply isn't taken for a thread's start
+    const replyText = threadMode
+        ? replyingTo && t('thread.replyingTo', { name: replyingTo })
+        : feedReplyText(targetStatus, i18n);
+    const replyLabel = !!replyText && (
         <View style={styles.directRow}>
-            <Ionicons name="return-down-forward" size={13} color={colors.textMuted} />
+            <Icon name="return-down-forward" size={13} color={colors.textMuted} />
             <Text style={[type.meta, { color: colors.textMuted }]} numberOfLines={1}>
-                {t('thread.replyingTo', { name: replyingTo })}
+                {replyText}
             </Text>
         </View>
     );
 
     const card = (
-        <Card style={[styles.card, isDirect && styles.cardDirect, compactMode && styles.cardCompact, threadMode && styles.cardThread]}>
+        // A new view when Compact Mode changes: Android keeps a square edge from the compact bottom
+        // hairline when that border is taken off a view that's already drawn
+        <Card key={compactMode ? 'compact' : 'card'} style={[styles.card, isDirect && styles.cardDirect, compactMode && styles.cardCompact, threadMode && styles.cardThread]}>
             {isReblog && (
                 <Pressable
                     onPress={() => openPerson(status.account)}
                     accessibilityRole="link"
                     style={[styles.boostRow, compactMode && styles.boostRowCompact]}
                 >
-                    <Ionicons name="repeat" size={14} color={colors.textMuted} />
+                    <Icon name="repeat" size={14} color={colors.textMuted} />
                     <Avatar name={status.account.display_name || status.account.username} uri={status.account.avatar} size={18} />
                     {renderTextWithEmojis(
                         t('post.boosted', { name: status.account.display_name || status.account.username }),
                         status.account.emojis || [],
                         [type.meta, styles.boostText],
-                        12.5
+                        12.5,
+                        // Android measures some text a hair too narrow ("Tilt deu boost", not "Lilt deu boost"), and
+                        // the last word then wraps out of sight. On one line it stays.
+                        1
                     )}
                 </Pressable>
             )}
@@ -728,6 +919,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                         {privateMention}
                         {replyLabel}
                         {renderContent()}
+                        {details}
                         {actions}
                         {reactions}
                     </View>
@@ -740,7 +932,9 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                         {time}
                     </View>
                     {privateMention}
+                    {replyLabel}
                     {renderContent()}
+                    {details}
                     {actions}
                     {reactions}
                 </>
@@ -759,9 +953,10 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     actions={[
                         {
                             key: 'boost',
-                            icon: 'repeat',
+                            icon: boostAllowed ? 'repeat' : 'lock-closed-outline',
                             label: isReblogged ? t('quotes.undoBoost') : t('quotes.boost'),
-                            description: isReblogged ? undefined : t('quotes.boostHint'),
+                            description: !boostAllowed ? t('post.boostNotAllowed') : isReblogged ? undefined : t('quotes.boostHint'),
+                            disabled: !boostAllowed,
                             onPress: toggleReblog,
                         },
                         {
@@ -801,6 +996,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     onClose={() => setPostMenuOpen(false)}
                     actions={[
                         ...(quotesCount > 0 ? [viewQuotes] : []),
+                        openInBrowser,
                         ...(canChangeQuotePolicy
                             ? [{
                                 key: 'quotePolicy',
@@ -837,6 +1033,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     onClose={() => setPostMenuOpen(false)}
                     actions={[
                         ...(quotesCount > 0 ? [viewQuotes] : []),
+                        openInBrowser,
                         { key: 'report', icon: 'flag-outline', label: t('moderation.reportPost'), onPress: () => moderation.report(author, targetStatus) },
                         { key: 'mute', icon: 'volume-mute-outline', label: t('moderation.muteAccount', { acct: author.acct }), description: t('moderation.muteHint'), onPress: () => moderation.mute(author) },
                         { key: 'block', icon: 'hand-left-outline', label: t('moderation.blockAccount', { acct: author.acct }), description: t('moderation.blockHint'), onPress: () => moderation.block(author) },

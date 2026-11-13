@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon } from '../../components/ui/icon';
 import { PugMark, SegmentOption, SegmentedPill } from '../../components/ui';
 import { AccountRow } from '../../components/AccountRow/accountRow';
 import { HashtagRow } from '../../components/HashtagRow/hashtagRow';
@@ -26,7 +26,7 @@ import { SearchType, shouldResolve } from '../../services/mastodon/search';
 import { mergeTrending, TrendingPost, TrendLink } from '../../services/mastodon/trends';
 import { Account, Status } from '../../services/mastodon/types';
 import { Tag } from '../../services/mastodon/tags';
-import { autoplayViewability } from '../../services/media/autoplay';
+import { postListProps } from '../../services/media/autoplay';
 import { makeStyles } from './styles';
 
 type Tab = 'all' | SearchType;
@@ -160,7 +160,7 @@ export default function Search({ onStatusPress }: SearchProps) {
 
     const field = (
         <View style={styles.field}>
-            <Ionicons name="search" size={18} color={colors.textMuted} />
+            <Icon name="search" size={18} color={colors.textMuted} />
             <TextInput
                 value={query}
                 onChangeText={setQuery}
@@ -180,7 +180,7 @@ export default function Search({ onStatusPress }: SearchProps) {
                     accessibilityLabel={t('search.clear')}
                     hitSlop={10}
                 >
-                    <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+                    <Icon name="close-circle" size={18} color={colors.textMuted} />
                 </Pressable>
             )}
         </View>
@@ -293,7 +293,7 @@ export default function Search({ onStatusPress }: SearchProps) {
         empty: React.ReactNode
     ) => (
         <FlashList
-            {...autoplayViewability}
+            {...postListProps}
             data={page.data?.pages.flat() ?? []}
             keyExtractor={keyOf}
             renderItem={({ item }) => renderItem(item)}
@@ -344,7 +344,7 @@ export default function Search({ onStatusPress }: SearchProps) {
                             accessibilityRole="button"
                             accessibilityLabel={term}
                         >
-                            <Ionicons name="time-outline" size={13} color={colors.textMuted} />
+                            <Icon name="time-outline" size={13} color={colors.textMuted} />
                             <Text style={[type.name, styles.recentText]} numberOfLines={1}>
                                 {term}
                             </Text>
@@ -355,7 +355,7 @@ export default function Search({ onStatusPress }: SearchProps) {
                                 accessibilityRole="button"
                                 accessibilityLabel={t('search.removeRecent', { term })}
                             >
-                                <Ionicons name="close" size={13} color={colors.textMuted} />
+                                <Icon name="close" size={13} color={colors.textMuted} />
                             </Pressable>
                         </Pressable>
                     ))}
@@ -387,7 +387,7 @@ export default function Search({ onStatusPress }: SearchProps) {
                 <View style={styles.exploreContainer}>
                     {exploreTab === 'posts' && (
                         <FlashList
-                            {...autoplayViewability}
+                            {...postListProps}
                             data={trendingPosts}
                             // Ids repeat across servers; the post's address doesn't
                             keyExtractor={(item: TrendingPost) => item.status.uri}

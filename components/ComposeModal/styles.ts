@@ -194,20 +194,27 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     // The quoted post under the text, with its ✕ over the corner
     quote: {
         marginHorizontal: space.lg,
+        marginTop: space.sm,
     },
     quoteRemove: {
         position: 'absolute',
-        top: 0,
+        top: -space.sm,
         right: -space.sm,
     },
     // Kept mounted but out of the way (the post while describing an image)
     hidden: {
         display: 'none',
     },
-    toolbarSpacer: {
+    // Fills the room the counter leaves, and scrolls when the tools need more
+    tools: {
         flex: 1,
     },
+    toolsContent: {
+        alignItems: 'center',
+        gap: space.xs,
+    },
     counter: {
+        flexShrink: 0,
         flexDirection: 'row',
         alignItems: 'center',
         gap: space.sm,
@@ -306,6 +313,16 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     multipleText: {
         color: colors.textSecondary,
         fontSize: 13,
+    },
+    mediaSensitive: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.sm,
+        marginTop: space.sm,
+        marginHorizontal: space.lg,
+    },
+    mediaSensitiveText: {
+        flex: 1,
     },
 
     /* Bottom sheets (visibility, language, poll length, emoji) */

@@ -72,7 +72,7 @@ describe('emoji cache', () => {
 
         await prefetchEmojiImages([emoji('pug'), emoji('blobcat'), emoji('hidden', false)], (done, total) => progress.push([done, total]), 1);
 
-        expect(prefetch.mock.calls.map(([url]) => url)).toEqual(['https://pug.social/pug.png', 'https://pug.social/blobcat.png']);
+        expect(prefetch.mock.calls.map(([url]) => url)).toEqual(['https://pug.social/pug.gif', 'https://pug.social/blobcat.gif']);
         expect(progress).toEqual([[0, 2], [1, 2], [2, 2]]);
     });
 });

@@ -185,7 +185,7 @@ describe('Other servers in the Feeds sheet', () => {
         await pinFeed('me', createServerFeed({ domain: 'art.social', title: 'Mastodon Art' }));
         const onAddServer = jest.fn();
         await render(withQuery(
-            <FeedsSheet visible onClose={jest.fn()} onSelectFeed={jest.fn()} onCreateFeed={jest.fn()} onEditList={jest.fn()} onAddServer={onAddServer} />
+            <FeedsSheet visible onClose={jest.fn()} onSelectFeed={jest.fn()} onEditFeed={jest.fn()} onEditList={jest.fn()} onAddServer={onAddServer} />
         ));
 
         expect(await screen.findAllByText('Local timeline of art.social')).toHaveLength(2);

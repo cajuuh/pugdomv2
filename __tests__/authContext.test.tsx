@@ -34,7 +34,8 @@ jest.mock('../services/storage', () => {
         getSavedAccounts: jest.fn(async () => accounts),
         addSavedAccount: jest.fn(async (accessToken: string, instanceUrl: string, userInfo: any) => {
             const id = `${userInfo.acct}@${instanceUrl}`;
-            accounts = [...accounts.filter(a => a.id !== id), { id, accessToken, instanceUrl, userInfo }];
+            const record = { id, accessToken, instanceUrl, userInfo };
+            accounts = accounts.some(a => a.id === id) ? accounts.map(a => (a.id === id ? record : a)) : [...accounts, record];
         }),
         removeSavedAccount: jest.fn(async (id: string) => {
             accounts = accounts.filter(a => a.id !== id);
@@ -219,6 +220,19 @@ describe('AuthProvider account changes', () => {
 
         await act(async () => auth.finishSetup());
         expect(auth.needsSetup).toBe(false);
+    });
+
+    it("saves the account's current name and photo over the ones from sign-in", async () => {
+        mockedStorage.__setState({ accessToken: 'alice-token', instanceUrl: alice.instanceUrl }, [alice, bob]);
+        mockedGetCurrentAccount.mockResolvedValueOnce({ ...alice.userInfo, display_name: 'Alice :blob:', avatar: 'https://one.social/new.jpg', emojis: [] } as any);
+        await renderAuth();
+
+        await waitFor(() => expect(auth.savedAccounts[0].userInfo.avatar).toBe('https://one.social/new.jpg'));
+        expect(auth.savedAccounts.map(a => a.id)).toEqual([alice.id, bob.id]);
+        expect(auth.savedAccounts[0].userInfo.display_name).toBe('Alice :blob:');
+
+        await act(() => auth.switchAccount(bob.id));
+        expect(mockedStorage.addSavedAccount).toHaveBeenLastCalledWith(bob.accessToken, bob.instanceUrl, expect.objectContaining({ acct: 'bob' }));
     });
 
     it('does not ask for setup when switching to a saved account', async () => {

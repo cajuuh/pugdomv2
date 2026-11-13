@@ -5,6 +5,9 @@ const PAIRS: [keyof ThemeColors, keyof ThemeColors][] = [
     ['textMuted', 'background'],
     ['accentText', 'background'],
     ['accentText', 'cardBackground'],
+    ['linkColor', 'cardBackground'],
+    // Quotes sit on the sunken surface
+    ['linkColor', 'inputBackground'],
     ['buttonTextColor', 'accentColor'],
 ];
 
@@ -19,6 +22,15 @@ describe('coat palettes', () => {
         for (const [fg, bg] of PAIRS) {
             expect({ pair: `${fg} on ${bg}`, ratio: contrast(colors[fg], colors[bg]) >= 4.5 })
                 .toEqual({ pair: `${fg} on ${bg}`, ratio: true });
+        }
+    });
+
+    it("gives black pug links a colour of their own, and other coats the accent", () => {
+        for (const dark of [false, true]) {
+            const black = buildColors('black', dark, true);
+            expect(contrast(black.linkColor, black.textPrimary)).toBeGreaterThan(2);
+            const apricot = buildColors('apricot', dark, true);
+            expect(apricot.linkColor).toBe(apricot.accentText);
         }
     });
 

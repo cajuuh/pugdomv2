@@ -1,6 +1,6 @@
 import React from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon } from '../ui/icon';
 import { useTheme } from '../../services/themeContext';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { mediaColors } from '../../services/theme/media';
@@ -86,7 +86,7 @@ export const AttachmentStrip: React.FC<AttachmentStripProps> = ({ attachments, o
                                 accessibilityLabel={label('retry')}
                                 style={[StyleSheet.absoluteFill, styles.failed, { backgroundColor: mediaColors.scrim }]}
                             >
-                                <Ionicons name="refresh" size={22} color={mediaColors.ink} />
+                                <Icon name="refresh" size={22} color={mediaColors.ink} />
                                 <Text style={[type.meta, { color: mediaColors.ink }]}>{t('attachments.failed')}</Text>
                             </Pressable>
                         )}
@@ -132,7 +132,7 @@ export const AttachmentStrip: React.FC<AttachmentStripProps> = ({ attachments, o
                                 hitSlop={8}
                                 style={[styles.corner, styles.edit, { backgroundColor: mediaColors.scrimStrong }]}
                             >
-                                <Ionicons name="crop" size={14} color={mediaColors.ink} />
+                                <Icon name="crop" size={14} color={mediaColors.ink} />
                             </Pressable>
                         )}
 
@@ -143,7 +143,7 @@ export const AttachmentStrip: React.FC<AttachmentStripProps> = ({ attachments, o
                             hitSlop={8}
                             style={[styles.corner, styles.remove, { backgroundColor: mediaColors.scrimStrong }]}
                         >
-                            <Ionicons name="close" size={16} color={mediaColors.ink} />
+                            <Icon name="close" size={16} color={mediaColors.ink} />
                         </Pressable>
                     </View>
                 );

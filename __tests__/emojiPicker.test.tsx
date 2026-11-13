@@ -1,16 +1,20 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '../testUtils/queryClient';
 import { EmojiPicker, groupByCategory, searchEmojis, UNCATEGORIZED } from '../components/ComposeModal/emojiPicker';
 import { fetchCustomEmojis } from '../services/mastodon/customEmojis';
 import { CustomEmoji } from '../services/mastodon/types';
+import { addRecentEmoji, getRecentEmojis, MAX_RECENT_EMOJIS } from '../services/recentEmojis';
 
 jest.mock('../services/themeContext', () => ({
     useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
 }));
 jest.mock('../services/mastodon/customEmojis', () => ({ fetchCustomEmojis: jest.fn() }));
+let mockAutoplay = false;
+jest.mock('../services/settingsContext', () => ({ useOptionalSettings: () => ({ mediaAutoplay: mockAutoplay }) }));
 // The keyboard, as the sheet sees it
 let mockKeyboard = { visible: false, inset: 0 };
 jest.mock('../hooks/useKeyboard', () => ({ useKeyboard: () => mockKeyboard }));
@@ -32,6 +36,23 @@ const renderPicker = (onPick = jest.fn()) =>
         </QueryClientProvider>
     );
 
+describe('recent emoji', () => {
+    beforeEach(() => AsyncStorage.clear());
+
+    it('keeps the newest first, without repeats, up to two rows, per account', async () => {
+        await addRecentEmoji('a', 'me');
+        await addRecentEmoji('b', 'me');
+        await addRecentEmoji('a', 'me');
+        expect(await getRecentEmojis('me')).toEqual(['a', 'b']);
+        expect(await getRecentEmojis('other')).toEqual([]);
+
+        for (let i = 0; i < 20; i++) await addRecentEmoji(`e${i}`, 'me');
+        const recent = await getRecentEmojis('me');
+        expect(recent).toHaveLength(MAX_RECENT_EMOJIS);
+        expect(recent[0]).toBe('e19');
+    });
+});
+
 describe('groupByCategory', () => {
     it('sorts categories A–Z and puts uncategorized emoji last under Other', () => {
         const groups = groupByCategory([emoji('blobcat', 'Blobs'), emoji('pug'), emoji('ablobwave', 'Blobs'), emoji('flag_br', 'Flags'), emoji('x', '  ')]);
@@ -43,18 +64,64 @@ describe('groupByCategory', () => {
 });
 
 describe('EmojiPicker', () => {
-    beforeEach(() => jest.clearAllMocks());
+    beforeEach(async () => {
+        jest.clearAllMocks();
+        mockAutoplay = false;
+        await AsyncStorage.clear();
+    });
+
+    it('shows the emoji you used last first, under Recent, leaving out ones the server removed', async () => {
+        mockedFetch.mockResolvedValue([emoji('blobcat', 'Blobs'), emoji('flag_br', 'Flags'), emoji('pug', 'Blobs')]);
+        await addRecentEmoji('pug', 'me');
+        await addRecentEmoji('gone', 'me');
+        await addRecentEmoji('flag_br', 'me');
+        await render(
+            <QueryClientProvider client={createTestQueryClient()}>
+                <EmojiPicker visible onPick={jest.fn()} onClose={jest.fn()} accountId="me" />
+            </QueryClientProvider>
+        );
+
+        expect(await screen.findByRole('header', { name: 'Recent' })).toBeTruthy();
+        // Once each: the list also draws a copy of the header stuck to its top
+        const headers = [...new Set(screen.getAllByRole('header').map(header => header.props.children))];
+        // After the sheet's title
+        expect(headers).toEqual(['Custom emoji', 'Recent', 'Blobs', 'Flags']);
+        // Each recent one shows twice: under Recent and in its own category
+        expect(screen.getAllByRole('button', { name: ':flag_br:' })).toHaveLength(2);
+        expect(screen.getAllByRole('button', { name: ':pug:' })).toHaveLength(2);
+        expect(screen.getAllByRole('button', { name: ':blobcat:' })).toHaveLength(1);
+        expect(screen.queryByRole('button', { name: ':gone:' })).toBeNull();
+    });
+
+    it('gives a server without categories a Recent row above All', async () => {
+        mockedFetch.mockResolvedValue([emoji('pug'), emoji('blobcat')]);
+        await addRecentEmoji('blobcat');
+        await renderPicker();
+
+        expect(await screen.findByRole('header', { name: 'Recent' })).toBeTruthy();
+        expect(screen.getAllByRole('header', { name: 'All' }).length).toBeGreaterThan(0);
+    });
 
     it('shows every category under its own header, with a chip for each', async () => {
         mockedFetch.mockResolvedValue([emoji('blobcat', 'Blobs'), emoji('flag_br', 'Flags'), emoji('pug'), emoji('hidden', 'Blobs', false)]);
         await renderPicker();
 
         expect(await screen.findByRole('button', { name: ':blobcat:' })).toBeTruthy();
-        expect(screen.getByRole('header', { name: 'Blobs' })).toBeTruthy();
-        expect(screen.getByRole('header', { name: 'Flags' })).toBeTruthy();
-        expect(screen.getByRole('header', { name: 'Other' })).toBeTruthy();
+        for (const name of ['Blobs', 'Flags', 'Other']) expect(screen.getAllByRole('header', { name }).length).toBeGreaterThan(0);
         expect(screen.getByRole('button', { name: 'All' })).toBeSelected();
         expect(screen.queryByRole('button', { name: ':hidden:' })).toBeNull();
+    });
+
+    it.each([
+        [false, 'https://x/blobdance-still.png'],
+        [true, 'https://x/blobdance.gif'],
+    ])('with media autoplay %s, shows animated emoji from %s', async (autoplay, uri) => {
+        mockAutoplay = autoplay;
+        mockedFetch.mockResolvedValue([{ ...emoji('blobdance'), url: 'https://x/blobdance.gif', static_url: 'https://x/blobdance-still.png' }]);
+        await renderPicker();
+        await screen.findByRole('button', { name: ':blobdance:' });
+
+        expect(screen.getByTestId('emoji-image').props.source).toEqual({ uri });
     });
 
     it('keeps a server category literally named "Other" apart from the uncategorized group', async () => {
@@ -62,7 +129,7 @@ describe('EmojiPicker', () => {
         await renderPicker();
         await screen.findByRole('button', { name: ':blobcat:' });
 
-        expect(screen.getAllByRole('header', { name: 'Other' })).toHaveLength(2);
+        expect(screen.getAllByRole('header', { name: 'Other' }).length).toBeGreaterThanOrEqual(2);
         expect(screen.getAllByRole('button', { name: 'Other' })).toHaveLength(2);
     });
 
@@ -98,6 +165,12 @@ describe('searchEmojis', () => {
         expect(searchEmojis(list, ':BLOB').map(e => e.shortcode)).toEqual(['blobcat', 'BlobFox', 'happy_blobcat']);
         expect(searchEmojis(list, '  ')).toEqual([]);
     });
+
+    it('matches every word of the query, as shortcodes have no spaces', () => {
+        const list = [emoji('neofox_pet'), emoji('neofox'), emoji('pet_neofox_happy'), emoji('pug_pet')];
+        expect(searchEmojis(list, 'neofox pet').map(e => e.shortcode)).toEqual(['neofox_pet', 'pet_neofox_happy']);
+        expect(searchEmojis(list, 'neofox_pet').map(e => e.shortcode)).toEqual(['neofox_pet', 'pet_neofox_happy']);
+    });
 });
 
 describe('EmojiPicker search', () => {
@@ -114,9 +187,12 @@ describe('EmojiPicker search', () => {
 
         await fireEvent.changeText(screen.getByLabelText('Search emoji'), 'cat');
 
+        // The list stays put until typing pauses
+        expect(screen.getByRole('button', { name: ':flag_br:' })).toBeTruthy();
+        await waitFor(() => expect(screen.queryByRole('button', { name: ':flag_br:' })).toBeNull());
+
         expect(screen.getByRole('button', { name: ':blobcat:' })).toBeTruthy();
         expect(screen.getByRole('button', { name: ':cat_pug:' })).toBeTruthy();
-        expect(screen.queryByRole('button', { name: ':flag_br:' })).toBeNull();
         // No chips or headers while searching
         expect(screen.queryByRole('button', { name: 'All' })).toBeNull();
         expect(screen.queryByRole('header', { name: 'Blobs' })).toBeNull();
@@ -124,6 +200,7 @@ describe('EmojiPicker search', () => {
         await fireEvent.press(screen.getByRole('button', { name: ':cat_pug:' }));
         expect(onPick).toHaveBeenCalledWith('cat_pug');
 
+        // Clearing doesn't wait
         await fireEvent.changeText(screen.getByLabelText('Search emoji'), '');
         expect(screen.getByRole('header', { name: 'Flags' })).toBeTruthy();
         expect(screen.getByRole('button', { name: 'All' })).toBeTruthy();
@@ -136,7 +213,7 @@ describe('EmojiPicker search', () => {
 
         await fireEvent.changeText(screen.getByLabelText('Search emoji'), 'zebra');
 
-        expect(screen.getByText('No emoji match “zebra”')).toBeTruthy();
+        expect(await screen.findByText('No emoji match “zebra”')).toBeTruthy();
     });
 
     it('rides above the keyboard', async () => {

@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { BlurTargetView } from 'expo-blur';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { StyleSheet, ActivityIndicator, BackHandler, DeviceEventEmitter, TouchableOpacity, Platform, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider, useAuth } from './services/authContext';
@@ -38,7 +38,10 @@ import Conversations from './screens/Conversations/conversations';
 import ConversationGroup from './screens/Conversations/conversationGroup';
 import ScheduledPosts from './screens/Scheduled/scheduledPosts';
 import Drafts from './screens/Drafts/drafts';
+import ModeratedAccounts from './screens/Moderated/moderatedAccounts';
+import { FilterEditor, FilterList } from './screens/Filters/filters';
 import Reactions from './screens/Reactions/reactions';
+import AccountNote from './screens/AccountNote/accountNote';
 import EditProfile from './screens/EditProfile/editProfile';
 import { useUnreadConversations } from './hooks/useUnreadConversations';
 import { useServerPreferences } from './hooks/useExpandSpoilers';
@@ -56,6 +59,7 @@ function NavigationRoot() {
   const { colors, isDark, fontsReady } = useTheme();
   const { languageReady } = useI18n();
   const [activeTab, setActiveTab] = useState<'home' | 'search' | 'notifications' | 'profile'>('home');
+  const dockBlurTarget = useRef<View>(null);
   const unreadNotifications = useUnreadNotifications();
   // New over-the-air code: checks on returning to the app, offers a restart once it's downloaded
   useAppUpdates();
@@ -87,15 +91,17 @@ function NavigationRoot() {
     reset();
   }, [user?.id, reset]);
 
-  // Android's back button closes the top screen; with none open it leaves the app as usual
+  // Android's back button closes the top screen; with none open another tab goes back to Home,
+  // where it leaves the app as usual
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (stack.length === 0) return false;
-      pop();
+      if (stack.length > 0) pop();
+      else if (activeTab !== 'home') setActiveTab('home');
+      else return false;
       return true;
     });
     return () => subscription.remove();
-  }, [stack.length, pop]);
+  }, [stack.length, pop, activeTab]);
 
   const renderScreen = ({ route }: StackEntry) => {
     switch (route.name) {
@@ -104,7 +110,15 @@ function NavigationRoot() {
         // (Messages, a profile, the tabs...); Android's back button steps through the posts one by one
         return <Thread statusId={route.statusId} onBack={closeThreads} onStatusPress={openThread} />;
       case 'settings':
-        return <Settings onBack={pop} onScheduledPosts={() => push({ name: 'scheduledPosts' })} onDrafts={() => push({ name: 'drafts' })} />;
+        return (
+          <Settings
+            onBack={pop}
+            onScheduledPosts={() => push({ name: 'scheduledPosts' })}
+            onDrafts={() => push({ name: 'drafts' })}
+            onModeratedAccounts={() => push({ name: 'moderatedAccounts' })}
+            onFilters={() => push({ name: 'filters' })}
+          />
+        );
       case 'scheduledPosts':
         return <ScheduledPosts onBack={pop} />;
       case 'drafts':
@@ -117,7 +131,7 @@ function NavigationRoot() {
       case 'link':
         return <LinkTimeline url={route.url} title={route.title} onBack={pop} onStatusPress={openThread} />;
       case 'feedEditor':
-        return <FeedEditor onBack={pop} />;
+        return <FeedEditor feed={route.feed} onBack={pop} />;
       case 'listEditor':
         return <ListEditor listId={route.listId} onBack={pop} />;
       case 'serverPicker':
@@ -133,9 +147,17 @@ function NavigationRoot() {
       case 'reactions':
         return <Reactions id={route.statusId} kind={route.reaction} onBack={pop} />;
       case 'follows':
-        return <Reactions id={route.accountId} kind={route.list} onBack={pop} />;
+        return <Reactions id={route.accountId} kind={route.list} account={route.account} onBack={pop} />;
       case 'editProfile':
         return <EditProfile onBack={pop} />;
+      case 'moderatedAccounts':
+        return <ModeratedAccounts onBack={pop} />;
+      case 'filters':
+        return <FilterList onBack={pop} onEdit={filterId => push({ name: 'filterEditor', filterId })} />;
+      case 'filterEditor':
+        return <FilterEditor filterId={route.filterId} onBack={pop} />;
+      case 'accountNote':
+        return <AccountNote account={route.account} note={route.note} onBack={pop} />;
     }
   };
 
@@ -184,9 +206,11 @@ function NavigationRoot() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar style={statusBarStyle} />
 
+      {/* Everything that can sit behind the dock, which Android blurs from here. The dock stays outside it */}
+      <BlurTargetView ref={dockBlurTarget} style={styles.container}>
       {/* The tabs, always mounted. Hidden from screen readers while a screen is open over them */}
       <View
-        style={styles.container}
+        style={[styles.container, { backgroundColor: colors.background }]}
         importantForAccessibility={stack.length > 0 ? 'no-hide-descendants' : 'auto'}
         accessibilityElementsHidden={stack.length > 0}
       >
@@ -202,7 +226,14 @@ function NavigationRoot() {
 
         {/* Screen content area */}
         <View style={styles.container}>
-          {activeTab === 'home' && <Timeline onStatusPress={openThread} />}
+          {/* Home stays mounted behind the other tabs, so coming back finds your place in the timeline */}
+          <View
+            style={[styles.container, activeTab !== 'home' && styles.hidden]}
+            importantForAccessibility={activeTab !== 'home' ? 'no-hide-descendants' : 'auto'}
+            accessibilityElementsHidden={activeTab !== 'home'}
+          >
+            <Timeline onStatusPress={openThread} active={activeTab === 'home'} />
+          </View>
           {activeTab === 'search' && <Search onStatusPress={openThread} />}
           {activeTab === 'notifications' && <Notifications onStatusPress={openThread} />}
           {activeTab === 'profile' && <Profile onStatusPress={openThread} />}
@@ -221,9 +252,10 @@ function NavigationRoot() {
               {renderScreen(entry)}
           </View>
       ))}
+      </BlurTargetView>
 
       {/* Custom Tab Bar, last so it stays on top of the overlays on both platforms */}
-      <TabBar activeTab={activeTab} onTabPress={handleTabPress} onComposePress={openCompose} unreadNotifications={unreadNotifications} />
+      <TabBar activeTab={activeTab} onTabPress={handleTabPress} onComposePress={openCompose} unreadNotifications={unreadNotifications} blurTarget={dockBlurTarget} />
     </View>
   );
 }

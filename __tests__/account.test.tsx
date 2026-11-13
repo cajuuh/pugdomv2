@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Text } from 'react-native';
+import { Alert, Share, Text } from 'react-native';
 import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import * as WebBrowser from 'expo-web-browser';
@@ -30,6 +30,10 @@ const ana: AccountType = {
 
 jest.mock('../services/authContext', () => ({
     useAuth: () => ({ user: { id: 'me', username: 'pedro', acct: 'pedro', display_name: 'Pedro', avatar: '', emojis: [] } }),
+}));
+const mockOpenCompose = jest.fn();
+jest.mock('../services/composeContext', () => ({
+    useCompose: () => ({ openCompose: mockOpenCompose }),
 }));
 jest.mock('../services/themeContext', () => ({
     useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
@@ -117,6 +121,27 @@ describe('Account screen', () => {
         expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith('https://art.social/@ana');
     });
 
+    it('says Mutuals when you follow each other, without the follows-you badge', async () => {
+        mocked.getRelationships.mockResolvedValue([relationship({ following: true, followed_by: true })]);
+        await renderAccount({ account: ana });
+
+        expect(await screen.findByRole('button', { name: 'Mutuals' })).toBeTruthy();
+        expect(screen.queryByText('Follows you')).toBeNull();
+    });
+
+    it("shares someone else's profile from the menu, keeping the row for Follow, the bell and lists", async () => {
+        const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.sharedAction });
+        mocked.getRelationships.mockResolvedValue([relationship({ following: true })]);
+        await renderAccount({ account: ana });
+        await screen.findByRole('button', { name: 'Following' });
+        expect(screen.queryByRole('button', { name: 'Share profile' })).toBeNull();
+
+        await fireEvent.press(screen.getByRole('button', { name: 'More options for Ana' }));
+        await fireEvent.press(screen.getByRole('button', { name: 'Share profile' }));
+
+        await waitFor(() => expect(share).toHaveBeenCalled());
+    });
+
     it('opens who they follow and who follows them from the counts', async () => {
         const Stack = () => <Text testID="stack">{JSON.stringify(useNavigator().stack.map(entry => entry.route))}</Text>;
         await render(
@@ -128,10 +153,41 @@ describe('Account screen', () => {
         const stack = () => JSON.parse(String(screen.getByTestId('stack').props.children));
 
         await fireEvent.press(screen.getByRole('button', { name: '3 following' }));
-        expect(stack()).toEqual([{ name: 'follows', accountId: 'ana', list: 'following' }]);
+        expect(stack()).toMatchObject([{ name: 'follows', accountId: 'ana', list: 'following', account: { id: 'ana' } }]);
 
         await fireEvent.press(screen.getByRole('button', { name: '40 followers' }));
-        expect(stack()[1]).toEqual({ name: 'follows', accountId: 'ana', list: 'followers' });
+        expect(stack()[1]).toMatchObject({ name: 'follows', accountId: 'ana', list: 'followers' });
+    });
+
+    it('shows your private note on them, and opens it to edit; the menu adds one', async () => {
+        const Stack = () => <Text testID="stack">{JSON.stringify(useNavigator().stack.map(entry => entry.route))}</Text>;
+        mocked.getRelationships.mockResolvedValue([relationship({ note: 'met at the pug meetup' })]);
+        await render(
+            <NavigationProvider>
+                {withQuery(<Account accountId="ana" account={ana} onBack={jest.fn()} onStatusPress={jest.fn()} onSettingsPress={jest.fn()} />)}
+                <Stack />
+            </NavigationProvider>
+        );
+        const stack = () => JSON.parse(String(screen.getByTestId('stack').props.children));
+
+        expect(await screen.findByText('met at the pug meetup')).toBeTruthy();
+        await fireEvent.press(screen.getByRole('button', { name: 'Your note on Ana: met at the pug meetup. Edit' }));
+        expect(stack()).toMatchObject([{ name: 'accountNote', account: { id: 'ana' }, note: 'met at the pug meetup' }]);
+    });
+
+    it('offers to add a note from the menu when there is none', async () => {
+        await renderAccount({ account: ana });
+        await fireEvent.press(await screen.findByRole('button', { name: 'More options for Ana' }));
+        expect(await screen.findByText('Add a note')).toBeTruthy();
+        expect(screen.queryByText('Your note')).toBeNull();
+    });
+
+    it('starts a direct message from the menu', async () => {
+        await renderAccount({ account: ana });
+        await fireEvent.press(await screen.findByRole('button', { name: 'More options for Ana' }));
+        await fireEvent.press(await screen.findByText('Direct message @ana@art.social'));
+
+        await waitFor(() => expect(mockOpenCompose).toHaveBeenCalledWith({ directTo: expect.objectContaining({ id: 'ana' }) }));
     });
 
     it('goes back with its arrow', async () => {

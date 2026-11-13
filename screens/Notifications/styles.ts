@@ -5,6 +5,7 @@ import { radii, space } from '../../services/theme/shape';
 
 const ROW_PADDING = space.lg;
 const AVATAR_SIZE = 44;
+const UNREAD_DOT = 8;
 const ROW_GAP = space.md;
 const FAVOURITE_SIZE = 34;
 const STACKED_AVATAR = 30;
@@ -19,11 +20,13 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
+        gap: space.md,
         paddingTop: 6,
         paddingLeft: 20,
         paddingRight: space.lg,
     },
     title: {
+        flexShrink: 1,
         color: colors.textPrimary,
     },
     headerActions: {
@@ -77,6 +80,11 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         borderColor: colors.borderColor,
         borderLeftWidth: StyleSheet.hairlineWidth,
         borderRightWidth: StyleSheet.hairlineWidth,
+        // Set here so segmentFirst/Last only change them, never unset them: on Android an unset border
+        // width is NaN, which on a card that's still rounded clips the whole row away (a lone "New" row
+        // turned blank when Mark all as read took its bottom border and corners but left the top ones)
+        borderTopWidth: 0,
+        borderBottomWidth: 0,
         overflow: 'hidden',
     },
     segmentFirst: {
@@ -88,6 +96,16 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         borderBottomWidth: StyleSheet.hairlineWidth,
         borderBottomLeftRadius: radii.card,
         borderBottomRightRadius: radii.card,
+    },
+    // A new row's dot, in the padding left of the avatar, level with its middle
+    unreadDot: {
+        position: 'absolute',
+        left: (ROW_PADDING - UNREAD_DOT) / 2,
+        top: 14 + AVATAR_SIZE / 2 - UNREAD_DOT / 2,
+        width: UNREAD_DOT,
+        height: UNREAD_DOT,
+        borderRadius: UNREAD_DOT / 2,
+        backgroundColor: colors.accentColor,
     },
     // Hairline indented to where the text starts
     separator: {
@@ -109,11 +127,18 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         backgroundColor: colors.inputBackground,
     },
     // A swiped row covers the Remove action behind it
+    swipeCell: {
+        overflow: 'hidden',
+    },
     swipeRow: {
         backgroundColor: colors.cardBackground,
     },
     removeAction: {
-        flex: 1,
+        position: 'absolute',
+        top: 0,
+        bottom: 0,
+        left: 0,
+        right: 0,
         flexDirection: 'row',
         alignItems: 'center',
         gap: space.sm,

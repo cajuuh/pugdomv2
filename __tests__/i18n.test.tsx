@@ -4,15 +4,27 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, render, screen, waitFor } from '@testing-library/react-native';
 import { en } from '../services/i18n/en';
 import { ptBR } from '../services/i18n/pt-BR';
+import { es419 } from '../services/i18n/es-419';
+import { de } from '../services/i18n/de';
+import { fr } from '../services/i18n/fr';
+import { eo } from '../services/i18n/eo';
+import { la } from '../services/i18n/la';
+import { ja } from '../services/i18n/ja';
+import { zhCN } from '../services/i18n/zh-CN';
 import { createTranslator, pluralForm } from '../services/i18n/translate';
-import { I18nProvider, LANGUAGE_KEY, useI18n } from '../services/i18n/i18nContext';
-import { DEFAULT_LANGUAGE } from '../services/i18n/defaults';
+import { I18nProvider, LANGUAGE_KEY, phoneLanguage, useI18n } from '../services/i18n/i18nContext';
+import { DEFAULT_LANGUAGE, phoneLocales } from '../services/i18n/defaults';
+import { getCredentials } from '../services/storage';
 import { describeHidden, countMedia } from '../components/TootCard/tootCard';
 import { actorsText, notificationTime } from '../screens/Notifications/rows';
 import { pollTimeLeft } from '../components/Poll/poll';
 import { Attachment, Status } from '../services/mastodon/types';
 import { TabBar } from '../components/TabBar/tabBar';
 
+jest.mock('../services/storage', () => ({
+    ...jest.requireActual('../services/storage'),
+    getCredentials: jest.fn(async () => ({ accessToken: null, instanceUrl: null })),
+}));
 jest.mock('../services/themeContext', () => ({
     useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
 }));
@@ -24,21 +36,46 @@ const keysOf = (node: unknown, prefix = ''): string[] =>
         : [prefix.slice(0, -1)];
 
 describe('dictionaries', () => {
-    it('have exactly the same keys', () => {
-        expect(keysOf(ptBR).sort()).toEqual(keysOf(en).sort());
+    const others = Object.entries({ 'pt-BR': ptBR, 'es-419': es419, de, fr, eo, la, ja, 'zh-CN': zhCN });
+
+    it.each(others)('%s has exactly the same keys as English', (_, dict) => {
+        expect(keysOf(dict).sort()).toEqual(keysOf(en).sort());
     });
 
-    it('fill in every placeholder the English text uses', () => {
+    it.each(others)('%s fills in every placeholder the English text uses', (_, dict) => {
         const placeholders = (text: string) => (text.match(/\{\{\w+\}\}/g) ?? []).sort();
-        const pairs = keysOf(en).map(key => [key, key.split('.').reduce<any>((n, p) => n[p], en), key.split('.').reduce<any>((n, p) => n[p], ptBR)]);
-        for (const [key, english, portuguese] of pairs) {
+        const pairs = keysOf(en).map(key => [key, key.split('.').reduce<any>((n, p) => n[p], en), key.split('.').reduce<any>((n, p) => n[p], dict)]);
+        for (const [key, english, translated] of pairs) {
             if (typeof english !== 'string') continue;
-            expect([key, placeholders(portuguese)]).toEqual([key, placeholders(english)]);
+            expect([key, placeholders(translated)]).toEqual([key, placeholders(english)]);
         }
     });
 
-    it('give the pug as many messages in Portuguese as in English', () => {
-        expect(ptBR.setup.messages).toHaveLength(en.setup.messages.length);
+    it.each(others)('%s gives the pug as many messages as English', (_, dict) => {
+        expect(dict.setup.messages).toHaveLength(en.setup.messages.length);
+    });
+
+    it('speaks Spanish for Latin America, with Spanish plurals', () => {
+        const es = createTranslator('es-419');
+        expect(es.t('settings.switchTo', { name: 'Ana' })).toBe('Cambiar a Ana');
+        expect(es.tn('poll.votes', 0)).toBe('0 votos');
+        expect(es.tn('poll.votes', 1)).toBe('1 voto');
+        expect(es.locale).toBe('es-419');
+    });
+
+    it('uses the singular for 0 and 1 in French, like Portuguese', () => {
+        const french = createTranslator('fr');
+        expect(french.tn('poll.votes', 0)).toBe('0 vote');
+        expect(french.tn('poll.votes', 2)).toBe('2 votes');
+        expect(createTranslator('de').tn('poll.votes', 0)).toBe('0 Stimmen');
+    });
+
+    it('follows a phone in Japanese, Chinese, German, French or Esperanto', () => {
+        expect(phoneLanguage(['ja-JP'])).toBe('ja');
+        expect(phoneLanguage(['zh-Hans-CN'])).toBe('zh-CN');
+        expect(phoneLanguage(['de-AT'])).toBe('de');
+        expect(phoneLanguage(['fr-CA'])).toBe('fr');
+        expect(phoneLanguage(['eo'])).toBe('eo');
     });
 });
 
@@ -114,6 +151,39 @@ describe('I18nProvider', () => {
 
         expect(screen.getByText('Home')).toBeTruthy();
         expect(await AsyncStorage.getItem(LANGUAGE_KEY)).toBe('en');
+    });
+
+    it('picks the first of the phone\'s languages it speaks, or the default', () => {
+        expect(phoneLanguage(['es-AR'])).toBe('es-419');
+        expect(phoneLanguage(['es_MX'])).toBe('es-419');
+        expect(phoneLanguage(['ko-KR', 'en-GB'])).toBe('en');
+        expect(phoneLanguage(['pt-PT'])).toBe('pt-BR');
+        expect(phoneLanguage(['ru-RU'])).toBe(DEFAULT_LANGUAGE);
+        expect(phoneLanguage([])).toBe(DEFAULT_LANGUAGE);
+    });
+
+    it("starts in the phone's language on a new install, and keeps it", async () => {
+        (phoneLocales as jest.Mock).mockReturnValueOnce(['es-AR']);
+        await render(
+            <I18nProvider>
+                <Probe />
+            </I18nProvider>
+        );
+        await waitFor(() => expect(screen.getByTestId('language').props.children).toBe('es-419'));
+        expect(await AsyncStorage.getItem(LANGUAGE_KEY)).toBe('es-419');
+    });
+
+    it("doesn't change the language of someone already signed in", async () => {
+        (phoneLocales as jest.Mock).mockReturnValue(['es-AR']);
+        (getCredentials as jest.Mock).mockResolvedValueOnce({ accessToken: 'token', instanceUrl: 'https://one.social' });
+        await render(
+            <I18nProvider>
+                <Probe />
+            </I18nProvider>
+        );
+        await waitFor(async () => expect(await AsyncStorage.getItem(LANGUAGE_KEY)).toBe(DEFAULT_LANGUAGE));
+        expect(screen.getByTestId('language').props.children).toBe(DEFAULT_LANGUAGE);
+        (phoneLocales as jest.Mock).mockReturnValue([]);
     });
 
     it('ignores a saved value it does not know', async () => {
