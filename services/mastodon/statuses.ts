@@ -34,7 +34,11 @@ export interface CreateStatusParams {
     };
     // Publish later instead (ISO 8601, at least five minutes ahead): the server answers with a ScheduledStatus
     scheduled_at?: string;
+    // text/plain or text/markdown, on servers that take Markdown (instance supportsMarkdown)
+    content_type?: ContentType;
 }
+
+export type ContentType = 'text/plain' | 'text/markdown';
 
 // Mastodon makes one post per Idempotency-Key, so a retried request can't post twice
 const idempotencyKey = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
@@ -124,6 +128,7 @@ export interface EditStatusParams {
     media_attributes?: { id: string; description?: string; focus?: string }[];
     poll?: CreateStatusParams['poll'];
     quote_approval_policy?: CreateStatusParams['quote_approval_policy'];
+    content_type?: ContentType;
 }
 
 // Saves an edit; visibility, the reply and the quote can't change

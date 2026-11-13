@@ -2,6 +2,7 @@ import { TextStyle } from 'react-native';
 // Per-weight entry points, so only the weights below end up in the bundle
 import { Fraunces_700Bold } from '@expo-google-fonts/fraunces/700Bold';
 import { Nunito_400Regular } from '@expo-google-fonts/nunito/400Regular';
+import { Nunito_400Regular_Italic } from '@expo-google-fonts/nunito/400Regular_Italic';
 import { Nunito_600SemiBold } from '@expo-google-fonts/nunito/600SemiBold';
 import { Nunito_700Bold } from '@expo-google-fonts/nunito/700Bold';
 import { Nunito_800ExtraBold } from '@expo-google-fonts/nunito/800ExtraBold';
@@ -10,6 +11,8 @@ import { Nunito_800ExtraBold } from '@expo-google-fonts/nunito/800ExtraBold';
 export const fontFamilies = {
     display: 'Fraunces_700Bold',
     regular: 'Nunito_400Regular',
+    // Emphasis in posts (<em>, Markdown _text_)
+    italic: 'Nunito_400Regular_Italic',
     semiBold: 'Nunito_600SemiBold',
     bold: 'Nunito_700Bold',
     extraBold: 'Nunito_800ExtraBold',
@@ -18,6 +21,7 @@ export const fontFamilies = {
 export const fontAssets = {
     [fontFamilies.display]: Fraunces_700Bold,
     [fontFamilies.regular]: Nunito_400Regular,
+    [fontFamilies.italic]: Nunito_400Regular_Italic,
     [fontFamilies.semiBold]: Nunito_600SemiBold,
     [fontFamilies.bold]: Nunito_700Bold,
     [fontFamilies.extraBold]: Nunito_800ExtraBold,

@@ -165,6 +165,8 @@ export interface StatusSource {
     id: string;
     text: string;
     spoiler_text: string;
+    // What it was written in, on servers that take Markdown
+    content_type?: string;
 }
 
 // One version of an edited post

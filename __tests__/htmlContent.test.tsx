@@ -210,3 +210,36 @@ describe('tapping an emoji', () => {
         expect(shownEmoji(toJSON())).toEqual(['https://x/pug.png']);
     });
 });
+
+describe('formatted posts (Markdown and HTML from glitch-soc, Akkoma, Pleroma)', () => {
+    // The style a piece of text ends up with, nested styles flattened
+    const styleOf = (text: string) => {
+        const { StyleSheet } = jest.requireActual('react-native');
+        let node: any = screen.getByText(text);
+        const styles: any[] = [];
+        while (node) {
+            if (node.props?.style) styles.unshift(node.props.style);
+            node = node.parent;
+        }
+        return StyleSheet.flatten(styles);
+    };
+
+    it('uses the bold and italic faces, and monospace for code', async () => {
+        await renderPost('<p><strong>loud</strong> <em>soft</em> <code>npm i</code></p>', []);
+
+        expect(styleOf('loud').fontFamily).toBe('Nunito_700Bold');
+        expect(styleOf('soft').fontFamily).toBe('Nunito_400Regular_Italic');
+        expect(styleOf('npm i').fontFamily).toBe(Platform.select({ ios: 'Menlo', default: 'monospace' }));
+    });
+
+    it('marks quotes with the accent colour and shows lists and headings', async () => {
+        await renderPost('<h2>Pugs</h2><blockquote><p>snort</p></blockquote><ul><li>one</li><li>two</li></ul>', []);
+
+        expect(screen.getByText('Pugs')).toBeTruthy();
+        expect(screen.getByText('one')).toBeTruthy();
+        // The bar is on the quote's block, somewhere above the text
+        const around: string[] = [];
+        for (let node: any = screen.getByText('snort'); node; node = node.parent) around.push(JSON.stringify(node.props?.style ?? null));
+        expect(around.join()).toContain(mockTheme.colors.accentColor);
+    });
+});
