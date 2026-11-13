@@ -19,7 +19,7 @@ jest.mock('../services/mastodon/statuses', () => ({
     unreblogStatus: jest.fn(),
 }));
 
-jest.mock('../services/settingsContext', () => ({
+jest.mock('../services/settingsContext', () => ({ useOptionalSettings: () => null,
     useSettings: () => ({ compactMode: false, mediaAutoplay: false }),
 }));
 

@@ -20,7 +20,7 @@ jest.mock('../services/themeContext', () => ({
     useTheme: () => jest.requireActual('../testUtils/theme').mockTheme,
 }));
 const mockSettings = { compactMode: false, mediaAutoplay: false, hideCounts: false };
-jest.mock('../services/settingsContext', () => ({ useSettings: () => mockSettings }));
+jest.mock('../services/settingsContext', () => ({ useOptionalSettings: () => null, useSettings: () => mockSettings }));
 jest.mock('../services/composeContext', () => ({ useCompose: () => ({ openCompose: jest.fn() }) }));
 jest.mock('expo-web-browser', () => ({ openBrowserAsync: jest.fn(() => Promise.resolve()) }));
 

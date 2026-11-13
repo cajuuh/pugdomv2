@@ -9,6 +9,8 @@ import { renderNameWithEmojis, renderTextWithEmojis } from '../services/emojiHel
 import { HUGE_POST, LONG_POST, breakLongRuns, postSize, splitTrailingHashtags } from '../services/htmlText';
 
 jest.mock('../components/MediaViewer/mediaViewer', () => ({ useOptionalMediaViewer: jest.fn(() => undefined) }));
+let mockAutoplay = false;
+jest.mock('../services/settingsContext', () => ({ useOptionalSettings: () => ({ mediaAutoplay: mockAutoplay }) }));
 
 const emoji = (shortcode: string): CustomEmoji => ({
     shortcode,
@@ -33,6 +35,36 @@ describe('StatusHtmlContent emoji', () => {
         await renderPost('<p>good :pug: morning</p>', [emoji('pug')]);
 
         expect(screen.getByText(/morning/)).toBeTruthy();
+    });
+});
+
+describe('animated custom emoji', () => {
+    const blob: CustomEmoji = { shortcode: 'blob', url: 'https://x/blob.gif', static_url: 'https://x/blob.png', visible_in_picker: true };
+    // Every image's address in what's on screen
+    const imageUris = (node: any): string[] =>
+        !node ? [] : Array.isArray(node) ? node.flatMap(imageUris) : [...(node.type === 'Image' ? [node.props.source.uri] : []), ...imageUris(node.children)];
+    const renderAll = () =>
+        render(
+            <>
+                <StatusHtmlContent content="<p>hi :blob:</p>" emojis={[blob]} colors={mockTheme.colors} bodyFont={mockTheme.type.body} width={320} />
+                {renderNameWithEmojis('Pug :blob:', [blob], {})}
+                {renderTextWithEmojis('Pug :blob:', [blob], {})}
+            </>,
+        );
+
+    afterEach(() => {
+        mockAutoplay = false;
+    });
+
+    it('holds still in posts and names unless media autoplay is on', async () => {
+        const { toJSON } = await renderAll();
+        expect(imageUris(toJSON())).toEqual(['https://x/blob.png', 'https://x/blob.png', 'https://x/blob.png']);
+    });
+
+    it('moves with media autoplay on', async () => {
+        mockAutoplay = true;
+        const { toJSON } = await renderAll();
+        expect(imageUris(toJSON())).toEqual(['https://x/blob.gif', 'https://x/blob.gif', 'https://x/blob.gif']);
     });
 });
 

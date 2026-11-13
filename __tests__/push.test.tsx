@@ -20,7 +20,7 @@ const mockPush = jest.fn();
 jest.mock('../services/authContext', () => ({
     useAuth: () => ({ user: { id: 'me' }, savedAccounts: mockAccounts, switchAccount: mockSwitchAccount }),
 }));
-jest.mock('../services/settingsContext', () => ({
+jest.mock('../services/settingsContext', () => ({ useOptionalSettings: () => null,
     useSettings: () => ({ notifications: true, pushAlerts: jest.requireActual('../services/push').DEFAULT_PUSH_ALERTS, loadingSettings: false }),
 }));
 jest.mock('../services/i18n/i18nContext', () => ({ useI18n: () => ({ t: (key: string) => key }) }));

@@ -23,7 +23,7 @@ jest.mock('../services/storage', () => ({
 const me: Account = { id: 'me', username: 'me', acct: 'me', display_name: 'Me', avatar: '', emojis: [] };
 jest.mock('../services/authContext', () => ({ useAuth: () => ({ user: me }), useOptionalAuth: () => ({ user: me }) }));
 jest.mock('../services/themeContext', () => ({ useTheme: () => jest.requireActual('../testUtils/theme').mockTheme }));
-jest.mock('../services/settingsContext', () => ({ useSettings: () => ({ compactMode: false, mediaAutoplay: false }) }));
+jest.mock('../services/settingsContext', () => ({ useOptionalSettings: () => null, useSettings: () => ({ compactMode: false, mediaAutoplay: false }) }));
 jest.mock('../services/composeContext', () => ({ useCompose: () => ({ openCompose: jest.fn() }) }));
 
 const api = apiClient as unknown as Record<'get' | 'post', jest.Mock>;

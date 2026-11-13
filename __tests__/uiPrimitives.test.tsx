@@ -6,6 +6,8 @@ import { initialsOf } from '../components/ui/avatar';
 import { mockTheme } from '../testUtils/theme';
 
 let mockIsDark = false;
+let mockAutoplay = false;
+jest.mock('../services/settingsContext', () => ({ useOptionalSettings: () => ({ mediaAutoplay: mockAutoplay }) }));
 jest.mock('../services/themeContext', () => ({
     useTheme: () => ({ ...jest.requireActual('../testUtils/theme').mockTheme, isDark: mockIsDark }),
 }));
@@ -103,6 +105,16 @@ describe('Avatar', () => {
 
         await fireEvent(screen.getByTestId('avatar-image'), 'error', { nativeEvent: { error: 'Not found' } });
         expect(screen.getByText('A')).toBeTruthy();
+    });
+
+    it('holds an animated avatar still unless media autoplay is on', async () => {
+        await render(<Avatar name="alice" uri="https://example.social/a.gif" />);
+        expect(screen.getByTestId('avatar-image').props.autoplay).toBe(false);
+
+        mockAutoplay = true;
+        await render(<Avatar name="alice" uri="https://example.social/a.gif" />);
+        expect(screen.getByTestId('avatar-image').props.autoplay).toBe(true);
+        mockAutoplay = false;
     });
 
     it('shows a badge when given one', async () => {

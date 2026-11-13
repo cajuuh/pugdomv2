@@ -42,7 +42,7 @@ jest.mock('../services/mastodon/polls', () => ({
 
 // Mutable so the Compact Mode tests can turn it on
 const mockSettings: { compactMode: boolean; mediaAutoplay: boolean; hideCounts: boolean; expandSpoilers: boolean | null; coverSensitiveMedia: boolean; uncroppedMedia: boolean; mediaGrid?: boolean } = { compactMode: false, mediaAutoplay: false, hideCounts: false, expandSpoilers: null, coverSensitiveMedia: true, uncroppedMedia: false };
-jest.mock('../services/settingsContext', () => ({
+jest.mock('../services/settingsContext', () => ({ useOptionalSettings: () => null,
     useSettings: () => mockSettings,
 }));
 

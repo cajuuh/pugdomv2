@@ -34,7 +34,7 @@ jest.mock('../services/mastodon/notifications', () => {
         dismissNotificationGroup: jest.fn(),
     };
 });
-jest.mock('../services/settingsContext', () => ({ useSettings: () => ({ groupNotifications: true }) }));
+jest.mock('../services/settingsContext', () => ({ useOptionalSettings: () => null, useSettings: () => ({ groupNotifications: true }) }));
 jest.mock('../services/mastodon/accounts', () => ({
     followAccount: jest.fn(),
     getRelationships: jest.fn(),

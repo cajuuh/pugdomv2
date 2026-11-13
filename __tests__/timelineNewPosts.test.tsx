@@ -10,7 +10,7 @@ import Timeline from '../screens/Timeline/timeline';
 import { Account, Status } from '../services/mastodon/types';
 
 // Pinned feeds are kept per account
-jest.mock('../services/settingsContext', () => ({ useSettings: () => ({ swipeFeeds: false, homeBoosts: true, homeReplies: true }) }));
+jest.mock('../services/settingsContext', () => ({ useOptionalSettings: () => null, useSettings: () => ({ swipeFeeds: false, homeBoosts: true, homeReplies: true }) }));
 jest.mock('../services/mastodon/tags', () => ({ ...jest.requireActual('../services/mastodon/tags'), getFollowedTags: jest.fn(async () => []) }));
 jest.mock('../services/authContext', () => ({ useAuth: () => ({ user: { id: 'me' } }), useOptionalAuth: () => ({ user: { id: 'me' } }) }));
 jest.mock('../services/themeContext', () => ({
