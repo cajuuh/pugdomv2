@@ -996,6 +996,7 @@ export const eo: Dictionary = {
         swipeFeeds: 'Ŝovumi inter tempolinioj',
         homeBoosts: 'Montri diskonigojn en la hejma tempolinio',
         homeReplies: 'Montri respondojn en la hejma tempolinio',
+        keepPlace: "Teni vian lokon en tempolinioj",
         replyUnlisted: 'Respondi nelistigite',
         uncroppedMedia: 'Montri bildojn netonditaj',
         externalBrowser: 'Malfermi ligilojn en la retumilo de via telefono',

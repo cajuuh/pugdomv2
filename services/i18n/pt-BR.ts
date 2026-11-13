@@ -999,6 +999,7 @@ export const ptBR: Dictionary = {
         swipeFeeds: 'Deslizar entre as timelines',
         homeBoosts: 'Mostrar boosts na timeline Início',
         homeReplies: 'Mostrar respostas na timeline Início',
+        keepPlace: "Manter seu lugar nas timelines",
         replyUnlisted: 'Responder como não listado',
         externalBrowser: 'Abrir links no navegador do celular',
         uncroppedMedia: 'Mostrar imagens sem recorte',

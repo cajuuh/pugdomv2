@@ -996,6 +996,7 @@ export const de: Dictionary = {
         swipeFeeds: 'Zwischen Timelines wischen',
         homeBoosts: 'Geteilte Beiträge auf der Startseite zeigen',
         homeReplies: 'Antworten auf der Startseite zeigen',
+        keepPlace: "Leseposition in Zeitleisten behalten",
         replyUnlisted: 'Nicht gelistet antworten',
         uncroppedMedia: 'Bilder unbeschnitten zeigen',
         externalBrowser: 'Links im Browser deines Handys öffnen',

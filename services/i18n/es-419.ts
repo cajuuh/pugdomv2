@@ -998,6 +998,7 @@ export const es419: Dictionary = {
         swipeFeeds: 'Deslizar entre líneas de tiempo',
         homeBoosts: 'Mostrar impulsos en la línea de tiempo Inicio',
         homeReplies: 'Mostrar respuestas en la línea de tiempo Inicio',
+        keepPlace: "Mantener tu lugar en las líneas de tiempo",
         replyUnlisted: 'Responder como no listado',
         uncroppedMedia: 'Mostrar imágenes sin recortar',
         externalBrowser: 'Abrir enlaces en el navegador del celular',

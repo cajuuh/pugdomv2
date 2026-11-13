@@ -997,6 +997,7 @@ export const ja: Dictionary = {
         swipeFeeds: 'スワイプでタイムラインを切り替え',
         homeBoosts: 'ホームにブーストを表示',
         homeReplies: 'ホームに返信を表示',
+        keepPlace: "タイムラインで読んでいた位置を保つ",
         replyUnlisted: '返信を未収載にする',
         uncroppedMedia: '画像を切り取らずに表示',
         externalBrowser: 'リンクをスマホのブラウザで開く',

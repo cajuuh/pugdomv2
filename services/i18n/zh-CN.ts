@@ -997,6 +997,7 @@ export const zhCN: Dictionary = {
         swipeFeeds: '左右滑动切换时间线',
         homeBoosts: '在主页显示转嘟',
         homeReplies: '在主页显示回复',
+        keepPlace: "在时间线中保留阅读位置",
         replyUnlisted: '以不公开方式回复',
         uncroppedMedia: '显示未裁切的图片',
         externalBrowser: '在手机浏览器中打开链接',

@@ -61,6 +61,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
         setHomeBoosts,
         homeReplies,
         setHomeReplies,
+        keepPlace,
+        setKeepPlace,
         replyUnlisted,
         setReplyUnlisted,
         groupNotifications,
@@ -349,6 +351,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
                     {switchRow('repeat', t('settings.homeBoosts'), homeBoosts, setHomeBoosts)}
                     <View style={styles.divider} />
                     {switchRow('chatbubbles-outline', t('settings.homeReplies'), homeReplies, setHomeReplies)}
+                    <View style={styles.divider} />
+                    {switchRow('time-outline', t('settings.keepPlace'), keepPlace, setKeepPlace)}
                     <View style={styles.divider} />
                     {switchRow('lock-open-outline', t('settings.replyUnlisted'), replyUnlisted, setReplyUnlisted)}
                     <View style={styles.divider} />

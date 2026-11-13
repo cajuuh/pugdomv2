@@ -59,7 +59,7 @@ const FeedList = ({ feed, current, visible, onStatusPress }: FeedListProps) => {
     const { t } = useI18n();
     const listRef = useRef<FlashListRef<FeedItem>>(null);
 
-    const { homeBoosts, homeReplies } = useSettings();
+    const { homeBoosts, homeReplies, keepPlace } = useSettings();
     const { user } = useAuth();
     const filterContext = feedFilterContext(feed.kind);
     // Hide filters drop posts; on Home, the boosts and replies switches too
@@ -88,7 +88,8 @@ const FeedList = ({ feed, current, visible, onStatusPress }: FeedListProps) => {
         loadNewest,
         loadGap,
         loadingGap,
-    } = useFeed(feed, shows);
+        refetch,
+    } = useFeed(feed, shows, keepPlace);
 
     const newPosts = useNewPosts(feed, posts[0]?.id, current, shows);
     const [loadingNewPosts, setLoadingNewPosts] = useState(false);
@@ -176,6 +177,12 @@ const FeedList = ({ feed, current, visible, onStatusPress }: FeedListProps) => {
     }, []);
     useEffect(() => {
         if (feed.kind !== 'home') return;
+        // Your own new post shows on top. With keepPlace, without reloading Home (that would lose a
+        // restored place).
+        const published = DeviceEventEmitter.addListener('status_published', () => {
+            (keepPlace ? loadNewest() : refetch()).catch(error => console.warn('Loading new posts failed:', error));
+        });
+        if (!keepPlace) return () => published.remove();
         let saved: string | undefined;
         const subscription = AppState.addEventListener('change', state => {
             const id = firstOnScreen.current;
@@ -183,15 +190,11 @@ const FeedList = ({ feed, current, visible, onStatusPress }: FeedListProps) => {
             saved = id;
             saveHomeMarker(id).catch(error => console.warn('Saving the Home position failed:', error));
         });
-        // Your own new post shows on top, without reloading Home (that would lose a restored place)
-        const published = DeviceEventEmitter.addListener('status_published', () => {
-            loadNewest().catch(error => console.warn('Loading new posts failed:', error));
-        });
         return () => {
             subscription.remove();
             published.remove();
         };
-    }, [feed.kind, loadNewest]);
+    }, [feed.kind, keepPlace, loadNewest, refetch]);
 
     useEffect(() => {
         if (!current) return;
@@ -215,11 +218,12 @@ const FeedList = ({ feed, current, visible, onStatusPress }: FeedListProps) => {
     const handleRefresh = useCallback(async () => {
         setPulling(true);
         try {
-            await showNewPosts();
+            // Without keepPlace, a pull reloads what's loaded from the newest posts
+            await (keepPlace ? showNewPosts() : refetch());
         } finally {
             setPulling(false);
         }
-    }, [showNewPosts]);
+    }, [keepPlace, showNewPosts, refetch]);
 
     const handleLoadMore = () => {
         if (!isFetchingNextPage && hasNextPage) {

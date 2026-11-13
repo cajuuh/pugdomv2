@@ -11,7 +11,11 @@ import Timeline from '../screens/Timeline/timeline';
 import { Account, Status } from '../services/mastodon/types';
 
 // Pinned feeds are kept per account
-jest.mock('../services/settingsContext', () => ({ useOptionalSettings: () => null, useSettings: () => ({ swipeFeeds: false, homeBoosts: true, homeReplies: true }) }));
+let mockKeepPlace = true;
+jest.mock('../services/settingsContext', () => ({
+    useOptionalSettings: () => null,
+    useSettings: () => ({ swipeFeeds: false, homeBoosts: true, homeReplies: true, keepPlace: mockKeepPlace }),
+}));
 jest.mock('../services/mastodon/tags', () => ({ ...jest.requireActual('../services/mastodon/tags'), getFollowedTags: jest.fn(async () => []) }));
 jest.mock('../services/authContext', () => ({ useAuth: () => ({ user: { id: 'me' } }), useOptionalAuth: () => ({ user: { id: 'me' } }) }));
 jest.mock('../services/themeContext', () => ({
@@ -56,6 +60,7 @@ describe('Timeline new posts pill', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        mockKeepPlace = true;
         queryClient = createTestQueryClient();
         mockedHome.mockResolvedValue([post('10'), post('9')]);
         (fetchPublicTimeline as jest.Mock).mockResolvedValue([]);
@@ -190,6 +195,25 @@ describe('Timeline new posts pill', () => {
         expect(mockedHome).toHaveBeenCalledTimes(1);
         // The pill stops loading once the list has scrolled up
         await waitFor(() => expect(screen.getByRole('button', { name: '2 new posts' })).not.toBeBusy());
+    });
+
+    it('without "Keep your place", reloads only the first page and goes to the newest', async () => {
+        mockKeepPlace = false;
+        mockNewPosts = { count: 1, more: false, accounts: [] };
+        await renderTimeline();
+        await screen.findByText('post 10');
+        queryClient.setQueryData(['timeline', 'home'], (data: any) => ({
+            pages: [...data.pages, [post('8')]],
+            pageParams: [...data.pageParams, '9'],
+        }));
+        mockedHome.mockResolvedValue([post('12'), post('11'), post('10')]);
+
+        await fireEvent.press(screen.getByRole('button', { name: '1 new post' }));
+
+        await waitFor(() => expect(screen.getByText('post 12')).toBeTruthy());
+        expect(queryClient.getQueryData<{ pages: Status[][] }>(['timeline', 'home'])!.pages).toHaveLength(1);
+        expect(mockedHome).toHaveBeenLastCalledWith(undefined);
+        expect(fetchFeedRange).not.toHaveBeenCalled();
     });
 
     it("leaves a gap under a full page of new posts, and fills it from either end", async () => {

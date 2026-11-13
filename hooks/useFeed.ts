@@ -4,13 +4,24 @@ import { FeedDescriptor } from '../services/mastodon/feedTypes';
 import { canPageById, fetchFeedPage, fetchFeedRange } from '../services/mastodon/feedService';
 import { afterLoad, feedItems, Gap, GapEnd, GAP_LIMIT, gapRange, Gaps, insertAfter, newestFirst, prepend, restoreHome } from '../services/mastodon/timelineGaps';
 import { Status } from '../services/mastodon/types';
+import { getSetting } from '../services/storage';
+import { KEEP_PLACE_KEY } from '../services/settingsContext';
 
 type Pages = InfiniteData<Status[], string | undefined>;
+
+const keepPlaceSaved = async () => {
+    try {
+        return await getSetting(KEEP_PLACE_KEY, false);
+    } catch {
+        return false;
+    }
+};
 
 // Pages keep every post the server sent, so each one's last post is the cursor for the next. `items` is
 // what to draw: direct posts and what `shows` hides (Home without boosts or replies) left out, gap rows
 // put in. Keep `shows` the same function between renders.
-export const useFeed = (feed: FeedDescriptor, shows?: (post: Status) => boolean) => {
+// `keepPlace` (a setting): new posts go on top with a gap under them, instead of a reload from the newest
+export const useFeed = (feed: FeedDescriptor, shows?: (post: Status) => boolean, keepPlace = false) => {
     const queryClient = useQueryClient();
     const key = useMemo(() => ['timeline', feed.id], [feed.id]);
     const [gaps, setGaps] = useState<Gaps>({});
@@ -20,8 +31,9 @@ export const useFeed = (feed: FeedDescriptor, shows?: (post: Status) => boolean)
     const query = useInfiniteQuery({
         queryKey: key,
         queryFn: async ({ pageParam }) => {
-            // Home's first load (per account) opens where you left it
-            if (feed.kind === 'home' && pageParam === undefined && !queryClient.getQueryData(key)) {
+            // Home's first load (per account) opens where you left it. Read from storage: the settings
+            // may still be loading.
+            if (feed.kind === 'home' && pageParam === undefined && !queryClient.getQueryData(key) && (await keepPlaceSaved())) {
                 const restored = await restoreHome().catch(() => null);
                 if (restored) {
                     setGaps(restored.gaps);
@@ -59,10 +71,10 @@ export const useFeed = (feed: FeedDescriptor, shows?: (post: Status) => boolean)
     const fetchNextPage = useCallback(() => query.fetchNextPage({ cancelRefetch: false }), [query.fetchNextPage]);
 
     // The newest posts on top. More than a page leaves a gap under them, so what's loaded stays.
-    // Gives the newest post's id.
+    // Without keepPlace, the list is cut to its first page and reloaded. Gives the newest post's id.
     const loadNewest = useCallback(async (): Promise<string | undefined> => {
         const top = queryClient.getQueryData<Pages>(key)?.pages[0]?.[0];
-        if (!top || !canPageById(feed)) {
+        if (!top || !keepPlace || !canPageById(feed)) {
             queryClient.setQueryData<Pages>(key, current => current && { pages: current.pages.slice(0, 1), pageParams: current.pageParams.slice(0, 1) });
             const { data } = await query.refetch();
             return data?.pages[0]?.[0]?.id;
@@ -73,7 +85,7 @@ export const useFeed = (feed: FeedDescriptor, shows?: (post: Status) => boolean)
         const sorted = newestFirst(fetched);
         if (fetched.length >= GAP_LIMIT) setGaps(current => ({ ...current, [sorted[sorted.length - 1].id]: top.id }));
         return sorted[0].id;
-    }, [queryClient, key, feed, query.refetch]);
+    }, [queryClient, key, feed, keepPlace, query.refetch]);
 
     // Posts into a gap from one end. Throws when the server can't be reached.
     const [loadingGap, setLoadingGap] = useState<string | null>(null);

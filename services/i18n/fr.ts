@@ -996,6 +996,7 @@ export const fr: Dictionary = {
         swipeFeeds: 'Glisser entre les fils',
         homeBoosts: 'Afficher les partages dans l’accueil',
         homeReplies: 'Afficher les réponses dans l’accueil',
+        keepPlace: "Garder votre place dans les fils",
         replyUnlisted: 'Répondre en non listé',
         uncroppedMedia: 'Afficher les images sans recadrage',
         externalBrowser: 'Ouvrir les liens dans le navigateur du téléphone',

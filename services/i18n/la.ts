@@ -997,6 +997,7 @@ export const la: Dictionary = {
         swipeFeeds: 'Inter lineas temporis trahere',
         homeBoosts: 'Divulgationes in Domo ostendere',
         homeReplies: 'Responsa in Domo ostendere',
+        keepPlace: "Locum tuum in temporum lineis servare",
         replyUnlisted: 'Ut non indicatus respondere',
         uncroppedMedia: 'Imagines integras ostendere',
         externalBrowser: 'Nexus in navigatro telephoni aperire',
