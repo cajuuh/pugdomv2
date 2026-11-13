@@ -68,7 +68,7 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       # Queued on EAS without waiting; each build is submitted when it finishes. iOS goes to App Store Connect and you
-      # release it from there. Android lands as a draft in the closed test (eas.json): add the release notes and
+      # release it from there. Android lands as a draft in the open test (eas.json track "beta"): add the release notes and
       # mapping.txt (the build's artifact) in Play Console, then send it for review.
       # Needs the Google service account key on EAS (Credentials → Android → Service credentials).
       - name: Build iOS and submit to App Store Connect
