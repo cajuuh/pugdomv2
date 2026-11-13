@@ -282,6 +282,9 @@ export const en = {
         unsupported: "Your server doesn't support link timelines. You can still open the article directly.",
     },
     post: {
+        moreMedia: '{{count}} more',
+        continuesThread: 'Continues their own thread',
+        isReply: 'Reply',
         readDescription: 'Read the image description',
         descriptionTitle: 'Image description',
         image: 'Image',
@@ -360,6 +363,7 @@ export const en = {
         backToVote: 'Back to voting',
     },
     compose: {
+        mediaSensitive: 'Mark media as sensitive',
         newPost: 'New post',
         reply: 'Reply',
         post: 'Post',
@@ -944,6 +948,8 @@ export const en = {
         later: 'Later',
     },
     settings: {
+        absoluteDates: 'Show dates and times',
+        mediaGrid: 'Several images in a grid',
         title: 'Settings',
         close: 'Close settings',
         accounts: 'Accounts',
@@ -1035,6 +1041,9 @@ export const en = {
         note: "Removing deletes notifications from your account on your server, so they're gone in every app you use, and it can't be undone. To only stop them showing as new, use ✓✓ Mark all as read.",
     },
     appearance: {
+        textSize: 'Text size',
+        textSizeHint: 'Compact Mode too',
+        textSizes: { small: 'Small', default: 'Default', large: 'Large', larger: 'Larger' },
         title: 'Appearance',
         back: 'Back to settings',
         light: 'Light',

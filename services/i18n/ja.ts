@@ -279,6 +279,9 @@ export const ja: Dictionary = {
         unsupported: 'お使いのサーバーはリンクのタイムラインに対応していません。記事は直接開けます。',
     },
     post: {
+        moreMedia: 'ほか{{count}}件',
+        continuesThread: '自分のスレッドの続き',
+        isReply: '返信',
         readDescription: '画像の説明を読む',
         descriptionTitle: '画像の説明',
         image: '画像',
@@ -350,6 +353,7 @@ export const ja: Dictionary = {
         backToVote: '投票に戻る',
     },
     compose: {
+        mediaSensitive: 'メディアをセンシティブにする',
         newPost: '新しい投稿',
         reply: '返信',
         post: '投稿',
@@ -925,6 +929,8 @@ export const ja: Dictionary = {
         later: 'あとで',
     },
     settings: {
+        absoluteDates: '日付と時刻を表示',
+        mediaGrid: '複数の画像をグリッドで表示',
         title: '設定',
         close: '設定を閉じる',
         accounts: 'アカウント',
@@ -1013,6 +1019,9 @@ export const ja: Dictionary = {
         note: '削除するとサーバー上のアカウントから通知が消えるので、使っているすべてのアプリから消え、元に戻せません。新着として表示しないだけなら、✓✓「すべて既読にする」を使ってください。',
     },
     appearance: {
+        textSize: '文字サイズ',
+        textSizeHint: 'コンパクト表示でも',
+        textSizes: { small: '小', default: '標準', large: '大', larger: '特大' },
         title: '外観',
         back: '設定に戻る',
         light: 'ライト',

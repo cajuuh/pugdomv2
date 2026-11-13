@@ -41,7 +41,7 @@ import { statusLength } from '../../services/mastodon/statusLength';
 import { useInstanceConfiguration } from '../../hooks/useInstanceConfiguration';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { hitSlopFor, space } from '../../services/theme/shape';
-import { Avatar, IconButton, PillButton, Well } from '../ui';
+import { Avatar, IconButton, PillButton, ThemedSwitch, Well } from '../ui';
 import { CharacterCounter } from './characterCounter';
 import { EmojiPicker } from './emojiPicker';
 import { addRecentEmoji } from '../../services/recentEmojis';
@@ -200,7 +200,9 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
     const instanceConfiguration = useInstanceConfiguration(isOpen && !!user);
 
     const [text, setText] = useState('');
+    // `sensitive` is the content warning; media can also be marked sensitive on its own, with no warning
     const [sensitive, setSensitive] = useState(false);
+    const [mediaSensitive, setMediaSensitive] = useState(false);
     const [spoilerText, setSpoilerText] = useState('');
     const [loading, setLoading] = useState(false);
     const [language, setLanguage] = useState(() => defaultLanguage(user, appLanguage));
@@ -286,6 +288,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                     text,
                     spoilerText,
                     sensitive,
+                    mediaSensitive,
                     visibility,
                     language,
                     quotePolicy,
@@ -354,6 +357,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
             setText(withShared);
             cursor.current = withShared.length;
             setSensitive(false);
+            setMediaSensitive(false);
             setSpoilerText('');
             setLanguage(defaultLanguage(user, appLanguage));
             setVisibility(directTo ? 'direct' : defaultVisibility(user, replyToStatus, quoteStatus, replyUnlisted));
@@ -382,6 +386,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 setText(source);
                 cursor.current = source.length;
                 setSensitive(!!post.spoiler_text);
+                setMediaSensitive(post.sensitive && !post.spoiler_text);
                 setSpoilerText(post.spoiler_text ?? '');
                 setVisibility(post.visibility);
                 if (post.language && LANGUAGES.some(option => option.code === post.language)) setLanguage(post.language);
@@ -414,6 +419,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 setText(draft.text);
                 cursor.current = draft.text.length;
                 setSensitive(draft.sensitive);
+                setMediaSensitive(!!draft.mediaSensitive);
                 setSpoilerText(draft.spoilerText);
                 setVisibility(draft.visibility);
                 setLanguage(draft.language);
@@ -459,6 +465,8 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
     const isOverLimit = remaining < 0;
     // Images can be posted without text
     const isEmpty = text.trim().length === 0 && media.attachments.length === 0;
+    // A content warning hides the media too; without one, the switch under the media marks just the media
+    const marksSensitive = sensitive || (mediaSensitive && media.attachments.length > 0);
     const pollError = showPoll ? pollValidationError(pollOptions, i18n) : null;
     const isPublishDisabled = isEmpty || isOverLimit || !!pollError || media.pending || loading;
     const editingAttachment = altEditing ? media.attachments.find(attachment => attachment.key === altEditing.key) : undefined;
@@ -600,7 +608,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 const updated = await editStatus(existing.status.id, {
                     status: text,
                     spoiler_text: sensitive ? spoilerText : '',
-                    sensitive,
+                    sensitive: marksSensitive,
                     language,
                     media_ids: ids,
                     media_attributes: attributes.length > 0 ? attributes : undefined,
@@ -622,7 +630,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
             await createStatus({
                 status: text,
                 in_reply_to_id: reply ? reply.id : existing?.status.in_reply_to_id ?? null,
-                sensitive,
+                sensitive: marksSensitive,
                 spoiler_text: sensitive ? spoilerText : undefined,
                 language: language,
                 visibility,
@@ -888,6 +896,15 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                     onRemove={media.remove}
                     onRetry={media.retry}
                 />
+                {media.attachments.length > 0 && !sensitive && (
+                    <View style={styles.mediaSensitive}>
+                        <Icon name="eye-off-outline" size={16} color={colors.textSecondary} />
+                        <Text style={[type.name, styles.multipleText, styles.mediaSensitiveText]} importantForAccessibility="no" accessibilityElementsHidden>
+                            {t('compose.mediaSensitive')}
+                        </Text>
+                        <ThemedSwitch value={mediaSensitive} onValueChange={setMediaSensitive} accessibilityLabel={t('compose.mediaSensitive')} />
+                    </View>
+                )}
 
                 {showPoll && (
                     <PollEditor

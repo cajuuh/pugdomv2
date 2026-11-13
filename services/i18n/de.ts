@@ -278,6 +278,9 @@ export const de: Dictionary = {
         unsupported: 'Dein Server unterstützt keine Link-Timelines. Du kannst den Artikel trotzdem direkt öffnen.',
     },
     post: {
+        moreMedia: '{{count}} weitere',
+        continuesThread: 'Setzt den eigenen Thread fort',
+        isReply: 'Antwort',
         readDescription: 'Bildbeschreibung lesen',
         descriptionTitle: 'Bildbeschreibung',
         image: 'Bild',
@@ -349,6 +352,7 @@ export const de: Dictionary = {
         backToVote: 'Zurück zur Abstimmung',
     },
     compose: {
+        mediaSensitive: 'Medien als sensibel markieren',
         newPost: 'Neuer Beitrag',
         reply: 'Antworten',
         post: 'Veröffentlichen',
@@ -924,6 +928,8 @@ export const de: Dictionary = {
         later: 'Später',
     },
     settings: {
+        absoluteDates: 'Datum und Uhrzeit zeigen',
+        mediaGrid: 'Mehrere Bilder als Raster',
         title: 'Einstellungen',
         close: 'Einstellungen schließen',
         accounts: 'Konten',
@@ -1012,6 +1018,9 @@ export const de: Dictionary = {
         note: 'Entfernen löscht Benachrichtigungen aus deinem Konto auf deinem Server, also verschwinden sie in jeder App, die du nutzt, und das kann nicht rückgängig gemacht werden. Damit sie nur nicht mehr als neu erscheinen, nutze ✓✓ Alle als gelesen markieren.',
     },
     appearance: {
+        textSize: 'Textgröße',
+        textSizeHint: 'Auch im Kompaktmodus',
+        textSizes: { small: 'Klein', default: 'Standard', large: 'Groß', larger: 'Größer' },
         title: 'Aussehen',
         back: 'Zurück zu den Einstellungen',
         light: 'Hell',

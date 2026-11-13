@@ -8,6 +8,8 @@ export interface ThemeColors {
     accentColor: string;
     // Accent as text: links, active labels, "near the limit"
     accentText: string;
+    // Links, mentions and hashtags in posts: the accent text, except where that's the text's own colour (black pug)
+    linkColor: string;
     // Accent as a soft fill: chips, content warnings, selected rows
     accentSoft: string;
     tabBarBackground: string;
@@ -190,6 +192,8 @@ export function buildColors(coatKey: string, dark: boolean, tint: boolean, trueB
         textMuted: neutrals.ink3,
         accentColor: accent.accent,
         accentText: accent.accentText,
+        // Black pug's accent text is the ink itself, so its links are a grey that still reads at 4.5:1
+        linkColor: coat.key === 'black' ? neutrals.ink3 : accent.accentText,
         accentSoft: neutrals.accentSoft,
         buttonTextColor: accent.onAccent,
         // Surface at 95% opacity

@@ -314,6 +314,16 @@ export const makeStyles = (colors: ThemeColors) => StyleSheet.create({
         color: colors.textSecondary,
         fontSize: 13,
     },
+    mediaSensitive: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.sm,
+        marginTop: space.sm,
+        marginHorizontal: space.lg,
+    },
+    mediaSensitiveText: {
+        flex: 1,
+    },
 
     /* Bottom sheets (visibility, language, poll length, emoji) */
     sheetRoot: {

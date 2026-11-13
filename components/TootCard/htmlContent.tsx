@@ -7,6 +7,7 @@ import { inlineEmojiStyle } from '../../services/emojiHelper';
 import { fontFamilies } from '../../services/theme/typography';
 import { tagFromHref } from '../../services/mastodon/tags';
 import { breakLongRuns, withoutQuoteInline } from '../../services/htmlText';
+import { postTextMetrics } from './styles';
 
 // Post (and bio) HTML: custom emoji inline, mentions / hashtags / links routed to the handlers
 
@@ -74,7 +75,7 @@ export const linkKind = (href: string, attribs: { class?: string; rel?: string }
     return 'link';
 };
 
-export const StatusHtmlContent = React.memo(({ content, emojis, colors, bodyFont, compactMode, width, onPressMention, onPressHashtag, onPressLink }: any) => {
+export const StatusHtmlContent = React.memo(({ content, emojis, colors, bodyFont, compactMode, textSize, width, onPressMention, onPressHashtag, onPressLink }: any) => {
     const renderersProps = React.useMemo(() => ({
         a: {
             onPress: (event: any, href: string, htmlAttribs: any) => {
@@ -98,18 +99,17 @@ export const StatusHtmlContent = React.memo(({ content, emojis, colors, bodyFont
         body: {
             ...bodyFont,
             color: colors.textPrimary,
-            fontSize: compactMode ? 13 : 15.5,
-            lineHeight: compactMode ? 18 : 22.5,
+            ...postTextMetrics(!!compactMode, textSize),
         },
         a: {
-            color: colors.accentText,
+            color: colors.linkColor,
             textDecorationLine: 'none' as const,
         },
         p: {
             marginTop: 0,
             marginBottom: PARAGRAPH_GAP,
         }
-    }), [colors, bodyFont, compactMode]);
+    }), [colors, bodyFont, compactMode, textSize]);
 
     const processedHtml = React.useMemo(() => {
         // One <p> for the whole post: each <p> is its own Text, and a selection can't cross Texts, so

@@ -63,6 +63,10 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
         setGroupNotifications,
         uncroppedMedia,
         setUncroppedMedia,
+        mediaGrid,
+        setMediaGrid,
+        absoluteDates,
+        setAbsoluteDates,
         externalBrowser,
         setExternalBrowser,
         setExpandSpoilers,
@@ -304,6 +308,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
                     <View style={styles.divider} />
                     {switchRow('stats-chart-outline', t('settings.hideCounts'), hideCounts, setHideCounts)}
                     <View style={styles.divider} />
+                    {switchRow('calendar-outline', t('settings.absoluteDates'), absoluteDates, setAbsoluteDates)}
+                    <View style={styles.divider} />
                     {switchRow('warning-outline', t('settings.expandSpoilers'), expandSpoilers, setExpandSpoilers)}
                     <View style={styles.divider} />
                     {switchRow('swap-horizontal-outline', t('settings.swipeFeeds'), swipeFeeds, setSwipeFeeds)}
@@ -322,6 +328,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
                     {switchRow('play-circle-outline', t('settings.autoplay'), mediaAutoplay, setMediaAutoplay)}
                     <View style={styles.divider} />
                     {switchRow('expand-outline', t('settings.uncroppedMedia'), uncroppedMedia, setUncroppedMedia)}
+                    <View style={styles.divider} />
+                    {switchRow('grid-outline', t('settings.mediaGrid'), mediaGrid, setMediaGrid)}
                     <View style={styles.divider} />
                     {switchRow('eye-outline', t('settings.showSensitiveMedia'), showSensitive, setShowSensitiveMedia)}
                     <View style={styles.divider} />

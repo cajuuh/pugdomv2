@@ -36,6 +36,7 @@ jest.mock('../services/authContext', () => ({
     }),
 }));
 jest.mock('../services/settingsContext', () => ({
+    ...jest.requireActual('../services/settingsContext'),
     useSettings: () => ({
         notifications: true,
         setNotifications: jest.fn(),
@@ -43,8 +44,11 @@ jest.mock('../services/settingsContext', () => ({
         setMediaAutoplay: jest.fn(),
         compactMode: false,
         setCompactMode: jest.fn(),
+        postTextSize: 'default',
+        setPostTextSize: mockSetPostTextSize,
     }),
 }));
+const mockSetPostTextSize = jest.fn();
 
 const renderAppearance = async () => {
     await render(
@@ -96,6 +100,15 @@ describe('Appearance settings', () => {
 
         expect(screen.getByRole('tab', { name: 'Dark' })).toBeSelected();
         await waitFor(async () => expect(await AsyncStorage.getItem('pugdom_settings_theme')).toBe('dark'));
+    });
+
+    it('picks the post text size', async () => {
+        await renderAppearance();
+        expect(screen.getByRole('tab', { name: 'Default' })).toBeSelected();
+
+        await fireEvent.press(screen.getByRole('tab', { name: 'Larger' }));
+
+        expect(mockSetPostTextSize).toHaveBeenCalledWith('larger');
     });
 
     it('turns the surface tint off and saves it', async () => {

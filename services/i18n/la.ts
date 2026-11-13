@@ -279,6 +279,9 @@ export const la: Dictionary = {
         unsupported: 'Servitor tuus lineas temporis nexuum non sustinet. Articulum tamen directe aperire potes.',
     },
     post: {
+        moreMedia: '{{count}} plures',
+        continuesThread: 'Filum suum continuat',
+        isReply: 'Responsum',
         readDescription: 'Descriptionem imaginis legere',
         descriptionTitle: 'Descriptio imaginis',
         image: 'Imago',
@@ -350,6 +353,7 @@ export const la: Dictionary = {
         backToVote: 'Ad suffragandum redire',
     },
     compose: {
+        mediaSensitive: 'Media ut delicata notare',
         newPost: 'Novus nuntius',
         reply: 'Respondere',
         post: 'Publicare',
@@ -925,6 +929,8 @@ export const la: Dictionary = {
         later: 'Postea',
     },
     settings: {
+        absoluteDates: 'Diem et horam ostendere',
+        mediaGrid: 'Plures imagines in cancellis',
         title: 'Optiones',
         close: 'Optiones claudere',
         accounts: 'Rationes',
@@ -1013,6 +1019,9 @@ export const la: Dictionary = {
         note: 'Removere monitiones ex ratione tua in servitore delet, itaque ex omni applicatione qua uteris evanescunt, nec revocari potest. Ut tantum non iam ut novae appareant, utere ✓✓ Omnes ut lectas notare.',
     },
     appearance: {
+        textSize: 'Magnitudo litterarum',
+        textSizeHint: 'Etiam modo contracto',
+        textSizes: { small: 'Parva', default: 'Solita', large: 'Magna', larger: 'Maior' },
         title: 'Species',
         back: 'Ad optiones redire',
         light: 'Clara',

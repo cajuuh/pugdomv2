@@ -23,6 +23,8 @@ export interface Draft {
     text: string;
     spoilerText: string;
     sensitive: boolean;
+    // Media marked sensitive without a content warning (older drafts don't have it)
+    mediaSensitive?: boolean;
     visibility: Status['visibility'];
     language: string;
     quotePolicy: QuotePolicy;
