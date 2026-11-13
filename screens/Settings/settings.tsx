@@ -15,6 +15,7 @@ import ClearNotificationsHelp from './clearNotificationsHelp';
 import PushAlerts from './pushAlerts';
 import { Esmeralda, useEsmeraldaTaps } from './esmeralda';
 import { pushAvailable, requestPushPermission } from '../../services/push';
+import { useNotificationPolicy } from '../../hooks/useNotificationRequests';
 import { SettingsHeader } from './header';
 import { makeStyles } from './styles';
 import { useI18n } from '../../services/i18n/i18nContext';
@@ -35,9 +36,12 @@ interface SettingsProps {
     onDrafts: () => void;
     onModeratedAccounts: () => void;
     onFilters: () => void;
+    // The notification policy (Mastodon 4.3+)
+    onNotificationPolicy?: () => void;
 }
 
-const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts, onModeratedAccounts, onFilters }) => {
+const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts, onModeratedAccounts, onFilters, onNotificationPolicy }) => {
+    const { data: notificationPolicy } = useNotificationPolicy();
     const { user, logout, savedAccounts, switchAccount, setAddingAccount, updateUser } = useAuth();
     const activeServer = savedAccounts.find(account => account.userInfo.id === user?.id)?.instanceUrl;
     const { colors, type, coat } = useTheme();
@@ -296,6 +300,16 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
                                     <Text style={[type.meta, styles.rowDetail]}>{t('settings.pushUnavailable')}</Text>
                                 </View>
                             </View>
+                            <View style={styles.divider} />
+                        </>
+                    )}
+                    {!!notificationPolicy && onNotificationPolicy && (
+                        <>
+                            <Pressable style={styles.row} onPress={onNotificationPolicy} accessibilityRole="button">
+                                <Icon name="options-outline" size={20} color={colors.accentText} />
+                                <Text style={[labelStyle, styles.rowText]}>{t('filteredNotifications.rulesTitle')}</Text>
+                                <Icon name="chevron-forward" size={16} color={colors.textMuted} />
+                            </Pressable>
                             <View style={styles.divider} />
                         </>
                     )}
