@@ -171,6 +171,18 @@ describe('Feeds sheet', () => {
         await waitFor(async () => expect((await getPinnedFeeds('me')).map(feed => feed.id)).toContain('trending'));
     });
 
+    it('can pin Federated again after unpinning it', async () => {
+        await unpinFeed('me', 'federated');
+        await renderSheet();
+
+        // Gone from the pinned rows, first under Discover
+        await waitFor(() => expect(screen.queryByRole('button', { name: 'Move Federated up' })).toBeNull());
+        expect(screen.getAllByRole('button', { name: 'Open Federated' })).toHaveLength(1);
+        await fireEvent.press(screen.getAllByRole('button', { name: 'Pin' })[0]);
+
+        await waitFor(async () => expect((await getPinnedFeeds('me')).map(feed => feed.id)).toContain('federated'));
+    });
+
     it('opens a feed and closes', async () => {
         const onSelectFeed = jest.fn();
         const onClose = jest.fn();
