@@ -77,7 +77,7 @@ export const mergeGroups = (groups: NotificationGroup[]): NotificationGroup[] =>
 };
 
 // Servers older than Mastodon 4.3 (and other software) answer v2 with one of these
-const V2_UNSUPPORTED = [400, 404, 405, 501];
+export const V2_UNSUPPORTED = [400, 404, 405, 501];
 // Instances known to lack v2, so each page after the first goes straight to v1
 const v1Instances = new Set<string>();
 

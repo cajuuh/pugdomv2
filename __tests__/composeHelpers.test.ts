@@ -99,6 +99,20 @@ describe('fetchInstanceConfiguration', () => {
         await expect(fetchInstanceConfiguration()).resolves.toMatchObject({ supportsQuotes: false });
     });
 
+    it('knows when posts can be written in Markdown: glitch-soc in v2, Akkoma and Pleroma in v1', async () => {
+        mockedGet.mockResolvedValue({ data: { configuration: { statuses: { max_characters: 500, supported_mime_types: ['text/plain', 'text/markdown'] } } } });
+        await expect(fetchInstanceConfiguration()).resolves.toMatchObject({ supportsMarkdown: true });
+
+        mockedGet.mockImplementation(async (url: string) => {
+            if (url.endsWith('/api/v2/instance')) throw new Error('Not implemented');
+            return { data: { max_toot_chars: 5000, pleroma: { metadata: { post_formats: ['text/plain', 'text/html', 'text/markdown'] } } } };
+        });
+        await expect(fetchInstanceConfiguration()).resolves.toMatchObject({ supportsMarkdown: true });
+
+        mockedGet.mockReset().mockResolvedValue({ data: { configuration: { statuses: { max_characters: 500 } } } });
+        await expect(fetchInstanceConfiguration()).resolves.toMatchObject({ supportsMarkdown: false });
+    });
+
     it('reads Akkoma and Pleroma limits from v1 when there is no v2', async () => {
         mockedGet.mockImplementation(async (url: string) => {
             if (url.endsWith('/api/v2/instance')) throw new Error('Not implemented');

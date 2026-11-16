@@ -20,6 +20,8 @@ jest.mock('../services/api/client', () => ({
 }));
 jest.mock('../services/storage', () => ({
     getCredentials: async () => ({ accessToken: 'token', instanceUrl: 'https://home.social' }),
+    getStringSetting: async (_key: string, fallback: string) => fallback,
+    saveStringSetting: async () => {},
 }));
 const me: Account = { id: 'me', username: 'me', acct: 'me', display_name: 'Me', avatar: '', emojis: [] };
 jest.mock('../services/authContext', () => ({ useAuth: () => ({ user: me }), useOptionalAuth: () => ({ user: me }) }));

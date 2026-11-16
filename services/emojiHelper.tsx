@@ -1,6 +1,16 @@
 import React from 'react';
 import { Image as RNImage, ImageStyle, StyleSheet, Text, View } from 'react-native';
 import { CustomEmoji } from './mastodon/types';
+import { useOptionalSettings } from './settingsContext';
+
+// Animated custom emoji keep the screen redrawing (battery): the still file unless media autoplay is on
+export const emojiSource = (emoji: Pick<CustomEmoji, 'url' | 'static_url'>, animate: boolean) =>
+    (animate ? emoji.url : emoji.static_url) || emoji.url || emoji.static_url;
+
+const EmojiImage = ({ emoji, style }: { emoji: CustomEmoji; style: ImageStyle }) => {
+    const animate = useOptionalSettings()?.mediaAutoplay ?? false;
+    return <RNImage source={{ uri: emojiSource(emoji, animate) }} style={style} />;
+};
 
 // Share of its height an emoji is lowered by, to tune how it sits against the text
 const EMOJI_DROP = 0.2;
@@ -37,11 +47,7 @@ export const renderTextWithEmojis = (
                     const emoji = emojis.find((e) => e.shortcode === shortcode);
                     if (emoji) {
                         return (
-                            <RNImage
-                                key={index}
-                                source={{ uri: emoji.url }}
-                                style={inlineEmojiStyle(emojiSize)}
-                            />
+                            <EmojiImage key={index} emoji={emoji} style={inlineEmojiStyle(emojiSize)} />
                         );
                     }
                 }
@@ -63,7 +69,7 @@ export const renderNameWithEmojis = (text: string, emojis: CustomEmoji[], textSt
             {parts.map((part, index) => {
                 const emoji = /^:\w+:$/.test(part) ? emojis?.find(e => e.shortcode === part.slice(1, -1)) : undefined;
                 return emoji ? (
-                    <RNImage key={index} source={{ uri: emoji.url }} style={{ width: emojiSize, height: emojiSize, resizeMode: 'contain' }} />
+                    <EmojiImage key={index} emoji={emoji} style={{ width: emojiSize, height: emojiSize, resizeMode: 'contain' }} />
                 ) : (
                     <Text key={index} style={[textStyle, styles.namePart]} numberOfLines={lines}>{part}</Text>
                 );

@@ -279,3 +279,35 @@ describe('Quoting in compose', () => {
         expect(createStatus).toHaveBeenCalledWith(expect.objectContaining({ quote_approval_policy: undefined }));
     });
 });
+
+describe('Post format', () => {
+    const renderCompose = () =>
+        render(
+            <QueryClientProvider client={createTestQueryClient()}>
+                <ComposeModal isOpen replyToStatus={null} quoteStatus={null} closeCompose={jest.fn()} />
+            </QueryClientProvider>
+        );
+
+    it('offers Markdown on servers that take it, and posts with it', async () => {
+        (fetchInstanceConfiguration as jest.Mock).mockResolvedValue({ ...DEFAULT_INSTANCE_CONFIGURATION, supportsMarkdown: true });
+        await renderCompose();
+
+        await fireEvent.press(await screen.findByRole('button', { name: 'Format: Plain text' }));
+        await fireEvent.press(screen.getByRole('radio', { name: /^Markdown/ }));
+        await fireEvent.changeText(screen.getByLabelText('Post text'), '**pugs**');
+        await fireEvent.press(screen.getByRole('button', { name: 'Post' }));
+
+        expect(createStatus).toHaveBeenCalledWith(expect.objectContaining({ status: '**pugs**', content_type: 'text/markdown' }));
+    });
+
+    it("isn't there on servers that don't, and sends no format", async () => {
+        (fetchInstanceConfiguration as jest.Mock).mockResolvedValue({ ...DEFAULT_INSTANCE_CONFIGURATION, supportsQuotes: true, supportsMarkdown: false });
+        await renderCompose();
+        await screen.findByRole('button', { name: /^Who can quote/ });
+
+        expect(screen.queryByTestId('compose-format')).toBeNull();
+        await fireEvent.changeText(screen.getByLabelText('Post text'), 'hi');
+        await fireEvent.press(screen.getByRole('button', { name: 'Post' }));
+        expect(createStatus).toHaveBeenCalledWith(expect.objectContaining({ content_type: undefined }));
+    });
+});

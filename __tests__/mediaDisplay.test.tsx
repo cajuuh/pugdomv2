@@ -6,7 +6,7 @@ import { getPreferences } from '../services/mastodon/preferences';
 import { useMediaDisplay } from '../hooks/useExpandSpoilers';
 
 const mockSettings: { showSensitiveMedia: boolean | null; expandSpoilers: boolean | null } = { showSensitiveMedia: null, expandSpoilers: null };
-jest.mock('../services/settingsContext', () => ({ useSettings: () => mockSettings }));
+jest.mock('../services/settingsContext', () => ({ useOptionalSettings: () => null, useSettings: () => mockSettings }));
 jest.mock('../services/authContext', () => ({ useOptionalAuth: () => ({ user: { id: 'me' } }) }));
 jest.mock('../services/mastodon/preferences', () => ({ getPreferences: jest.fn() }));
 

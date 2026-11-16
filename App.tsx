@@ -42,6 +42,9 @@ import ModeratedAccounts from './screens/Moderated/moderatedAccounts';
 import { FilterEditor, FilterList } from './screens/Filters/filters';
 import Reactions from './screens/Reactions/reactions';
 import AccountNote from './screens/AccountNote/accountNote';
+import NotificationRequests from './screens/NotificationRequests/notificationRequests';
+import NotificationRequestScreen from './screens/NotificationRequests/notificationRequest';
+import NotificationPolicyScreen from './screens/NotificationRequests/notificationPolicy';
 import EditProfile from './screens/EditProfile/editProfile';
 import { useUnreadConversations } from './hooks/useUnreadConversations';
 import { useServerPreferences } from './hooks/useExpandSpoilers';
@@ -49,6 +52,7 @@ import { useUnreadNotifications } from './hooks/useUnreadNotifications';
 import { DialogHost } from './components/Dialog/dialogHost';
 import { useAppUpdates } from './hooks/useAppUpdates';
 import { usePushNotifications } from './hooks/usePushNotifications';
+import { useStreaming } from './hooks/useStreaming';
 
 // Keep the pug splash up until the fonts and the saved account are loaded
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -117,6 +121,7 @@ function NavigationRoot() {
             onDrafts={() => push({ name: 'drafts' })}
             onModeratedAccounts={() => push({ name: 'moderatedAccounts' })}
             onFilters={() => push({ name: 'filters' })}
+            onNotificationPolicy={() => push({ name: 'notificationPolicy' })}
           />
         );
       case 'scheduledPosts':
@@ -158,6 +163,18 @@ function NavigationRoot() {
         return <FilterEditor filterId={route.filterId} onBack={pop} />;
       case 'accountNote':
         return <AccountNote account={route.account} note={route.note} onBack={pop} />;
+      case 'notificationRequests':
+        return (
+          <NotificationRequests
+            onBack={pop}
+            onOpenRequest={request => push({ name: 'notificationRequest', request })}
+            onRules={() => push({ name: 'notificationPolicy' })}
+          />
+        );
+      case 'notificationRequest':
+        return <NotificationRequestScreen request={route.request} onBack={pop} onStatusPress={openThread} />;
+      case 'notificationPolicy':
+        return <NotificationPolicyScreen onBack={pop} />;
     }
   };
 
@@ -168,6 +185,8 @@ function NavigationRoot() {
     reset();
     setActiveTab('notifications');
   });
+  // New posts, deletions, edits and notifications as they happen
+  useStreaming(ready && !!user && !isAddingAccount && !needsSetup);
 
   useEffect(() => {
     if (ready) {

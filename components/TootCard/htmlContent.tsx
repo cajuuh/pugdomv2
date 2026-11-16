@@ -3,11 +3,13 @@ import { Image, Platform, Pressable, Share } from 'react-native';
 import RenderHtml, { HTMLElementModel, HTMLContentModel, defaultSystemFonts, useInternalRenderer } from 'react-native-render-html';
 import { useOptionalMediaViewer } from '../MediaViewer/mediaViewer';
 import { CustomEmoji } from '../../services/mastodon/types';
-import { inlineEmojiStyle } from '../../services/emojiHelper';
+import { emojiSource, inlineEmojiStyle } from '../../services/emojiHelper';
+import { useOptionalSettings } from '../../services/settingsContext';
 import { fontFamilies } from '../../services/theme/typography';
 import { tagFromHref } from '../../services/mastodon/tags';
 import { breakLongRuns, withoutQuoteInline } from '../../services/htmlText';
 import { postTextMetrics } from './styles';
+import type { useTheme } from '../../services/themeContext';
 
 // Post (and bio) HTML: custom emoji inline, mentions / hashtags / links routed to the handlers
 
@@ -23,8 +25,9 @@ const customHTMLElementModels = {
 };
 
 // Tapping an emoji shows it bigger, in the media viewer
-const InlineEmoji = ({ src, shortcode }: { src: string; shortcode: string }) => {
+const InlineEmoji = ({ src, still, shortcode }: { src: string; still?: string; shortcode: string }) => {
     const viewer = useOptionalMediaViewer();
+    const animate = useOptionalSettings()?.mediaAutoplay ?? false;
     const label = `:${shortcode}:`;
     return (
         <Pressable
@@ -34,7 +37,7 @@ const InlineEmoji = ({ src, shortcode }: { src: string; shortcode: string }) => 
             accessibilityRole="imagebutton"
             accessibilityLabel={label}
         >
-            <Image source={{ uri: src }} style={[inlineEmojiStyle(16), { marginHorizontal: 2 }]} />
+            <Image source={{ uri: emojiSource({ url: src, static_url: still ?? '' }, animate) }} style={[inlineEmojiStyle(16), { marginHorizontal: 2 }]} />
         </Pressable>
     );
 };
@@ -51,7 +54,7 @@ const LinkRenderer = (props: any) => {
 };
 
 const renderers = {
-    emoji: ({ tnode }: any) => <InlineEmoji src={tnode.attributes.src} shortcode={tnode.attributes.shortcode} />,
+    emoji: ({ tnode }: any) => <InlineEmoji src={tnode.attributes.src} still={tnode.attributes.still} shortcode={tnode.attributes.shortcode} />,
     a: LinkRenderer,
 };
 
@@ -61,8 +64,48 @@ export const PARAGRAPH_GAP = 10;
 // Holding the text selects it, to copy (tester request); links and taps on the card still work
 const defaultTextProps = { selectable: true };
 
+// Code in posts
+const monospace = Platform.select({ ios: 'Menlo', default: 'monospace' });
+
 // RenderHtml ignores font families it wasn't told about
-const systemFonts = [...defaultSystemFonts, ...Object.values(fontFamilies)];
+const systemFonts = [...defaultSystemFonts, ...Object.values(fontFamilies), monospace];
+
+// Formatting from servers that post Markdown or HTML (glitch-soc, Akkoma, Pleroma), which Mastodon keeps.
+// One family per weight and style: fontWeight and fontStyle can't reach them on custom fonts.
+const formattingStyles = (colors: ReturnType<typeof useTheme>['colors'], fontSize: number) => {
+    const bold = { fontFamily: fontFamilies.bold };
+    const heading = (scale: number) => ({ ...bold, fontSize: Math.round(fontSize * scale), lineHeight: Math.round(fontSize * scale * 1.3), marginTop: 0, marginBottom: PARAGRAPH_GAP / 2 });
+    const code = { fontFamily: monospace, fontSize: Math.round(fontSize * 0.9), backgroundColor: colors.inputBackground };
+    return {
+        strong: bold,
+        b: bold,
+        em: { fontFamily: fontFamilies.italic, fontStyle: 'normal' as const },
+        i: { fontFamily: fontFamilies.italic, fontStyle: 'normal' as const },
+        code,
+        // Spelled out: the library's own defaults for these didn't reach the device
+        pre: { ...code, whiteSpace: 'pre' as const, padding: 10, borderRadius: 8, marginTop: 0, marginBottom: PARAGRAPH_GAP },
+        del: { textDecorationLine: 'line-through' as const },
+        s: { textDecorationLine: 'line-through' as const },
+        blockquote: {
+            marginTop: 0,
+            marginBottom: PARAGRAPH_GAP,
+            marginLeft: 0,
+            marginRight: 0,
+            paddingLeft: 10,
+            borderLeftWidth: 3,
+            borderLeftColor: colors.accentColor,
+            color: colors.textSecondary,
+        },
+        ul: { marginTop: 0, marginBottom: PARAGRAPH_GAP, paddingLeft: 18 },
+        ol: { marginTop: 0, marginBottom: PARAGRAPH_GAP, paddingLeft: 18 },
+        h1: heading(1.3),
+        h2: heading(1.2),
+        h3: heading(1.1),
+        h4: heading(1),
+        h5: heading(1),
+        h6: heading(1),
+    };
+};
 
 // What a link in a post is. Mastodon marks hashtags as class="mention hashtag" (rel="tag"), so check for
 // hashtags before mentions; links from other software may only have the /tags/ path.
@@ -96,6 +139,7 @@ export const StatusHtmlContent = React.memo(({ content, emojis, colors, bodyFont
     }), [onPressMention, onPressHashtag, onPressLink]);
 
     const tagsStyles = React.useMemo(() => ({
+        ...formattingStyles(colors, postTextMetrics(!!compactMode, textSize).fontSize),
         body: {
             ...bodyFont,
             color: colors.textPrimary,
@@ -126,7 +170,7 @@ export const StatusHtmlContent = React.memo(({ content, emojis, colors, bodyFont
                 const regex = new RegExp(`:${emoji.shortcode}:`, 'g');
                 // Closed explicitly: HTML ignores "/>" on custom tags, so everything after the first
                 // emoji (more emoji, the rest of the text) would end up inside it, unseen
-                html = html.replace(regex, `<emoji src="${emoji.url}" shortcode="${emoji.shortcode}"></emoji>`);
+                html = html.replace(regex, `<emoji src="${emoji.url}" still="${emoji.static_url}" shortcode="${emoji.shortcode}"></emoji>`);
             });
         }
         return breakLongRuns(html);

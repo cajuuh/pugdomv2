@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dimensions, View } from 'react-native';
+import { Dimensions, Text, View } from 'react-native';
 import { State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
@@ -18,6 +18,7 @@ import { Account, Notification } from '../services/mastodon/types';
 import { actorsText, buildListItems, notificationTime, plainText, withoutOwnMention } from '../screens/Notifications/rows';
 import { makeStyles } from '../screens/Notifications/styles';
 import { ThemeColors } from '../services/themeContext';
+import { NavigationProvider, useNavigator } from '../services/navigationContext';
 
 // Tests give v1-shaped lists; the screen gets them as rows, grouped the way the v1 fallback groups them.
 // The v2 shape is covered in notificationGroups.test.ts.
@@ -34,7 +35,13 @@ jest.mock('../services/mastodon/notifications', () => {
         dismissNotificationGroup: jest.fn(),
     };
 });
-jest.mock('../services/settingsContext', () => ({ useSettings: () => ({ groupNotifications: true }) }));
+// The server's notification policy; null: a server without it
+let mockPolicy: any = null;
+jest.mock('../services/mastodon/notificationRequests', () => ({
+    ...jest.requireActual('../services/mastodon/notificationRequests'),
+    getNotificationPolicy: jest.fn(async () => mockPolicy),
+}));
+jest.mock('../services/settingsContext', () => ({ useOptionalSettings: () => null, useSettings: () => ({ groupNotifications: true }) }));
 jest.mock('../services/mastodon/accounts', () => ({
     followAccount: jest.fn(),
     getRelationships: jest.fn(),
@@ -92,8 +99,43 @@ describe('Notifications', () => {
         mockedRelationships.mockResolvedValue([]);
         (getConversations as jest.Mock).mockResolvedValue({ conversations: [] });
         mockMarker = null;
+        mockPolicy = null;
         // What earlier tests showed would count as seen
         return AsyncStorage.clear();
+    });
+
+    describe('filtered notifications', () => {
+        const StackProbe = () => <Text testID="stack">{JSON.stringify(useNavigator().stack.map(entry => entry.route.name))}</Text>;
+        const renderWithNavigation = () =>
+            render(
+                <QueryClientProvider client={queryClient}>
+                    <NavigationProvider>
+                        <Notifications />
+                        <StackProbe />
+                    </NavigationProvider>
+                </QueryClientProvider>
+            );
+        const policy = (pending: number) => ({
+            for_not_following: 'accept', for_not_followers: 'accept', for_new_accounts: 'filter', for_private_mentions: 'filter', for_limited_accounts: 'filter',
+            summary: { pending_requests_count: pending, pending_notifications_count: pending * 2 },
+        });
+
+        it('shows a row when the server holds some back, and it opens them', async () => {
+            mockedFetch.mockResolvedValue([]);
+            mockPolicy = policy(2);
+            await renderWithNavigation();
+
+            await fireEvent.press(await screen.findByRole('button', { name: 'Filtered notifications, 2 accounts waiting' }));
+            expect(screen.getByTestId('stack').props.children).toBe('["notificationRequests"]');
+        });
+
+        it('leaves the row out when nothing waits, or the server has no policy', async () => {
+            mockedFetch.mockResolvedValue([notification('1', 'mention', account('a', 'alice'))]);
+            mockPolicy = policy(0);
+            await renderWithNavigation();
+            await screen.findByText(/alice/);
+            expect(screen.queryByTestId('filtered-notifications')).toBeNull();
+        });
     });
 
     it('asks the server only for the types it can render', async () => {

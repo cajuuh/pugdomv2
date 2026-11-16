@@ -19,6 +19,10 @@ export interface InstanceConfiguration {
     supportsQuotes: boolean;
     // The server can translate posts (POST /statuses/:id/translate)
     supportsTranslation: boolean;
+    // Where the streaming API lives (wss://…), when the server says; it can be another host
+    streamingUrl?: string;
+    // Posts can be written in Markdown (content_type text/markdown): glitch-soc, Akkoma, Pleroma
+    supportsMarkdown: boolean;
 }
 
 // Mastodon's own defaults, used when the instance doesn't report its limits
@@ -34,7 +38,10 @@ export const DEFAULT_INSTANCE_CONFIGURATION: InstanceConfiguration = {
     supportedMimeTypes: [],
     supportsQuotes: false,
     supportsTranslation: false,
+    supportsMarkdown: false,
 };
+
+export const MARKDOWN = 'text/markdown';
 
 // Mastodon's API version that added quote posts and their policies
 const QUOTES_API_VERSION = 7;
@@ -42,7 +49,9 @@ const QUOTES_API_VERSION = 7;
 interface InstanceV2 {
     api_versions?: { mastodon?: number };
     configuration?: {
-        statuses?: { max_characters?: number; max_media_attachments?: number };
+        urls?: { streaming?: string };
+        // glitch-soc adds supported_mime_types
+        statuses?: { max_characters?: number; max_media_attachments?: number; supported_mime_types?: string[] };
         polls?: { max_options?: number; max_characters_per_option?: number };
         translation?: { enabled?: boolean };
         media_attachments?: {
@@ -57,6 +66,9 @@ interface InstanceV2 {
 
 // Akkoma and Pleroma name their limits differently, in v1 only
 interface InstanceV1 extends Pick<InstanceV2, 'configuration'> {
+    urls?: { streaming_api?: string };
+    // Akkoma and Pleroma list what posts can be written in
+    pleroma?: { metadata?: { post_formats?: string[] } };
     max_toot_chars?: number;
     poll_limits?: { max_options?: number; max_option_chars?: number };
     description_limit?: number;
@@ -90,5 +102,7 @@ export async function fetchInstanceConfiguration(): Promise<InstanceConfiguratio
         supportedMimeTypes: media?.supported_mime_types ?? defaults.supportedMimeTypes,
         supportsQuotes: (v2?.api_versions?.mastodon ?? 0) >= QUOTES_API_VERSION,
         supportsTranslation: !!v2?.configuration?.translation?.enabled,
+        streamingUrl: v2?.configuration?.urls?.streaming ?? v1?.urls?.streaming_api,
+        supportsMarkdown: [...(statuses?.supported_mime_types ?? []), ...(v1?.pleroma?.metadata?.post_formats ?? [])].includes(MARKDOWN),
     };
 }

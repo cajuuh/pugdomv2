@@ -15,6 +15,7 @@ import ClearNotificationsHelp from './clearNotificationsHelp';
 import PushAlerts from './pushAlerts';
 import { Esmeralda, useEsmeraldaTaps } from './esmeralda';
 import { pushAvailable, requestPushPermission } from '../../services/push';
+import { useNotificationPolicy } from '../../hooks/useNotificationRequests';
 import { SettingsHeader } from './header';
 import { makeStyles } from './styles';
 import { useI18n } from '../../services/i18n/i18nContext';
@@ -35,9 +36,12 @@ interface SettingsProps {
     onDrafts: () => void;
     onModeratedAccounts: () => void;
     onFilters: () => void;
+    // The notification policy (Mastodon 4.3+)
+    onNotificationPolicy?: () => void;
 }
 
-const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts, onModeratedAccounts, onFilters }) => {
+const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts, onModeratedAccounts, onFilters, onNotificationPolicy }) => {
+    const { data: notificationPolicy } = useNotificationPolicy();
     const { user, logout, savedAccounts, switchAccount, setAddingAccount, updateUser } = useAuth();
     const activeServer = savedAccounts.find(account => account.userInfo.id === user?.id)?.instanceUrl;
     const { colors, type, coat } = useTheme();
@@ -57,6 +61,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
         setHomeBoosts,
         homeReplies,
         setHomeReplies,
+        keepPlace,
+        setKeepPlace,
         replyUnlisted,
         setReplyUnlisted,
         groupNotifications,
@@ -265,7 +271,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
                         <Icon name="chevron-forward" size={16} color={colors.textMuted} />
                     </Pressable>
                     <View style={styles.divider} />
-                    {pushAvailable && (
+                    {pushAvailable ? (
                         <>
                             {switchRow('notifications-outline', t('settings.pushNotifications'), notifications, changePush)}
                             {notifications && (
@@ -278,6 +284,34 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
                                     </Pressable>
                                 </>
                             )}
+                            <View style={styles.divider} />
+                        </>
+                    ) : (
+                        <>
+                            {/* The F-Droid / GitHub build leaves out Google's push, so the permission is greyed out in
+                                Android settings: say why here instead of a missing switch */}
+                            <View
+                                testID="push-unavailable"
+                                style={styles.row}
+                                accessible
+                                accessibilityLabel={`${t('settings.pushNotifications')}. ${t('settings.pushUnavailable')}`}
+                            >
+                                <Icon name="notifications-outline" size={20} color={colors.textMuted} />
+                                <View style={styles.rowText}>
+                                    <Text style={labelStyle}>{t('settings.pushNotifications')}</Text>
+                                    <Text style={[type.meta, styles.rowDetail]}>{t('settings.pushUnavailable')}</Text>
+                                </View>
+                            </View>
+                            <View style={styles.divider} />
+                        </>
+                    )}
+                    {!!notificationPolicy && onNotificationPolicy && (
+                        <>
+                            <Pressable style={styles.row} onPress={onNotificationPolicy} accessibilityRole="button">
+                                <Icon name="options-outline" size={20} color={colors.accentText} />
+                                <Text style={[labelStyle, styles.rowText]}>{t('filteredNotifications.rulesTitle')}</Text>
+                                <Icon name="chevron-forward" size={16} color={colors.textMuted} />
+                            </Pressable>
                             <View style={styles.divider} />
                         </>
                     )}
@@ -317,6 +351,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
                     {switchRow('repeat', t('settings.homeBoosts'), homeBoosts, setHomeBoosts)}
                     <View style={styles.divider} />
                     {switchRow('chatbubbles-outline', t('settings.homeReplies'), homeReplies, setHomeReplies)}
+                    <View style={styles.divider} />
+                    {switchRow('time-outline', t('settings.keepPlace'), keepPlace, setKeepPlace)}
                     <View style={styles.divider} />
                     {switchRow('lock-open-outline', t('settings.replyUnlisted'), replyUnlisted, setReplyUnlisted)}
                     <View style={styles.divider} />

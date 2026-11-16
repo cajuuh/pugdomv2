@@ -8,7 +8,7 @@ import { useExpandSpoilers } from '../hooks/useExpandSpoilers';
 jest.mock('../services/api/client', () => ({ __esModule: true, default: { get: jest.fn() } }));
 jest.mock('../services/authContext', () => ({ useOptionalAuth: () => ({ user: { id: 'me' } }) }));
 let mockExpandSpoilers: boolean | null = null;
-jest.mock('../services/settingsContext', () => ({ useSettings: () => ({ expandSpoilers: mockExpandSpoilers }) }));
+jest.mock('../services/settingsContext', () => ({ useOptionalSettings: () => null, useSettings: () => ({ expandSpoilers: mockExpandSpoilers }) }));
 
 const mockedGet = apiClient.get as jest.Mock;
 

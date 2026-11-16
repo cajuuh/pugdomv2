@@ -35,6 +35,9 @@ interface SettingsContextType {
     setHomeBoosts: (value: boolean) => Promise<void>;
     homeReplies: boolean;
     setHomeReplies: (value: boolean) => Promise<void>;
+    // Reopen Home where you left it, and keep what's loaded when new posts arrive (gap rows)
+    keepPlace: boolean;
+    setKeepPlace: (value: boolean) => Promise<void>;
     // Replies to public posts start as unlisted
     replyUnlisted: boolean;
     setReplyUnlisted: (value: boolean) => Promise<void>;
@@ -71,6 +74,7 @@ export const HIDE_COUNTS_KEY = 'pugdom_settings_hide_counts';
 export const SWIPE_FEEDS_KEY = 'pugdom_settings_swipe_feeds';
 export const HOME_BOOSTS_KEY = 'pugdom_settings_home_boosts';
 export const HOME_REPLIES_KEY = 'pugdom_settings_home_replies';
+export const KEEP_PLACE_KEY = 'pugdom_settings_keep_place';
 export const REPLY_UNLISTED_KEY = 'pugdom_settings_reply_unlisted';
 export const GROUP_NOTIFICATIONS_KEY ='pugdom_settings_group_notifications';
 export const UNCROPPED_MEDIA_KEY = 'pugdom_settings_uncropped_media';
@@ -91,6 +95,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const [swipeFeeds, setSwipeFeedsState] = useState(false);
     const [homeBoosts, setHomeBoostsState] = useState(true);
     const [homeReplies, setHomeRepliesState] = useState(true);
+    const [keepPlace, setKeepPlaceState] = useState(false);
     const [replyUnlisted, setReplyUnlistedState] = useState(false);
     const [groupNotifications, setGroupNotificationsState] = useState(true);
     const [uncroppedMedia, setUncroppedMediaState] = useState(true);
@@ -114,6 +119,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 const swipe = await getSetting(SWIPE_FEEDS_KEY, false);
                 const boosts = await getSetting(HOME_BOOSTS_KEY, true);
                 const replies = await getSetting(HOME_REPLIES_KEY, true);
+                const place = await getSetting(KEEP_PLACE_KEY, false);
                 const unlistedReplies = await getSetting(REPLY_UNLISTED_KEY, false);
                 const grouped = await getSetting(GROUP_NOTIFICATIONS_KEY, true);
                 const uncropped = await getSetting(UNCROPPED_MEDIA_KEY, true);
@@ -133,6 +139,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 setSwipeFeedsState(swipe);
                 setHomeBoostsState(boosts);
                 setHomeRepliesState(replies);
+                setKeepPlaceState(place);
                 setReplyUnlistedState(unlistedReplies);
                 setGroupNotificationsState(grouped);
                 setUncroppedMediaState(uncropped);
@@ -193,6 +200,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const setHomeReplies = async (value: boolean) => {
         setHomeRepliesState(value);
         await saveSetting(HOME_REPLIES_KEY, value);
+    };
+
+    const setKeepPlace = async (value: boolean) => {
+        setKeepPlaceState(value);
+        await saveSetting(KEEP_PLACE_KEY, value);
     };
 
     const setGroupNotifications = async (value: boolean) => {
@@ -268,6 +280,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 setHomeBoosts,
                 homeReplies,
                 setHomeReplies,
+                keepPlace,
+                setKeepPlace,
                 replyUnlisted,
                 setReplyUnlisted,
                 groupNotifications,

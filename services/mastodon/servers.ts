@@ -20,7 +20,7 @@ export type ServerCheck =
     | { ok: false; reason: 'invalid' | 'own' | 'unreachable' | 'private' };
 
 // Anonymous: nothing from our account goes to the other server
-const serverUrl = (domain: string, path: string) => `https://${domain}/api${path}`;
+export const serverUrl = (domain: string, path: string) => `https://${domain}/api${path}`;
 
 // A server's local timeline, read without an account (newest first)
 export async function getServerTimeline(domain: string, maxId?: string, sinceId?: string, limit?: number): Promise<Status[]> {

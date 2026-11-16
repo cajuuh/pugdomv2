@@ -9,6 +9,8 @@ import { renderNameWithEmojis, renderTextWithEmojis } from '../services/emojiHel
 import { HUGE_POST, LONG_POST, breakLongRuns, postSize, splitTrailingHashtags } from '../services/htmlText';
 
 jest.mock('../components/MediaViewer/mediaViewer', () => ({ useOptionalMediaViewer: jest.fn(() => undefined) }));
+let mockAutoplay = false;
+jest.mock('../services/settingsContext', () => ({ useOptionalSettings: () => ({ mediaAutoplay: mockAutoplay }) }));
 
 const emoji = (shortcode: string): CustomEmoji => ({
     shortcode,
@@ -33,6 +35,36 @@ describe('StatusHtmlContent emoji', () => {
         await renderPost('<p>good :pug: morning</p>', [emoji('pug')]);
 
         expect(screen.getByText(/morning/)).toBeTruthy();
+    });
+});
+
+describe('animated custom emoji', () => {
+    const blob: CustomEmoji = { shortcode: 'blob', url: 'https://x/blob.gif', static_url: 'https://x/blob.png', visible_in_picker: true };
+    // Every image's address in what's on screen
+    const imageUris = (node: any): string[] =>
+        !node ? [] : Array.isArray(node) ? node.flatMap(imageUris) : [...(node.type === 'Image' ? [node.props.source.uri] : []), ...imageUris(node.children)];
+    const renderAll = () =>
+        render(
+            <>
+                <StatusHtmlContent content="<p>hi :blob:</p>" emojis={[blob]} colors={mockTheme.colors} bodyFont={mockTheme.type.body} width={320} />
+                {renderNameWithEmojis('Pug :blob:', [blob], {})}
+                {renderTextWithEmojis('Pug :blob:', [blob], {})}
+            </>,
+        );
+
+    afterEach(() => {
+        mockAutoplay = false;
+    });
+
+    it('holds still in posts and names unless media autoplay is on', async () => {
+        const { toJSON } = await renderAll();
+        expect(imageUris(toJSON())).toEqual(['https://x/blob.png', 'https://x/blob.png', 'https://x/blob.png']);
+    });
+
+    it('moves with media autoplay on', async () => {
+        mockAutoplay = true;
+        const { toJSON } = await renderAll();
+        expect(imageUris(toJSON())).toEqual(['https://x/blob.gif', 'https://x/blob.gif', 'https://x/blob.gif']);
     });
 });
 
@@ -176,5 +208,38 @@ describe('tapping an emoji', () => {
     it('still draws it outside the viewer', async () => {
         const { toJSON } = await renderPost('<p>:pug:</p>', [emoji('pug')]);
         expect(shownEmoji(toJSON())).toEqual(['https://x/pug.png']);
+    });
+});
+
+describe('formatted posts (Markdown and HTML from glitch-soc, Akkoma, Pleroma)', () => {
+    // The style a piece of text ends up with, nested styles flattened
+    const styleOf = (text: string) => {
+        const { StyleSheet } = jest.requireActual('react-native');
+        let node: any = screen.getByText(text);
+        const styles: any[] = [];
+        while (node) {
+            if (node.props?.style) styles.unshift(node.props.style);
+            node = node.parent;
+        }
+        return StyleSheet.flatten(styles);
+    };
+
+    it('uses the bold and italic faces, and monospace for code', async () => {
+        await renderPost('<p><strong>loud</strong> <em>soft</em> <code>npm i</code></p>', []);
+
+        expect(styleOf('loud').fontFamily).toBe('Nunito_700Bold');
+        expect(styleOf('soft').fontFamily).toBe('Nunito_400Regular_Italic');
+        expect(styleOf('npm i').fontFamily).toBe(Platform.select({ ios: 'Menlo', default: 'monospace' }));
+    });
+
+    it('marks quotes with the accent colour and shows lists and headings', async () => {
+        await renderPost('<h2>Pugs</h2><blockquote><p>snort</p></blockquote><ul><li>one</li><li>two</li></ul>', []);
+
+        expect(screen.getByText('Pugs')).toBeTruthy();
+        expect(screen.getByText('one')).toBeTruthy();
+        // The bar is on the quote's block, somewhere above the text
+        const around: string[] = [];
+        for (let node: any = screen.getByText('snort'); node; node = node.parent) around.push(JSON.stringify(node.props?.style ?? null));
+        expect(around.join()).toContain(mockTheme.colors.accentColor);
     });
 });
