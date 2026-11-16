@@ -446,6 +446,15 @@ describe('Timeline feed pills', () => {
         expect(screen.getByRole('tab', { name: '#pugs' })).toBeSelected();
     });
 
+    it('opens on the first pinned feed, not always Home', async () => {
+        await AsyncStorage.setItem(getPinnedStorageKey('me'), JSON.stringify([DEFAULT_PINNED_FEEDS[1], DEFAULT_PINNED_FEEDS[0]]));
+        await render(withQuery(<Timeline />));
+
+        await waitFor(() => expect(screen.getByRole('tab', { name: 'Local' })).toBeSelected());
+        expect(await screen.findByText('post /timelines/public')).toBeTruthy();
+        expect(screen.queryByText('post /timelines/home')).toBeNull();
+    });
+
     it('opens the feed editor from the sheet', async () => {
         const StackProbe = () => <Text testID="stack">{JSON.stringify(useNavigator().stack.map(entry => entry.route))}</Text>;
         await render(withQuery(<><Timeline /><StackProbe /></>));
