@@ -593,6 +593,20 @@ export const la: Dictionary = {
         noneMuted: 'Neminem silentio affecisti',
         noneBlocked: 'Neminem obstruxisti',
     },
+    // Collections (Mastodon 4.6): curated lists of accounts on profiles
+    collections: {
+        title: 'Collectiones',
+        one: 'Collectio',
+        accounts_one: '{{count}} persona',
+        accounts_other: '{{count}} personae',
+        unlisted: 'Tantum per nexum',
+        sensitive: 'Delicatum',
+        by: 'A {{name}}',
+        share: 'Collectionem communicare',
+        pending: 'Nondum consensit',
+        empty: 'Nemo adhuc in hac collectione',
+        loadFailed: 'Collectio aperiri non potuit',
+    },
     reactions: {
         favouritesTitle: 'Probatum a',
         boostsTitle: 'Divulgatum a',

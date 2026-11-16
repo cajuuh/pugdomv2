@@ -99,6 +99,13 @@ describe('fetchInstanceConfiguration', () => {
         await expect(fetchInstanceConfiguration()).resolves.toMatchObject({ supportsQuotes: false });
     });
 
+    it('knows collections come with Mastodon API version 10', async () => {
+        mockedGet.mockResolvedValue({ data: { api_versions: { mastodon: 10 } } });
+        await expect(fetchInstanceConfiguration()).resolves.toMatchObject({ supportsCollections: true });
+        mockedGet.mockResolvedValue({ data: { api_versions: { mastodon: 9 } } });
+        await expect(fetchInstanceConfiguration()).resolves.toMatchObject({ supportsCollections: false });
+    });
+
     it('knows when posts can be written in Markdown: glitch-soc in v2, Akkoma and Pleroma in v1', async () => {
         mockedGet.mockResolvedValue({ data: { configuration: { statuses: { max_characters: 500, supported_mime_types: ['text/plain', 'text/markdown'] } } } });
         await expect(fetchInstanceConfiguration()).resolves.toMatchObject({ supportsMarkdown: true });

@@ -606,6 +606,20 @@ export const en = {
         noneMuted: "You haven't muted anyone",
         noneBlocked: "You haven't blocked anyone",
     },
+    // Collections (Mastodon 4.6): curated lists of accounts on profiles
+    collections: {
+        title: 'Collections',
+        one: 'Collection',
+        accounts_one: '{{count}} account',
+        accounts_other: '{{count}} accounts',
+        unlisted: 'Only by link',
+        sensitive: 'Sensitive',
+        by: 'By {{name}}',
+        share: 'Share collection',
+        pending: "Hasn't agreed to be featured yet",
+        empty: 'No one in this collection yet',
+        loadFailed: "Couldn't open this collection",
+    },
     reactions: {
         favouritesTitle: 'Favourited by',
         boostsTitle: 'Boosted by',

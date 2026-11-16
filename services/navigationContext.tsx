@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
-import { Account, Status } from './mastodon/types';
+import { Account, Collection, Status } from './mastodon/types';
 import { FeedDescriptor } from './mastodon/feedTypes';
 import { NotificationRequest } from './mastodon/notificationRequests';
 
@@ -14,6 +14,8 @@ export type Route =
     | { name: 'drafts' }
     | { name: 'account'; accountId: string; account?: Account }
     | { name: 'hashtag'; tag: string }
+    // A collection of accounts (Mastodon 4.6); the copy from a profile shows while it loads
+    | { name: 'collection'; collectionId: string; collection?: Collection }
     | { name: 'link'; url: string; title?: string }
     | { name: 'feedEditor'; feed?: FeedDescriptor }
     | { name: 'listEditor'; listId?: string }

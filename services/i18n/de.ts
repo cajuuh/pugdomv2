@@ -592,6 +592,20 @@ export const de: Dictionary = {
         noneMuted: 'Du hast niemanden stummgeschaltet',
         noneBlocked: 'Du hast niemanden blockiert',
     },
+    // Collections (Mastodon 4.6): curated lists of accounts on profiles
+    collections: {
+        title: 'Sammlungen',
+        one: 'Sammlung',
+        accounts_one: '{{count}} Konto',
+        accounts_other: '{{count}} Konten',
+        unlisted: 'Nur per Link',
+        sensitive: 'Heikel',
+        by: 'Von {{name}}',
+        share: 'Sammlung teilen',
+        pending: 'Hat noch nicht zugestimmt',
+        empty: 'Noch niemand in dieser Sammlung',
+        loadFailed: 'Die Sammlung ließ sich nicht öffnen',
+    },
     reactions: {
         favouritesTitle: 'Favorisiert von',
         boostsTitle: 'Geteilt von',

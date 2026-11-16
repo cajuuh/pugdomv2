@@ -594,6 +594,20 @@ export const ptBR: Dictionary = {
         noneMuted: 'Você não silenciou ninguém',
         noneBlocked: 'Você não bloqueou ninguém',
     },
+    // Collections (Mastodon 4.6): curated lists of accounts on profiles
+    collections: {
+        title: 'Coleções',
+        one: 'Coleção',
+        accounts_one: '{{count}} conta',
+        accounts_other: '{{count}} contas',
+        unlisted: 'Só pelo link',
+        sensitive: 'Sensível',
+        by: 'Por {{name}}',
+        share: 'Compartilhar coleção',
+        pending: 'Ainda não aceitou aparecer',
+        empty: 'Ninguém nesta coleção ainda',
+        loadFailed: 'Não deu para abrir esta coleção',
+    },
     reactions: {
         favouritesTitle: 'Favoritado por',
         boostsTitle: 'Boosts de',

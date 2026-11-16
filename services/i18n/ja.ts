@@ -593,6 +593,20 @@ export const ja: Dictionary = {
         noneMuted: '誰もミュートしていません',
         noneBlocked: '誰もブロックしていません',
     },
+    // Collections (Mastodon 4.6): curated lists of accounts on profiles
+    collections: {
+        title: 'コレクション',
+        one: 'コレクション',
+        accounts_one: '{{count}}アカウント',
+        accounts_other: '{{count}}アカウント',
+        unlisted: 'リンクを知っている人のみ',
+        sensitive: '閲覧注意',
+        by: '作成: {{name}}',
+        share: 'コレクションを共有',
+        pending: '掲載の承認待ち',
+        empty: 'このコレクションにはまだ誰もいません',
+        loadFailed: 'このコレクションを開けませんでした',
+    },
     reactions: {
         favouritesTitle: 'お気に入りした人',
         boostsTitle: 'ブーストした人',

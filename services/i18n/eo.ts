@@ -592,6 +592,20 @@ export const eo: Dictionary = {
         noneMuted: 'Vi silentigis neniun',
         noneBlocked: 'Vi blokis neniun',
     },
+    // Collections (Mastodon 4.6): curated lists of accounts on profiles
+    collections: {
+        title: 'Kolektoj',
+        one: 'Kolekto',
+        accounts_one: '{{count}} konto',
+        accounts_other: '{{count}} kontoj',
+        unlisted: 'Nur per ligilo',
+        sensitive: 'Tikla',
+        by: 'De {{name}}',
+        share: 'Kundividi kolekton',
+        pending: 'Ankoraŭ ne konsentis aperi',
+        empty: 'Ankoraŭ neniu en ĉi tiu kolekto',
+        loadFailed: 'Ne eblis malfermi ĉi tiun kolekton',
+    },
     reactions: {
         favouritesTitle: 'Stelumita de',
         boostsTitle: 'Diskonigita de',

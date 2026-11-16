@@ -225,6 +225,36 @@ export interface Poll {
     emojis: CustomEmoji[];
 }
 
+// One person in a collection. They have to agree to be featured: until then it's pending (only the owner sees it)
+export interface CollectionItem {
+    id: string;
+    account_id: string | null;
+    state: 'pending' | 'accepted' | 'rejected' | 'revoked';
+    created_at: string;
+}
+
+// A curated, public list of accounts someone features on their profile (Mastodon 4.6)
+export interface Collection {
+    id: string;
+    // Who made it
+    account_id: string;
+    uri: string;
+    url: string | null;
+    name: string;
+    // HTML
+    description: string | null;
+    language: string | null;
+    local: boolean;
+    sensitive: boolean;
+    // Shown on the owner's profile; otherwise only reachable by its link
+    discoverable: boolean;
+    tag: { name: string; url: string } | null;
+    created_at: string;
+    updated_at: string;
+    item_count: number;
+    items: CollectionItem[];
+}
+
 export interface Relationship {
     id: string;
     following: boolean;

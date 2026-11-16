@@ -28,6 +28,7 @@ import { I18nProvider, useI18n } from './services/i18n/i18nContext';
 import { NavigationProvider, StackEntry, useNavigator } from './services/navigationContext';
 import Account from './screens/Account/account';
 import Hashtag from './screens/Hashtag/hashtag';
+import Collection from './screens/Collection/collection';
 import LinkTimeline from './screens/LinkTimeline/linkTimeline';
 import FeedEditor from './screens/FeedEditor/feedEditor';
 import ListEditor from './screens/ListEditor/listEditor';
@@ -133,6 +134,8 @@ function NavigationRoot() {
         return <Account accountId={route.accountId} account={route.account} onBack={pop} onStatusPress={openThread} onSettingsPress={openSettings} />;
       case 'hashtag':
         return <Hashtag tag={route.tag} onBack={pop} onStatusPress={openThread} />;
+      case 'collection':
+        return <Collection collectionId={route.collectionId} collection={route.collection} onBack={pop} />;
       case 'link':
         return <LinkTimeline url={route.url} title={route.title} onBack={pop} onStatusPress={openThread} />;
       case 'feedEditor':

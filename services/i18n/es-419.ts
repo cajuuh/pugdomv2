@@ -593,6 +593,20 @@ export const es419: Dictionary = {
         noneMuted: 'No has silenciado a nadie',
         noneBlocked: 'No has bloqueado a nadie',
     },
+    // Collections (Mastodon 4.6): curated lists of accounts on profiles
+    collections: {
+        title: 'Colecciones',
+        one: 'Colección',
+        accounts_one: '{{count}} cuenta',
+        accounts_other: '{{count}} cuentas',
+        unlisted: 'Solo con el enlace',
+        sensitive: 'Sensible',
+        by: 'De {{name}}',
+        share: 'Compartir colección',
+        pending: 'Todavía no aceptó aparecer',
+        empty: 'Todavía no hay nadie en esta colección',
+        loadFailed: 'No se pudo abrir esta colección',
+    },
     reactions: {
         favouritesTitle: 'Marcada como favorita por',
         boostsTitle: 'Impulsada por',

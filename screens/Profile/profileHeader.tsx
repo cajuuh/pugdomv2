@@ -22,6 +22,11 @@ import { useNotifyOff, useNotifyOn } from '../../hooks/useRelationships';
 import { dialog } from '../../services/dialog';
 import { useCompose } from '../../services/composeContext';
 import { useOptionalSettings } from '../../services/settingsContext';
+import { CollectionCards } from '../../components/CollectionCards/collectionCards';
+import { useAccountCollections } from '../../hooks/useCollections';
+
+// The profile's side padding (styles.info)
+const PROFILE_GUTTER = 20;
 
 const originOf = (url?: string) => url?.match(/^https?:\/\/[^/?#]+/i)?.[0];
 
@@ -82,6 +87,7 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
     };
 
     const { push } = useNavigator();
+    const collections = useAccountCollections(user.id);
     const { openMedia } = useMediaViewer();
     // The profile picture or header, full size in the viewer (zoom, swipe to close)
     const viewImage = (url: string) => openMedia([{ id: url, type: 'image', url, preview_url: url } as Attachment], 0);
@@ -325,6 +331,12 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
                     {followStat('following', user.following_count, t('profile.statFollowing'))}
                     {followStat('followers', user.followers_count, t('profile.statFollowers'))}
                 </View>
+
+                <CollectionCards
+                    collections={collections}
+                    gutter={PROFILE_GUTTER}
+                    onOpen={collection => push({ name: 'collection', collectionId: collection.id, collection })}
+                />
             </View>
 
             <View style={styles.tabs}>

@@ -593,6 +593,20 @@ export const zhCN: Dictionary = {
         noneMuted: '你没有隐藏任何人',
         noneBlocked: '你没有屏蔽任何人',
     },
+    // Collections (Mastodon 4.6): curated lists of accounts on profiles
+    collections: {
+        title: '收藏集',
+        one: '收藏集',
+        accounts_one: '{{count}}个账号',
+        accounts_other: '{{count}}个账号',
+        unlisted: '仅限链接访问',
+        sensitive: '敏感内容',
+        by: '由 {{name}} 创建',
+        share: '分享收藏集',
+        pending: '尚未同意被收录',
+        empty: '这个收藏集里还没有人',
+        loadFailed: '无法打开这个收藏集',
+    },
     reactions: {
         favouritesTitle: '喜欢的人',
         boostsTitle: '转嘟的人',
