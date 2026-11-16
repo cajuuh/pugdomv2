@@ -573,7 +573,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     <Image
                         source={{ uri: card.image }}
                         placeholder={card.blurhash ? { blurhash: card.blurhash } : undefined}
-                        recyclingKey={card.image}
+                        key={card.image}
                         style={StyleSheet.absoluteFill}
                         contentFit="cover"
                     />

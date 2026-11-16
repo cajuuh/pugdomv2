@@ -117,6 +117,18 @@ describe('Avatar', () => {
         mockAutoplay = false;
     });
 
+    // A recycled row that reuses the image view could show a late load from its previous row: someone else's face
+    it('gets a new image view when a recycled row changes picture', async () => {
+        const { rerender } = await render(<Avatar name="alice" uri="https://example.social/a.png" />);
+        const first = screen.getByTestId('avatar-image');
+
+        await rerender(<Avatar name="alice" uri="https://example.social/a.png" />);
+        expect(screen.getByTestId('avatar-image')).toBe(first);
+
+        await rerender(<Avatar name="bob" uri="https://example.social/b.png" />);
+        expect(screen.getByTestId('avatar-image')).not.toBe(first);
+    });
+
     it('shows a badge when given one', async () => {
         await render(<Avatar name="bob" badge="heart" />);
         expect(styleOf(screen.getByTestId('avatar-badge')).backgroundColor).toBe(colors.accentColor);

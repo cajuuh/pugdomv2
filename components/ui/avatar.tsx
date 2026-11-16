@@ -48,11 +48,14 @@ export const Avatar: React.FC<AvatarProps> = ({ name, uri, size = 42, badge, rin
     return (
         <View accessible accessibilityRole="image" accessibilityLabel={name} style={circle}>
             {showImage ? (
-                // Kept in memory as well as on disk: the same faces come back all over the timeline
+                // Kept in memory as well as on disk: the same faces come back all over the timeline.
+                // A new view per picture: when a recycled row changes picture, expo-image on Android (56.0.13) cancels
+                // only the load on screen, and one still loading for an earlier row lands on top: someone else's face.
+                // Remounting cancels every load the old view had. The post images (focusedImage, link cards) do the same.
                 <Image
+                    key={uri}
                     testID="avatar-image"
                     source={{ uri }}
-                    recyclingKey={uri}
                     cachePolicy="memory-disk"
                     autoplay={animate}
                     style={[circle, { backgroundColor: colors.inputBackground }]}
