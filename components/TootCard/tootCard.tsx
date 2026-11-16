@@ -756,6 +756,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
             <Avatar
                 name={targetStatus.account.display_name || targetStatus.account.username}
                 uri={targetStatus.account.avatar}
+                staticUri={targetStatus.account.avatar_static}
                 size={avatarSize}
             />
         </Pressable>
@@ -889,7 +890,7 @@ export const TootCard: React.FC<TootCardProps> = ({ status, onPressMention, onPr
                     style={[styles.boostRow, compactMode && styles.boostRowCompact]}
                 >
                     <Icon name="repeat" size={14} color={colors.textMuted} />
-                    <Avatar name={status.account.display_name || status.account.username} uri={status.account.avatar} size={18} />
+                    <Avatar name={status.account.display_name || status.account.username} uri={status.account.avatar} staticUri={status.account.avatar_static} size={18} />
                     {renderTextWithEmojis(
                         t('post.boosted', { name: status.account.display_name || status.account.username }),
                         status.account.emojis || [],

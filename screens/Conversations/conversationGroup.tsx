@@ -61,7 +61,7 @@ const ConversationGroupScreen = ({ groupKey, onBack, onStatusPress }: Conversati
                 </View>
                 {/* The last message, as a chat would show it: yours on the right in the accent, theirs on the left */}
                 <View style={[styles.message, mine && styles.messageMine]}>
-                    {!mine && last && <Avatar name={sender} uri={last.account.avatar} size={28} />}
+                    {!mine && last && <Avatar name={sender} uri={last.account.avatar} staticUri={last.account.avatar_static} size={28} />}
                     <View style={[styles.bubbleColumn, mine && styles.bubbleColumnMine]}>
                         {people.length > 1 && <Text style={[type.meta, { color: colors.textMuted }]}>{sender}</Text>}
                         <View
@@ -87,7 +87,7 @@ const ConversationGroupScreen = ({ groupKey, onBack, onStatusPress }: Conversati
             <View style={[styles.header, { paddingTop: insets.top + 10, borderBottomColor: colors.borderColor, backgroundColor: colors.cardBackground }]}>
                 <IconButton icon="arrow-back" accessibilityLabel={t('common.goBack')} onPress={onBack} />
                 <View style={styles.headerTitle} accessible accessibilityRole="header">
-                    <Avatar name={names} uri={people[0]?.avatar} size={32} />
+                    <Avatar name={names} uri={people[0]?.avatar} staticUri={people[0]?.avatar_static} size={32} />
                     <View style={styles.flex}>
                         <View>
                             {renderTextWithEmojis(names, people.flatMap(account => account.emojis || []), [type.name, { color: colors.textPrimary }], 15)}

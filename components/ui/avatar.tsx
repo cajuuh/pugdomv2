@@ -9,6 +9,9 @@ interface AvatarProps {
     // Used for the initials fallback and the accessibility label
     name: string;
     uri?: string | null;
+    // The still version (Mastodon's avatar_static), shown unless media autoplay is on: an animated avatar's
+    // file can be many times bigger, and it would be held still anyway
+    staticUri?: string | null;
     size?: number;
     // Type glyph in an accent circle at the bottom-right (e.g. a notification's type)
     badge?: IconName;
@@ -36,11 +39,12 @@ export const AvatarBadge: React.FC<{ icon: IconName }> = ({ icon }) => {
     );
 };
 
-export const Avatar: React.FC<AvatarProps> = ({ name, uri, size = 42, badge, ring = false }) => {
+export const Avatar: React.FC<AvatarProps> = ({ name, uri: animatedUri, staticUri, size = 42, badge, ring = false }) => {
     const { colors, type } = useTheme();
     // An animated avatar redraws the screen every frame, forever: a timeline full of them drained batteries
     // They hold still unless media autoplay is on, like posts' GIFs.
     const animate = useOptionalSettings()?.mediaAutoplay ?? false;
+    const uri = (!animate && staticUri) || animatedUri;
     const [failedUri, setFailedUri] = useState<string | null>(null);
     const showImage = !!uri && uri !== failedUri;
     const circle = { width: size, height: size, borderRadius: size / 2 };

@@ -164,7 +164,7 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
                         accessibilityLabel={t('profile.viewAvatar', { name })}
                         style={styles.avatarRing}
                     >
-                        <Avatar name={name} uri={user.avatar} size={AVATAR_SIZE} />
+                        <Avatar name={name} uri={user.avatar} staticUri={user.avatar_static} size={AVATAR_SIZE} />
                     </Pressable>
                     <View style={styles.actions}>
                         {mode === 'self' ? (

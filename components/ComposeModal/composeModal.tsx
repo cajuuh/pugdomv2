@@ -778,7 +778,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({ isOpen, replyToStatus, quot
                 {reply && (
                     <Well style={styles.replyWell}>
                         <View style={styles.replyHeader}>
-                            <Avatar name={reply.account.display_name || reply.account.username} uri={reply.account.avatar} size={24} />
+                            <Avatar name={reply.account.display_name || reply.account.username} uri={reply.account.avatar} staticUri={reply.account.avatar_static} size={24} />
                             <View style={styles.replyNames}>
                                 <Text style={[type.name, styles.replyName]} numberOfLines={1}>
                                     {renderTextWithEmojis(

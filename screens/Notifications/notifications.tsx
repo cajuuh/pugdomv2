@@ -195,7 +195,7 @@ const StackedAvatars = ({ accounts, badge }: { accounts: Account[]; badge: IconN
         <View testID="avatar-stack" style={styles.stack44}>
             {accounts.slice(0, 2).map((account, index) => (
                 <View key={account.id} style={[styles.stacked, index === 0 ? styles.stackedBack : styles.stackedFront]}>
-                    <Avatar name={nameOf(account)} uri={account.avatar} size={STACKED_AVATAR} />
+                    <Avatar name={nameOf(account)} uri={account.avatar} staticUri={account.avatar_static} size={STACKED_AVATAR} />
                 </View>
             ))}
             <AvatarBadge icon={badge} />
@@ -260,7 +260,7 @@ export const NotificationRow = ({ group, relationship, onStatusPress, onLongPres
         >
             {shown.length > 1
                 ? <StackedAvatars accounts={shown} badge={config.badge} />
-                : <Avatar name={name} uri={account?.avatar} size={44} badge={config.badge} />}
+                : <Avatar name={name} uri={account?.avatar} staticUri={account?.avatar_static} size={44} badge={config.badge} />}
         </Pressable>
     );
 

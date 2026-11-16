@@ -37,7 +37,7 @@ export const AccountRow: React.FC<AccountRowProps> = ({ account, relationship, i
                 accessibilityLabel={t('post.openProfile', { name })}
                 style={({ pressed }) => [styles.person, pressed && { opacity: 0.7 }]}
             >
-                <Avatar name={name} uri={account.avatar} size={44} />
+                <Avatar name={name} uri={account.avatar} staticUri={account.avatar_static} size={44} />
                 <View style={styles.names}>
                     <Text style={[type.name, { color: colors.textPrimary }]} numberOfLines={1}>
                         {renderTextWithEmojis(name, account.emojis || [], [type.name, { color: colors.textPrimary }], 16)}
