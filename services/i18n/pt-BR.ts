@@ -857,6 +857,8 @@ export const ptBR: Dictionary = {
         follow: 'seguiu você',
         quote: 'citou sua publicação',
         quotedUpdate: 'editou uma publicação que você citou',
+        addedToCollection: 'adicionou você a uma coleção',
+        collectionUpdate: 'atualizou uma coleção em que você está',
         status: 'publicou',
         update: 'editou uma publicação que você deu boost',
         followRequest: 'pediu para seguir você',

@@ -855,6 +855,8 @@ export const de: Dictionary = {
         follow: 'folgt dir',
         quote: 'hat deinen Beitrag zitiert',
         quotedUpdate: 'hat einen Beitrag bearbeitet, den du zitiert hast',
+        addedToCollection: 'hat dich zu einer Sammlung hinzugefügt',
+        collectionUpdate: 'hat eine Sammlung aktualisiert, in der du bist',
         status: 'hat etwas veröffentlicht',
         update: 'hat einen Beitrag bearbeitet, den du geteilt hast',
         followRequest: 'möchte dir folgen',

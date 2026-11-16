@@ -856,6 +856,8 @@ export const es419: Dictionary = {
         follow: 'te siguió',
         quote: 'citó tu publicación',
         quotedUpdate: 'editó una publicación que citaste',
+        addedToCollection: 'te agregó a una colección',
+        collectionUpdate: 'actualizó una colección en la que estás',
         status: 'publicó',
         update: 'editó una publicación que impulsaste',
         followRequest: 'pidió seguirte',

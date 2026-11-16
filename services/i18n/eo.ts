@@ -855,6 +855,8 @@ export const eo: Dictionary = {
         follow: 'sekvis vin',
         quote: 'citis vian afiŝon',
         quotedUpdate: 'redaktis afiŝon, kiun vi citis',
+        addedToCollection: 'aldonis vin al kolekto',
+        collectionUpdate: 'ĝisdatigis kolekton, en kiu vi estas',
         status: 'afiŝis',
         update: 'redaktis afiŝon, kiun vi diskonigis',
         followRequest: 'petis sekvi vin',

@@ -871,6 +871,8 @@ export const en = {
         follow: 'followed you',
         quote: 'quoted your post',
         quotedUpdate: 'edited a post you quoted',
+        addedToCollection: 'added you to a collection',
+        collectionUpdate: 'updated a collection you’re in',
         // Someone you turned the bell on for
         status: 'posted',
         update: 'edited a post you boosted',

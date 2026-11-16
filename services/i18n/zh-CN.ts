@@ -856,6 +856,8 @@ export const zhCN: Dictionary = {
         follow: '关注了你',
         quote: '引用了你的嘟文',
         quotedUpdate: '编辑了你引用过的嘟文',
+        addedToCollection: '将你加入了收藏集',
+        collectionUpdate: '更新了你所在的收藏集',
         status: '发布了嘟文',
         update: '编辑了你转嘟过的嘟文',
         followRequest: '请求关注你',

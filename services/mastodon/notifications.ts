@@ -38,6 +38,7 @@ export const groupsFromNotifications = (notifications: Notification[], grouped =
         accounts: [notification.account],
         count: 1,
         status: notification.status,
+        collection: notification.collection,
         created_at: notification.created_at,
         newestId: notification.id,
         partial: true,
@@ -53,6 +54,7 @@ export const groupsFromV2 = (data: GroupedNotificationsResponse): NotificationGr
         accounts: group.sample_account_ids.map(id => accounts.get(id)).filter(account => !!account),
         count: group.notifications_count,
         status: group.status_id ? statuses.get(group.status_id) : undefined,
+        collection: group.collection,
         created_at: group.latest_page_notification_at ?? '',
         newestId: group.page_max_id ?? group.most_recent_notification_id,
     }));

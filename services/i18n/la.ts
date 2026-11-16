@@ -856,6 +856,8 @@ export const la: Dictionary = {
         follow: 'te secutus est',
         quote: 'nuntium tuum citavit',
         quotedUpdate: 'nuntium quem citavisti mutavit',
+        addedToCollection: 'te collectioni addidit',
+        collectionUpdate: 'collectionem in qua es mutavit',
         status: 'publicavit',
         update: 'nuntium quem divulgavisti mutavit',
         followRequest: 'te sequi rogavit',

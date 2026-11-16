@@ -76,6 +76,7 @@ export async function syncPush(accounts: SavedAccount[], enabled: boolean, alert
 
 // Where a tapped push opens: the post it's about, else the profile of who it's from
 export function routeForNotification(notification: Notification): Route {
+    if (notification.collection) return { name: 'collection', collectionId: notification.collection.id, collection: notification.collection };
     if (notification.status) return { name: 'thread', statusId: notification.status.id };
     return { name: 'account', accountId: notification.account.id, account: notification.account };
 }

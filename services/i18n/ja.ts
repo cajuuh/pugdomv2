@@ -856,6 +856,8 @@ export const ja: Dictionary = {
         follow: 'にフォローされました',
         quote: 'があなたの投稿を引用しました',
         quotedUpdate: 'があなたの引用した投稿を編集しました',
+        addedToCollection: 'があなたをコレクションに追加しました',
+        collectionUpdate: 'があなたの掲載されたコレクションを更新しました',
         status: 'が投稿しました',
         update: 'があなたのブーストした投稿を編集しました',
         followRequest: 'からフォローリクエストが届きました',

@@ -855,6 +855,8 @@ export const fr: Dictionary = {
         follow: 'vous suit',
         quote: 'a cité votre message',
         quotedUpdate: 'a modifié un message que vous avez cité',
+        addedToCollection: 'vous a ajouté à une collection',
+        collectionUpdate: 'a modifié une collection où vous figurez',
         status: 'a publié',
         update: 'a modifié un message que vous avez partagé',
         followRequest: 'demande à vous suivre',

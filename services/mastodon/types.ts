@@ -280,10 +280,14 @@ export interface Rule {
 
 export interface Notification {
     id: string;
-    type: 'mention' | 'status' | 'reblog' | 'follow' | 'follow_request' | 'favourite' | 'poll' | 'update' | 'admin.sign_up' | 'admin.report' | 'severed_relationships' | 'moderation_warning' | 'quote' | 'quoted_update';
+    type: 'mention' | 'status' | 'reblog' | 'follow' | 'follow_request' | 'favourite' | 'poll' | 'update' | 'admin.sign_up' | 'admin.report' | 'severed_relationships' | 'moderation_warning' | 'quote' | 'quoted_update'
+        // Mastodon 4.6: someone added you to a collection, or changed one you're in
+        | 'added_to_collection' | 'collection_update';
     created_at: string;
     account: Account;
     status?: Status;
+    // The collection of an added_to_collection or collection_update
+    collection?: Collection;
 }
 
 // One row on the notifications screen: a single notification, or several favourites / boosts of the same post
@@ -295,6 +299,7 @@ export interface NotificationGroup {
     // How many notifications the group stands for
     count: number;
     status?: Status;
+    collection?: Collection;
     created_at: string;
     // Newest notification id in the group, for read markers
     newestId: string;
@@ -315,6 +320,7 @@ export interface NotificationGroupV2 {
     latest_page_notification_at?: string;
     sample_account_ids: string[];
     status_id?: string | null;
+    collection?: Collection;
 }
 
 export interface GroupedNotificationsResponse {
