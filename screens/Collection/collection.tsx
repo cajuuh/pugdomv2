@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FlashList } from '@shopify/flash-list';
@@ -6,16 +6,17 @@ import { useTheme } from '../../services/themeContext';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { useOptionalAuth } from '../../services/authContext';
 import { Collection as CollectionType } from '../../services/mastodon/types';
-import { featuredAccounts } from '../../services/mastodon/collections';
+import { featuredAccounts, itemFor } from '../../services/mastodon/collections';
 import { plainText } from '../../services/htmlText';
-import { useCollection } from '../../hooks/useCollections';
+import { useCollection, useCollectionActions } from '../../hooks/useCollections';
+import { useNavigator } from '../../services/navigationContext';
 import { useRelationships } from '../../hooks/useRelationships';
 import { useOpenAccount } from '../../hooks/useOpenAccount';
 import { dialog } from '../../services/dialog';
 import { radii, space } from '../../services/theme/shape';
 import { TAB_BAR_CLEARANCE } from '../../components/TabBar/styles';
 import { AccountRow } from '../../components/AccountRow/accountRow';
-import { Avatar, IconButton } from '../../components/ui';
+import { Avatar, IconButton, PillButton } from '../../components/ui';
 import { Icon } from '../../components/ui/icon';
 
 interface CollectionProps {
@@ -25,7 +26,8 @@ interface CollectionProps {
     onBack: () => void;
 }
 
-// A collection (Mastodon 4.6): who made it, what it's about, and its people, each with a follow button
+// A collection (Mastodon 4.6): who made it, what it's about, and its people, each with a follow button.
+// Yours can be edited and its people taken out; if you're in someone else's, you can leave it.
 const Collection = ({ collectionId, collection: initial, onBack }: CollectionProps) => {
     const { colors, type } = useTheme();
     const { t, tn } = useI18n();
@@ -38,6 +40,29 @@ const Collection = ({ collectionId, collection: initial, onBack }: CollectionPro
     const people = data && collection ? featuredAccounts(collection, data.accounts, me?.id) : [];
     const relationships = useRelationships(people.filter(({ account }) => account.id !== me?.id).map(({ account }) => account.id));
     const description = plainText(collection?.description ?? '').trim();
+    const { push } = useNavigator();
+    const actions = useCollectionActions();
+    const isOwner = !!me && collection?.account_id === me.id;
+    // You, in someone else's collection
+    const myItem = !isOwner && me && collection ? itemFor(collection, me.id) : undefined;
+    const [busyItem, setBusyItem] = useState<string | null>(null);
+
+    const run = async (itemId: string, task: () => Promise<unknown>) => {
+        setBusyItem(itemId);
+        try {
+            await task();
+        } catch {
+            dialog.toast(t('collections.failed'));
+        } finally {
+            setBusyItem(null);
+        }
+    };
+
+    const confirmLeave = () =>
+        dialog.alert(t('collections.leaveTitle', { name: collection!.name }), t('collections.leaveMessage'), [
+            { text: t('collections.keep'), style: 'cancel' },
+            { text: t('collections.leave'), style: 'destructive', onPress: () => run(myItem!.id, () => actions.leave(collectionId, myItem!.id)) },
+        ]);
 
     const share = async () => {
         if (!collection?.url) return;
@@ -95,6 +120,25 @@ const Collection = ({ collectionId, collection: initial, onBack }: CollectionPro
                     </View>
                 )}
             </View>
+            {isOwner && (
+                <PillButton
+                    label={t('collections.edit')}
+                    icon="create-outline"
+                    variant="ghost"
+                    onPress={() => push({ name: 'collectionEditor', collectionId })}
+                    style={styles.action}
+                />
+            )}
+            {!!myItem && (
+                <PillButton
+                    label={t('collections.leave')}
+                    icon="log-out-outline"
+                    variant="ghost"
+                    onPress={confirmLeave}
+                    loading={busyItem === myItem.id}
+                    style={styles.action}
+                />
+            )}
         </View>
     );
 
@@ -126,6 +170,19 @@ const Collection = ({ collectionId, collection: initial, onBack }: CollectionPro
                             isSelf={account.id === me?.id}
                             // Only you see these: people who haven't agreed to be featured yet
                             detail={item.state === 'pending' ? t('collections.pending') : undefined}
+                            // In yours, a person can be taken out instead of followed
+                            action={
+                                isOwner ? (
+                                    <PillButton
+                                        label={t('collections.remove')}
+                                        icon="remove-circle-outline"
+                                        variant="ghost"
+                                        accessibilityLabel={t('collections.removeLabel', { name: account.display_name || account.username })}
+                                        loading={busyItem === item.id}
+                                        onPress={() => run(item.id, () => actions.removeItem(collectionId, item.id))}
+                                    />
+                                ) : undefined
+                            }
                         />
                     )}
                     ListHeaderComponent={info}
@@ -134,7 +191,7 @@ const Collection = ({ collectionId, collection: initial, onBack }: CollectionPro
                             <ActivityIndicator style={styles.loading} color={colors.accentColor} />
                         ) : (
                             <Text style={[type.body, styles.empty, { color: colors.textMuted }]}>
-                                {t(isError ? 'collections.loadFailed' : 'collections.empty')}
+                                {t(isError ? 'collections.loadFailed' : isOwner ? 'collections.emptyOwner' : 'collections.empty')}
                             </Text>
                         )
                     }
@@ -193,6 +250,9 @@ const styles = StyleSheet.create({
     },
     list: {
         paddingBottom: TAB_BAR_CLEARANCE,
+    },
+    action: {
+        alignSelf: 'flex-start',
     },
     empty: {
         textAlign: 'center',

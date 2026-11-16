@@ -29,6 +29,7 @@ import { NavigationProvider, StackEntry, useNavigator } from './services/navigat
 import Account from './screens/Account/account';
 import Hashtag from './screens/Hashtag/hashtag';
 import Collection from './screens/Collection/collection';
+import CollectionEditor from './screens/CollectionEditor/collectionEditor';
 import LinkTimeline from './screens/LinkTimeline/linkTimeline';
 import FeedEditor from './screens/FeedEditor/feedEditor';
 import ListEditor from './screens/ListEditor/listEditor';
@@ -136,6 +137,8 @@ function NavigationRoot() {
         return <Hashtag tag={route.tag} onBack={pop} onStatusPress={openThread} />;
       case 'collection':
         return <Collection collectionId={route.collectionId} collection={route.collection} onBack={pop} />;
+      case 'collectionEditor':
+        return <CollectionEditor collectionId={route.collectionId} onBack={pop} />;
       case 'link':
         return <LinkTimeline url={route.url} title={route.title} onBack={pop} onStatusPress={openThread} />;
       case 'feedEditor':

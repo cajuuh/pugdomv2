@@ -40,6 +40,9 @@ export interface Account {
     display_name: string;
     avatar: string;
     avatar_static?: string;
+    // Whether you can feature them in a collection (Mastodon 4.6): only automatic or manual can be added.
+    // missing: their server has no collections; denied/unknown: they don't allow it
+    feature_approval?: { automatic: string[]; manual: string[]; current_user: 'automatic' | 'manual' | 'denied' | 'unknown' | 'missing' };
     // Only in your list of muted accounts: when a timed mute ends (null: until you unmute)
     mute_expires_at?: string | null;
     header?: string;

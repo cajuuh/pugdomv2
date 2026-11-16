@@ -16,6 +16,8 @@ export type Route =
     | { name: 'hashtag'; tag: string }
     // A collection of accounts (Mastodon 4.6); the copy from a profile shows while it loads
     | { name: 'collection'; collectionId: string; collection?: Collection }
+    // Making one of your collections, or editing it
+    | { name: 'collectionEditor'; collectionId?: string }
     | { name: 'link'; url: string; title?: string }
     | { name: 'feedEditor'; feed?: FeedDescriptor }
     | { name: 'listEditor'; listId?: string }
