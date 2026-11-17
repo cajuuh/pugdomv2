@@ -94,7 +94,7 @@ export const QuotedPost: React.FC<QuotedPostProps> = ({ quote, onOpen, timeOf, c
         >
             {/* Laid out like a post's own header: name over handle, time on the right */}
             <View style={styles.author}>
-                <Avatar name={name} uri={status.account.avatar} size={AVATAR} />
+                <Avatar name={name} uri={status.account.avatar} staticUri={status.account.avatar_static} size={AVATAR} />
                 <View style={styles.names}>
                     {renderNameWithEmojis(name, status.account.emojis ?? [], [type.name, { color: colors.textPrimary }], 15)}
                     <Text style={[type.meta, { color: colors.textMuted }]} numberOfLines={1}>@{status.account.acct}</Text>

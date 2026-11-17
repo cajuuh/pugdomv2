@@ -39,7 +39,7 @@ export const ReactionLink: React.FC<ReactionLinkProps> = ({ label, onPress, stat
                             key={account.id}
                             style={[styles.avatar, { borderColor: colors.cardBackground }, index > 0 && styles.avatarStacked]}
                         >
-                            <Avatar name={account.display_name || account.username} uri={account.avatar} size={20} />
+                            <Avatar name={account.display_name || account.username} uri={account.avatar} staticUri={account.avatar_static} size={20} />
                         </View>
                     ))}
                 </View>

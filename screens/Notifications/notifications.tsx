@@ -62,6 +62,9 @@ const TYPE_CONFIG: Record<string, { badge: IconName; action: TKey }> = {
     update: { badge: 'create', action: 'notifications.update' },
     follow_request: { badge: 'person-add', action: 'notifications.followRequest' },
     poll: { badge: 'stats-chart', action: 'notifications.pollEnded' },
+    // Mastodon 4.6 collections: the row shows the collection's name and opens it
+    added_to_collection: { badge: 'layers-outline', action: 'notifications.addedToCollection' },
+    collection_update: { badge: 'layers-outline', action: 'notifications.collectionUpdate' },
 };
 
 // Accept or turn down someone who asked to follow your locked account; the answer stays on the row
@@ -195,7 +198,7 @@ const StackedAvatars = ({ accounts, badge }: { accounts: Account[]; badge: IconN
         <View testID="avatar-stack" style={styles.stack44}>
             {accounts.slice(0, 2).map((account, index) => (
                 <View key={account.id} style={[styles.stacked, index === 0 ? styles.stackedBack : styles.stackedFront]}>
-                    <Avatar name={nameOf(account)} uri={account.avatar} size={STACKED_AVATAR} />
+                    <Avatar name={nameOf(account)} uri={account.avatar} staticUri={account.avatar_static} size={STACKED_AVATAR} />
                 </View>
             ))}
             <AvatarBadge icon={badge} />
@@ -224,7 +227,12 @@ export const NotificationRow = ({ group, relationship, onStatusPress, onLongPres
     const account = group.accounts[0];
     const name = account ? nameOf(account) : '';
     const time = notificationTime(group.created_at, new Date(), i18n);
-    const openStatus = status && onStatusPress ? () => onStatusPress(status.id) : undefined;
+    const { push } = useNavigator();
+    const { collection } = group;
+    // A collection row opens the collection; the rest open their post
+    const openStatus = collection
+        ? () => push({ name: 'collection', collectionId: collection.id, collection })
+        : status && onStatusPress ? () => onStatusPress(status.id) : undefined;
 
     // Up to two names in bold, then "and N others" with the action
     const shown = group.accounts.slice(0, group.count > 2 ? 2 : group.count);
@@ -260,7 +268,7 @@ export const NotificationRow = ({ group, relationship, onStatusPress, onLongPres
         >
             {shown.length > 1
                 ? <StackedAvatars accounts={shown} badge={config.badge} />
-                : <Avatar name={name} uri={account?.avatar} size={44} badge={config.badge} />}
+                : <Avatar name={name} uri={account?.avatar} staticUri={account?.avatar_static} size={44} badge={config.badge} />}
         </Pressable>
     );
 
@@ -286,7 +294,7 @@ export const NotificationRow = ({ group, relationship, onStatusPress, onLongPres
         );
     }
 
-    const text = status ? statusText(status, group.type, i18n, me?.username) : '';
+    const text = status ? statusText(status, group.type, i18n, me?.username) : collection?.name ?? '';
     const body = (
         <>
             <View style={styles.headline}>

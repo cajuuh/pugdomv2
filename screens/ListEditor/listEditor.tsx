@@ -159,7 +159,7 @@ const ListEditor = ({ listId, onBack }: ListEditorProps) => {
                                 const name = member.display_name || member.username;
                                 return (
                                     <View key={member.id} style={styles.member}>
-                                        <Avatar name={name} uri={member.avatar} size={40} />
+                                        <Avatar name={name} uri={member.avatar} staticUri={member.avatar_static} size={40} />
                                         <View style={styles.rowText}>
                                             <Text style={[type.name, { color: colors.textPrimary }]} numberOfLines={1}>
                                                 {renderTextWithEmojis(name, member.emojis || [], [type.name, { color: colors.textPrimary }], 16)}

@@ -92,7 +92,7 @@ export const FocusedImage: React.FC<FocusedImageProps> = ({ attachment, style, b
                     <Image
                         source={{ uri: attachment.preview_url }}
                         placeholder={placeholder}
-                        recyclingKey={attachment.preview_url}
+                        key={attachment.preview_url}
                         style={StyleSheet.absoluteFill}
                         contentFit={contain ? 'contain' : 'cover'}
                         blurRadius={blurred ? HIDDEN_BLUR_RADIUS : undefined}
@@ -126,7 +126,7 @@ export const FocusedImage: React.FC<FocusedImageProps> = ({ attachment, style, b
                 <Image
                     source={{ uri }}
                     placeholder={placeholder}
-                    recyclingKey={uri}
+                    key={uri}
                     testID={blurred ? 'focused-image-blurred' : contain ? 'focused-image-whole' : undefined}
                     style={StyleSheet.absoluteFill}
                     contentFit={contain ? 'contain' : 'cover'}
@@ -137,7 +137,7 @@ export const FocusedImage: React.FC<FocusedImageProps> = ({ attachment, style, b
                     <Image
                         source={{ uri }}
                         placeholder={placeholder}
-                        recyclingKey={uri}
+                        key={uri}
                         testID="focused-image-picture"
                         style={[styles.positioned, focusedCover(box, { width: size!.width!, height: size!.height! }, fromMastodonFocus(focus!))]}
                     />

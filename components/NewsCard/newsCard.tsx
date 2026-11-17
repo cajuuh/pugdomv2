@@ -61,7 +61,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({ link, onPressLinkTimeline })
 
                 {link.image ? (
                     <View style={styles.imageContainer}>
-                        <Image source={{ uri: link.image }} placeholder={link.blurhash ? { blurhash: link.blurhash } : undefined} style={styles.image} contentFit="cover" />
+                        <Image key={link.image} source={{ uri: link.image }} placeholder={link.blurhash ? { blurhash: link.blurhash } : undefined} style={styles.image} contentFit="cover" />
                     </View>
                 ) : null}
 

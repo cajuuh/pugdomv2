@@ -6,9 +6,11 @@ import { useSettings } from '../services/settingsContext';
 export type NotificationFilter = 'all' | 'mentions' | 'follows';
 
 // The notification types the screen knows how to render. `status` is a post from someone you turned the bell on
-// for; `poll` a poll you voted in (or made) has ended; `update` a post you boosted was edited.
+// for; `poll` a poll you voted in (or made) has ended; `update` a post you boosted was edited; and the two
+// collection ones (Mastodon 4.6).
 export const SUPPORTED_NOTIFICATION_TYPES: Notification['type'][] = [
     'mention', 'status', 'reblog', 'favourite', 'follow', 'follow_request', 'quote', 'quoted_update', 'poll', 'update',
+    'added_to_collection', 'collection_update',
 ];
 
 // Filtering happens on the server, so every page is full of matching notifications

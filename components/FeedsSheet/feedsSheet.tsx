@@ -5,7 +5,7 @@ import { Icon } from '../ui/icon';
 import { useTheme } from '../../services/themeContext';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { usePinnedFeeds } from '../../hooks/usePinnedFeeds';
-import { createHashtagFeed, createListFeed, describeCriteria, FeedDescriptor, feedIcon, feedLabel, TRENDING_FEED } from '../../services/mastodon/feedTypes';
+import { createHashtagFeed, createListFeed, DEFAULT_PINNED_FEEDS, describeCriteria, FeedDescriptor, feedIcon, feedLabel, TRENDING_FEED } from '../../services/mastodon/feedTypes';
 import { useLists } from '../../hooks/useLists';
 import { radii, space } from '../../services/theme/shape';
 import { IconButton, PillButton, SectionLabel } from '../ui';
@@ -172,6 +172,8 @@ export const FeedsSheet: React.FC<FeedsSheetProps> = ({ visible, onClose, onSele
                     />
 
                     <SectionLabel style={styles.section}>{t('feeds.discover')}</SectionLabel>
+                    {/* An unpinned Local or Federated waits here to be pinned again */}
+                    {DEFAULT_PINNED_FEEDS.filter(feed => feed.canUnpin && !isPinned(feed.id)).map(feed => row(feed))}
                     {row(TRENDING_FEED, { subtitle: t('feeds.trendingSubtitle') })}
 
                     <SectionLabel style={styles.section}>{t('lists.title')}</SectionLabel>

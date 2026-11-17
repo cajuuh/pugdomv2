@@ -40,6 +40,9 @@ export interface Account {
     display_name: string;
     avatar: string;
     avatar_static?: string;
+    // Whether you can feature them in a collection (Mastodon 4.6): only automatic or manual can be added.
+    // missing: their server has no collections; denied/unknown: they don't allow it
+    feature_approval?: { automatic: string[]; manual: string[]; current_user: 'automatic' | 'manual' | 'denied' | 'unknown' | 'missing' };
     // Only in your list of muted accounts: when a timed mute ends (null: until you unmute)
     mute_expires_at?: string | null;
     header?: string;
@@ -225,6 +228,36 @@ export interface Poll {
     emojis: CustomEmoji[];
 }
 
+// One person in a collection. They have to agree to be featured: until then it's pending (only the owner sees it)
+export interface CollectionItem {
+    id: string;
+    account_id: string | null;
+    state: 'pending' | 'accepted' | 'rejected' | 'revoked';
+    created_at: string;
+}
+
+// A curated, public list of accounts someone features on their profile (Mastodon 4.6)
+export interface Collection {
+    id: string;
+    // Who made it
+    account_id: string;
+    uri: string;
+    url: string | null;
+    name: string;
+    // HTML
+    description: string | null;
+    language: string | null;
+    local: boolean;
+    sensitive: boolean;
+    // Shown on the owner's profile; otherwise only reachable by its link
+    discoverable: boolean;
+    tag: { name: string; url: string } | null;
+    created_at: string;
+    updated_at: string;
+    item_count: number;
+    items: CollectionItem[];
+}
+
 export interface Relationship {
     id: string;
     following: boolean;
@@ -247,10 +280,14 @@ export interface Rule {
 
 export interface Notification {
     id: string;
-    type: 'mention' | 'status' | 'reblog' | 'follow' | 'follow_request' | 'favourite' | 'poll' | 'update' | 'admin.sign_up' | 'admin.report' | 'severed_relationships' | 'moderation_warning' | 'quote' | 'quoted_update';
+    type: 'mention' | 'status' | 'reblog' | 'follow' | 'follow_request' | 'favourite' | 'poll' | 'update' | 'admin.sign_up' | 'admin.report' | 'severed_relationships' | 'moderation_warning' | 'quote' | 'quoted_update'
+        // Mastodon 4.6: someone added you to a collection, or changed one you're in
+        | 'added_to_collection' | 'collection_update';
     created_at: string;
     account: Account;
     status?: Status;
+    // The collection of an added_to_collection or collection_update
+    collection?: Collection;
 }
 
 // One row on the notifications screen: a single notification, or several favourites / boosts of the same post
@@ -262,6 +299,7 @@ export interface NotificationGroup {
     // How many notifications the group stands for
     count: number;
     status?: Status;
+    collection?: Collection;
     created_at: string;
     // Newest notification id in the group, for read markers
     newestId: string;
@@ -282,6 +320,7 @@ export interface NotificationGroupV2 {
     latest_page_notification_at?: string;
     sample_account_ids: string[];
     status_id?: string | null;
+    collection?: Collection;
 }
 
 export interface GroupedNotificationsResponse {

@@ -117,6 +117,33 @@ describe('Avatar', () => {
         mockAutoplay = false;
     });
 
+    it('loads the small still avatar unless media autoplay is on', async () => {
+        const still = 'https://example.social/static/a.png';
+        await render(<Avatar name="alice" uri="https://example.social/a.gif" staticUri={still} />);
+        expect(screen.getByTestId('avatar-image').props.source).toEqual([{ uri: still }]);
+
+        mockAutoplay = true;
+        await render(<Avatar name="alice" uri="https://example.social/a.gif" staticUri={still} />);
+        expect(screen.getByTestId('avatar-image').props.source).toEqual([{ uri: 'https://example.social/a.gif' }]);
+        mockAutoplay = false;
+
+        // Servers that send no still version keep the one they have
+        await render(<Avatar name="alice" uri="https://example.social/a.png" />);
+        expect(screen.getByTestId('avatar-image').props.source).toEqual([{ uri: 'https://example.social/a.png' }]);
+    });
+
+    // A recycled row that reuses the image view could show a late load from its previous row: someone else's face
+    it('gets a new image view when a recycled row changes picture', async () => {
+        const { rerender } = await render(<Avatar name="alice" uri="https://example.social/a.png" />);
+        const first = screen.getByTestId('avatar-image');
+
+        await rerender(<Avatar name="alice" uri="https://example.social/a.png" />);
+        expect(screen.getByTestId('avatar-image')).toBe(first);
+
+        await rerender(<Avatar name="bob" uri="https://example.social/b.png" />);
+        expect(screen.getByTestId('avatar-image')).not.toBe(first);
+    });
+
     it('shows a badge when given one', async () => {
         await render(<Avatar name="bob" badge="heart" />);
         expect(styleOf(screen.getByTestId('avatar-badge')).backgroundColor).toBe(colors.accentColor);

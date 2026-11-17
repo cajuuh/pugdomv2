@@ -145,6 +145,7 @@ describe('Notifications', () => {
         await screen.findByText(/mentioned you/);
         expect(mockedFetch).toHaveBeenCalledWith(undefined, [
             'mention', 'status', 'reblog', 'favourite', 'follow', 'follow_request', 'quote', 'quoted_update', 'poll', 'update',
+            'added_to_collection', 'collection_update',
         ]);
     });
 

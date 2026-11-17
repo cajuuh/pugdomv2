@@ -15,6 +15,7 @@ import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { useI18n } from '../../services/i18n/i18nContext';
 import { AVATAR_SIZE, BANNER_HEIGHT, SHARE_SIZE, makeStyles } from './styles';
 import { AccountListsSheet } from '../../components/AccountListsSheet/accountListsSheet';
+import { AccountCollectionsSheet } from '../../components/AccountCollectionsSheet/accountCollectionsSheet';
 import { ActionSheet } from '../../components/ComposeModal/optionSheet';
 import { useModeration } from '../../hooks/useModeration';
 import { useMediaViewer } from '../../components/MediaViewer/mediaViewer';
@@ -22,6 +23,12 @@ import { useNotifyOff, useNotifyOn } from '../../hooks/useRelationships';
 import { dialog } from '../../services/dialog';
 import { useCompose } from '../../services/composeContext';
 import { useOptionalSettings } from '../../services/settingsContext';
+import { CollectionCards } from '../../components/CollectionCards/collectionCards';
+import { useAccountCollections } from '../../hooks/useCollections';
+import { useInstanceConfiguration } from '../../hooks/useInstanceConfiguration';
+
+// The profile's side padding (styles.info)
+const PROFILE_GUTTER = 20;
 
 const originOf = (url?: string) => url?.match(/^https?:\/\/[^/?#]+/i)?.[0];
 
@@ -59,6 +66,7 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
     const { openMention, openHashtag, openLinkInApp } = useOpenAccount();
     const name = user.display_name || user.username;
     const [listsOpen, setListsOpen] = useState(false);
+    const [collectionsOpen, setCollectionsOpen] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
     const moderation = useModeration();
     const remoteServer = mode === 'other' && user.acct.includes('@') ? user.acct.split('@').pop() : undefined;
@@ -82,6 +90,8 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
     };
 
     const { push } = useNavigator();
+    const collections = useAccountCollections(user.id);
+    const { supportsCollections } = useInstanceConfiguration();
     const { openMedia } = useMediaViewer();
     // The profile picture or header, full size in the viewer (zoom, swipe to close)
     const viewImage = (url: string) => openMedia([{ id: url, type: 'image', url, preview_url: url } as Attachment], 0);
@@ -164,7 +174,7 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
                         accessibilityLabel={t('profile.viewAvatar', { name })}
                         style={styles.avatarRing}
                     >
-                        <Avatar name={name} uri={user.avatar} size={AVATAR_SIZE} />
+                        <Avatar name={name} uri={user.avatar} staticUri={user.avatar_static} size={AVATAR_SIZE} />
                     </Pressable>
                     <View style={styles.actions}>
                         {mode === 'self' ? (
@@ -325,6 +335,13 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
                     {followStat('following', user.following_count, t('profile.statFollowing'))}
                     {followStat('followers', user.followers_count, t('profile.statFollowers'))}
                 </View>
+
+                <CollectionCards
+                    collections={collections}
+                    gutter={PROFILE_GUTTER}
+                    onOpen={collection => push({ name: 'collection', collectionId: collection.id, collection })}
+                    onCreate={mode === 'self' && supportsCollections ? () => push({ name: 'collectionEditor' }) : undefined}
+                />
             </View>
 
             <View style={styles.tabs}>
@@ -332,6 +349,9 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
             </View>
             {mode === 'other' && (
                 <AccountListsSheet visible={listsOpen} onClose={() => setListsOpen(false)} account={user} following={!!relationship?.following} />
+            )}
+            {mode === 'other' && supportsCollections && (
+                <AccountCollectionsSheet visible={collectionsOpen} onClose={() => setCollectionsOpen(false)} account={user} />
             )}
             {mode === 'other' && (
                 <ActionSheet
@@ -344,6 +364,10 @@ export function ProfileHeader<T extends string>({ user, mode, tabs, tab, onChang
                         // After the sheet has closed, like Share: compose is a sheet too
                         { key: 'directMessage', icon: 'mail-outline', label: t('profile.directMessage', { acct: user.acct }), onPress: () => setTimeout(() => openCompose({ directTo: user }), Platform.OS === 'ios' ? 400 : 0) },
                         { key: 'share', icon: 'share-outline', label: t('profile.shareProfile'), onPress: () => setTimeout(handleShare, Platform.OS === 'ios' ? 400 : 0) },
+                        // After the menu has closed: one sheet at a time
+                        ...(supportsCollections
+                            ? [{ key: 'collections', icon: 'layers-outline' as const, label: t('collections.addTo'), onPress: () => setTimeout(() => setCollectionsOpen(true), Platform.OS === 'ios' ? 400 : 0) }]
+                            : []),
                         ...(relationship?.followed_by
                             ? [{ key: 'removeFollower', icon: 'person-remove-outline' as const, label: t('moderation.removeFollower', { acct: user.acct }), description: t('moderation.removeFollowerHint'), onPress: () => moderation.removeFollower(user) }]
                             : []),

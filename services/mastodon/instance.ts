@@ -17,6 +17,8 @@ export interface InstanceConfiguration {
     supportedMimeTypes: string[];
     // Quote posts, with who-can-quote settings (Mastodon 4.5, API version 7)
     supportsQuotes: boolean;
+    // Collections: curated lists of accounts on profiles (Mastodon 4.6, API version 10)
+    supportsCollections: boolean;
     // The server can translate posts (POST /statuses/:id/translate)
     supportsTranslation: boolean;
     // Where the streaming API lives (wss://…), when the server says; it can be another host
@@ -37,6 +39,7 @@ export const DEFAULT_INSTANCE_CONFIGURATION: InstanceConfiguration = {
     descriptionLimit: 1500,
     supportedMimeTypes: [],
     supportsQuotes: false,
+    supportsCollections: false,
     supportsTranslation: false,
     supportsMarkdown: false,
 };
@@ -45,6 +48,7 @@ export const MARKDOWN = 'text/markdown';
 
 // Mastodon's API version that added quote posts and their policies
 const QUOTES_API_VERSION = 7;
+const COLLECTIONS_API_VERSION = 10;
 
 interface InstanceV2 {
     api_versions?: { mastodon?: number };
@@ -101,6 +105,7 @@ export async function fetchInstanceConfiguration(): Promise<InstanceConfiguratio
         descriptionLimit: media?.description_limit ?? v1?.description_limit ?? defaults.descriptionLimit,
         supportedMimeTypes: media?.supported_mime_types ?? defaults.supportedMimeTypes,
         supportsQuotes: (v2?.api_versions?.mastodon ?? 0) >= QUOTES_API_VERSION,
+        supportsCollections: (v2?.api_versions?.mastodon ?? 0) >= COLLECTIONS_API_VERSION,
         supportsTranslation: !!v2?.configuration?.translation?.enabled,
         streamingUrl: v2?.configuration?.urls?.streaming ?? v1?.urls?.streaming_api,
         supportsMarkdown: [...(statuses?.supported_mime_types ?? []), ...(v1?.pleroma?.metadata?.post_formats ?? [])].includes(MARKDOWN),

@@ -171,6 +171,18 @@ describe('Feeds sheet', () => {
         await waitFor(async () => expect((await getPinnedFeeds('me')).map(feed => feed.id)).toContain('trending'));
     });
 
+    it('can pin Federated again after unpinning it', async () => {
+        await unpinFeed('me', 'federated');
+        await renderSheet();
+
+        // Gone from the pinned rows, first under Discover
+        await waitFor(() => expect(screen.queryByRole('button', { name: 'Move Federated up' })).toBeNull());
+        expect(screen.getAllByRole('button', { name: 'Open Federated' })).toHaveLength(1);
+        await fireEvent.press(screen.getAllByRole('button', { name: 'Pin' })[0]);
+
+        await waitFor(async () => expect((await getPinnedFeeds('me')).map(feed => feed.id)).toContain('federated'));
+    });
+
     it('opens a feed and closes', async () => {
         const onSelectFeed = jest.fn();
         const onClose = jest.fn();
@@ -432,6 +444,15 @@ describe('Timeline feed pills', () => {
 
         expect(await screen.findByText('post /timelines/tag/pugs')).toBeTruthy();
         expect(screen.getByRole('tab', { name: '#pugs' })).toBeSelected();
+    });
+
+    it('opens on the first pinned feed, not always Home', async () => {
+        await AsyncStorage.setItem(getPinnedStorageKey('me'), JSON.stringify([DEFAULT_PINNED_FEEDS[1], DEFAULT_PINNED_FEEDS[0]]));
+        await render(withQuery(<Timeline />));
+
+        await waitFor(() => expect(screen.getByRole('tab', { name: 'Local' })).toBeSelected());
+        expect(await screen.findByText('post /timelines/public')).toBeTruthy();
+        expect(screen.queryByText('post /timelines/home')).toBeNull();
     });
 
     it('opens the feed editor from the sheet', async () => {

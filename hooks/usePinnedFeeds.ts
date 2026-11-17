@@ -113,6 +113,8 @@ export const usePinnedFeeds = () => {
         customFeeds: customFeedsQuery.data ?? [],
         followedTags: followedTagsQuery.data ?? [],
         isLoading: pinnedQuery.isLoading,
+        // False until the saved pins have been read (till then, the defaults are shown)
+        pinsLoaded: !pinnedQuery.isPlaceholderData,
         pinFeed: pinMutation.mutateAsync,
         unpinFeed: unpinMutation.mutateAsync,
         updatePinnedFeed: updatePinnedMutation.mutateAsync,

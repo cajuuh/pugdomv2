@@ -353,7 +353,7 @@ const Timeline = ({ onStatusPress, active = true }: TimelineProps) => {
     const i18n = useI18n();
     const { t } = i18n;
     const { push } = useNavigator();
-    const { pinnedFeeds, pinFeed } = usePinnedFeeds();
+    const { pinnedFeeds, pinFeed, pinsLoaded } = usePinnedFeeds();
     const { swipeFeeds } = useSettings();
 
     const [activeFeed, setActiveFeed] = useState<FeedDescriptor>(DEFAULT_PINNED_FEEDS[0]);
@@ -409,6 +409,18 @@ const Timeline = ({ onStatusPress, active = true }: TimelineProps) => {
             opened.remove();
         };
     }, [openFeed]);
+
+    // The app opens on your first pinned feed, once the saved order has been read; until then Home
+    const opened = useRef(false);
+    useEffect(() => {
+        if (!pinsLoaded || opened.current) return;
+        opened.current = true;
+        const first = pinnedFeeds[0];
+        if (!first || previewing || activeFeed.id !== DEFAULT_PINNED_FEEDS[0].id || first.id === activeFeed.id) return;
+        // Home was only a stand-in: don't keep its list mounted
+        visited.current.delete(activeFeed.id);
+        setActiveFeed(first);
+    }, [pinsLoaded, pinnedFeeds, previewing, activeFeed.id]);
 
     const activeIsPinned = pinnedFeeds.some(f => f.id === activeFeed.id);
     const previewFeed = previewing && !activeIsPinned ? activeFeed : null;

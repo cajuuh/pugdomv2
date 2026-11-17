@@ -72,7 +72,7 @@ const Conversations = ({ onBack, onStatusPress, onGroupPress }: ConversationsPro
                 accessibilityLabel={[names, threads, item.unread ? t('conversations.unread') : null, preview].filter(Boolean).join('. ')}
                 style={({ pressed }) => [styles.row, { borderBottomColor: colors.borderColor }, pressed && { backgroundColor: colors.inputBackground }]}
             >
-                <Avatar name={names} uri={people[0]?.avatar} size={44} />
+                <Avatar name={names} uri={people[0]?.avatar} staticUri={people[0]?.avatar_static} size={44} />
                 <View style={styles.rowText}>
                     <View style={styles.rowTop}>
                         <View style={styles.names}>
