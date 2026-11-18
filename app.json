@@ -3,7 +3,7 @@
     "name": "pugdon",
     "slug": "pugdom",
     "scheme": "pugdom",
-    "version": "1.3.4",
+    "version": "1.3.5",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -54,7 +54,8 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/b034b44b-e429-4a96-b049-74c54fe27444"
+      "url": "https://u.expo.dev/b034b44b-e429-4a96-b049-74c54fe27444",
+      "checkAutomatically": "NEVER"
     },
     "plugins": [
       [
