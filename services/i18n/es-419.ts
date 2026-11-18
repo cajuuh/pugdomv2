@@ -1016,6 +1016,11 @@ export const es419: Dictionary = {
         discard: 'Descartar',
         keepEditing: 'Seguir editando',
     },
+    crash: {
+        title: 'Algo salió mal',
+        message: 'pugdon tuvo un error en esta pantalla. Tu cuenta y tus ajustes están bien.',
+        retry: 'Volver al inicio',
+    },
     updates: {
         downloading: 'Descargando una actualización…',
         readyTitle: 'Actualización lista',

@@ -1017,6 +1017,11 @@ export const ptBR: Dictionary = {
         discard: 'Descartar',
         keepEditing: 'Continuar editando',
     },
+    crash: {
+        title: 'Algo deu errado',
+        message: 'O pugdon encontrou um erro nesta tela. Sua conta e suas configurações estão bem.',
+        retry: 'Voltar ao início',
+    },
     updates: {
         downloading: 'Baixando uma atualização…',
         readyTitle: 'Atualização pronta',

@@ -1015,6 +1015,11 @@ export const zhCN: Dictionary = {
         discard: '放弃',
         keepEditing: '继续编辑',
     },
+    crash: {
+        title: '出了点问题',
+        message: 'pugdon 在此页面遇到错误。你的账号和设置没有问题。',
+        retry: '返回首页',
+    },
     updates: {
         downloading: '正在下载更新…',
         readyTitle: '更新已就绪',

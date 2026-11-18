@@ -1034,6 +1034,12 @@ export const en = {
         discard: 'Discard',
         keepEditing: 'Keep editing',
     },
+    // Shown instead of a screen that crashed
+    crash: {
+        title: 'Something went wrong',
+        message: 'pugdon ran into an error on this screen. Your account and settings are fine.',
+        retry: 'Back to Home',
+    },
     updates: {
         downloading: 'Downloading an update…',
         readyTitle: 'Update ready',

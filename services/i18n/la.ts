@@ -1015,6 +1015,11 @@ export const la: Dictionary = {
         discard: 'Abicere',
         keepEditing: 'Pergere mutare',
     },
+    crash: {
+        title: 'Aliquid erravit',
+        message: 'pugdon in hac pagina errorem invenit. Ratio et optiones tuae salvae sunt.',
+        retry: 'Domum redire',
+    },
     updates: {
         downloading: 'Renovatio deprimitur…',
         readyTitle: 'Renovatio parata',

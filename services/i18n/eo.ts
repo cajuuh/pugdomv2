@@ -1014,6 +1014,11 @@ export const eo: Dictionary = {
         discard: 'Forĵeti',
         keepEditing: 'Daŭrigi redaktadon',
     },
+    crash: {
+        title: 'Io misfunkciis',
+        message: 'pugdon renkontis eraron en ĉi tiu ekrano. Via konto kaj agordoj estas en ordo.',
+        retry: 'Reen al la hejmo',
+    },
     updates: {
         downloading: 'Elŝutante ĝisdatigon…',
         readyTitle: 'Ĝisdatigo preta',

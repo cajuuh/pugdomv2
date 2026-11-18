@@ -55,6 +55,7 @@ import { DialogHost } from './components/Dialog/dialogHost';
 import { useAppUpdates } from './hooks/useAppUpdates';
 import { usePushNotifications } from './hooks/usePushNotifications';
 import { useStreaming } from './hooks/useStreaming';
+import { ErrorBoundary } from './components/ErrorBoundary/errorBoundary';
 
 // Keep the pug splash up until the fonts and the saved account are loaded
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -299,7 +300,9 @@ export default function App() {
               <ComposeProvider>
                 <MediaViewerProvider>
                   <NavigationProvider>
-                    <NavigationRoot />
+                    <ErrorBoundary>
+                      <NavigationRoot />
+                    </ErrorBoundary>
                     {/* Dialogs and toasts over everything (compose and sheets have their own) */}
                     <DialogHost />
                   </NavigationProvider>

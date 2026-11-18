@@ -1015,6 +1015,11 @@ export const ja: Dictionary = {
         discard: '破棄',
         keepEditing: '編集を続ける',
     },
+    crash: {
+        title: '問題が発生しました',
+        message: 'この画面で pugdon にエラーが発生しました。アカウントと設定は無事です。',
+        retry: 'ホームに戻る',
+    },
     updates: {
         downloading: 'アップデートをダウンロードしています…',
         readyTitle: 'アップデートの準備ができました',

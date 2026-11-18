@@ -1014,6 +1014,11 @@ export const de: Dictionary = {
         discard: 'Verwerfen',
         keepEditing: 'Weiter bearbeiten',
     },
+    crash: {
+        title: 'Etwas ist schiefgelaufen',
+        message: 'pugdon hatte auf diesem Bildschirm einen Fehler. Dein Konto und deine Einstellungen sind in Ordnung.',
+        retry: 'Zur Startseite',
+    },
     updates: {
         downloading: 'Ein Update wird heruntergeladen …',
         readyTitle: 'Update bereit',

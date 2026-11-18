@@ -1014,6 +1014,11 @@ export const fr: Dictionary = {
         discard: 'Abandonner',
         keepEditing: 'Continuer à modifier',
     },
+    crash: {
+        title: 'Un problème est survenu',
+        message: 'pugdon a rencontré une erreur sur cet écran. Votre compte et vos réglages sont intacts.',
+        retry: 'Retour à l’accueil',
+    },
     updates: {
         downloading: 'Téléchargement d’une mise à jour…',
         readyTitle: 'Mise à jour prête',
