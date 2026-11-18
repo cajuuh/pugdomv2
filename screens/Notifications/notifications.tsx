@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, Text, View, useWindowDimensions } from 'react-native';
 import { FlashList, useRecyclingState } from '@shopify/flash-list';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -389,13 +389,20 @@ const REMOVE_AT = 0.75;
 // A row dragged nearly all the way to the right flies off, tilting and fading, then its space closes and
 // only then it leaves the list, so the rows below slide up instead of jumping. Only the distance counts:
 // ReanimatedSwipeable adds the finger's speed to it, so a quick flick removed a row that had barely moved.
-const SwipeToRemove = ({ onRemove, children }: { onRemove: () => void; children: React.ReactNode }) => {
+const SwipeToRemove = ({ id, onRemove, children }: { id: string; onRemove: () => void; children: React.ReactNode }) => {
     const styles = useThemedStyles(makeStyles);
     const { width } = useWindowDimensions();
     const x = useSharedValue(0);
     const flying = useSharedValue(0);
     const height = useSharedValue(-1);
     const measured = useRef(0);
+    // A recycled cell never comes back half swiped or collapsed. Resetting, not remounting on a new key,
+    // keeps FlashList's recycling: a key per row rebuilt every row that scrolled into view.
+    useLayoutEffect(() => {
+        x.value = 0;
+        flying.value = 0;
+        height.value = -1;
+    }, [id]);
     const card = useAnimatedStyle(() => ({
         opacity: 1 - flying.value * 0.7,
         transform: [{ translateX: x.value }, { rotate: `${flying.value * 8}deg` }, { translateY: -flying.value * 16 }],
@@ -688,8 +695,7 @@ const Notifications = ({ onStatusPress }: NotificationsProps) => {
                         {row}
                     </SelectableRow>
                 ) : (
-                    // Keyed by the notification so a recycled cell never comes back half swiped or collapsed
-                    <SwipeToRemove key={item.group.key} onRemove={() => removeOne(item.group)}>
+                    <SwipeToRemove id={item.group.key} onRemove={() => removeOne(item.group)}>
                         {row}
                     </SwipeToRemove>
                 )}
