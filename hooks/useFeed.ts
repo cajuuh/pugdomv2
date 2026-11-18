@@ -10,6 +10,14 @@ import { KEEP_PLACE_KEY } from '../services/settingsContext';
 
 type Pages = InfiniteData<Status[], string | undefined>;
 
+// A feed left open at its top keeps taking live posts, and on a busy Federated the list grew without end. Past this many the oldest go, as one page whose last post is the cursor, so scrolling
+// down loads them again.
+export const LIVE_LIMIT = 200;
+export const keepNewest = (data: Pages): Pages => {
+    const posts = data.pages.flat();
+    return posts.length <= LIVE_LIMIT ? data : { pages: [posts.slice(0, LIVE_LIMIT)], pageParams: data.pageParams.slice(0, 1) };
+};
+
 const keepPlaceSaved = async () => {
     try {
         return await getSetting(KEEP_PLACE_KEY, false);
@@ -109,7 +117,7 @@ export const useFeed = (feed: FeedDescriptor, shows?: (post: Status) => boolean,
         const newer = top ? streamed.filter(post => compareIds(post.id, top.id) > 0) : [];
         if (!top || !newer.length) return;
         if (atTop) {
-            queryClient.setQueryData<Pages>(key, current => current && { ...current, pages: prepend(current.pages, newer) });
+            queryClient.setQueryData<Pages>(key, current => current && keepNewest({ ...current, pages: prepend(current.pages, newer) }));
             return;
         }
         queryClient.setQueryData<Status[]>(newPostsKey(feed.id, top.id), waiting => {
