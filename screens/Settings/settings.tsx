@@ -10,6 +10,7 @@ import { getCoat } from '../../services/theme/coats';
 import { useThemedStyles } from '../../services/theme/useThemedStyles';
 import { Avatar, Card, IconButton, PugMark, SectionLabel, ThemedSwitch } from '../../components/ui';
 import { appVersionLabel, codeVersionLabel } from '../../services/appVersion';
+import { appChecksAtLaunch, checkForUpdate, updatesAvailable } from '../../hooks/useAppUpdates';
 import Appearance from './appearance';
 import ClearNotificationsHelp from './clearNotificationsHelp';
 import PushAlerts from './pushAlerts';
@@ -63,6 +64,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
         setHomeReplies,
         keepPlace,
         setKeepPlace,
+        autoUpdates,
+        setAutoUpdates,
         replyUnlisted,
         setReplyUnlisted,
         groupNotifications,
@@ -389,6 +392,26 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onScheduledPosts, onDrafts,
                             <Text style={[type.meta, styles.rowValue]} selectable>{codeVersionLabel(i18n)}</Text>
                         </View>
                     </View>
+                    {updatesAvailable() && (
+                        <>
+                            <View style={styles.divider} />
+                            <View style={styles.row}>
+                                <Icon name="download-outline" size={20} color={colors.accentText} />
+                                <View style={styles.rowText}>
+                                    <Text style={labelStyle}>{t('updates.automatic')}</Text>
+                                    <Text style={[type.meta, styles.rowDetail]}>
+                                        {t(autoUpdates ? 'updates.automaticOn' : appChecksAtLaunch() ? 'updates.automaticOff' : 'updates.automaticOffUntilRelease')}
+                                    </Text>
+                                </View>
+                                <ThemedSwitch value={autoUpdates} onValueChange={setAutoUpdates} accessibilityLabel={t('updates.automatic')} />
+                            </View>
+                            <View style={styles.divider} />
+                            <Pressable style={styles.row} onPress={() => checkForUpdate(t)} accessibilityRole="button">
+                                <Icon name="refresh" size={20} color={colors.accentText} />
+                                <Text style={[labelStyle, styles.rowText]}>{t('updates.check')}</Text>
+                            </Pressable>
+                        </>
+                    )}
                     <View style={styles.divider} />
                     <Pressable
                         style={styles.row}
