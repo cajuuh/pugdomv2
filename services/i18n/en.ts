@@ -1034,12 +1034,27 @@ export const en = {
         discard: 'Discard',
         keepEditing: 'Keep editing',
     },
+    // Shown instead of a screen that crashed
+    crash: {
+        title: 'Something went wrong',
+        message: 'pugdon ran into an error on this screen. Your account and settings are fine.',
+        retry: 'Back to Home',
+    },
     updates: {
         downloading: 'Downloading an update…',
         readyTitle: 'Update ready',
         readyMessage: 'Restart pugdon to use the latest version.',
         restart: 'Restart',
         later: 'Later',
+        // Settings › About: the switch, the line under it (on / off / off on a build that still downloads at launch)
+        automatic: 'Update automatically',
+        automaticOn: 'Updates download in the background, then pugdon offers a restart',
+        automaticOff: 'pugdon updates only when you tap Check for updates',
+        automaticOffUntilRelease: 'Until the next store version, updates still download when pugdon opens',
+        check: 'Check for updates',
+        checking: 'Checking for updates…',
+        upToDate: 'You have the latest version',
+        checkFailed: 'Couldn’t check for updates. Try again later',
     },
     settings: {
         absoluteDates: 'Show dates and times',

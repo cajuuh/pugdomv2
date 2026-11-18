@@ -109,7 +109,14 @@ export class StreamConnection {
             } catch {
                 return;
             }
-            this.listeners.forEach(listener => listener(event));
+            // A listener that throws here would be an uncaught error, which closes the app in store builds
+            this.listeners.forEach(listener => {
+                try {
+                    listener(event);
+                } catch (error) {
+                    console.warn('Handling a stream event failed:', error);
+                }
+            });
         };
         socket.onclose = () => {
             // Closed by stop(), or replaced

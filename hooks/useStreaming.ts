@@ -30,6 +30,8 @@ export const handleStreamEvent = (event: StreamEvent, handlers: StreamHandlers) 
     }
 };
 
+export const NOTIFIED_WAIT_MS = 5000;
+
 // Live updates while the app is on screen and signed in. Away, the socket closes; the periodic
 // checks catch up when it's back.
 export const useStreaming = (enabled: boolean) => {
@@ -65,17 +67,24 @@ export const useStreaming = (enabled: boolean) => {
         if (!enabled) return;
         // Notifications come on `user`, so it stays on whichever feed is open
         const unsubscribe = streaming.subscribe({ stream: 'user' });
+        // A refresh reloads every page of Notifications you've scrolled through, so a burst of favourites
+        // refreshes once, NOTIFIED_WAIT_MS after the first, instead of once per favourite
+        let timer: ReturnType<typeof setTimeout> | undefined;
         const unlisten = streaming.listen(event =>
             handleStreamEvent(event, {
                 update,
                 remove,
                 notified: () => {
-                    queryClient.invalidateQueries({ queryKey: ['notifications'] });
-                    queryClient.invalidateQueries({ queryKey: ['unreadNotifications'] });
+                    timer ??= setTimeout(() => {
+                        timer = undefined;
+                        queryClient.invalidateQueries({ queryKey: ['notifications'] });
+                        queryClient.invalidateQueries({ queryKey: ['unreadNotifications'] });
+                    }, NOTIFIED_WAIT_MS);
                 },
             })
         );
         return () => {
+            clearTimeout(timer);
             unsubscribe();
             unlisten();
         };
